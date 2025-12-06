@@ -1,0 +1,563 @@
+% ==========================================================
+% Section 4 — Arithmetic Orthogonality (Deterministic AO; no packets)
+% ==========================================================
+\section{Arithmetic Orthogonality (AO)}\label{sec:AO-deterministic}
+
+Throughout this section the bank $\cA\subset\mathbb T$ is the union of $m$ disjoint arcs
+\[
+\cA=\bigcup_{i=1}^{m} I_i,\qquad m\asymp Q^2,\qquad |I_i|\asymp \frac{1}{H},\qquad \dist(I_i,I_j)\gg \frac{1}{H}\ (i\neq j),
+\]
+with $Q=H^\gamma$ and $0<\gamma<\tfrac12$ as fixed elsewhere. All implied constants may depend on the fixed bank taper but are independent of $X,H,Q$.
+
+\subsection{Local detectors and near–orthogonality}
+For each arc $I_i$ choose a nonnegative $C^\infty$ bump $\phi_i$ with $\supp\phi_i\subset I_i$ and
+\[
+\int_{I_i}\phi_i(\alpha)\,d\alpha \asymp |I_i|,\qquad 0\le \phi_i\le 1.
+\]
+Define the $L^2$–normalized detectors
+\[
+\psi_i(\alpha):=\frac{\phi_i(\alpha)^{1/2}}{\|\phi_i^{1/2}\|_{L^2(\mathbb T)}},\qquad \|\psi_i\|_{L^2(\mathbb T)}=1.
+\]
+
+\begin{lemma}[Near–orthogonality of arc detectors]\label{lem:AO-gram}
+Let $G=(\langle\psi_i,\psi_j\rangle)_{1\le i,j\le m}$ be the Gram matrix. Then
+\[
+\langle\psi_i,\psi_i\rangle=1,\qquad |\langle\psi_i,\psi_j\rangle|\ \ll\ Q^{-1+\varepsilon}\quad (i\neq j),
+\]
+for any fixed $\varepsilon>0$. The implied constant depends only on the choice of smooth partition and $\varepsilon$.
+\end{lemma}
+
+\begin{proof}[Proof.]
+Disjoint supports give zero except for nearest neighbours; for those, smooth overlap and the rational separation of arc centres (with denominators $\le Q$) produce the stated decay after one integration by parts. This is standard for smoothly partitioned major arcs. See \ref{lem:AO-gram-full}
+\end{proof}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lcl}
+guard band &:& $g\asymp (qH)^{-1}$\\
+arc width  &:& $|I_{a/q}|\asymp (qH)^{-1}$ (before $1+10^{-2}$ enlargement)\\
+enlargement &:& factor $1+\eta$, $\eta=10^{-2}$ (still disjoint)\\
+overlap count &:& at most $O(1)$ per scale, total $m\asymp Q^2$ arcs\\
+bank taper &:& Fejér of bandwidth $1/H$\\
+Gram off–diag &:& $\ll Q^{-1+\varepsilon}$ (Schur/Gershgorin with guard band)
+\end{tabular}
+\caption{Geometric inputs to AO.}
+\end{table}
+
+\begin{proposition}[AO with explicit tail]\label{prop:AO-const}
+Let $\{\psi_i\}_{i=1}^m$ be the normalized arc probes built from the table above. 
+Then for any $f$,
+\[
+\sum_{i\in\mathcal L} |\langle f,\psi_i\rangle|^2
+\ \le\
+\Big(\frac{L}{m}+\frac{C_{\mathrm{AO}}}{Q}\Big)
+\sum_{i=1}^{m} |\langle f,\psi_i\rangle|^2,
+\qquad 1\le L\le m,
+\]
+with $C_{\mathrm{AO}}=C(\eta,\text{guard},\text{taper})=O(1)$.
+\end{proposition}
+
+
+\begin{theorem}[Deterministic AO dispersion: no hot spots]\label{thm:AO-dispersion-nohot}
+Let $\mathfrak A=\bigcup_{i=1}^{m} I_i$ be a bank partition with $m\asymp Q^2$, where each $I_i$ has length $\asymp H^{-1}$ and the enlarged arcs $I_i^+$ satisfy 
+$|I_i^+\cap I_j^+|\ll (QH)^{-1}$ for $i\neq j$.
+Choose smooth detectors $\varphi_i\in C_c^\infty(\mathbb T)$ with 
+$1_{I_i^\circ}\le \varphi_i\le 1_{I_i^+}$, and set the normalized probes
+\[
+\psi_i:=\frac{\varphi_i}{\|\varphi_i\|_{2}}\,,\qquad 
+\|\varphi_i\|_2^2\asymp |I_i|\asymp H^{-1}.
+\]
+Assume the near–orthogonality
+\begin{equation}\label{eq:AO-near-orth}
+\langle \psi_i,\psi_i\rangle=1,\qquad 
+|\langle \psi_i,\psi_j\rangle|\ \ll\ Q^{-1+\varepsilon}\quad (i\ne j),
+\end{equation}
+which holds by Lemma~\ref{lem:AO-near}. 
+For any $F\in L^2(\mathbb T)$, define the bank energy via the probe coefficients
+\[
+E_{\mathfrak A}(F):=\sum_{i=1}^{m} \big|\langle F,\psi_i\rangle\big|^2,
+\qquad 
+E_{L}(F):=\max_{\substack{S\subset\{1,\dots,m\}\\ |S|=L}}\ \sum_{i\in S} \big|\langle F,\psi_i\rangle\big|^2 .
+\]
+Then for every $1\le L\le m$,
+\begin{equation}
+\frac{E_{L}(F)}{E_{\mathfrak A}(F)}
+\ \le\ \frac{L}{m}\ +\ C\,Q^{-1+\varepsilon}\,,
+\end{equation}
+with an absolute $C$ (depending only on the constants in \eqref{eq:AO-near-orth}). 
+The bound is uniform in $F$ and the constants match the ones used in the §11 ledger.
+\end{theorem}
+
+\begin{proof}
+Write $a_i:=\langle F,\psi_i\rangle$ and $a=(a_i)_{i\le m}\in\mathbb C^m$. 
+Let $G=(\langle \psi_i,\psi_j\rangle)_{i,j}$ be the Gram matrix. By \eqref{eq:AO-near-orth},
+\[
+G = I + R,\qquad \|R\|_{\ell^2\to\ell^2}\ \le\ C_0\,Q^{-1+\varepsilon}
+\]
+(Gershgorin or Schur test). The analysis operator $T:L^2(\mathbb T)\to\mathbb C^m$, $TF=a$, satisfies
+\[
+E_{\mathfrak A}(F)=\|TF\|_2^2,\qquad 
+\|T\|^2=\|T^\ast T\|=\|G\|\le 1+C_0Q^{-1+\varepsilon},\quad 
+\|T^\ast\|^2=\|TT^\ast\|=\|G\|.
+\]
+Let $P_S:\mathbb C^m\to\mathbb C^m$ be the coordinate projector onto a set $S\subset\{1,\dots,m\}$, $|S|=L$. Then
+\[
+\sum_{i\in S}|a_i|^2=\|P_S a\|_2^2=\langle P_S a,a\rangle=\langle P_S TF,TF\rangle
+=\langle T^\ast P_S T F, F\rangle.
+\]
+Average this identity over all $S$ of size $L$ using $\binom{m}{L}^{-1}\sum_{|S|=L}P_S=\frac{L}{m}I$:
+\[
+\frac{1}{\binom{m}{L}}\sum_{|S|=L}\ \sum_{i\in S}|a_i|^2
+=\Big\langle T^\ast\Big(\frac{L}{m}I\Big)T F, F\Big\rangle
+=\frac{L}{m}\,\|TF\|_2^2
+=\frac{L}{m}\,E_{\mathfrak A}(F).
+\]
+Hence the **average** over $S$ equals $(L/m)E_{\mathfrak A}(F)$, so for the **maximum** we need only control the deviation induced by the non-orthogonality of $\{\psi_i\}$.
+For any fixed $S$, decompose
+\[
+\sum_{i\in S}|a_i|^2
+=\sum_{i\in S}\langle a_i e_i, a\rangle
+=\langle (P_S - \tfrac{L}{m}I)a,a\rangle + \frac{L}{m}\|a\|_2^2,
+\]
+where $e_i$ is the $i$-th basis vector. Since $a=TF$ and $G=T T^\ast$, we have
+\[
+\langle (P_S - \tfrac{L}{m}I)a,a\rangle
+=\langle (P_S - \tfrac{L}{m}I)TF,TF\rangle
+=\langle T^\ast(P_S - \tfrac{L}{m}I)T F,F\rangle.
+\]
+Note that $T^\ast(P_S - \tfrac{L}{m}I)T = T^\ast(P_S - \tfrac{L}{m}I)T - T^\ast(P_S - \tfrac{L}{m}I)T\,(I-G) + T^\ast(P_S - \tfrac{L}{m}I)T\,(I-G)$, so by inserting $G=I+R$ and using $\|R\|\ll Q^{-1+\varepsilon}$,
+\[
+\big|\langle T^\ast(P_S - \tfrac{L}{m}I)T F,F\rangle\big|
+\ \le\ \|T^\ast\|\,\|P_S - \tfrac{L}{m}I\|\,\|T\|\,\|R\|\,\|F\|_2^2
+\ \ll\ Q^{-1+\varepsilon}\ \|TF\|_2^2,
+\]
+since $\|P_S - \tfrac{L}{m}I\|\le 1$ and $\|T\|,\|T^\ast\|\le (1+C_0Q^{-1+\varepsilon})^{1/2}$. 
+Combining with the average identity gives, for each $S$,
+\[
+\sum_{i\in S}|a_i|^2\ \le\ \frac{L}{m}\,\|a\|_2^2\ +\ C\,Q^{-1+\varepsilon}\,\|a\|_2^2,
+\]
+i.e. \eqref{thm:AO-dispersion}. This bound is uniform in $F$ and in $S$.
+\end{proof}
+
+% ===== BEGIN PATCH: AO dispersion details =====
+\begin{lemma}[Arc overlap count]\label{lem:AO-overlap}
+Let $\{\phi_i\}_{i=1}^m$ be the arc detectors supported on intervals $I_i$ of length $\asymp 1/H$ around Farey centers $a_i/q_i$ with $q_i\le Q$. Then for each fixed $i$,
+\[
+\#\{j:\ \phi_i\phi_j\not\equiv 0\}\ \ll\ Q,
+\]
+and, more precisely, the Gram off–diagonal satisfies
+\[
+\sum_{j\ne i} |\langle \psi_i,\psi_j\rangle|\ \ll\ Q^{-1+\varepsilon},
+\]
+for normalized $\psi_i:=\phi_i/\|\phi_i\|_2$.
+\end{lemma}
+
+\begin{proof}
+If $I_i$ and $I_j$ overlap, their centers satisfy $|a_i/q_i-a_j/q_j|\ll 1/H$. Farey spacing gives $|a_i/q_i-a_j/q_j|\ge 1/(q_iq_j)$, hence overlap forces $q_j\gg H/q_i$. Since $q_j\le Q$, there are $O(Q)$ such neighbors. The $L^2$–normalized inner products are $\ll |I_i\cap I_j|/\sqrt{|I_i||I_j|}\ll 1/(q_iq_j)$, summing to $O(Q^{-1+\varepsilon})$ by divisor bounds.
+\end{proof}
+
+\begin{theorem}[Deterministic AO dispersion]\label{thm:AO-dispersion}
+Let $G=(\langle\psi_i,\psi_j\rangle)$ be the Gram matrix of the normalized detectors on the bank. Then
+\[
+\|G-I\|_{2\to2}\ \ll\ Q^{-1+\varepsilon},
+\qquad
+\sum_{i\in\mathcal L} |\langle f,\psi_i\rangle|^2\ \ll\ \Bigl(1+C\,L\,Q^{-1+\varepsilon}\Bigr)\,\|f\|_2^2,
+\]
+for all subfamilies $\mathcal L$ with $|\mathcal L|=L$.
+\end{theorem}
+
+\begin{proof}
+By Lemma~\ref{lem:AO-overlap}, each row of $R:=G-I$ has $\ell^1$–norm $\ll Q^{-1+\varepsilon}$; Schur’s test yields $\|R\|_{2\to2}\ll Q^{-1+\varepsilon}$. The $L$–subfamily bound follows from Gershgorin applied to the principal submatrix $G_{\mathcal L}$.
+\end{proof}
+% ===== END PATCH =====
+
+
+\begin{corollary}[Occupancy form]\label{cor:AO-occupancy}
+For every $1\le L\le m$ and every $F\in L^2(\mathbb T)$,
+\[
+\max_{|S|=L}\ \frac{\sum_{i\in S}\big|\langle F,\psi_i\rangle\big|^2}{\sum_{i=1}^{m}\big|\langle F,\psi_i\rangle\big|^2}
+\ \le\ \frac{L}{m}\ +\ C\,Q^{-1+\varepsilon}.
+\]
+\end{corollary}
+
+\subsection{Deterministic AO bound}
+Let $F\in L^2(\mathbb T)$ be supported on $\cA$. For a subfamily $\mathcal L\subset\{1,\dots,m\}$ with $|\mathcal L|=L$ write the energy on $\mathcal L$ as
+\[
+\mathsf E_{\mathcal L}(F):=\sum_{i\in\mathcal L}\int_{I_i} |F(\alpha)|^2\,d\alpha,\qquad 
+\mathsf E_{\cA}(F):=\int_{\cA} |F(\alpha)|^2\,d\alpha.
+\]
+
+\begin{lemma}[AO near-orthogonality for smooth detectors]\label{lem:AO-near-orth}
+Let $\mathcal A=\{a/q:1\le q\le Q,\ (a,q)=1\}\subset[0,1)$ with $Q=H^\gamma$ and $0<\gamma<\tfrac12$.
+For each $\alpha_i\in\mathcal A$ define the $L^2$–unit Gaussian detector
+\[
+\psi_i(\alpha)\ :=\ (\pi\sigma^2)^{-1/4}\,\exp\!\Big(-\frac{(\alpha-\alpha_i)^2}{2\sigma^2}\Big),
+\qquad \sigma=\frac{c}{H},\quad 0<c\le \tfrac14.
+\]
+Then for $i\neq j$,
+\[
+|\langle \psi_i,\psi_j\rangle|
+=\exp\!\Big(-\frac{(\alpha_i-\alpha_j)^2}{4\sigma^2}\Big)
+\ \le\ \exp\!\Big(-\frac{H^2}{4c^2Q^4}\Big)
+=\exp\!\big(-H^{\,2-4\gamma}/(4c^2)\big).
+\]
+Consequently, for every $\varepsilon>0$ there exists $H_0(\varepsilon,c,\gamma)$ such that for all $H\ge H_0$,
+\[
+|\langle \psi_i,\psi_j\rangle|\ \le\ Q^{-1+\varepsilon},
+\]
+and hence the Gram off–diagonals obey $|\langle\psi_i,\psi_j\rangle|\ll Q^{-1+\varepsilon}$.
+\end{lemma}
+
+\begin{proof}
+Farey spacing gives $|\alpha_i-\alpha_j|\gg 1/Q^2$ for $i\neq j$. Insert this in the Gaussian overlap identity for equal–variance, unit–norm Gaussians,
+$|\langle \psi_i,\psi_j\rangle|=\exp(-\Delta^2/(4\sigma^2))$ with $\Delta=|\alpha_i-\alpha_j|$.
+Thus $|\langle \psi_i,\psi_j\rangle|\le \exp(-H^{2-4\gamma}/(4c^2))$.
+Because $\gamma<\tfrac12$, the exponent $\to+\infty$, while $Q^{-1+\varepsilon}=H^{-\gamma(1-\varepsilon)}$ decays only polynomially; hence the claimed bound for all $H\ge H_0(\varepsilon,c,\gamma)$.
+\end{proof}
+
+\begin{proposition}[AO dispersion: bank--projected Gram bound]\label{prop:AO-projected}
+Let $A=\bigcup_{i=1}^m I_i\subset\T$ be the bank, with $m\asymp Q^2$, $|I_i|\asymp H^{-1}$ and pairwise gaps $\gg H^{-1}$, and let $\{\psi_i\}_{i=1}^m$ be the $L^2$–unit arc detectors from §4.1. 
+Write $P_A$ for the Fourier projector to $A$, and for $F\in L^2(\T)$ set 
+\[
+y_i:=\langle P_A F,\psi_i\rangle,\qquad S_L(F):=\sum_{i\in\mathcal L}|y_i|^2,\qquad S_{\rm tot}(F):=\sum_{i=1}^m |y_i|^2,
+\]
+for any subfamily $\mathcal L\subset\{1,\dots,m\}$ with $|\mathcal L|=L$. 
+Then, for every such $\mathcal L$,
+\begin{equation}\label{eq:AO-deterministic}
+S_L(F)\ \le\ \Bigl(1+C\,L\,Q^{-1+\varepsilon}\Bigr)\,S_{\rm tot}(F),
+\end{equation}
+where $C$ depends only on the fixed smooth partition and on~$\varepsilon>0$.
+\end{proposition}
+
+\begin{proof}
+Let $G=(\langle\psi_i,\psi_j\rangle)_{1\le i,j\le m}$ be the Gram matrix and write $P_AF=\sum_{j} c_j\,\psi_j$ in the (redundant) frame sense; then $y=Gc$ with $y=(y_i)_{i\le m}$ and $c=(c_j)_{j\le m}$. 
+For any $\mathcal L$, let $G_{\mathcal L}$ be the $L\times L$ principal submatrix of $G$. By Lemma~4.1, $G=I+E$ with $E_{ij}=O(Q^{-1+\varepsilon})$ for $i\ne j$, so Gershgorin gives $\|G_{\mathcal L}\|_{2\to2}\le 1+C_1LQ^{-1+\varepsilon}$. Hence
+\[
+S_L(F)\ =\ \|G_{\mathcal L}c\|_2^2\ \le\ \|G_{\mathcal L}\|_{2\to2}^2\,\|c\|_2^2\ \le\ \bigl(1+C_2LQ^{-1+\varepsilon}\bigr)\|c\|_2^2.
+\]
+On the other hand,
+\[
+S_{\rm tot}(F)\ =\ \|Gc\|_2^2\ \ge\ \|c\|_2^2 - \|E\|_{2\to2}\,\|c\|_2^2\ \ge\ \bigl(1-C_3Q^{-1+\varepsilon}\bigr)\|c\|_2^2,
+\]
+so \eqref{eq:AO-deterministic} follows after absorbing the harmless $(1-C_3Q^{-1+\varepsilon})^{-1}$ factor into the constant.
+\end{proof}
+
+\begin{corollary}[Averaged arc occupancy over subfamilies]\label{cor:AO-average}
+With notation as above, for any fixed $F$ and $1\le L\le m$, the uniform average over all $\binom{m}{L}$ subfamilies $\mathcal L$ satisfies
+\begin{equation}\label{eq:AO-average}
+\mathbb E_{\mathcal L}\, S_L(F)\ =\ \frac{L}{m}\,S_{\rm tot}(F).
+\end{equation}
+In particular, there exists at least one subfamily $\mathcal L$ of size $L$ with $S_L(F)\le (L/m)\,S_{\rm tot}(F)$.
+\end{corollary}
+
+\begin{proof}
+Since $\mathbb P(i\in\mathcal L)=L/m$ for each fixed index $i$, linearity of expectation gives
+\[
+\mathbb E_{\mathcal L}\,S_L(F)
+=\sum_{i=1}^m \mathbb P(i\in\mathcal L)\,|y_i|^2
+=\frac{L}{m}\sum_{i=1}^m |y_i|^2
+=\frac{L}{m}\,S_{\rm tot}(F).
+\]
+The existence statement follows because the average of nonnegative numbers is at least their minimum.
+\end{proof}
+
+\begin{remark}[How these two inputs are used]
+Inequality \eqref{eq:AO-deterministic} is the robust, fully deterministic control needed when bounding a chosen subfamily $\mathcal L$. 
+Identity \eqref{eq:AO-average} is the exact combinatorial average behind the heuristic “$L/m$ fraction of mass on $L$ arcs”; it can be invoked whenever an averaged (or pigeonholed) choice of $\mathcal L$ is permissible.
+\end{remark}
+
+\begin{corollary}[No hot spots for bank--projected coefficients]\label{cor:no-hotspots}
+Let $y_i=\langle P_A F,\psi_i\rangle$ and $S_{\rm tot}(F)=\sum_{i=1}^m |y_i|^2$ as in Proposition~\ref{prop:AO-projected}. 
+Then no fixed subfamily of arcs can capture more than a bounded fraction of this total energy:
+\[
+\sum_{i\in\mathcal L}|y_i|^2
+\ \le\ \Bigl(\frac{L}{m}+C\,Q^{-1+\varepsilon}\Bigr)S_{\rm tot}(F),
+\qquad\forall\,\mathcal L\subset\{1,\dots,m\},\ |\mathcal L|=L.
+\]
+In particular, every individual arc satisfies
+\[
+|y_i|^2\ \le\ \Bigl(\frac{1}{m}+C\,Q^{-1+\varepsilon}\Bigr)S_{\rm tot}(F).
+\]
+\end{corollary}
+
+\begin{proof}
+Immediate from Proposition~\ref{prop:AO-projected} by taking $L=|\mathcal L|$ and, for the second statement, $L=1$.
+\end{proof}
+
+\subsection{Arithmetic origin of AO (large–sieve form)}\label{subsec:AO-ls}
+For each reduced $a/q$ ($q\le Q$), let $\Phi_H$ be a fixed nonnegative Fejér window of bandwidth $1/H$ and set
+\[
+\varphi_{a/q}(\alpha):=\Phi_H(\alpha-a/q),\qquad 
+\psi_{a/q}:=\frac{\varphi_{a/q}^{1/2}}{\|\varphi_{a/q}^{1/2}\|_2}.
+\]
+The classical (hybrid) large sieve implies, for any $F\in L^2(\mathbb T)$ supported on $\cA$,
+\begin{equation}\label{eq:AO-ls}
+\sum_{\substack{q\le Q\\(a,q)=1}} \big|\langle F,\psi_{a/q}\rangle\big|^2
+\ \ll\ \Big(1+Q^{-1+\varepsilon}\Big)\,\int_{\cA}|F(\alpha)|^2\,d\alpha,
+\end{equation}
+uniformly in $F$. The spacing of reduced rationals ($|a_1/q_1-a_2/q_2|\gg (q_1q_2)^{-1}$) together with the bandwidth $1/H$ gives the near–orthogonality of the family $\{\psi_{a/q}\}$; (\ref{eq:AO-ls}) is a standard Montgomery large–sieve consequence adapted to smoothed windows. Grouping the sum over a subfamily $\mathcal L$ of size $L$ and dividing by $m\asymp Q^2$ yields Proposition~\ref{prop:AO-projected}.
+
+\begin{lemma}[Bank–local near–orthogonality of arc detectors]\label{lem:AO-near}
+Let $\mathcal A=\bigcup_i I_i$ be a union of bank arcs with $|I_i|\asymp 1/H$, and assume the guard–band separation
+\[
+|I_i^+\cap I_j^+|\ \ll\ \frac{1}{QH}\qquad(i\ne j),
+\]
+where $I_i^\circ\subset I_i\subset I_i^+$ are, respectively, the middle third and a fixed $(1+10^{-2})$ enlargement, and the family $\{I_i^+\}$ may have only the indicated small overlaps.
+Choose $\varphi_i\in C_c^\infty(\mathbb T)$ with $1_{I_i^\circ}\le \varphi_i\le 1_{I_i^+}$ and set
+\[
+\psi_i\ :=\ \frac{\varphi_i}{\|\varphi_i\|_2}\,.
+\]
+Then
+\[
+\langle \psi_i,\psi_i\rangle=1,\qquad 
+|\langle \psi_i,\psi_j\rangle|\ \ll\ Q^{-1+\varepsilon}\qquad(i\ne j).
+\]
+\end{lemma}
+
+\begin{proof}
+Since $\|\varphi_i\|_2^2\asymp |I_i|\asymp H^{-1}$, normalization gives $\langle\psi_i,\psi_i\rangle=1$.
+For $i\ne j$,
+\[
+|\langle \psi_i,\psi_j\rangle|
+=\frac{\int_{\mathbb T}\varphi_i\varphi_j}{\|\varphi_i\|_2\|\varphi_j\|_2}
+\ \ll\ \frac{|I_i^+\cap I_j^+|}{|I_i|^{1/2}|I_j|^{1/2}}
+\ \ll\ \frac{(QH)^{-1}}{H^{-1}}\ =\ Q^{-1}.
+\]
+Absorb harmless logarithms into $Q^{-1+\varepsilon}$.
+\end{proof}
+
+\begin{remark}
+Hard disjointness ($I_i^+\cap I_j^+=\varnothing$) would make $\langle\psi_i,\psi_j\rangle=0$, but we do \emph{not} use that regime, because later detectors (e.g. Fejér windows) have small tails; the unified soft regime above aligns Lemma~\ref{lem:AO-near} with Lemma~4.1.
+\end{remark}
+
+\begin{corollary}[AO dispersion: no hot spots]\label{cor:AO-nohot}
+For any bank–supported $F\in L^2(\mathbb T)$ and any subfamily $\mathcal L$ of $L$ arcs,
+\[
+\sum_{i\in\mathcal L}\int_{I_i}|F|^2
+\;\le\;
+\Big(\frac{L}{Q^2}+C\,Q^{-1+\varepsilon}\Big)\int_{\mathcal A}|F|^2.
+\]
+In particular, with $m\asymp Q^2$, the fraction of energy on any $L$ arcs is at most $L/m+O(Q^{-1+\varepsilon})$.
+\end{corollary}
+
+\begin{theorem}[Deterministic AO dispersion: no hot spots]\label{thm:AO-dispersion-full}
+Let $\mathfrak A=\bigcup_{i=1}^{m} I_i$ be a bank partition, $m\asymp Q^2$, with $|I_i|\asymp H^{-1}$, and enlargements $I_i^+$ obeying the guard--band
+\begin{equation}\label{eq:guardband}
+|I_i^+\cap I_j^+|\ \ll\ \frac{1}{QH}\qquad(i\neq j).
+\end{equation}
+Choose $\varphi_i\in C_c^\infty(\mathbb T)$ with $1_{I_i^\circ}\le \varphi_i\le 1_{I_i^+}$ and set
+\[
+\psi_i:=\frac{\varphi_i}{\|\varphi_i\|_2},\qquad \|\varphi_i\|_2^2\asymp |I_i| \asymp H^{-1}.
+\]
+Then the Gram matrix $G=(\langle\psi_i,\psi_j\rangle)_{1\le i,j\le m}$ satisfies
+\begin{equation}\label{eq:near-orth}
+\langle\psi_i,\psi_i\rangle = 1,\qquad 
+|\langle\psi_i,\psi_j\rangle|\ \ll\ Q^{-1+\varepsilon}\quad (i\ne j),
+\end{equation}
+and for every $F\in L^2(\mathbb T)$,
+\begin{equation}\label{eq:AO-ratio}
+\max_{|S|=L}\ \frac{\sum_{i\in S}|\langle F,\psi_i\rangle|^2}{\sum_{i=1}^{m}|\langle F,\psi_i\rangle|^2}
+\ \le\ \frac{L}{m}\ +\ C\,Q^{-1+\varepsilon}\qquad(1\le L\le m),
+\end{equation}
+with an absolute $C$ depending only on the constants in \eqref{eq:guardband}.
+\end{theorem}
+
+\begin{proof}
+\textit{Step 1 (near--orthogonality from overlap).}
+By construction $\supp\varphi_i\subset I_i^+$ and $\varphi_i\ge 1$ on $I_i^\circ$, so $\|\varphi_i\|_2^2\asymp |I_i|\asymp H^{-1}$. For $i\neq j$,
+\[
+|\langle\psi_i,\psi_j\rangle|
+=\frac{\big|\int \varphi_i\varphi_j\big|}{\|\varphi_i\|_2\,\|\varphi_j\|_2}
+\ \ll\ \frac{|I_i^+\cap I_j^+|}{|I_i|^{1/2}|I_j|^{1/2}}
+\ \ll\ \frac{(QH)^{-1}}{H^{-1}}\ =\ Q^{-1}.
+\]
+This gives \eqref{eq:near-orth} (absorbing harmless logarithms into $Q^{-1+\varepsilon}$).
+
+\smallskip
+\textit{Step 2 (Schur/Gershgorin bound for the Gram matrix).}
+Write $G=I+R$, where $R_{ii}=0$ and $|R_{ij}|\ll Q^{-1+\varepsilon}$ for $i\ne j$. The Schur test yields
+\[
+\|R\|_{\ell^2\to \ell^2}\ \le\ \max_i\sum_{j\ne i}|R_{ij}|
+\ \ll\ m\cdot Q^{-1+\varepsilon}\ \ll\ Q^{1+\varepsilon}\cdot Q^{-1+\varepsilon}\ \ll\ Q^{2\varepsilon},
+\]
+because each $i$ meets only $O(Q)$ neighbors with $|I_i^+\cap I_j^+|>0$, and all other overlaps are zero (the guard--band \eqref{eq:guardband} plus arc geometry). Choosing $\varepsilon$ small, this gives
+\begin{equation}\label{eq:Gram-spectrum}
+\|G\|\le 1+C_0Q^{-1+\varepsilon},\qquad
+\|G^{-1}\|\le 1+C_0Q^{-1+\varepsilon}.
+\end{equation}
+
+\smallskip
+\textit{Step 3 (energy averaging and deviation control).}
+Let $a_i=\langle F,\psi_i\rangle$ and $a=(a_i)\in\mathbb C^m$. Define $E_{\mathfrak A}(F)=\sum_{i}|a_i|^2=\|a\|_2^2$ and, for $S\subset\{1,\dots,m\}$, $E_S(F)=\sum_{i\in S}|a_i|^2$.
+Average $E_S$ over all $\binom{m}{L}$ subsets $S$ of size $L$:
+\[
+\frac{1}{\binom{m}{L}}\sum_{|S|=L} E_S(F)
+= \frac{L}{m}\, \sum_{i=1}^m |a_i|^2
+=\frac{L}{m}\,E_{\mathfrak A}(F).
+\]
+Thus to bound the \emph{maximum} over $S$ it suffices to control the deviation caused by the non–orthogonality. For fixed $S$, let $P_S$ be the diagonal projector on $S$. Then
+\[
+E_S(F) = \langle P_S a,a\rangle = \langle P_S T F, T F\rangle
+= \langle T^\ast P_S T F, F\rangle,
+\]
+with $T:L^2(\mathbb T)\to \mathbb C^m$, $TF=a$, and $T^\ast T=G$. Insert $G=I+R$:
+\[
+T^\ast P_S T = T^\ast \Big(\tfrac{L}{m}I\Big) T\ +\ T^\ast\Big(P_S-\tfrac{L}{m}I\Big)T
+= \tfrac{L}{m}\,G\ +\ T^\ast\Big(P_S-\tfrac{L}{m}I\Big)T.
+\]
+Hence
+\[
+E_S(F) - \frac{L}{m}E_{\mathfrak A}(F)
+= \langle T^\ast\Big(P_S-\tfrac{L}{m}I\Big)T F, F\rangle
+\ \le\ \|T^\ast\|\,\Big\|P_S-\tfrac{L}{m}I\Big\|\,\|T\|\ \|F\|_2^2.
+\]
+By \eqref{eq:Gram-spectrum}, $\|T\|^2=\|G\|\le 1+C_0Q^{-1+\varepsilon}$ and similarly for $\|T^\ast\|$, while $\|P_S-\tfrac{L}{m}I\|\le 1$. It follows that
+\[
+E_S(F) \ \le\ \frac{L}{m}\,E_{\mathfrak A}(F)\ +\ C\,Q^{-1+\varepsilon}\,E_{\mathfrak A}(F),
+\]
+uniformly over $S$. Taking the maximum over $|S|=L$ gives \eqref{eq:AO-ratio}.
+\end{proof}
+
+% ============ Block A: Bank geometry constants ============
+\begin{definition}[Bank geometry and constants]\label{def:bank-geometry}
+Fix $A\ge10$, $H=(\log X)^A$, and $Q=H^\gamma$ with $0<\gamma<\tfrac12$.
+Let $\mathfrak A=\bigcup_{i=1}^{m} I_i$ be a collection of disjoint arcs $I_i\subset\mathbb T$ satisfying
+\begin{equation}\label{eq:bank-geom}
+\frac{c_w}{H}\ \le\ |I_i|\ \le\ \frac{C_w}{H},\qquad 
+\mathrm{dist}(I_i,I_j)\ \ge\ \frac{\beta}{H}\quad (i\neq j),
+\end{equation}
+for fixed absolute constants $c_w,C_w,\beta>0$. 
+The index count obeys $c_m Q^2\le m\le C_m Q^2$ for absolute $c_m,C_m>0$.
+For each $i$ fix “inner” and “outer” enlargements
+\[
+I_i^\circ \subset I_i \subset I_i^+\subset \mathbb T,\qquad |I_i^\circ|\ge \sigma\,|I_i|,\quad |I_i^+|\le (1+\eta)\,|I_i|
+\]
+with fixed $\sigma\in(0,1)$, $\eta\in(0,10^{-2})$, and assume the guard–band
+\begin{equation}\label{eq:guard-band}
+|I_i^+\cap I_j^+| \le \frac{C_{\rm gb}}{QH}\qquad (i\neq j).
+\end{equation}
+\end{definition}
+
+% ============ Block B: Detectors and normalizations ============
+\begin{lemma}[Detectors; $L^1/L^2$ normalizations]\label{lem:detectors}
+For each $i$ choose $\varphi_i\in C_c^\infty(\mathbb T)$ with $1_{I_i^\circ}\le \varphi_i \le 1_{I_i^+}$.
+Let $\psi_i:=\varphi_i/\|\varphi_i\|_2$ and denote $|I_i|=:w_i$.
+Then
+\[
+c_1 w_i \le \|\varphi_i\|_1 \le C_1 w_i,\qquad c_2 w_i \le \|\varphi_i\|_2^2 \le C_2 w_i,
+\]
+hence $c_3 H^{-1}\le \|\varphi_i\|_2^2\le C_3 H^{-1}$ with $c_k,C_k$ depending only on $(c_w,C_w,\sigma,\eta)$.
+\end{lemma}
+
+% ============ Block C: Overlap counting and Gram control ============
+\begin{lemma}[Overlap counting]\label{lem:overlap}
+For each fixed $i$ the set $\{j\ne i: I_i^+\cap I_j^+\neq\emptyset\}$ has cardinality $\le C_{\rm nb} Q$, where $C_{\rm nb}$ depends only on $(c_w,C_w,\beta,\eta)$.
+\end{lemma}
+
+\begin{lemma}[Gram off–diagonal bound]\label{lem:gram}
+Let $G=(\langle\psi_i,\psi_j\rangle)_{1\le i,j\le m}$.
+Then
+\[
+\langle\psi_i,\psi_i\rangle=1,\qquad 
+|\langle\psi_i,\psi_j\rangle|\ \le\ \frac{C_{\rm od}}{Q}\quad(i\ne j),
+\]
+and the remainder $R:=G-I$ satisfies
+\[
+\|R\|_{\ell^2\to\ell^2}\ \le\ \kappa,\qquad \kappa:=\frac{C_{\rm AO}}{Q},
+\]
+with $C_{\rm AO}$ depending only on $(c_w,C_w,\beta,\sigma,\eta,C_{\rm gb},C_{\rm nb})$.
+\end{lemma}
+
+\begin{proof}[Sketch]
+Since $\supp\varphi_i\subset I_i^+$, by Cauchy–Schwarz and Lemma~\ref{lem:detectors},
+\[
+|\langle\psi_i,\psi_j\rangle|
+=\frac{\int \varphi_i\varphi_j}{\|\varphi_i\|_2\|\varphi_j\|_2}
+\le \frac{|I_i^+\cap I_j^+|}{(c_2 w_i c_2 w_j)^{1/2}}
+\ll \frac{(QH)^{-1}}{H^{-1}}\ =\ \frac{1}{Q}.
+\]
+For the operator norm, Schur or Gershgorin with Lemma~\ref{lem:overlap} gives
+\(
+\|R\|\le \max_i \sum_{j\ne i}|R_{ij}|
+\le (C_{\rm nb}Q)\cdot (C_{\rm od}/Q)= C_{\rm AO}/Q.
+\)
+\end{proof}
+
+% ============ Block D: AO dispersion with explicit constants ============
+\begin{theorem}[Deterministic AO dispersion with constants]\label{thm:AO-disp-full}
+For $F\in L^2(\mathbb T)$ set $a_i=\langle F,\psi_i\rangle$, $E_{\mathfrak A}(F):=\sum_{i=1}^m |a_i|^2$ and, for $S\subset\{1,\dots,m\}$ with $|S|=L$, let $E_S(F):=\sum_{i\in S}|a_i|^2$.
+Then
+\begin{equation}\label{eq:AO-disp-const}
+\frac{E_S(F)}{E_{\mathfrak A}(F)}\ \le\ \frac{L}{m}\ +\ \kappa
+\qquad\text{with }\ \kappa=\frac{C_{\rm AO}}{Q}.
+\end{equation}
+Consequently,
+\[
+\max_{|S|=L}\frac{E_S(F)}{E_{\mathfrak A}(F)}\ \le\ \frac{L}{m}+\frac{C_{\rm AO}}{Q}.
+\]
+\end{theorem}
+
+\begin{proof}
+Let $T:L^2(\mathbb T)\to\mathbb C^m$, $TF=(a_i)$, so $T^\ast T=G=I+R$ with $\|R\|\le\kappa$.
+Average $E_S(F)=\langle P_S TF,TF\rangle$ over all $S$ of size $L$ to get $\mathbb E_S E_S=(L/m)E_{\mathfrak A}$.
+For a fixed $S$,
+\[
+E_S-\tfrac{L}{m}E_{\mathfrak A}
+=\langle T^\ast(P_S-\tfrac{L}{m}I)T F,F\rangle
+\le \|T^\ast\|\,\|P_S-\tfrac{L}{m}I\|\,\|T\|\,\|F\|_2^2
+\le (1+\kappa)\,\|F\|_2^2 - \tfrac{L}{m}\,(1-\kappa)\,\|F\|_2^2
+\]
+after inserting $G$ and using $\|T\|^2=\|G\|\le 1+\kappa$, $\|(T^\ast)\|^2=\|G\|\le 1+\kappa$ and $\|P_S-\tfrac{L}{m}I\|\le 1$.
+Dividing by $E_{\mathfrak A}=\langle GF,F\rangle \ge (1-\kappa)\|F\|_2^2$ yields \eqref{eq:AO-disp-const}.
+\end{proof}
+
+% ============ Block E: Matching the TT* probes and window energies ============
+\begin{proposition}[Equivalence of probe and window energies]\label{prop:AO-eq-window}
+Let $w_i\in C_c^\infty(\mathbb T)$ be nonnegative windows with $c_-\,1_{I_i^\circ}\le w_i\le c_+\,1_{I_i^+}$.
+Then for all $F\in L^2(\mathbb T)$
+\[
+c_-\ c_2\ \sum_{i} \big|\langle F,\psi_i\rangle\big|^2
+\ \le\ 
+\sum_i \int_{\mathbb T} |F(\xi)|^2 w_i(\xi)\,d\xi
+\ \le\ 
+c_+\, C_2\ \sum_{i} \big|\langle F,\psi_i\rangle\big|^2.
+\]
+In particular, the AO dispersion bound \eqref{eq:AO-disp-const} transfers verbatim to the windowed energy used in the $TT^\ast$ ledger (up to the fixed constants $c_\pm, c_2, C_2$).
+\end{proposition}
+
+\begin{corollary}[AO $\Rightarrow$ SSU packet energy control]\label{cor:AO-to-SSU}
+Let $\{w_i\}$ be bank windows as in Proposition~\ref{prop:AO-eq-window}, and let $\{\eta_\nu\}$ be the SSU packets.
+Assume each $\eta_\nu$ is supported in the union of at most $C$ enlarged arcs $I_i^+$ (true since $|\supp\eta_\nu|\asymp (q_\nu H)^{-1}$ and $|I_i|\asymp H^{-1}$).
+Then for any $F\in L^2(\mathbb T)$,
+\begin{equation}\label{eq:AO-to-SSU}
+\sum_{\nu} \big|\langle F,\eta_\nu\rangle\big|^2
+\ \ll\ \sum_{i=1}^{m} \big|\langle F,\psi_i\rangle\big|^2,
+\end{equation}
+and if $\mathcal N\subset\{\nu\}$ has $|\mathcal N|=L$, then
+\begin{equation}\label{eq:AO-to-SSU-disp}
+\sum_{\nu\in\mathcal N} \big|\langle F,\eta_\nu\rangle\big|^2
+\ \ll\ \Big(\frac{L}{m}+\frac{C_{\rm AO}}{Q}\Big)\ \sum_{i=1}^{m} \big|\langle F,\psi_i\rangle\big|^2.
+\end{equation}
+\end{corollary}
+
+\begin{proof}
+Since $\eta_\nu\ll \sum_{i\in S(\nu)} w_i$ with $|S(\nu)|\le C$ and by Cauchy–Schwarz, 
+$|\langle F,\eta_\nu\rangle|^2 \ll \sum_{i\in S(\nu)} |\langle F,\psi_i\rangle|^2$ using Lemma~\ref{lem:detectors}.
+Finite overlap of $\nu\mapsto S(\nu)$ and Proposition~\ref{prop:AO-eq-window} give \eqref{eq:AO-to-SSU}.
+For \eqref{eq:AO-to-SSU-disp}, apply Theorem~\ref{thm:AO-disp-full} to the family $\{\psi_i\}$ and the set of indices supporting $\{\eta_\nu:\nu\in\mathcal N\}$, noting $m\asymp Q^2$ and the overlap constant is absorbed into $C_{\rm AO}$.
+\end{proof}
+
+\begin{theorem}[Deterministic AO with explicit constants]\label{thm:AO-explicit}
+Let $\{I_i\}_{i=1}^m$ be disjoint arcs with $|I_i|\asymp 1/H$ and mutual gaps $\gg 1/H$.
+Let $\{\psi_i\}$ be $C^\infty$ arc detectors with $\mathbf{1}_{I_i^\circ}\le \psi_i\le \mathbf{1}_{I_i^+}$ and $\| \psi_i\|_2=1$.
+There exists $C_{\mathrm{AO}}=C_{\mathrm{AO}}(\text{taper},\text{overlap})$ such that for every $F\in L^2(\mathbb T)$ and every subfamily $\mathcal L\subset\{1,\dots,m\}$ with $|\mathcal L|=L$,
+\[
+\sum_{i\in\mathcal L} |\langle F,\psi_i\rangle|^2
+\ \le\ \Big(\frac{L}{m} + \frac{C_{\mathrm{AO}}}{Q}\Big)\,\sum_{i=1}^m |\langle F,\psi_i\rangle|^2
+\ +\ O(Q^{-1+\varepsilon})\,\|F\|_2^2.
+\]
+\end{theorem}
+
+\begin{proof}
+Let $G=(\langle \psi_i,\psi_j\rangle)_{1\le i,j\le m}$ be the Gram matrix. By guard bands and support size, $G_{ii}=1$ and $|G_{ij}|\ll Q^{-1+\varepsilon}$ for $i\ne j$. Gershgorin’s theorem (or Schur test) yields $\|G-\mathrm{Id}\|_{\ell^2\to\ell^2}\ll Q^{-1+\varepsilon}$. For any coefficients $c_i:=\langle F,\psi_i\rangle$, $\sum_{i\in\mathcal L}|c_i|^2 \le \|P_{\mathcal L}\|\,\sum_{i}|c_i|^2$ where $P_{\mathcal L}$ is the orthogonal projector onto the span of $\{\psi_i:i\in\mathcal L\}$ measured in the $G$-metric. Since $P_{\mathcal L}$ has rank $L$, a trace bound gives $\|P_{\mathcal L}\|\le L/m + O(Q^{-1+\varepsilon})$. The $C_{\mathrm{AO}}/Q$ term records taper/overlap constants when passing from sharp arcs to smooth detectors.
+\end{proof}

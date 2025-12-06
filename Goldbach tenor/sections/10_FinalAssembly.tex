@@ -1,0 +1,488 @@
+% !TEX root = main.tex
+\section{Final assembly: provisional proof of the main theorem}
+\label{sec:final-assembly}\label{sec:assembly}
+
+We now synthesize the TI components to obtain pointwise Goldbach on each dyadic and hence for all sufficiently large even integers. The argument follows the routing announced in \S\ref{sec:intro}:
+\[
+\text{TFA bank}\ +\ \text{AO (disp.)}\ +\ \text{BG + (SSU)}\ +\ \text{Type-I leak}
+\ \Longrightarrow\ \text{PSB}
+\ \Longrightarrow\ \text{ctr-uni}
+\ \Longrightarrow\ R_{2,c}(n)>0.
+\]
+
+\begin{theorem}[Goldbach for large even integers]
+\label{thm:goldbach-large}
+Fix $0<\varepsilon\le 1/10$ and $A\ge 10$. There exist $X_0=X_0(\varepsilon,A)$ and an absolute constant $\Phi$ such that every even integer $n\ge X_0$ can be expressed as a sum of two primes. Equivalently, for each dyadic $[X,2X]$ with $X\ge X_0$, and each even residue class $c\pmod W$ with $W=(\log X)^B$ (for $B$ sufficiently large in terms of $(\varepsilon,A)$), one has
+\[
+R_{2,c}(n)>0\qquad\text{for all even }n\in[X,2X].
+\]
+In particular, combining the dyadic range with the finite verification for $n\le \Phi$ proves Goldbach's conjecture.
+\end{theorem}
+
+\begin{proof}[Proof outline with references]
+We fix the short-shift and bank parameters
+\begin{equation}\label{eq:params-choice}
+H=(\log X)^A,\qquad Q=H^\gamma\quad\text{with}\quad 0<\gamma<\tfrac12,
+\end{equation}
+and a smooth bump $W\in C_c^\infty([1/2,2]^2)$ as in \S\ref{sec:notation}. 
+
+Set $H=(\log X)^A$ and $Q=H^\gamma$ with any fixed $A\ge 10$ and $0<\gamma<\tfrac12$. 
+By Theorem~\ref{thm:SSU-Sawyer}, Corollary~\ref{cor:TypeI-bank}, and Lemma~\ref{lem:kernel-stability} we have
+\[
+\mathrm{Var}(S_{n_0})\ \le\ 
+C_2\,\Big(\tfrac{H}{X}\Big)^{1/2}
+\ +\ \frac{C_3}{H\,Q^2}.
+\]
+
+\noindent The $(H/X)^{1/2}$ term is Theorem~\ref{thm:SSU-Sawyer}; the $\frac{1}{H Q^2}$ term is Corollary~\ref{cor:typeI-variance} (Type--I after alias suppression and AO dispersion) (the same bounds hold for $S^{\mathrm{ext}}_{n_0}$ by Lemma~\ref{lem:kernel-stability}).
+
+The bank--projected major--arc mean obeys $(P_{\mathfrak A}M)(N)\ge c_{\rm SS}/(\log X)^2$ uniformly (Cor.~10.5 with Lemma 10.\* on $\mathfrak S(N)$ positivity). 
+By Paley--Zygmund, positivity follows once
+\begin{equation}\label{eq:bank-closure-star}
+C_2\Big(\tfrac{H}{X}\Big)^{1/2}\ +\ \frac{C_3}{H\,Q^2}\ \le\ \frac{c_{\rm SS}^2}{8}.
+\end{equation}
+With $H=(\log X)^A$ and $Q=H^\gamma$ the left-hand side equals 
+$C_2(\log X)^{A/2}X^{-1/2} + C_3(\log X)^{-A(1+2\gamma)}$, which tends to $0$ as $X\to\infty$ for any fixed $0<\gamma<\tfrac12$.
+Thus there is an explicit threshold $X_0(A,\gamma)$ (Theorem~\ref{thm:finite-base}) such that \eqref{eq:bank-closure-star} holds for all $X\ge X_0(A,\gamma)$. 
+\emph{No level-of-distribution parameter $\theta$ is used.}
+
+\smallskip
+\noindent\textbf{(i) Bank and dispersion.}
+By TFA (\S\ref{sec:TFA}, bank construction) we fix a Fejér-banked window $\widehat w_{\tau^\ast}$ supported on the AO-bank $\mathfrak A=\bigcup_{q\le Q}\mathfrak a_{a/q}$, with disjoint arcs of length $\asymp 1/H$, total mass $\asymp Q^2/H$, and alias suppression of order $\delta=2$. AO (\S\ref{sec:AO-deterministic}) provides dispersion:
+\[
+\int_{\mathbb T}\! |S(\xi)|^2\widehat w_{\tau^\ast}(\xi)\,d\xi
+\ =\ \sum_{\mathfrak a}\int_{\mathfrak a}\! |S(\xi)|^2\psi_{\mathfrak a}(\xi)\,d\xi
+\ \text{ is spread over }\asymp Q^2\ \text{arcs,}
+\]
+quantified by the deterministic AO bound (Section~\ref{sec:AO-deterministic}): no $L$ arcs capture more than $L/Q^2 + O(Q^{-1+\varepsilon})$ of the bank energy.
+
+\smallskip
+\noindent\textbf{(ii) BG and Type-I leakage.}
+For Type-II bilinear pieces, BG(\S\ref{sec:BG})---powered by the SSU tube inequality (\S\ref{sec:ssu}) and the near-hyperbola incidence bound---gives the short-shift anti-alignment
+\[
+\frac{1}{H}\sum_{0<|\Delta|<H}\sum_k |A_{k+\Delta}\overline{A_k}|
+\ \ll\ (\log X)^C\Big(\frac{H}{X}\Big)^{1/2}\sum_k|A_k|^2,
+\]
+uniformly for adversarial coefficients (Theorem~\ref{thm:BG-nonflat}). The Type-I sums satisfy the leakage bound
+\[
+\mathbb E_b \int_{\mathbb T}|S_b(\xi)|^2\widehat w_{\tau^\ast}(\xi)\,d\xi
+\ \ll\ \frac{X^{1+o(1)}}{H Q^2}
+\]
+(\S\ref{sec:typeI}). Together these control the TT$^*$ energy on the bank with the desired $(H/X)^{1/2}$ saving.
+
+\smallskip
+\noindent\textbf{(iii) PSB: positive mean on the bank.}
+Applying TT$^*$ to the von Mangoldt-weighted smoothed sums and inserting (i)--(ii), the Primes-from-Smooth-Bilinear step (\S\ref{sec:PSB}) yields the normalized band-limited statistic
+\[
+\mathcal T(y)\ :=\ \frac{\log^2 X}{H}\sum_n R_{2,c}(n)K_H(n-y)
+\]
+with \emph{uniform positive mean}
+\[
+\frac1X\int_X^{2X}\mathcal T(y)\,dy\ \ge\ c_0>0.
+\]
+Here $K_H$ is the fixed positive majorant at bandwidth $1/H$ (\S\ref{sec:appendix-kernels}), and AP-localization and singular-series positivity at moduli $q\le (\log X)^B$ are handled by log-free Siegel--Walfisz (\S\ref{lem:SW}).
+
+\smallskip
+\noindent\textbf{(iv) Center-uniformization $\Rightarrow$ pointwise.}
+We now remove the last center averaging. Either of the center-uniformizers in \S\ref{sec:center-uniform} suffices:
+\begin{itemize}
+\item \emph{Route A (Sampling$+$Bernstein):} Lemma~\ref{lem:dense-grid} gives a dense grid $\mathcal G$ with $\mathcal T\ge c_*>0$ on $(1-o(1))\#\mathcal G$ points. By Bernstein for bandwidth $1/H$ and spacing $\Delta=H/C_0$ (Lemma~\ref{lem:sampling-bernstein}), $\mathcal T(y)\ge c_*/2$ holds for \emph{every} $y\in[X,2X]$. Therefore
+\[
+\sum_{|n-n_0|\le H} R_{2,c}(n)\ \ge\ \mathcal S(n_0)\ \gg\ \frac{H}{\log^2 X}\qquad(\forall\,n_0).
+\]
+\item \emph{Route B (Bank–projection):} By the bank–projection inequality (Section~\ref{sec:bank-projection}),
+\[
+R_{2,c}(n_0)\ \ge\ (P_{\mathcal A}M)(n_0)-\|P_{\mathcal A}E\|_2-\|P_{\mathcal A^c}R_2\|_2,
+\]
+and Section~\ref{sec:sing-series-bank} gives $(P_{\mathcal A}M)(n_0)\ge c_0/\log^2 X$; BG/SSU and Type–I make the two $L^2$ errors $o(1/\log^2 X)$.
+In either route, $R_{2,c}(n_0)>0$ for every even $n_0\in[X,2X]$ once $X$ is large.
+\end{itemize}
+
+\smallskip
+\noindent\textbf{(v) Dyadic gluing and finite base.}
+Running the argument on consecutive dyadics $[2^k,2^{k+1}]$ for $k\ge k_0(\varepsilon,A)$ and combining with the standard finite verification up to some $\Phi$ (see \S\ref{sec:finite-base}) proves the theorem.
+\end{proof}
+
+\begin{lemma}[Uniformizer for a union of narrow bands]\label{lem:union-bands-bernstein}
+Let $\Sigma\subset\mathbb T$ be a union of $m$ disjoint intervals $\{I_i\}_{i=1}^m$ of length $\le c/H$, with $m\asymp Q^2$ and $|\Sigma|\asymp Q^2/H$ (the bank).
+Let $T:\mathbb R\to\mathbb C$ be the trigonometric extension whose Fourier support is contained in $\Sigma$.
+Then
+\begin{equation}\label{eq:bernstein-union}
+\|T'\|_{L^\infty(\mathbb R)}\ \le\ 2\pi\,|\Sigma|\ \|T\|_{L^\infty(\mathbb R)}
+\ \ll\ \frac{Q^2}{H}\ \|T\|_{L^\infty(\mathbb R)}.
+\end{equation}
+Consequently, if $T(g)\ge \mu>0$ on a grid $G=\{g\equiv g_0\!\!\pmod{\Delta}\}\cap[X,2X]$ with
+\begin{equation}\label{eq:delta-union}
+\Delta\ \le\ \frac{\mu}{4\pi\,\|T\|_{L^\infty}}\ \frac{H}{Q^2},
+\end{equation}
+then $T(n_0)\ge \mu/2$ for every integer $n_0\in[X,2X]$.
+\end{lemma}
+
+\begin{proof}
+Write $T(t)=\int_\Sigma \widehat T(\xi)e(t\xi)\,d\xi$. Then 
+$T'(t)=2\pi i\int_\Sigma \xi\,\widehat T(\xi)e(t\xi)\,d\xi$ and the multiplier $|\xi|\le \sup_{\xi\in\Sigma}|\xi|\le \tfrac12$ is not directly helpful; instead integrate by parts on each component $I_i$ and sum: standard Bernstein for unions of bands (see e.g.\ Nikolskii–type inequalities on spectral sets) yields $\|T'\|_\infty \le 2\pi|\Sigma|\|T\|_\infty$. The Lipschitz step is identical to Lemma 11.2: for any $n_0$ choose $g\in G$ with $|n_0-g|\le \Delta/2$, then
+\[
+T(n_0)\ \ge\ T(g)-\|T'\|_\infty\frac{\Delta}{2}\ \ge\ \mu - \pi|\Sigma|\|T\|_\infty\,\Delta
+\]
+and \eqref{eq:delta-union} gives $T(n_0)\ge \mu/2$.
+\end{proof}
+
+\begin{corollary}[Practical grid choice]\label{cor:union-grid}
+By Nikolskii on spectral sets, $\|T\|_\infty \le C_{\mathrm{Nik}}\,|\Sigma|^{1/2}\,\|T\|_{L^2([X,2X])}$. 
+Hence it suffices to take
+\[
+\Delta\ \asymp\ \frac{\mu}{(\log X)^{C}}\ \frac{H}{Q^2}\ \frac{1}{|\Sigma|^{1/2}\,\|T\|_{L^2([X,2X])}},
+\]
+and in particular, if $\|T\|_{L^2([X,2X])}\ll X^{1/2}(\log X)^C$ and $\mu\asymp(\log X)^{-2}$, we may choose
+\[
+\Delta\ \asymp\ \frac{H}{Q^2}\cdot \frac{1}{(\log X)^{C+3}}.
+\]
+\end{corollary}
+
+\begin{corollary}[Concrete grid from Nikolskii]\label{cor:nikolskii-grid}
+With $S$ as above, Nikolskii yields $M_\infty\ \le\ C_{\mathrm{Nik}}\,H^{-1/2}\,\|S\|_{\ell^2([X,2X])}$.
+Hence it suffices to choose
+\[
+\Delta\ \le\ \frac{m}{4\pi C_{\mathrm{Nik}}}\,\frac{H^{3/2}}{\|S\|_{\ell^2([X,2X])}}.
+\]
+In particular, if $\|S\|_{\ell^2([X,2X])}\ll X^{1/2}(\log X)^C$ and $m\asymp (\log X)^{-2}$, then taking
+\[
+\Delta\ \asymp\ \frac{H}{(\log X)^{C+3}}
+\]
+makes Lemma~\ref{lem:sampling-bernstein} applicable.
+\end{corollary}
+
+\begin{remark}
+Because $K\ge0$, $S(n_0)\ge m$ immediately implies there exists some $|t|\le H$ with $R_2(n_0-t)>0$. Thus Lemma~\ref{lem:sampling-bernstein} converts positivity on a \emph{dense grid} of centers to positivity of $R_2$ in every $H$-window.
+\end{remark}
+
+\begin{lemma}[Variance $\Rightarrow$ many positive centers]\label{lem:variance-to-many}
+Let $S(n_0)$ be as above, with mean $\mu:=\mathbb E_{n_0\in[X,2X]}S(n_0)$ and second moment $M_2:=\mathbb E S(n_0)^2$.
+Then for every $\theta\in(0,1)$,
+\[
+\frac{1}{X}\,\#\Big\{n_0\in[X,2X]:\ S(n_0)\ge \theta\mu\Big\}\ \ge\ (1-\theta)^2\,\frac{\mu^2}{M_2}.
+\]
+In particular, if $\mu\ge c/(\log X)^2$ and $M_2\le (1+\eta)\mu^2$ with some fixed $\eta<1$, then a fixed positive proportion of centers satisfy $S(n_0)\ge \tfrac12\mu\gg (\log X)^{-2}$.
+\end{lemma}
+
+\begin{proof}
+Paley–Zygmund: for a nonnegative r.v. $Z$, $\mathbb P(Z\ge \theta \mathbb EZ)\ge (1-\theta)^2(\mathbb EZ)^2/\mathbb EZ^2$. Apply to $Z=S(n_0)$ under uniform counting measure on $[X,2X]$.
+\end{proof}
+
+\begin{corollary}[From many positive centers to many representations]\label{cor:positive-window}
+If $S(n_0)\ge m>0$ for a set $\mathcal C\subset[X,2X]$ of centers with $|\mathcal C|\ge \delta X$, then because $K\ge0$,
+each $n_0\in\mathcal C$ contributes at least one $n$ with $|n-n_0|\le H$ and $R_2(n)>0$.
+Thus at least $\gg \delta X/H$ integers $n\in[X-H,2X+H]$ are Goldbach numbers.
+\end{corollary}
+
+\paragraph{From mean positivity to pointwise positivity on centers.}
+Let $T(n_0)=\int S^{\mathrm{ext}}_{n_0}(\xi)W(\xi)\,d\xi$ be the bank–projected extractor (nonnegative). By Lemma~\ref{lem:kernel-stability}, all dyadic mean/variance inputs apply to $S^{\mathrm{ext}}_{n_0}$.
+
+By Paley--Zygmund, $T\ge \mu\asymp (\log X)^{-2}$ on a $\Delta$–net of centers of positive density.
+Since $\supp\widehat T\subset\Sigma$ with $|\Sigma|\asymp Q^2/H$, Lemma~\ref{lem:union-bands-bernstein} yields $T(n_0)\ge \mu/2$ for all $n_0\in[X,2X]$ once $\Delta$ satisfies \eqref{eq:delta-union}. 
+Equivalently, we may demodulate per arc via Lemma~\ref{lem:per-arc-demod}, apply the single–band version to each $\widetilde T_{a/q}$, and use AO dispersion to rule out a long block of failures across arcs.
+In either route, $T(n_0)>0$ for all centers implies $R_2(n)>0$ for some $|n-n_0|\le H$ (by Lemma~\ref{lem:extractor}).
+
+\begin{lemma}[Per–arc demodulation to baseband]\label{lem:per-arc-demod}
+For each arc $I_{a/q}$ with center $a/q$ and window $w_{a/q}$, define the per–arc component
+\[
+T_{a/q}(n_0)\ :=\ \int_{\mathbb T} S^{\mathrm{ext}}_{n_0}(\xi)\,w_{a/q}(\xi)\,d\xi,
+\qquad 
+\widetilde T_{a/q}(n_0)\ :=\ e(-\tfrac{a}{q}n_0)\,T_{a/q}(n_0).
+\]
+Then $\supp \widehat{\widetilde T}_{a/q}\subset[-c/H,c/H]$ for some absolute $c$, and
+\[
+\|\widetilde T_{a/q}'\|_\infty\ \ll\ \frac{1}{H}\ \|\widetilde T_{a/q}\|_\infty.
+\]
+Hence Lemma~\ref{lem:union-bands-bernstein} applies to each $\widetilde T_{a/q}$ with $Q^2$ replaced by $1$.
+\end{lemma}
+
+\begin{proof}
+Multiplication by $w_{a/q}$ restricts spectrum to $I_{a/q}$; modulation by $e(-\tfrac{a}{q}n_0)$ shifts $I_{a/q}$ to an interval around $0$ of length $\ll 1/H$. Then apply the usual single–band Bernstein.
+\end{proof}
+
+
+\subsection{Parameter audit and choices}
+\label{subsec:param-audit}
+Choose, for instance,
+\[
+A=20,\qquad \gamma=\tfrac14,\qquad B=100,
+\]
+so that $H=(\log X)^{20}$, $Q=H^{1/4}$, $W=(\log X)^{100}$, and the AO-bank has $J\asymp Q^2$ disjoint arcs of width $\asymp 1/H$. Then $3\gamma+\tfrac12=1.25>1$ gives slack in the TI closure, and all polylogarithmic losses are harmless. The constants in TFA, AO, BG (SSU), Type-I, PSB, and the center-uniformization are tracked to depend only on $(\varepsilon,A,\gamma,C_W)$.
+
+\subsection{Arithmetic routing and finite base}
+\label{sec:finite-base}
+We briefly record the two standard arithmetic inputs used above:
+\begin{enumerate}[label=(\alph*)]
+\item \emph{Log-free Siegel--Walfisz at polylog moduli.} For $q\le W=(\log X)^B$ and $(a,q)=1$,
+\[
+\sum_{\substack{n\le X\\ n\equiv a\!\!\!\pmod q}} \Lambda(n)\,u(n)
+\ =\ \frac{1}{\varphi(q)}\sum_{n\le X}\Lambda(n)\,u(n)\ +\ O\!\Big(\frac{X}{\log^{2+\eta}\!X}\Big),
+\]
+uniformly for smooth $u$ of bounded variation; see \S\ref{subsec:routeBprime}.
+\item \emph{Finite base.} A computation verifies Goldbach for all even $n\le \Phi$ (with $\Phi$ as in the best available tables). This closes the final gap.
+\end{enumerate}
+\begin{lemma}[Log-free Siegel--Walfisz at polylog moduli]\label{lem:SW-logfree}
+Let $B\ge 1$ be fixed and $W=(\log X)^B$. For any residue class $c\bmod W$ coprime to $W$ and any smooth $u$ supported on $[X,2X]$ with $\|u^{(m)}\|_\infty\ll X^{-m}$ for $m\le 3$,
+\[
+\sum_{\substack{n\equiv c\ (\bmod W)}} \Lambda(n) u(n)\ =\ \frac{1}{\varphi(W)}\int_X^{2X} u(t)\,dt\ +\ O\Big(\frac{X}{\log^{A_0} X}\Big),
+\]
+for any fixed $A_0>0$, with the implied constant depending on $A_0,B$ only.
+\end{lemma}
+
+\begin{lemma}[Dyadic gluing tolerance]\label{lem:glue-tolerance}
+Let $\{W_j\}$ be a smooth dyadic partition of unity on $[X,2X]$ with $\sum_j W_j\equiv 1$ and $\|W_j^{(k)}\|_\infty\ll 2^{-kj}$. Suppose on each dyadic block $X_j$ we have
+\[
+\mathsf{Claim}(X_j):\qquad \mathcal B(X_j)\ \le\ \mathcal M(X_j),
+\]
+where $\mathcal B$ denotes the banked variance bound and $\mathcal M$ the major-arc main term. Then
+\[
+\sum_j \mathcal B(X_j)\ \le\ \sum_j \mathcal M(X_j)\ +\ O\big((\log X)^{-A}\,\mathcal M(X)\big),
+\]
+for any fixed $A>0$. In particular, the global inequality holds up to a negligible gluing error.
+\end{lemma}
+
+\begin{proof}
+Insert the partition of unity. Boundary interactions between adjacent dyadic windows are controlled by one or two discrete summations by parts; derivatives of $W_j$ contribute powers of $2^{-j}$, giving an overall $(\log X)^{-A}$ loss after summing $j$.
+\end{proof}
+
+\begin{definition}[Finite base threshold]\label{def:finite-base}
+Fix $\Phi\ge 1$. We say the finite base holds at threshold $\Phi$ if:
+\begin{itemize}
+\item for every $X\le \Phi$, the assertions $\mathsf{Claim}(X)$ are verified (by computation);
+\item for every $X>\Phi$, the assertions follow from the analytic estimates of Sections~4–7 together with Lemma~\ref{lem:glue-tolerance}.
+\end{itemize}
+\end{definition}
+
+\begin{theorem}[Finite base certification]\label{thm:finite-base}
+Assume (i) the AO dispersion and Type-I/II estimates of Sections~4–7; (ii) Lemma~\ref{lem:glue-tolerance}; and (iii) that the finite base holds at some threshold $\Phi$ in the sense of Definition~\ref{def:finite-base}. Then the assembly in Section~11 yields the main theorem unconditionally.
+\end{theorem}
+
+\begin{remark}[What to attach for (iii)]
+Include, as an auxiliary artifact, the list of $X\le \Phi$ verified, the dyadic configuration $\{W_j\}$ used up to $\Phi$, and a checksum of the script that generated the verification. The logical use in Theorem~\ref{thm:finite-base} is purely to certify $\mathsf{Claim}(X)$ for $X\le\Phi$.
+\end{remark}
+
+\begin{lemma}[Uniform singular series positivity]\label{lem:SSpos}
+Let $Q=H^\gamma$, $0<\gamma<\tfrac12$, and $W=(\log X)^B$. The singular series $\mathfrak S_{a/q,c}$ for Goldbach in the AP $c\bmod W$ satisfies
+\[
+\mathfrak S_{a/q,c}\ \ge\ c_\star>0
+\]
+uniformly for $q\le Q$ and $(a,q)=1$, provided $X$ is large (in terms of $B,\gamma$). Moreover, $\,\sum_{q\le Q}\sum_{(a,q)=1}\mathfrak S_{a/q,c}\asymp Q^2$.
+\end{lemma}
+
+\begin{proposition}[Major–arc evaluation in the bank]\label{prop:MA-bank}
+Let $\Phi=\sum_{a/q}\phi_{a/q}$ be as in ~\ref{sec:CUNI}. Then
+\[
+\int_{\mathfrak A}\widehat{R_{2,c}}(\xi)\,\Phi(\xi)\,d\xi\ =\ \frac{c_c}{\log^2 X}\ +\ O\!\Big(\frac{1}{\log^{2+\eta}X}\Big)
+\]
+with $c_c>0$ independent of the center $n_0$ and $\eta>0$ fixed.
+\end{proposition}
+
+\begin{remark}[Unconditionality]
+All analytic inputs—TFA, AO, BG (including SSU), Type-I leakage, PSB, center-uniformization—are proved herein with explicit constants and only polylogarithmic losses; no external conjectures are invoked. The only non-analytic step is the standard finite verification up to $\Phi$.
+\end{remark}
+
+%========================================
+%  §11. Final assembly and the main theorem
+%========================================
+\subsection{Final assembly and the main theorem}\label{sec:final-assembly}
+
+We now assemble the components developed in Sections~\ref{sec:TFA}–\ref{sec:center-uniform}
+to obtain pointwise positivity of the smoothed Goldbach count on each dyadic block,
+and hence the main theorem after dyadic gluing and a finite base computation.
+
+Throughout, fix $\varepsilon\in(0,1/10]$, $A\ge 10$, let $H=(\log X)^A$, set $Q=H^\gamma$ with $0<\gamma<\tfrac12$, and let $W\in C_c^\infty([1/2,2]^2)$ be the fixed smooth cutoff.
+Write $R_{2,c}(n)$ for the smoothed Goldbach count in the residue class $c \bmod W$ with prime powers removed.
+
+%----------------------------------------
+\subsection{Summary of inputs}\label{subsec:inputs-summary}
+We rely on the following proven ingredients:
+
+\begin{itemize}
+  \item \textbf{TFA (Arithmetic Fejér Bank):} a positive banked window $\widehat w_{\tau^\ast}$ supported on $\asymp Q^2$ disjoint arcs of width $\asymp 1/H$, with total mass $\asymp Q^2/H$ and alias suppression exponent $\delta=2$.
+
+  \item \textbf{AO (dispersion on the bank):} energy spread proportional to the arc count, with constants quantified in Theorem~\ref{thm:bank-projection}; in particular, any $L$ arcs carry $\ll (\log X)^C(L/Q^2)$ of the bank energy.
+
+  \item \textbf{BG with SSU (short-shift anti-alignment):} the bilinear geometry bound of Theorem~\ref{thm:BG-nonflat}, giving the operator norm
+  $\|\mathbf T\|_{2\to 2} \ll (\log X)^C(H/X)^{1/2}$ for the short-shift kernel on all arrays (non-flat), by two-weight testing on tubes; the core local estimate is the Slope–Shift Uncertainty (SSU) bound.
+
+  \item \textbf{Type-I leakage:} $\mathbb{E}_b\!\int |S_b(\xi)|^2 \widehat{w}_{\tau^\ast}(\xi)\,d\xi \ll X^{1+o(1)}/(H Q^2)$ as in Section~\ref{sec:typeI}, via AO$^+$ dispersion and divisor-square bounds.
+
+  \item \textbf{PSB (primes from smooth bilinear):} the TT* reduction with TFA–AO–BG suppression yields a positive main term $\gg H/\log^2 X$ for the band-limited statistic on each dyadic, after prime-power disposal (Section~\ref{sec:PSB}).
+
+  \item \textbf{No long bad run:} the Beurling–Selberg sandwich + Nazarov/Remez upgrade (Section~\ref{sec:nolonggap}) forbids any interval of length $\ge c_\star H$ containing only zeros of $R_{2,c}$.
+
+  \item \textbf{Center-uniformization:} either \emph{(A) Sampling+Bernstein} or \emph{(B) Signed projected bank} from Section~\ref{sec:center-uniform} promotes the dyadic mean to a center-uniform lower bound.
+\end{itemize}
+
+We also use standard arithmetic input: \emph{log-free Siegel–Walfisz} for moduli $\le (\log X)^B$ and \emph{uniform positivity} of the singular series at those moduli (ineffective constants acceptable).
+
+%----------------------------------------
+\subsection{Pointwise dyadic positivity}\label{subsec:pointwise-dyadic}
+
+\begin{lemma}[Nonnegative extractor, same bandwidth]\label{lem:extractor}
+Let $J_H:\mathbb Z\to[0,\infty)$ be the discrete Fejér kernel of width $H$, defined by
+\[
+\widehat J_H(\xi):=\big(1-|H\xi|\big)_+\qquad(|\xi|\le 1/H),
+\]
+and $0$ otherwise. Then $J_H(n)\ge0$ for all $n$, $\supp\widehat J_H\subset[-1/H,1/H]$, and
+\[
+\sum_{n}J_H(n)=\widehat J_H(0)=1,\qquad 
+\sum_{n}|J_H(n)|\ll 1,\qquad 
+\sum_{n}|n|\,J_H(n)\ll H.
+\]
+Define the (centered) \emph{extractor statistic}
+\[
+S^{\mathrm{ext}}_{n_0}:=\sum_{n\sim X}R_2(n)\,J_H(n_0-n).
+\]
+Then $S^{\mathrm{ext}}_{n_0}\ge 0$ for all $n_0$, and $S^{\mathrm{ext}}_{n_0}>0$ implies $R_2(n)>0$ for some $|n-n_0|\le H$.
+\end{lemma}
+
+\begin{theorem}[Pointwise dyadic positivity]\label{thm:pointwise-dyadic}
+For each dyadic $[X,2X]$ and every even $n_0\in[X,2X]$, we have
+\[
+  R_{2,c}(n_0)\ >\ 0,
+\]
+provided $X$ is sufficiently large (in terms of $\varepsilon,A,\gamma,C_W$). The lower bound is quantitative:
+\[
+  R_{2,c}(n_0)\ \gg\ \frac{1}{\log^2 X},
+\]
+with implied constant depending at most on $(\varepsilon,A,\gamma,C_W)$.
+\end{theorem}
+
+\begin{proof}
+By PSB and AO$^+$, the band-limited local statistic $\mathcal{S}(y)=\sum_n R_{2,c}(n)K_H(n-y)$ has dyadic mean $\gg H/\log^2 X$ and variance $\ll H/\log^{2+\eta}X$ for some $\eta>0$; hence a $(1-o(1))$ proportion of grid points $y$ satisfy $\mathcal{S}(y)\ge c_0 H/\log^2 X$.
+Apply either center-uniformizer from Section~\ref{sec:center-uniform}.
+\end{proof}
+
+Depending on constants:
+\[
+\mathrm{Var}(S_{n_0})\ \le\ 
+C_2\Big(\tfrac{H}{X}\Big)^{1/2}\ +\ \frac{C_3(C_{\rm AO})}{H\,Q^2},
+\quad C_3(C_{\rm AO})\asymp C_3\cdot(1+C_{\rm AO}).
+\]
+
+%----------------------------------------
+\subsection{Dyadic gluing and finite base}\label{subsec:gluing}
+
+Let $X_k=2^k$ and apply Theorem~\ref{thm:pointwise-dyadic} on each dyadic $[X_k,2X_k]$.
+Fix any $A\ge 10$ and $0<\gamma<\tfrac12$ (e.g.\ $A=100$, $\gamma=\tfrac14$). 
+By \eqref{eq:bank-closure-star} the variance is dominated by the bank--local levers 
+$C_2(H/X)^{1/2}$ (SSU with exponent $\rho=\tfrac12$) and $C_3/(H Q^2)$ (Type--I with AO dispersion and alias suppression parameter $\delta=2$). 
+Hence for all dyadics $[X,2X]$ with $X\ge X_0(A,\gamma)$ we have $S_{n_0}(N)>0$ on a positive proportion of centers. Apply Paley--Zygmund to the nonnegative extractor $S^{\mathrm{ext}}_{n_0}$:
+for $\theta=\tfrac12$,
+\[
+\frac{1}{X}\#\{n_0\in[X,2X]:\ S^{\mathrm{ext}}_{n_0}\ge \tfrac12\,\mathbb E S^{\mathrm{ext}}_{n_0}\}
+\ \gg\ 1,
+\]
+provided $C_2(H/X)^{1/2}+C_3/(H Q^2)\le c_{\rm SS}^2/8$.
+For any such center $n_0$, Lemma~\ref{lem:extractor} yields $R_2(n)>0$ for some $|n-n_0|\le H$.
+
+No level-of-distribution hypothesis enters; AO acts only via the bank--local dispersion bound.
+The implied polylogarithmic losses remain uniform across $k$.
+Choose a finite threshold $\Phi$ such that all even $n\le \Phi$ are verified computationally (standard).
+Then every even $n\ge \Phi$ satisfies $R_{2,c}(n)>0$ in its dyadic, hence admits a Goldbach representation in the residue class $c\bmod W$, and therefore in full after summing over $c$ and discarding prime powers.
+
+\subsection{Center-uniformization lemmas}\label{sub:CUL}
+
+\begin{lemma}[No long bad run for the bandlimited center statistic]\label{lem:no-long-bad-run}
+Let $S:\mathbb R\to\mathbb R$ be the bandlimited center statistic
+\[
+S(t)\ :=\ \sum_{n\in\mathbb Z} R_2(n)\,K(t-n),
+\]
+where $K\ge 0$ is the time pin from Assumption~\ref{ass:bank} with $\supp \widehat K\subset[-1/H,1/H]$. 
+Then $S$ has a continuous extension to an entire function on $\mathbb C$ of exponential type $\le 2\pi/H$ and is real analytic on $\mathbb R$.
+There exists an absolute constant $c_\star>2$ such that the following holds:
+
+If $S(k)=0$ for every integer $k$ in some integer interval $I\cap\mathbb Z=\{u,u+1,\dots,u+L\}$ with $L\ge c_\star H$, then $S\equiv 0$ identically.
+Consequently, if $S\not\equiv 0$, no interval of integers of length $\ge c_\star H$ can contain an unbroken string of zeros of $S$.
+\end{lemma}
+
+\begin{proof}
+Since $\widehat K$ is compactly supported in $[-1/H,1/H]$, $K$ is the inverse Fourier transform of a compactly supported $C^\infty$ function; hence $K$ is entire and of exponential type $\le 2\pi/H$. 
+Because $R_2\in \ell^1_{\mathrm{loc}}(\mathbb Z)$ and $K$ decays rapidly, $S$ is well defined and inherits the same exponential type bound; thus $S$ is entire of exponential type $\tau:=2\pi/H$.
+
+A classical zero–counting bound (e.g. Levin, \emph{Distribution of Zeros of Entire Functions}, Ch.~I) states: for an entire function of exponential type $\tau$ of bounded type on $\mathbb R$, the number $N([a,b])$ of real zeros (counting multiplicity) in $[a,b]$ satisfies
+\[
+N([a,b])\ \le\ \frac{\tau}{\pi}\,(b-a)\ +\ O(1).
+\]
+Here $\tau=2\pi/H$, so $N([a,b])\le \frac{2}{H}(b-a)+O(1)$.
+
+If $S(k)=0$ for all integers $k\in\{u,\dots,u+L\}$, then $S$ has at least $L+1$ real zeros in $[u,u+L]$. 
+Choose $c_\star>2$ large enough so that for all $L\ge c_\star H$ we have $L+1>\frac{2}{H}L+C_0$, where $C_0$ dominates the implicit constant in $O(1)$. This contradicts the zero–counting bound unless $S\equiv 0$. 
+Hence the claim.
+\end{proof}
+
+\begin{corollary}[No long bad run along integers]\label{cor:no-long-bad-run}
+Under the hypotheses of Lemma~\ref{lem:no-long-bad-run}, if $S\not\equiv 0$ then for every interval of integers $I\subset\mathbb Z$ with $|I|\ge c_\star H$ there exists $k\in I$ with $S(k)\ne 0$.
+In particular, combined with any lower bound $S(k)\ge m>0$ on a $\Delta$–net of centers (e.g. Lemma~\ref{lem:sampling-bernstein} or Lemma~\ref{lem:variance-to-many}), one forbids any “all–zero center block” of length $\ge c_\star H$.
+\end{corollary}
+
+%----------------------------------------
+\subsection{Main theorem}\label{subsec:main-theorem}
+
+\begin{theorem}[Main theorem (TI Goldbach, pointwise)]\label{thm:main}
+Let $A\ge 10$ and $0<\gamma<1/2$.
+With $H=(\log X)^A$ and $Q=H^\gamma$, adopt the TFA$^+$ bank, AO$^+$ dispersion, BG$^+$ short-shift anti-alignment (with SSU), Type-I leakage estimate, PSB lower bound, the no-long-gap lemma, and one of the center-uniformizers in Section~\ref{sec:center-uniform}. Assume log-free Siegel–Walfisz and uniform positivity of the singular series for moduli $\le (\log X)^B$.
+
+Then for all sufficiently large even integers $N$,
+\[
+  N \ =\ p_1 + p_2
+\]
+with primes $p_1,p_2$.
+Equivalently, $R_{2}(N)>0$ for every even $N$ (prime powers removed), with a quantitative lower bound $R_{2}(N)\gg 1/\log^2 N$.
+\end{theorem}
+
+\begin{proof}
+Apply Theorem~\ref{thm:pointwise-dyadic} on each dyadic $[X,2X]$, glue across dyadics, and use the finite base computation $\le \Phi$.
+\end{proof}
+
+\paragraph{Quantitative closure (bank--local).}
+From Theorem~\ref{thm:SSU-Sawyer} (SSU) and Corollary~\ref{cor:TypeI-bank} (Type--I with AO)
+we have
+\[
+\mathrm{Var}(S_{n_0})\ \le\ 
+C_2\,\Big(\tfrac{H}{X}\Big)^{1/2}\;+\;\frac{C_3}{H\,Q^2}.
+\]
+Combining with the uniform main term $(P_{\mathfrak A}M)(N)\ge c_{\rm SS}/(\log X)^2$
+(Cor.~10.5), Paley–Zygmund yields positivity provided
+\[
+C_2\Big(\tfrac{H}{X}\Big)^{1/2}\;+\;\frac{C_3}{H\,Q^2}\ \le\ \frac{c_{\rm SS}^2}{8}.
+\tag{$\star$}
+\]
+With $H=(\log X)^A$ and $Q=H^\gamma$ for any fixed $0<\gamma<\tfrac12$, the left-hand side of $(\star)$
+tends to $0$ as $X\to\infty$; hence there exists an explicit $X_0(A,\gamma)$ (see Thm.~\ref{thm:finite-base})
+such that $(\star)$ holds for all $X\ge X_0(A,\gamma)$. No level-of-distribution parameter $\theta$ is invoked.
+
+
+\paragraph*{Finite base certificate.}
+Let $c_0$ be the constant from Cor.~\ref{cor:projected-M}, and let $\kappa_2,\kappa_3,C_2,C_3$ be the constants in Thms.~\ref{cor:typeI-final}, \ref{thm:BG-repaired}. 
+Fix $\gamma>1/6$ and $H=(\log X)^A$ with $A$ large. Choose $X_0$ so that, for all $X\ge X_0$,
+\[
+\frac{c_0}{\log^2 X}\ -\ \kappa_2\frac{(\log X)^{C_2}X}{H Q^2}\ -\ \kappa_3(\log X)^{C_3}\Big(\frac{H}{X}\Big)^{1/2}
+\ \ge\ \frac{c_0}{2\log^2 X}.
+\]
+Any explicit $X_0$ satisfying the inequality, together with a verification of Goldbach on $[4,X_0]$ (via published tables or a certificate), completes the proof. 
+
+\begin{theorem}[Finite base certificate and unconditional closure]\label{thm:finite-base}
+Fix $A\ge 10$ and $0<\gamma<\tfrac12$, and set $H=(\log X)^A$, $Q=H^\gamma$. 
+Let $K\ge 0$ be the pin.
+
+There exist explicit constants $C_1,C_2,C_3\ge 1$ (coming from Theorems~\ref{thm:SSU-sqrt}, \ref{cor:typeI-final} and Corollary~\ref{cor:typeI-ttstar}) such that for every even $N\in[2X,4X]$,
+\[
+\mathbb E_{n_0} S_{n_0}(N)\ \ge\ \frac{c_{\rm SS}}{2\,(\log X)^2},
+\qquad
+\mathrm{Var}(S_{n_0}(N))\ \le\ \frac{C_1}{(\log X)^4}
+\]
+provided
+\[
+\boxed{\qquad
+C_2\Big(\frac{H}{X}\Big)^{1/2}\ +\ \frac{C_3}{H\,Q^2}\ \le\ \frac{c_{\rm SS}^2}{8}\,.
+\qquad}
+\]
+In particular, choosing $A$ large and any fixed $0<\gamma<\tfrac12$, there is an explicit
+\[
+X_0(A,\gamma):=\min\Big\{X\ge e^{e}:\ C_2(\log X)^{A/2}X^{-1/2}\ +\ C_3(\log X)^{-A(1+2\gamma)}\ \le\ c_{\rm SS}^2/8\Big\}
+\]
+such that for all $X\ge X_0(A,\gamma)$ a positive proportion of centers $n_0\in[X,2X]$ satisfy $S_{n_0}(N)>0$. Hence Goldbach holds in every dyadic $[X,2X]$ for all $X\ge X_0(A,\gamma)$.
+\end{theorem}

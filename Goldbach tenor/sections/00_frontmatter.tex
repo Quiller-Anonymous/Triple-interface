@@ -1,0 +1,39 @@
+
+
+%--------------------------------------------------------
+%  00_frontmatter.tex — Title, authors, abstract, metadata
+%--------------------------------------------------------
+
+\begin{abstract}
+We develop a research program to prove a bank--local closure for the binary Goldbach correlation using three ingredients that are unconditional at polylogarithmic scales: (i) a deterministic arc--occupancy (AO) dispersion bound for a Farey bank of moduli $q\le Q=(\log X)^{A\gamma}$, stating that no subfamily of $L$ arcs captures more than its proportional share $L/m$ of the bank energy up to $O(Q^{-1+\varepsilon})$; (ii) a two--axis short--shift uncertainty (SSU) estimate that yields a square--root saving $\big(H/X\big)^{1/2}$ for the minor--arc variance of bank–projected statistics, with $H=(\log X)^A$; and (iii) a Type--I leakage bound at the banked scale which, combined with AO dispersion and alias suppression, contributes $X/(H Q^2)$ to the global variance.
+
+Let $H=(\log X)^A$ with $A\ge 10$ and $Q=H^\gamma$ with any fixed $0<\gamma<\tfrac12$. Uniform major--arc asymptotics and positivity of the singular series give a bank--projected mean $\gg (\log X)^{-2}$. The minor--arc variance is bounded by
+\[
+\mathrm{Var}\ \ll\ C_2\Big(\tfrac{H}{X}\Big)^{1/2}\ +\ \frac{C_3}{H\,Q^2}\,,
+\]
+for absolute $C_2,C_3\ge 1$. Hence, for each fixed $A$ and $\gamma\in(0,\tfrac12)$ there exists an explicit $X_0(A,\gamma)$ such that Paley--Zygmund yields positivity in every dyadic $[X,2X]$ for $X\ge X_0(A,\gamma)$. In our ledger the closure is governed solely by the two bank--local levers $(H/X)^{1/2}$ and $1/(H Q^2)$ together with the uniform main term. Center-uniformization completes the pointwise step.
+
+\end{abstract}
+
+% If you want the TOC on the title page or not; usually after \maketitle
+\maketitle
+
+% Optional: outline/roadmap paragraph
+\noindent\textbf{This} is a research plan to solve the Goldbach conjecture.
+Section~\ref{sec:intro} states the TI framework and the main theorem.
+Sections~\ref{sec:TFA}--\ref{sec:AO-deterministic} develop TFA and AO.
+Sections~\ref{sec:BG}--\ref{sec:ssu} establish BG (non-flat) and the slope--shift uncertainty.
+Section~\ref{sec:typeI} treats type-I leakage. Section~\ref{sec:PSB} proves the PSB step.
+We pass from dyadic mean positivity to pointwise positivity by \emph{two} routes.
+\emph{Route A} is a quantitative Sampling+Bernstein (Logvinenko–Sereda) argument at bandwidth $1/H$.
+\emph{Route B} is a bank–projection inequality: for the Fourier projector (or a smoothed variant) $P_{\cA}$ onto the bank,
+\[
+R_2(N)\ \ge\ (P_{\cA} M)(N) - \|P_{\cA}E\|_2 - \|P_{\cA^c}R_2\|_2,
+\]
+and the bank–summed singular series yields $(P_{\cA} M)(N)\gg 1/\log^2 X$ uniformly, while the two $L^2$ errors inherit the $ (\log X)^C(H/X)^{1/2}$ decay from SSU and Type–I.
+Either route suffices; we present both to emphasize robustness.
+Section~\ref{sec:center-uniform} carries out the arithmetic routing. Section~\ref{sec:final-assembly} assembles the provisional proof of Goldbach and records parameter choices. Appendices contain kernel details and auxiliary bounds and other treats.
+
+% If you want the table of contents right after frontmatter:
+% \setcounter{tocdepth}{2}
+% \tableofcontents

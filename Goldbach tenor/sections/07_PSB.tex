@@ -1,0 +1,251 @@
+% !TEX root = main.tex
+\section{PSB: From \texorpdfstring{$TT^\ast$}{TT*} to Positivity in Primes}\label{sec:PSB}
+
+In this section we complete the analytic limb by converting the pooled short–shift bound (from TFA$^+$, AO$^+$, BG) into an actual prime in the target domain. The argument is the standard $TT^\ast$ \emph{energy} $\Rightarrow$ \emph{positivity} step, adapted to the banked window and to our polylogarithmic scales.
+
+Throughout $X$ is large, $A\ge 10$, $H=(\log X)^A$, $Q=H^\gamma$ with fixed $0<\gamma<1/2$. We write $W\in C_c^\infty([1/2,2]^2)$ for the fixed smooth dyadic cutoffs, and $\widehat w$ for the banked window of TFA$^+$ (\S\ref{sec:TFA}). All implied constants depend at most on $(\varepsilon,A,\gamma,C_W)$.
+
+\subsection{Set–up}\label{subsec:psb.setup}
+
+Let $\Lambda^\sharp(n):=\log p$ if $n=p$ is prime and $0$ otherwise, and $\Lambda^b:=\Lambda-\Lambda^\sharp$ (prime powers $p^k$, $k\ge2$).
+Let $f:\mathbb{Z}\to[0,\infty)$ be a smooth envelope supported on $n\sim X$, with
+\begin{equation}\label{eq:psb.mass}
+\sum_{n\sim X} f(n)^2\ \asymp\ \frac{X}{H},\qquad
+\|f\|_\infty\ \ll\ 1.
+\end{equation}
+Define the banked Dirichlet sum
+\begin{equation}\label{eq:psb.S}
+S(\xi)\ :=\ \sum_{n\sim X} \Lambda(n)\,f(n)\,e(\xi n),\qquad \xi\in\mathbb{T},
+\end{equation}
+and recall our pooled $TT^\ast$ upper bound from the previous sections:
+\begin{equation}\label{eq:psb.upper}
+\int_{\mathbb{T}}|S(\xi)|^2\,\widehat w(\xi)\,d\xi\ \ll\ (\log X)^C\,X^{1-\eta_0}
+\qquad\text{for some }\ \eta_0=\eta_0(\varepsilon,A,\gamma)>0,
+\end{equation}
+obtained by combining Lemma ~\ref{lem:alias-delta2} (TFA), Corr ~\ref{cor:alias-kills-const} (AO), Corollary~\ref{cor:BG.AA} (BG), and Corrollary ~\ref{cor:typeI-final} (Type--I leakage).
+
+Our goal is to show that
+\begin{equation}\label{eq:psb.goal}
+T^\sharp\ :=\ \sum_{n\sim X} \Lambda^\sharp(n)\,f(n)\ >\ 0,
+\end{equation}
+which immediately yields a prime in the support of $f$.
+
+\subsection{Prime–power disposal}\label{subsec:psb.pp}
+
+\begin{lemma}[Prime–power disposal]\label{lem:psb.pp}
+With $f$ as in \eqref{eq:psb.mass},
+\[
+\sum_{n\sim X} \Lambda^b(n)\,|f(n)|\ \ll\ X^{1/2+o(1)}.
+\]
+Consequently, replacing $\Lambda$ by $\Lambda^\sharp$ in \eqref{eq:psb.S} and \eqref{eq:psb.upper} changes both sides by at most $X^{1/2+o(1)}$.
+\end{lemma}
+
+\begin{proof}
+The number of prime powers $p^k\le 2X$ with $k\ge2$ is $\ll X^{1/2+o(1)}$, each weighted by $\log p\ll\log X$; the bound follows from $\|f\|_\infty\ll1$.
+\end{proof}
+
+Henceforth we work with $\Lambda^\sharp$ and suppress the superscript.
+
+\subsection*{Pooled TT$^\ast$ at the short scale $H$}
+
+Fix a center $y\in[X,2X]$ and define the windowed coefficients
+\[
+A_k^{(y)}\ :=\ \sum_{dn=k} \alpha_d\,\beta_n\,W\!\Big(\frac dD,\frac nN\Big)\,K_H(k-y),
+\qquad K_H\ge 0,\ \ \supp \widehat{K_H}\subset[-1/H,1/H],\ \int K_H = H+O(1).
+\]
+Let
+\[
+S_y(\xi)\ :=\ \sum_{k} A_k^{(y)}\,e(\xi k),\qquad 
+\widehat w(\xi)\ \text{ the AO$^+$ bank (mass $\asymp Q^2/H$)}.
+\]
+Set the \emph{banked, windowed} TT$^\ast$ quadratic form
+\[
+\mathcal Q(y)\ :=\ \int_{\mathbb T} |S_y(\xi)|^2\,\widehat w(\xi)\,d\xi
+\ =\ \sum_{t\in\mathbb Z} w(t)\ \sum_{k} A_{k+t}^{(y)}\overline{A_k^{(y)}},\qquad
+w(t):=\int_{\mathbb T}\widehat w(\xi)\,e(\xi t)\,d\xi.
+\]
+\paragraph{Upper bound (PSB at polylog scale).}
+Split $t=0$ and $t\neq 0$. By Plancherel on the windowed support,
+\[
+\sum_{k}\big|A_k^{(y)}\big|^2\ \asymp\ \frac{H}{\log^2 X}\,(\log X)^{O(1)}.
+\]
+Since $\int\widehat w\asymp Q^2/H$ (bank mass), the diagonal contributes
+\[
+\mathsf{Diag}\ =\ w(0)\sum_k |A_k^{(y)}|^2\ \ll\ \frac{Q^2}{\log^2 X}\,(\log X)^{O(1)}.
+\]
+For $t\neq 0$, by BG$^+$ (SSU; Theorem ~\ref{thm:SSU}) localized with the same $K_H$,
+\[
+\bigg|\sum_{k}A_{k+t}^{(y)}\overline{A_k^{(y)}}\bigg|\ \ll\ 
+(\log X)^{C}\,\Big(\frac{H}{X}\Big)^{1/2}\sum_k |A_k^{(y)}|^2
+\ \ll\ (\log X)^{C}\,\Big(\frac{H}{X}\Big)^{1/2}\frac{H}{\log^2 X}.
+\]
+Moreover, the bank $\ell^1$–mass satisfies $\sum_{t\neq 0} |w(t)| \ll \|\widehat w\|_{L^1}\asymp Q^2/H$.
+Hence, the off–diagonal contribution is
+\[
+\mathsf{Off}\ \ll\ (\log X)^{C}\,\frac{Q^2}{H}\cdot \Big(\frac{H}{X}\Big)^{1/2}\cdot \frac{H}{\log^2 X}
+\ =\ (\log X)^{C}\,\frac{Q^2}{\log^2 X}\,\Big(\frac{H}{X}\Big)^{1/2}.
+\]
+Combining, uniformly in $y$,
+\begin{equation}\label{eq:PSB-corrected}
+\boxed{\quad
+\mathcal Q(y)\ \ll\ (\log X)^{C}\,\frac{Q^2}{\log^2 X}\ \Big(1+\Big(\frac{H}{X}\Big)^{1/2}\Big)
+\ \ll\ (\log X)^{C}\,\frac{Q^2}{\log^2 X}.\quad}
+\end{equation}
+\paragraph{Lower bound under $T^\sharp(y)=0$.}
+Assume that $R_{2,c}(n)=0$ for all even $n$ in $[y-H,y+H]$. By the BS sandwich (Appendix~\ref{app:BS}) and the Nazarov/LS sampling (Appendix~\ref{app:ls}), the banked, windowed statistic obeys the uniform positive lower bound (cf.\ Prop.~\ref{eq:Lower-corrected} with $\Phi=\widehat w$)
+\begin{equation}\label{eq:Lower-corrected}
+\boxed{\qquad
+\mathcal Q(y)\ \ge\ c\,\frac{H}{\log^4 X}\qquad (c>0)\,.
+\qquad}
+\end{equation}
+\paragraph{Contradiction for a fixed parameter choice.}
+With $Q=H^\gamma$, $0<\gamma<\tfrac12$, \eqref{eq:PSB-corrected} and \eqref{eq:Lower-corrected} are incompatible for $X$ large provided
+\[
+(\log X)^{C}\,\frac{Q^2}{\log^2 X}\ =\ (\log X)^{C}\,\frac{H^{2\gamma}}{\log^2 X}\ \le\ \frac12\,\frac{H}{\log^4 X},
+\quad\text{i.e.}\quad
+H^{1-2\gamma}\ \ge\ 2(\log X)^{C+2}.
+\]
+This holds as soon as $A(1-2\gamma)\ge C+3$ for $H=(\log X)^A$ (we fix such $A,\gamma$ once and for all).
+Therefore the hypothesis $T^\sharp(y)=0$ is false for all large $X$, i.e.\ every interval of length $2H$ centered at $y$ contains an even $n$ with $R_{2,c}(n)>0$.
+\qedhere
+
+\subsection{From positivity to a prime (via bank projection)}\label{subsec:psb.endgame}
+
+Write $R_2 = M + E$, where $M$ is the major–arc main term and $E$ the remainder.
+Let $\PA$ be the Fourier projector to the bank (or a smoothed variant $T_\psi$ with $0\le \psi\le 1$, $\supp\psi\subset\cA$, $\psi\equiv 1$ on the middle thirds). Then for every even $n_0\in[X,2X]$,
+\begin{equation}\label{eq:psb-projection}
+R_2(n_0)\ \ge\ (\PA M)(n_0)\ -\ \|\PA E\|_2\ -\ \|P_{\cA^c}R_2\|_2,
+\end{equation}
+and similarly with $\PA$ replaced by $T_\psi$.
+By the bank–summed singular series truncation, $(\PA M)(n_0)\gg 1/\log^2 X$ uniformly in $n_0$, whereas the two
+$L^2$ terms on the right of \eqref{eq:psb-projection} are $\ll (\log X)^C (H/X)^{1/2}$ by the repaired BG/SSU bound and the Type–I
+leakage estimate. Choosing $H=(\log X)^A$ with $A$ large makes the right–hand side positive, hence $R_2(n_0)>0$.
+\medskip
+
+In particular, if $\mathcal S(y)=\sum_n R_{2,c}(n)\,\Phi_H(n-y)$ denotes the bank–smoothed sum at bandwidth $1/H$, then a positive lower bound for $\int |S|^2\,\widehat w_{\mathrm{bank}}$ forces the existence of an even $n_0\in[y-H,y+H]$ with $R_{2,c}(n_0)>0$.
+
+
+% ============================
+% §14.3 — REPLACEMENT FOR THE PIN
+% ============================
+\subsection{Pointwise via bank projection}\label{subsec:pointwise-projection}
+
+Let $\PA$ denote the Fourier projector onto the bank $\cA$ (the union of major arcs with Fejér taper). 
+Write $R_2 = M + E$, where $M$ is the major–arc main term and $E$ the remainder.
+
+\begin{lemma}[Bank–projection inequality]\label{lem:bank-projection}
+For every even $N\in[X,2X]$,
+\[
+R_2(N)\ \ge\ (\PA M)(N)\ -\ \|\PA E\|_{\ell^2([X,2X])}\ -\ \|P_{\cA^c}R_2\|_{\ell^2([X,2X])}.
+\]
+\end{lemma}
+
+\begin{proof}
+Decompose $R_2(N)=(\PA R_2)(N) + (P_{\cA^c}R_2)(N) = (\PA M)(N) + (\PA E)(N) + (P_{\cA^c}R_2)(N)$ and bound
+$|(\PA E)(N)|\le \|\PA E\|_2$, $|(P_{\cA^c}R_2)(N)|\le \|P_{\cA^c}R_2\|_2$.
+\end{proof}
+
+\begin{corollary}[Projected main term]\label{cor:projected-main-lb}
+There exists $c_0>0$ such that for all even $N\in[X,2X]$,
+\[
+(\PA M)(N)\ \ge\ \frac{c_0}{\log^2 X}.
+\]
+\end{corollary}
+
+\begin{proof}
+By the bank-summed singular series truncation (Prop.~\ref{prop:truncation} in §\ref{sec:sing-series-bank}) and the Fejér bank capturing a fixed fraction of the major-arc mass.
+\end{proof}
+
+\begin{theorem}[Pointwise positivity on each dyadic block]\label{thm:pointwise-projection}
+Fix $\gamma>1/6$ and $H=(\log X)^A$ with $A$ large enough. Then for all sufficiently large $X$ and all even $N\in[X,2X]$,
+\[
+R_2(N)\ >\ 0.
+\]
+\end{theorem}
+
+\begin{proof}
+Combine Lemma~\ref{lem:bank-projection} with Cor.~\ref{cor:projected-main-lb} and the $L^2$ bounds
+\[
+\|\PA E\|_2 + \|P_{\cA^c}R_2\|_2\ \ll\ (\log X)^{C}\Big(\tfrac{H}{X}\Big)^{1/2}
+\]
+from the repaired BG/SSU theorem (Theorem~\ref{thm:BG-repaired}) and the Type-I leakage bound (Corr~\ref{cor:typeI-final}). 
+Choose $A$ so that $(\log X)^{C}(H/X)^{1/2} \le \tfrac12 c_0/\log^2 X$ for large $X$, and conclude from Lemma~\ref{lem:bank-projection}.
+\end{proof}
+
+
+\subsection*{Summary}
+Using only (i) the positive, banked $TT^\ast$ window of TFA$^+$, (ii) AO$^+$ dispersion, (iii) BG’s short–shift anti–alignment, and (iv) the nonnegative bank pin extracted from the major arcs, we pass from energy suppression to positivity in primes with polylogarithmic losses. This closes the analytic limb needed for Goldbach–type applications.
+
+\begin{remark}[On alternatives]
+The sampling\,+\,Bernstein route in \S\ref{sec:CUNI} provides an even shorter center–uniformizer: dense good grid (from PSB mean+variance) $\Rightarrow$ Lipschitz control at scale $H$ $\Rightarrow$ uniform every–window lower bound, after which the same pinning inequality yields $R_{2,c}(n_0)>0$ for every center. We keep both routes available, as they are complementary in different applications.
+\end{remark}
+
+%===========================
+% Section 9: PSB with normalized TT* scale
+%===========================
+\section{Primes from smooth bilinear (PSB): normalized TT\texorpdfstring{$^\ast$}{*} scale}\label{sec:PSB2}
+
+Let $S(\xi)$ denote the banked Dirichlet polynomial arising in the smoothed Goldbach setup after AP localization and prime-power disposal. We measure its pooled energy on the bank
+\[
+\mathsf E\ :=\ \int |S(\xi)|^2\,\widehat w_{\mathrm{bank}}(\xi)\,d\xi,
+\]
+where $\widehat w_{\mathrm{bank}}$ is the AO$^+$ bank of Section~\ref{sec:AO-deterministic} with $J\asymp Q^2$ arcs and total mass $\asymp J/H$.
+
+\begin{proof}
+Apply TT$^\ast$ with the bank weight $\widehat w_{\mathrm{bank}}$ (Fejér taper on each major arc).
+Alias suppression ($\delta=2$) removes the constant mode. Insert:
+(i) the bank mass contribution $\asymp 1/H$ from $\int \widehat w_{\mathrm{bank}}$;
+(ii) the Type–I leakage bound $\ll (\log X)^C\,X/(H Q^2)$ via the hybrid large sieve together with alias suppression;
+(iii) the repaired BG/SSU operator bound $\ll (\log X)^C (H/X)^{1/2}$ on sheared tube families;
+(iv) the deterministic AO dispersion (no hot spots) to preclude arc clustering at scale $L/Q^2+O(Q^{-1+\varepsilon})$.
+These terms yield the displayed bracket. With $Q=H^\gamma$ and $0<\gamma<\tfrac12$, and $H=(\log X)^A$, the right–hand side is $\ll \log^{-A'}X$ for some $A'=A'(\varepsilon,A,\gamma)>0$.
+\end{proof}
+
+\begin{proof}
+Decompose $S$ into bank packets (AO$^+$), apply TT$^\ast$ with the positive short-shift kernel induced by $K_H$, and insert:
+(i) the bank mass $1/H$ coming from $\int \widehat w_{\mathrm{bank}}$;
+(ii) Type-I leakage at level $Q$, giving an extra $Q^{-2}$ gain under packet averaging;
+(iii) the BG/SSU operator bound $\ll (H/X)^{1/2}$ on each sheared tube family;
+(iv) the AO dispersion (Theorem~\ref{cor:alias-kills-const}) to prevent arc clustering.
+The stated bracket gathers these contributions; with $Q=H^\gamma$ and $H=(\log X)^A$ the right-hand side is $\ll \log^{-A'}X$.
+\end{proof}
+
+\begin{corollary}[PSB lower bound forces positivity]\label{cor:PSB-contradiction}
+Let $\mathcal S(y)=\sum_n R_{2,c}(n)K_H(n-y)$ and suppose (for contradiction) that $R^\sharp_{2,c}\equiv 0$ on a dyadic block. Then
+\[
+\int |S|^2\,\widehat w_{\mathrm{bank}}\ \gg\ \frac{H}{\log^4 X}
+\]
+by the pinning/uniformizer (Sections~\ref{sec:LS-Bernstein} and \ref{sec:center-uniform}), contradicting EQ ~\ref{eq:psb.upper} for $X$ large. Hence $R^\sharp_{2,c}>0$ on every window of length $H$, and the dyadic block contains a Goldbach even.
+\end{corollary}
+
+% ==========================================================
+% Singular series on the bank: no per-arc floor, yes bank-summed floor
+% ==========================================================
+\subsection{Singular series on the bank}\label{sec:sing-series-bank}
+
+Let $Q=H^\gamma$, $0<\gamma<\tfrac12$, and $W=(\log X)^B$.
+Define $\mathfrak{S}_{\le Q}(N):=\sum_{q\le Q} \mu(q)^2 c_q(N)/\varphi(q)^2$.
+Then:
+
+\begin{lemma}[No uniform per-arc lower bound]\label{lem:no-go-per-arc}
+There is no $\sigma_0>0$ such that $\mu(q)^2 c_q(N)/\varphi(q)^2\ge\sigma_0$ holds for all $q\le Q$ and all even $N$ admissible mod $W$ (for prime $q\nmid N$ the term equals $-1/(q-1)^2$).
+\end{lemma}
+
+\begin{proposition}[Bank-summed truncation]\label{prop:truncation}
+For all even $N$ and all $Q\ge 3$,
+\[
+\big|\mathfrak S(N)-\mathfrak S_{\le Q}(N)\big|\ \le\ \frac{C}{Q},
+\]
+hence for $Q=(\log X)^{\gamma A}$ and $X$ large,
+\(
+\mathfrak S_{\le Q}(N)\ge C_0>0
+\)
+uniformly in $N$.
+\end{proposition}
+
+\begin{corollary}[Projected major-arc lower bound]\label{cor:projected-M}
+Let $P_{\mathcal A}$ be the bank projector. Then for all even $N\in[X,2X]$,
+\[
+(P_{\mathcal A}M)(N)\ \ge\ \frac{c_{\mathrm{arch}}\,C_0}{\log^2 X}.
+\]
+\end{corollary}

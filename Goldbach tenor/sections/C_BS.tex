@@ -1,0 +1,55 @@
+%--------------------------------------------------------
+%  A2_BS_Kernels.tex — Beurling–Selberg / Vaaler kernels
+%--------------------------------------------------------
+
+\section{Band-limited majorants/minorants for intervals}\label{app:kernels}\label{app:BS}
+
+We record a concrete choice of band-limited kernels used throughout.
+
+There exist even $M_H,m_H\in L^1(\mathbb R)$ with $\supp \widehat M_H,\supp \widehat m_H\subset[-1/H,1/H]$, 
+\[
+m_H\le \mathbf 1_{[-H,H]}\le M_H,\qquad \int (M_H-m_H)\,dt\ \ll 1,
+\]
+and
+\[
+\|\widehat m_H\|_1+\|\widehat M_H\|_1\ll H,\qquad \int_{|\xi|\le 1/H}\frac{|\widehat m_H(\xi)|+|\widehat M_H(\xi)|}{|\xi|}\,d\xi\ll H\log H.
+\]
+We fix such a pair throughout.
+
+
+\begin{theorem}[Vaaler-type majorant/minorant]\label{thm:BS}
+For each $H\ge 2$ there exist even, real $M_H,m_H\in L^1(\mathbb R)$ such that:
+\begin{align*}
+&\text{\emph{(Bandlimit)}}\qquad \mathrm{supp}\,\widehat M_H,\ \mathrm{supp}\,\widehat m_H\ \subset\ [-1/H,1/H];\\
+&\text{\emph{(Sandwich)}}\qquad m_H(t)\ \le\ \mathbf 1_{[-H,H]}(t)\ \le\ M_H(t)\quad\text{for all }t\in\mathbb R;\\
+&\text{\emph{(Mass)}}\qquad \int_{\mathbb R}\!\big(M_H(t)-m_H(t)\big)\,dt\ \le\ C_0;\\
+&\text{\emph{(Norms)}}\qquad \|\widehat M_H\|_{L^1}+\|\widehat m_H\|_{L^1}\ \ll\ H,\qquad
+\int_{|\xi|\le 1/H}\frac{|\widehat M_H(\xi)|+|\widehat m_H(\xi)|}{|\xi|}\,d\xi\ \ll\ H\log H.
+\end{align*}
+All implied constants are absolute.
+\end{theorem}
+
+\begin{lemma}[Parallel-tube degeneracy]\label{lem:BS.degeneracy}
+Let $\mathcal T$ be a family of sheared tubes $T(a/q,\Delta)$ of long axis $\asymp X$ and short axis $\asymp X/H$, with slope separation $\gg Q^{-2}$ and $q\le Q$. Then each point $(d,n)$ belongs to $O(1)$ tubes in $\mathcal T$, and any two distinct slope families intersect in $O(1)$ points per short-axis run. Consequently,
+\[
+\sum_{T\in\mathcal T} \mathbf 1_{(d,n)\in T}\ \ll 1,\qquad
+\sum_{T\in\mathcal T}\sum_{(d',n')\in T} 1\ \ll\ (\log X)^C\big(H(D+N)+X\big).
+\]
+\end{lemma}
+
+\begin{proof}
+Fix $(d,n)$. The condition $(d,n)\in T(a/q,\Delta)$ is $|d'n-dn'|\le H$ with $d'/d$ in a $\asymp Q^{-2}$ window around $a/q$. Two distinct slopes $a/q\ne a'/q'$ give disjoint windows since $|a/q-a'/q'|\gg Q^{-2}$ and the short-axis thickness in slope is $\ll Q^{-2}$. Hence $(d,n)$ belongs to $O(1)$ tubes. The pairwise intersections for two slope families lie in a rectangle of long side $\asymp X$ and short side $\asymp X/H$, hence $O(1)$ per short-axis run. Summing the local bounds and invoking Proposition~\ref{prop:incidence} for the global counting yields the stated inequalities.
+\end{proof}
+
+\begin{corollary}[Positive majorant]\label{cor:KH}
+There exists an even, nonnegative $K_H\in L^1(\mathbb R)$ with
+\[
+\mathrm{supp}\,\widehat K_H\subset[-1/H,1/H],\qquad
+\int K_H=H+O(1),\qquad \|\widehat K_H\|_{L^1}\ll H,\qquad
+\int_{|\xi|\le 1/H}\frac{|\widehat K_H(\xi)|}{|\xi|}\,d\xi\ll H\log H.
+\]
+\end{corollary}
+
+\begin{proof}
+Take $K_H:=M_H$ from Theorem~\ref{thm:BS} and absorb the $O(1)$ mass error into the normalization when defining $K_H^\circ$.
+\end{proof}

@@ -1,0 +1,363 @@
+%========================================================
+% sections/tfa.tex — TFA+: Arithmetic Fejér Bank
+%========================================================
+\section{Time Frequency Analysis (TFA)}\label{sec:TFA}
+
+The purpose of this section is to record the frequency-space
+objects used throughout the paper: the \emph{bank} of arcs at scale $1/H$,
+and the associated short--shift kernel $K_H$.  Later arguments (AO, BG, SSU)
+only need to cite the properties listed here.
+
+\subsection{Construction of the bank}
+
+Fix parameters $A\ge 10$, $0<\gamma<\tfrac12$, $H=(\log X)^A$, and
+$Q=H^\gamma$.  
+Let
+\[
+\mathfrak A\ :=\ \bigcup_{1\le q\le Q}\ \bigcup_{\substack{1\le a\le q\\(a,q)=1}}
+\ \mathfrak a_{a/q},
+\]
+where each $\mathfrak a_{a/q}$ is an interval of length $\asymp 1/H$
+centered at $a/q$.  
+We choose a smooth cutoff 
+$\phi_{a/q}\in C_c^\infty(\mathfrak a_{a/q})$, $0\le \phi_{a/q}\le 1$, with
+\[
+\int_{\mathfrak a_{a/q}} \phi_{a/q}(\xi)\,d\xi\ \asymp\ \tfrac{1}{H}, 
+\qquad 
+\|\phi_{a/q}^{(m)}\|_\infty \ \ll\ H^m\ \ (m\le 3).
+\]
+Finally, define the \emph{bank weight}
+\[
+\widehat w_{\tau^\ast}(\xi)\ :=\ \sum_{a/q}\phi_{a/q}(\xi).
+\]
+Thus $\widehat w_{\tau^\ast}$ is supported on $\mathfrak A$, satisfies
+$0\le \widehat w_{\tau^\ast}\le 1$, and has mass $\int \widehat w_{\tau^\ast}\asymp Q^2/H$.
+
+\paragraph{Terminology: bank envelope vs detector width.}
+We make a fixed distinction.
+
+\emph{Bank envelope.} The family $\{\phi_{a/q}\}_{q\le Q,(a,q)=1}$ forms the coarse envelope: each $\phi_{a/q}$ has height $\asymp 1/H$ on its support. Define the total \emph{bank mass}
+\[
+\mathsf{Mass}_{\mathrm{bank}}
+\ :=\ 
+\sum_{q\le Q}\ \sum_{\substack{a\!\!\!\pmod q\\(a,q)=1}}\ \int_{\mathbb T}\phi_{a/q}(\alpha)\,d\alpha.
+\]
+Since each support has length $\asymp 1/H$ and $\sum_{q\le Q}\varphi(q)=\tfrac{3}{\pi^2}Q^2+O(Q\log Q)$, we have
+\begin{equation}\label{eq:bank-mass}
+\mathsf{Mass}_{\mathrm{bank}}\ \asymp\ \frac{Q^2}{H}.
+\end{equation}
+
+\emph{Detector windows.} The fine detectors $w_{a/q}$ localize at length scale
+\begin{equation}\label{eq:detector-width}
+\mathrm{width}(w_{a/q})\ \asymp\ \frac{1}{qH},
+\end{equation}
+centered at $a/q$. This is the scale at which we apply AO dispersion and large-sieve estimates.
+
+\begin{lemma}[Bookkeeping of scales]\label{lem:bank-vs-detector}
+(i) For each fixed $\alpha\in\mathbb T$,
+\(
+\sum_{q\le Q}\sum_{(a,q)=1}\phi_{a/q}(\alpha)\ \ll\ Q^2/H.
+\)
+(ii) The total detector measure satisfies
+\(
+\sum_{q\le Q}\sum_{(a,q)=1}\operatorname{length}(\operatorname{supp} w_{a/q})\asymp Q^2/H.
+\)
+\end{lemma}
+
+\begin{remark}[Reader map]\label{rem:bank-detector-flag}
+When we refer to “bank mass $\asymp Q^2/H$,” we mean \eqref{eq:bank-mass} (envelope counting/measure).
+When we refer to “detector width $\asymp (qH)^{-1}$,” we mean \eqref{eq:detector-width} (analytic localization scale).
+Downstream, we explicitly indicate which layer is being used whenever we switch between them.
+\end{remark}
+
+
+\subsection{The kernel \texorpdfstring{$K_H$}{KH}}
+
+Define the time--side kernel $K_H$ by
+\[
+K_H(n) := \int_{\mathbb R} \widehat K_H(\xi) e(\xi n)\,d\xi,
+\qquad \widehat K_H(\xi) := H\,\phi(H\xi),
+\]
+where $\phi$ is a fixed, even, nonnegative bump supported on $[-2/H,2/H]$
+with $\phi(0)=1$.  
+
+Then $K_H$ enjoys the following properties.
+
+\begin{lemma}
+[Signed analysis kernel, bank via projector]\label{ass:signed-pin}
+Fix $A\ge 10$ and set $H=(\log X)^A$. 
+Let $K_H:\mathbb Z\to\mathbb C$ be a \emph{signed} time--kernel with
+\[
+\supp\widehat K_H \subset [-1/H,\,1/H],\qquad 
+\sum_{n\in\mathbb Z}K_H(n)=\widehat K_H(0)= H\,(1+O(H^{-1})),
+\]
+and kernel moments
+\[
+\sum_{n}|K_H(n)|\ \ll\ H,\qquad \sum_{n}|n|\,|K_H(n)|\ \ll\ H\log H.
+\]
+We never use $K_H\ge 0$. Bank localization is imposed \emph{only} by the frequency projector
+\[
+P_{\mathfrak A}f := \sum_{\substack{1\le q\le Q\\(a,q)=1}} (w_{a/q}\,\widehat f)^{\vee}\!,\qquad 
+Q=H^\gamma,\ 0<\gamma<\tfrac12,
+\]
+with Fejér--type windows $w_{a/q}\ge0$ supported on arcs of width $\asymp (qH)^{-1}$.
+\end{lemma}
+
+\begin{lemma}[Model construction of $K_H$]\label{lem:model-K}
+Let $\phi\in C_c^\infty(\mathbb R)$ be even, supported in $[-2,2]$, $\phi\equiv 1$ on $[-1,1]$, and set 
+$\widehat K_H(\xi):= H\,\phi(H\xi)$. 
+Then $K_H$ satisfies Assumption~\ref{ass:signed-pin}. 
+Moreover $\widehat K_H\ge 0$ (so $K_H$ is positive--definite) but $K_H$ may change sign; no pointwise positivity is claimed or used.
+\end{lemma}
+
+% ==========================================================
+% Section 3.2 — Bank normalization and alias suppression
+% (positive bank for main term; balanced bank for TT* tests)
+% ==========================================================
+\subsection{Bank normalization and alias suppression}\label{subsec:bank-alias}
+
+Let $Q=H^\gamma$ with $0<\gamma<\frac12$. For each reduced $a/q$ ($q\le Q$), let
+$\Phi_H$ be a fixed nonnegative Fejér window of bandwidth $1/H$ on $\mathbb T$
+and set $w_{a/q}(\alpha):=\Phi_H(\alpha-a/q)$. Define the \emph{positive bank weight}
+\begin{equation}\label{eq:wbank-def}
+\widehat w_{\mathrm{bank}}(\alpha)\ :=\ \sum_{q\le Q}\ \sum_{\substack{a\pmod q\\(a,q)=1}} w_{a/q}(\alpha),
+\qquad\text{so that}\quad \supp \widehat w_{\mathrm{bank}}\subset \cA.
+\end{equation}
+We also introduce a \emph{balanced alias–suppressed test weight} by subtracting a small multiple
+of a global Fejér window $u_H$ of the same bandwidth:
+\begin{equation}\label{eq:vbank-def}
+\widehat v_{\mathrm{bank}}(\alpha)\ :=\ \widehat w_{\mathrm{bank}}(\alpha)\ -\ \kappa\ u_H(\alpha),
+\quad\text{where }\ \kappa=\frac{\int_{\mathbb T}\widehat w_{\mathrm{bank}}}{\int_{\mathbb T} u_H}.
+\end{equation}
+By construction $\int_{\mathbb T}\widehat v_{\mathrm{bank}}=0$ (mean–zero). We use
+$\widehat w_{\mathrm{bank}}\ge 0$ for \emph{main–term lower bounds} and $\widehat v_{\mathrm{bank}}$ for
+\emph{TT$^\ast$ tests}, where the mean–zero property removes the constant Fourier mode (“alias suppression $\delta=1$”).
+A higher–order version with $\int \alpha\,\widehat v_{\mathrm{bank}}=0$ can be arranged as well, but we do not need it.
+
+\paragraph{Mass capture (positive bank).}
+\begin{lemma}[Bank mass and normalization]\label{lem:bank-mass}
+Let $M_H:=\int_{\mathbb T}\Phi_H(\alpha)\,d\alpha\asymp H^{-1}$. Then
+\[
+\int_{\mathbb T}\widehat w_{\mathrm{bank}}(\alpha)\,d\alpha
+=\Big(\sum_{q\le Q}\varphi(q)\Big)\,M_H
+\asymp \frac{Q^2}{H}.
+\]
+Consequently, the normalized projector $P_{\cA}$ (sharp cutoff on $\supp \widehat w_{\mathrm{bank}}$) captures a fixed positive fraction of the major–arc mass.
+\end{lemma}
+\begin{proof}
+$\int w_{a/q}=M_H$ for each $(a,q)=1$; there are $\varphi(q)$ such $a$; and
+$\sum_{q\le Q}\varphi(q)\asymp Q^2$.
+\end{proof}
+
+\paragraph{Alias suppression (balanced bank).}
+\begin{lemma}[Mean–zero alias suppression]\label{lem:alias-meanzero}
+For any trigonometric polynomial $F(\alpha)=\sum_{m\in\mathbb Z} \widehat F(m)\,e(m\alpha)$,
+\[
+\int_{\mathbb T}\widehat v_{\mathrm{bank}}(\alpha)\,|F(\alpha)|^2\,d\alpha
+=\sum_{m\ne 0} \widehat F(m)\,\overline{\widehat F(m)}\, \widehat v_{\mathrm{bank}}^{\ }(m),
+\]
+i.e. the $m=0$ (constant) mode drops out. In particular, when $F=S$ is a Dirichlet polynomial $S(\alpha)=\sum_{n\le X}\lambda(n)e(\alpha n)$,
+the $n=m$ diagonal contributes $0$ to the bank–averaged energy with $\widehat v_{\mathrm{bank}}$.
+\end{lemma}
+\begin{proof}
+Expand $|F|^2$ in Fourier modes and use $\int \widehat v_{\mathrm{bank}}=0$.
+\end{proof}
+
+\begin{proposition}[Hybrid large sieve with alias suppression]\label{prop:hls-alias}
+Let $S(\alpha)=\sum_{n\le X}\lambda(n)\,e(\alpha n)$ with $\sum_{n\le X}|\lambda(n)|^2\ll X(\log X)^{C_0}$.
+Define
+\[
+\mathsf{Leak}_I^{\mathrm{bal}}\ :=\ \frac{H}{Q^2}
+\sum_{q\le Q}\sum_{\substack{a\pmod q\\(a,q)=1}}
+\int \widehat v_{\mathrm{bank}}(\alpha)\,|S(\alpha)|^2\,d\alpha.
+\]
+Then
+\[
+\mathsf{Leak}_I^{\mathrm{bal}}\ \ll\ (\log X)^{C}\,\frac{X}{H\,Q^2}.
+\]
+\end{proposition}
+\begin{proof}
+Write $\widehat v_{\mathrm{bank}}=\sum_{q\le Q}\sum_{(a,q)=1}w_{a/q}-\kappa\,u_H$ and expand $|S|^2=\sum_{h}\Big(\sum_{n\le X-h}\lambda(n)\overline{\lambda(n+h)}\Big)e(h\alpha)$.
+By Lemma~\ref{lem:alias-meanzero}, the $h=0$ mode vanishes in $\int \widehat v_{\mathrm{bank}}|S|^2$.
+For $h\ne 0$, integrate $e(h\alpha)$ against each window to get a factor $\ll \min\{H,1/|h|\}$,
+sum over $a$ to get a Ramanujan sum $c_q(h)$, and apply Cauchy–Schwarz plus the hybrid large sieve to bound
+\[
+\sum_{q\le Q}\sum_{(a,q)=1}\int w_{a/q}\,|S|^2
+\ \ll\ (X+H Q^2)\sum_{n\le X}|\lambda(n)|^2.
+\]
+Multiply by $H/Q^2$ and subtract the $\kappa u_H$ part (which contributes the same bound with opposite sign at $h=0$ and is harmless for $h\ne 0$).
+Since the $h=0$ piece is absent, only the $X$–term remains; this yields the stated bound.
+\end{proof}
+
+\paragraph{Remarks.}
+(1) We keep \emph{two} bank weights on purpose: $\widehat w_{\mathrm{bank}}\ge 0$ for the projected main term (used in pointwise lower bounds), and the balanced $\widehat v_{\mathrm{bank}}$ for TT$^\ast$/Type–I tests where the constant mode would otherwise dominate.  
+(2) If desired, one can enforce a second vanishing moment (``$\delta=2$'') by replacing $u_H$ with a linear combination $u_H^{(0)}+u_H^{(1)}$ chosen so that $\int \alpha^k\,\widehat v_{\mathrm{bank}}=0$ for $k=0,1$. We do not need $k=1$ in the present argument.
+
+% ===== §3 PATCH: explicit alias suppression (δ=2) lemma + corollary =====
+
+\paragraph{Balanced bank mask.}
+Let $W\in C_c^\infty([1/2,2]^2)$ be the dyadic bump used to localize to $[D,2D]\times[N,2N]$. Define the \emph{balanced bank} (double–centered) mask
+\begin{align}
+\mathcal{B}(d,n)
+&:= W\!\left(\frac dD,\frac nN\right)
+ - \frac{1}{\#\mathcal{D}}\sum_{d'\in\mathcal{D}} W\!\left(\frac {d'}D,\frac nN\right)
+ - \frac{1}{\#\mathcal{N}}\sum_{n'\in\mathcal{N}} W\!\left(\frac dD,\frac {n'}N\right) \nonumber\\
+&\quad + \frac{1}{\#\mathcal{D}\,\#\mathcal{N}}\sum_{d'\in\mathcal{D}}\sum_{n'\in\mathcal{N}} W\!\left(\frac {d'}D,\frac {n'}N\right),
+\label{eq:balanced-bank}
+\end{align}
+where $\mathcal{D}=[D,2D]\cap\mathbb{Z}$ and $\mathcal{N}=[N,2N]\cap\mathbb{Z}$.
+
+\begin{lemma}[Alias suppression, $\delta=2$]\label{lem:alias-delta2}
+The mask $\mathcal{B}$ satisfies, for all $d\in\mathcal{D}$ and $n\in\mathcal{N}$,
+\[
+\sum_{n'\in\mathcal{N}} \mathcal{B}(d,n')=0,\qquad
+\sum_{d'\in\mathcal{D}} \mathcal{B}(d',n)=0.
+\]
+Consequently,
+\[
+\sum_{d,n}\mathcal{B}(d,n)\,g(d)=0,\qquad
+\sum_{d,n}\mathcal{B}(d,n)\,h(n)=0
+\]
+for any functions $g$ of $d$ alone and $h$ of $n$ alone. Moreover, $\mathcal{B}$ is supported where $W$ is supported and $\|\mathcal{B}\|_1\asymp \|W\|_1$ with absolute constants (depending only on bounds for $W$).
+\end{lemma}
+
+\begin{proof}
+Expanding \eqref{eq:balanced-bank} and summing over $n'$ (resp.\ over $d'$) shows telescoping cancellation by construction; the last term compensates the double subtraction. The orthogonality to $g(d)$ and $h(n)$ follows by linearity. Support and $L^1$ comparability are immediate from boundedness of $W$ on its compact support.
+\end{proof}
+
+\begin{corollary}[Constant aliases are killed on the bank]\label{cor:alias-kills-const}
+Let $F(d,n)=g(d)+h(n)$ (in particular, $F\equiv \mathrm{const}$). For the balanced mask $B$ in \ref{lem:bank-mass} and any array $A$ one has
+\[
+\sum_{d,n} B(d,n)\,F(d,n)\,A(d,n)=0.
+\]
+In particular, in any $TT^\ast$ average where the bank enters only via $B$, the row–constant, column–constant, and constant components make no contribution. 
+
+Equivalently, in any TT$^\ast$ average in which the bank enters only through $\mathcal{B}$ (or a positive multiple thereof), the row-constant, column-constant, and constant components of the input make no contribution. In particular, in the Type–I average the “constant alias mode” vanishes and the dispersion ledger starts at the oscillatory $Q^{-2}$ scale.
+\end{corollary}
+
+\begin{proof}
+By Lemma~\ref{lem:alias-delta2}, $\sum_n \mathcal{B}(d,n)=0$ and $\sum_d \mathcal{B}(d,n)=0$, hence the inner sum against $g(d)$ (resp.\ $h(n)$) vanishes for every fixed $d$ (resp.\ $n$); additivity yields the claim. The final statement is the advertised use in §7 and §11.
+\end{proof}
+
+\begin{remark}[“$\delta=2$” bookkeeping]
+The two independent cancellations (row and column) are what we count as $\delta=2$. This is the precise input used in §7 (Type–I) and in the TT$^\ast$ ledger of §11 whenever we say “alias suppression with $\delta=2$ removes the constant mode”.
+\end{remark}
+% ===== end §3 PATCH =====
+
+
+\subsection{Usage}
+
+In all later sections, the notation $K_H$ always refers to the kernel
+constructed above.  Whenever we write a smoothed statistic
+\[
+\mathcal S(y)\ :=\ \sum_n R_{2,c}(n)\,K_H(n-y),
+\]
+only the bandwidth 1/H and the moment bounds $K_H$ are used. Pointwise nonnegativity is provided by the extractor $J_H$. 
+Cross--arc estimates always exploit (v).
+\qedhere
+
+\subsection{Arithmetic Fej\'er bank}\label{AFB}
+
+Recall $H=(\log X)^A$ and $Q=H^\gamma$ with $0<\gamma<\tfrac12$. We construct a positive spectral window $\wh w_{\tau^\ast}$ supported on a union of $\asymp Q^2$ disjoint arcs of width $\asymp 1/H$, centred at rationals $a/q$ with $1\le q\le Q$, $(a,q)=1$, and prove its key properties: support, mass, positivity, and alias suppression.
+
+\subsection{Construction}
+Let $M:=\lfloor c_H H\rfloor$ for a small fixed $c_H\in(0,1/10)$. The (discrete) Fej\'er coefficients
+\[
+F_M(n):=\frac{1}{M+1}\Big(1-\frac{|n|}{M+1}\Big)_+,\qquad n\in\mathbb{Z},
+\]
+form a nonnegative, even, compactly supported sequence with $\sum_{n}F_M(n)=1$. Its $2\pi$-periodic Fourier transform is the Fej\'er kernel
+\[
+\wh F_M(\theta)=\frac{1}{M+1}\bigg(\frac{\sin\big((M+1)\theta/2\big)}{\sin(\theta/2)}\bigg)^2\ge 0,\qquad \theta\in\bbT.
+\]
+For each reduced fraction $a/q$ ($1\le q\le Q$) let $\theta_{a/q}$ be its representative on $\bbT$, and define a smooth nonnegative bump $\psi_{a/q}\in C_c^\infty(\bbT)$ supported on the arc
+\[
+\mathfrak a_{a/q}:=\{\theta\in\bbT:\ |\theta-\theta_{a/q}|\le c_0/H\},
+\]
+equal to $1$ on the middle third, with $\|\psi_{a/q}^{(m)}\|_\infty\ll H^m$ for $m\le 3$ and with pairwise disjoint supports as $a/q$ varies. Set
+\[
+\wh w_{\tau^\ast}(\theta):=\frac{1}{Z}\sum_{\substack{1\le q\le Q\\ (a,q)=1}}\ \psi_{a/q}(\theta)\,\wh F_M(\theta-\theta_{a/q}),
+\]
+with normalizing constant $Z\asymp \sum_{q\le Q}\varphi(q)\cdot H^{-1}\asymp Q^2/H$. Let $w_{\tau^\ast}$ be the (real, even) inverse transform.
+
+\begin{lemma}[Separation of roles: balanced vs.\ positive]\label{lem:sep-roles}
+Let $\widehat w_{\mathrm{bank}}\ge0$ be the positive Fejér bank of \S3.3 and let 
+$\widehat v_{\mathrm{bank}}=\widehat w_{\mathrm{bank}}-\kappa\,u_H$ be its balanced version with
+$\int_{\mathbb T}\widehat v_{\mathrm{bank}}=0$.
+Then:
+\begin{enumerate}
+\item[(i)] \textbf{Positivity is never bank-masked.} All lower bounds for the major term use the positive projector $P_A$ (sharp cutoff on $\mathrm{supp}\,\widehat w_{\mathrm{bank}}$) and the nonnegative extractor $J_H$, never $v_{\mathrm{bank}}$.
+\item[(ii)] \textbf{Balance is used only inside TT$^\ast$.} All large-sieve/TT$^\ast$ estimates insert $\widehat v_{\mathrm{bank}}$ (not $\widehat w_{\mathrm{bank}}$); the mean-zero eliminates the $t=0$ diagonal, and the bank geometry eliminates 1-D aliases (``$\delta=2$''), before AO dispersion.
+\end{enumerate}
+\end{lemma}
+
+\subsection{Properties}
+\begin{proposition}[Support, mass, positivity]\label{prop:tfa-basic}
+With the above construction:
+\begin{enumerate}[label=(\alph*),leftmargin=2em]
+  \item \textbf{Support.} $\operatorname{supp}\wh w_{\tau^\ast}\subset \displaystyle\bigcup_{q\le Q}\ \bigcup_{(a,q)=1}\ \mathfrak a_{a/q}$, a union of $J\asymp Q^2$ disjoint arcs, each of length $\asymp 1/H$.
+  \item \textbf{Mass.} $\displaystyle \int_{\bbT}\wh w_{\tau^\ast}(\theta)\,d\theta \asymp \frac{Q^2}{H}$.
+  \item \textbf{Positivity.} $\wh w_{\tau^\ast}\ge 0$, hence $w_{\tau^\ast}$ is positive-definite; in particular $\sum_{m,n}c_m\ol c_n\,w_{\tau^\ast}(m-n)\ge 0$ for all finitely supported $(c_n)$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+(a) and (c) are immediate from the definition and $\wh F_M\ge 0$. For (b), each bump $\psi_{a/q}$ has integral $\asymp 1/H$, and there are $\asymp \sum_{q\le Q}\varphi(q)\asymp Q^2$ arcs, yielding total mass $\asymp Q^2/H$ after the normalization.
+\end{proof}
+
+\begin{proposition}[Alias suppression, $\delta=2$]\label{prop:tfa-suppress}
+Let $S(\theta)=\sum_{n} C_n\,\ee{n\theta}$ be any trigonometric polynomial (or $L^2$ function on $\bbT$). Then
+\[
+\int_{\bbT} |S(\theta)|^2\,\wh w_{\tau^\ast}(\theta)\,d\theta
+\ \le\ \frac{C}{H}\sum_{n}|C_n|^2
+\]
+and for each fixed rational $\theta_0=a_0/q_0$ with $q_0\le Q$,
+\[
+\frac{1}{J}\sum_{\mathfrak a}\int_{\mathfrak a} |S(\theta+\theta_0)|^2\,\wh F_M(\theta)\,d\theta
+\ \ll\ \frac{1}{H Q^2}\sum_{n}|C_n|^2,
+\]
+i.e. averaging over the bank arcs enforces a factor $Q^{-2}$ dispersion on any single alias. All implied constants depend at most polylogarithmically on $X$.
+\end{proposition}
+
+\begin{proof}[Proof]
+For the first inequality, expand $|S|^2$ and integrate termwise: the Fej\'er factor makes $\wh w_{\tau^\ast}$ a positive mollifier of width $1/H$, giving mass $\asymp Q^2/H$ and an average per arc $\asymp 1/H$; use Cauchy--Schwarz and disjointness of arcs.
+
+For the second, fix $\theta_0=a_0/q_0$. On each $\mathfrak a=\mathfrak a_{a/q}$, write the local variable $\theta=\theta_{a/q}+\eta$ with $|\eta|\ll 1/H$ and orthogonally average the translates $S(\cdot+\theta_0)$ against $\wh F_M(\eta)$. The bank has $J\asymp Q^2$ disjoint arcs; modulo $1$ the phases $e(n\theta_{a/q})$ are separated at scale $\gg 1/Q^2$. A Montgomery--Vaughan large-sieve bound at spacing $\gg 1/Q^2$ yields the extra $Q^{-2}$ after summing over arcs.
+\end{proof}
+
+\begin{lemma}[Near–orthogonality of arc detectors]\label{lem:AO-gram-full}
+Let $\cA=\bigcup_i I_i$ be a union of disjoint arcs with $|I_i|\asymp H^{-1}$ and $\dist(I_i,I_j)\gg H^{-1}$ for $i\neq j$.
+Choose $\phi_i\in C_c^\infty(\mathbb T)$ with $\mathbf 1_{I_i^\circ}\le \phi_i\le \mathbf 1_{I_i^{+}}$, where $I_i^\circ$ is the middle third of $I_i$ and $I_i^{+}$ is a fixed $(1+\tfrac1{100})$ enlargement still disjoint from all other $I_j$.
+Set $\psi_i:=\phi_i^{1/2}/\|\phi_i^{1/2}\|_{2}$. Then
+\[
+\langle \psi_i,\psi_i\rangle=1,\qquad \langle \psi_i,\psi_j\rangle=0\ (i\ne j).
+\]
+\end{lemma}
+\begin{proof}
+$\supp\phi_i^{1/2}\subset I_i^{+}$ and the $I_i^{+}$ are pairwise disjoint, hence $\phi_i^{1/2}\phi_j^{1/2}\equiv 0$ for $i\neq j$; normalization gives $\langle\psi_i,\psi_i\rangle=1$.
+\end{proof}
+
+
+\subsection{A smooth partition and per-arc envelopes}
+We shall frequently localize to a single bank arc using a smooth partition of unity. Choose nonnegative $\{\psi_{\mathfrak a}\}_{\mathfrak a}$, $\psi_{\mathfrak a}\in C_c^\infty(\mathfrak a)$,
+\[
+0\le \psi_{\mathfrak a}\le 1,\qquad \sum_{\mathfrak a}\psi_{\mathfrak a}=\wh w_{\tau^\ast},\qquad
+\|\psi_{\mathfrak a}^{(m)}\|_\infty\ll H^m\ (m\le 3).
+\]
+For any frequency-side field $S$ we write $S_{\mathfrak a}:=S\cdot \psi_{\mathfrak a}^{1/2}$; then
+\[
+\int |S|^2\,\wh w_{\tau^\ast} = \sum_{\mathfrak a}\int |S_{\mathfrak a}|^2,
+\]
+and each $S_{\mathfrak a}$ is band-limited to width $\asymp 1/H$ around the arc centre. This reduction is used throughout \S\ref{sec:AO-deterministic}, \S\ref{sec:BG}, and \S\ref{sec:PSB}.
+
+\begin{lemma}[Mask separation: where balance vs positivity is used]\label{lem:mask-separation}
+Let $\widehat{\mathcal B}=\sum_{a/q\in\mathfrak A(Q)} w_{a/q}$ be the bank multiplier with each $w_{a/q}$ smooth, supported on an arc of width $\asymp 1/H$, and balanced $\int_{\mathbb T} w_{a/q}=0$. Let $J_H\ge 0$ be the Fejér extractor with $\widehat{J_H}$ supported in $|\xi|\le 1/H$ and $\widehat{J_H}(0)=1$.
+Then:
+\begin{enumerate}
+\item The **balanced** mask $\widehat{\mathcal B}$ is used only *inside* TT$^\ast$ on the Type–I limb to kill the constant mode and first aliases (via $\delta=2$), and in AO occupancy counting; positivity is not needed there.
+\item The **positive** extractor $J_H$ is never multiplied by the bank (we localize by the projector $P_A$ or a smooth taper $T_\psi$), and is used only to transfer mean positivity to pointwise positivity and to define $S_{n_0}$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(1) Balancedness $\int w_{a/q}=0$ forces the constant Fourier mode to vanish in the TT$^\ast$ Type–I quadratic form and, with $\delta=2$, removes row/column aliases. (2) Since $J_H\ge0$ and $\widehat{J_H}$ sits in a single band around $0$, convolving with $J_H$ preserves positivity and allows Bernstein–type Lipschitz control; multiplying by the (disconnected) bank would destroy both features, hence we avoid it by using $P_A$ (or $T_\psi$) for localization. 
+\end{proof}

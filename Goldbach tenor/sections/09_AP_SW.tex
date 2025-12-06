@@ -1,0 +1,125 @@
+%--------------------------------------------------------
+%  10_AP_SW.tex — AP localization & Siegel–Walfisz layer
+%--------------------------------------------------------
+\section{Arithmetic routing: AP localization and prime-power disposal}\label{sec:AP}
+
+Fix $A\ge 10$ and set $H=(\log X)^A$. Let $W=(\log X)^B$ with $B$ chosen large (specified below).
+We work with residue classes $c\bmod W$ that are admissible for Goldbach.
+
+\subsection{Log-free Siegel–Walfisz at polylog moduli}
+
+\begin{lemma}[Siegel--Walfisz at polylog moduli]\label{lem:SW}
+For every $B>0$ there exists $C_B>0$ such that for all $q\le (\log X)^B$ and $(a,q)=1$,
+\[
+\sum_{\substack{n\le X\\ n\equiv a\!\!\!\pmod q}}\!\!\Lambda(n)
+\;=\;\frac{X}{\varphi(q)}\;+\;O\!\left(\frac{X}{\log^{C_B}\!X}\right).
+\]
+The same holds with an additional smooth weight $\psi(n/X)$ with $\psi\in C_c^\infty([1/2,2])$, and the implied constants depend on $B$ and finitely many $\psi$-derivatives.
+\end{lemma}
+
+\begin{proof}
+Standard Siegel--Walfisz with log-free savings at polylogarithmic moduli; the smooth variant follows by Mellin inversion.
+\end{proof}
+
+\begin{proposition}[Uniform truncation of the singular series]\label{prop:truncation-proof}
+Let $\mathfrak S(N)=\sum_{q\ge 1}\mu(q)^2 c_q(N)/\varphi(q)^2$ and $\mathfrak S_{\le Q}(N)=\sum_{q\le Q}\mu(q)^2 c_q(N)/\varphi(q)^2$.
+For any $\varepsilon>0$ there exists $C_\varepsilon$ such that uniformly in even $N$ and $Q\ge 3$,
+\[
+\big|\mathfrak S(N)-\mathfrak S_{\le Q}(N)\big|\ \le\ \frac{C_\varepsilon}{Q^{1-\varepsilon}}.
+\]
+\end{proposition}
+\begin{proof}
+Since $|c_q(N)|\le \tau(q)\,(q,N)$ and the sum is restricted by $\mu(q)^2$ (squarefree $q$), we have for $q$ squarefree
+$|c_q(N)|\le \tau(q)\,q^{o(1)}$. Also $\varphi(q)\gg q \prod_{p\mid q}(1-1/p)\gg q/(\log\log q)$, hence
+\[
+\frac{|c_q(N)|}{\varphi(q)^2}\ \ll\ \frac{(\log\log q)^2\,q^{o(1)}}{q^2}\ \ll_\varepsilon\ \frac{1}{q^{2-\varepsilon}}.
+\]
+Therefore $\sum_{q>Q}\mu(q)^2 |c_q(N)|/\varphi(q)^2 \ll_\varepsilon \sum_{q>Q} q^{-(2-\varepsilon)}\ll_\varepsilon Q^{-(1-\varepsilon)}$, uniformly in $N$.
+\end{proof}
+
+
+
+\begin{lemma}[Log–free Siegel–Walfisz with smooth weight]\label{lem:LFSW}
+Let $A,B>0$ be fixed. Let $\Psi\in C_c^\infty([1/2,2])$ be a fixed smooth bump and set $\Psi_X(n)=\Psi(n/X)$.
+Uniformly for $X\ge 3$, moduli $1\le q\le (\log X)^B$, residues $(a,q)=1$, and Dirichlet characters $\chi\bmod q$,
+\[
+\sum_{n\ge 1}\Lambda(n)\,\chi(n)\,\Psi_X(n)\ =\ \delta_{\chi=\chi_0}\,\widehat\Psi(1)\,X\ +\ O_{A,B,\Psi}\!\Big(\frac{X}{(\log X)^A}\Big),
+\]
+where $\widehat\Psi(1)=\int_0^\infty \Psi(t)\,dt$ and $\chi_0$ is principal. The implied constant depends on $A,B$ and finitely many derivatives of $\Psi$, but not on $a,q,X$.
+\end{lemma}
+
+\begin{proof}[Proof]
+This is the standard smooth Siegel–Walfisz estimate; see e.g.\ Montgomery–Vaughan, \emph{Multiplicative Number Theory I}, Thm.~13.6 (unsmoothed) and Ch.~~on smooth weights, or Iwaniec–Kowalski, \emph{Analytic Number Theory}, Prop.~~(smooth SW). The bound is unconditional and uniform for $q\le (\log X)^B$.
+\end{proof}
+
+
+% ============================================
+% Replace per-arc positivity with bank-summed truncation
+% ============================================
+\subsection{Bank-summed singular series and projected main term}\label{sec:sing-series-bank-ap}
+
+Let $\mathfrak{S}(N)=\sum_{q\ge1}\mu(q)^2 c_q(N)/\varphi(q)^2$ and $\mathfrak{S}_{\le Q}(N)=\sum_{q\le Q}\mu(q)^2 c_q(N)/\varphi(q)^2$, with $Q=H^\gamma$.
+
+\begin{proposition}[Uniform truncation]\label{prop:truncation}
+There exists $C>0$ such that for all even $N$ and all $Q\ge3$,
+\[
+\big|\mathfrak{S}(N)-\mathfrak{S}_{\le Q}(N)\big|\ \le\ \frac{C}{Q}.
+\]
+In particular, for $Q=(\log X)^{\gamma A}$ and $X$ large, $\mathfrak{S}_{\le Q}(N)\ge C_0>0$ uniformly in $N$.
+\end{proposition}
+
+\begin{corollary}[Projected main term on the bank]\label{cor:projected-M}
+For the Fejér bank $\cA$ there is $c_0>0$ with
+\[
+(\PA M)(N)\ \ge\ \frac{c_0}{\log^2 X}\qquad\text{for all even }N\in[X,2X].
+\]
+\end{corollary}
+
+\begin{lemma}[Uniform positivity of the Goldbach singular series]\label{lem:SS-positive}
+For every even integer $N\ge 4$,
+\[
+\mathfrak S(N)
+=2\!\!\prod_{p>2}\!\!\Big(1-\frac{1}{(p-1)^2}\Big)\ \prod_{\substack{p\mid N\\ p>2}}\!\!\frac{p-1}{p-2}
+\ \ge\ 2\!\!\prod_{p>2}\!\!\Big(1-\frac{1}{(p-1)^2}\Big)\ =:\ c_{\rm SS}\ >0.
+\]
+\end{lemma}
+
+\begin{proof}
+The local Goldbach density equals $2\,(1-\tfrac{1}{(p-1)^2})$ for $p\nmid N$ and $2\,(1-\tfrac{1}{(p-1)^2})\cdot \frac{p-1}{p-2}$ for $p\mid N$ with $p>2$. Since $(p-1)/(p-2)>1$ for $p>2$, deleting the finite product over $p\mid N$ only lowers the value. The infinite Euler product $\prod_{p>2}(1-\frac{1}{(p-1)^2})$ converges to a positive constant; set $c_{\rm SS}$ to $2$ times that constant.
+\end{proof}
+
+\begin{corollary}[Bank–projected main term is uniformly positive]\label{cor:bank-main}
+Let $\mathfrak A(Q)$ be the bank and let $M(N)$ denote the bank–projected major–arc main term for the Goldbach correlation at level $X$ (as defined at the start of §10). Then, uniformly in even $N\in[2X,4X]$,
+\[
+M(N)\ \ge\ \frac{c_{\rm SS}}{(\log X)^2}\ -\ O\!\Big(\frac{1}{Q}\Big).
+\]
+In particular, if $Q\ge (\log X)^3$, then $M(N)\ge \dfrac{c_{\rm SS}}{2\,(\log X)^2}$ for all such $N$.
+\end{corollary}
+
+\subsection{Prime-power disposal}
+
+\begin{lemma}[Prime powers are negligible]\label{lem:pp}
+Let $f$ be any nonnegative weight supported on $n\asymp X$ with $\|f\|_\infty\ll 1$ and $\sum f(n)\ll X$. Then
+\[
+\sum_{n} \big(\Lambda(n)-\Lambda^\sharp(n)\big)\, f(n)\ \ll\ X^{1/2+o(1)}.
+\]
+\end{lemma}
+
+\begin{proof}
+Prime powers $p^k\le X$ have $p\le X^{1/2}$ for $k\ge 2$; there are $\ll X^{1/2+o(1)}$ such terms, each weighted $\ll \log X$.
+\end{proof}
+
+\subsection{From \texorpdfstring{$\Lambda$}{Lambda} to primes in residue classes}
+
+\begin{corollary}[\;$\Lambda\mapsto \mathbf 1_P$ with smooth error]\label{cor:LambdaToPrimes}
+Let $R_{2,c}(n)$ denote the smoothed Goldbach count in class $c\bmod W$, with the standard smooth cutoff and prime powers removed. Then for every fixed $B>0$,
+\[
+R_{2,c}(n)\ =\ \sum_{\substack{n_1+n_2=n\\ n_i\equiv c_i\!\!\!\pmod W}}\!\!\Lambda^\sharp(n_1)\Lambda^\sharp(n_2)\,\Psi\!\left(\frac{n_1}{X},\frac{n_2}{X}\right)
+\;+\;O\!\Big(\frac{H}{\log^{B}X}\Big),
+\]
+uniformly on $n\in[X,2X]$, where $\Psi\in C_c^\infty([1/2,2]^2)$ is the fixed envelope.
+\end{corollary}
+
+\begin{proof}
+Combine \Cref{lem:SW} and \Cref{lem:pp} with a dyadic partition and smooth summation by parts; the $O$-term is absorbed by choosing $B$ large versus $A$.
+\end{proof}

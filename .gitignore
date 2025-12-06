@@ -1,0 +1,14 @@
+# Lake build outputs & vendored deps
+.lake/
+build/
+
+# Node artifacts (ProofWidgets etc.)
+**/node_modules/
+**/dist/
+**/.lake/build/js/
+
+# macOS cruft
+.DS_Store
+
+# VS Code
+.vscode/

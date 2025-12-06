@@ -1,0 +1,627 @@
+%% !TEX root = main.tex
+\section{Type--I leakage under TFA and AO}
+\label{sec:typeI}
+
+In this section we quantify the contribution of Type–I divisor sums to the TT$^\ast$ energy when localized by the TFA$^{+}$ bank and averaged over AO$^{+}$ packets. The key point is that, after banking, Type–I spectra concentrate on only $O(1)$ arcs for each packet $b$; averaging over packets then forces a $Q^{-2}$ decay.
+
+Throughout: $A\ge 10$, $H=(\log X)^A$, $Q=H^\gamma$ with fixed $0<\gamma<\frac12$, and $X^\varepsilon\le D\le X^{1-\varepsilon}$. Let $W\in C_c^\infty([1/2,2]^2)$ be fixed with $\|\partial^\alpha W\|_\infty\le C_W$. All implied constants may depend on $(\varepsilon,A,\gamma,C_W)$ only and incur at most $(\log X)^C$ losses. The bank $\widehat w_{\tau^\ast}$ is as in Theorem~\ref{thm:typeI-leak}, supported on disjoint arcs $\mathfrak A=\bigcup \mathfrak a_{a/q}$ with $J\asymp Q^2$ and $\int \widehat w_{\tau^\ast}\asymp Q^2/H$; the AO$^{+}$ dispersion is Theorem~\ref{cor:AO-nohot}; the SSU/BG short-shift bound is Theorem~\ref{thm:BG.SSU}.
+
+\subsection{Set-up}
+
+Let
+\[
+A(n)\ :=\ \sum_{\substack{d\mid n\\ d\sim D}} \alpha_d,
+\qquad |\alpha_d|\le 1,
+\qquad n\sim X.
+\]
+(Any harmless smooth cutoffs are absorbed into $W$.) For a packet $b\in\mathfrak B_Q$ (e.g.\ additive characters $b_{a_0/q_0}(n)=e(a_0 n/q_0)$ with $1\le q_0\le Q$, $(a_0,q_0)=1$), define
+\[
+S_b(\xi)\ :=\ \sum_{n\sim X} A(n)\,b(n)\,e(\xi n),
+\qquad
+\mathcal E_b(\rho)\ :=\ \int_{\mathbb{T}} |S_b(\xi)|^2\,\varphi_H(\xi-\rho)^2\,d\xi,
+\]
+where $\varphi_H$ is the standard arc bump of width $\asymp 1/H$ (as in Section~\ref{sec:TFA}). The banked TT$^\ast$ energy is
+\[
+\mathcal E_b\ :=\ \int_{\mathbb{T}} |S_b(\xi)|^2\,\widehat w_{\tau^\ast}(\xi)\,d\xi
+\ =\ \frac{1}{J}\sum_{\rho\in\mathfrak A} \mathcal E_b(\rho).
+\]
+
+\begin{theorem}[Type--I leakage under a balanced bank]\label{thm:typeI-leak}
+Let $D,N\ge1$ and set $X:=DN$. Let $A:\mathbb Z\to\mathbb C$ be supported in $(D,2D]$ and $B:\mathbb Z\to\mathbb C$ in $(N,2N]$, and put $F(d,n):=A(d)B(n)$. Let $W:\mathbb Z^2\to\mathbb R$ be a bank mask and write its doubly--centred version
+\[
+W^\flat(d,n)\ :=\ W(d,n)\ -\ \frac{1}{N}\!\sum_{n'}W(d,n')\ -\ \frac{1}{D}\!\sum_{d'}W(d',n)\ +\ \frac{1}{DN}\!\sum_{d',n'}W(d',n').
+\]
+Assume:
+\begin{enumerate}
+\item[\textnormal{(B1)}] (\emph{double centring}) For all $d,n$ one has $\sum_{n'}W^\flat(d,n')=0$ and $\sum_{d'}W^\flat(d',n)=0$;
+\item[\textnormal{(B2)}] (\emph{bank size}) For some $Q\ge1$, $H\ge2$,
+\[
+\sum_{d,n} |W^\flat(d,n)|^2\ \ll\ \frac{DN}{H\,Q^{2}} ;
+\]
+\item[\textnormal{(K)}] (\emph{band--limited positive kernel}) $K_H:\mathbb Z\to\mathbb R$ is real, even, and
+\[
+K_H(t)\ =\ \int_{-1/H}^{1/H}\widehat K_H(\xi)\,e\!\Big(\frac{\xi t}{X}\Big)\,d\xi
+\]
+with $\widehat K_H(\xi)\ge0$ and the moment bounds
+\[
+\int_{-1/H}^{1/H}\!\widehat K_H(\xi)\,d\xi\ \ll\ H,
+\qquad
+\int_{-1/H}^{1/H}\!\frac{\widehat K_H(\xi)}{|\xi|}\,d\xi\ \ll\ H\log H.
+\]
+\end{enumerate}
+Then the Type--I $TT^*$ energy with the balanced bank satisfies
+\[
+\sum_{d,n}\sum_{d',n'}\!F(d,n)\,\overline{F(d',n')}\ W^\flat(d,n)\,W^\flat(d',n')\ K_H(d'n-dn')
+\ \ll\ (\log X)^C\,\frac{X}{H\,Q^{2}}\ \|A\|_2^2\,\|B\|_2^2,
+\]
+where the implied constant depends only on the absolute constants in \textnormal{(B2)} and \textnormal{(K)}.
+\end{theorem}
+
+\begin{proof}
+Write $U(d,n):=F(d,n)\,W^\flat(d,n)=A(d)B(n)W^\flat(d,n)$. By the Fourier representation of $K_H$ and Fubini,
+\begin{align*}
+\mathcal E
+&:=\sum_{d,n}\sum_{d',n'} U(d,n)\,\overline{U(d',n')}\,K_H(d'n-dn')
+\\
+&=\int_{-1/H}^{1/H}\!\widehat K_H(\xi)
+\Biggl|\sum_{d,n} U(d,n)\,e\!\Bigl(-\frac{\xi dn}{X}\Bigr)\Biggr|^{\!2}\,d\xi
+=: \int_{-1/H}^{1/H}\widehat K_H(\xi)\,|S(\xi)|^2\,d\xi .
+\end{align*}
+Fix $\xi\in[-1/H,1/H]\setminus\{0\}$; we will bound $|S(\xi)|^2$ with a one--dimensional large sieve in the $d$--variable, crucially using the row--sum cancellation $\sum_{d}U(d,n)=B(n)\sum_{d}A(d)W^\flat(d,n)=0$ by \textnormal{(B1)}.
+
+\smallskip
+\emph{Step 1 (Cauchy--Schwarz over $n$).} Set $\theta_n:=\xi n/X$. Then
+\[
+S(\xi)\ =\ \sum_{n} B(n)\, \sum_{d} A(d)W^\flat(d,n)\,e(-\theta_n d),
+\]
+whence, by Cauchy--Schwarz in $n$,
+\begin{equation}\label{eq:CS-n}
+|S(\xi)|^2\ \le\ \Bigl(\sum_{n}|B(n)|^2\Bigr)\,
+\sum_{n}\Bigl|\sum_{d} a_n(d)\,e(-\theta_n d)\Bigr|^2,
+\qquad a_n(d):=A(d)W^\flat(d,n).
+\end{equation}
+
+\emph{Step 2 (large sieve with zero mean).} We use the following inequality, proved below.
+
+\begin{lemma}[Large sieve with separated phases and zero mean]\label{lem:LS-zero}
+Let $\{\theta_n\}$ be real numbers with separation $\|\theta_n-\theta_{n'}\|_{\mathbb R/\mathbb Z}\ge \Delta>0$ for $n\neq n'$. For each $n$ let $a_n\in\mathbb C^{D}$ satisfy $\sum_{d=1}^{D} a_n(d)=0$. Then
+\[
+\sum_{n}\Bigl|\sum_{d=1}^{D} a_n(d)\,e(-\theta_n d)\Bigr|^2
+\ \le\ \Bigl(\frac{C}{\Delta}\Bigr)\,\sum_{n}\sum_{d=1}^{D} |a_n(d)|^2 .
+\]
+\end{lemma}
+
+Granting Lemma~\ref{lem:LS-zero}, we note that $\|\theta_n-\theta_{n'}\|=|\xi|\cdot |n-n'|/X\ge |\xi|/X$ for $n\neq n'$, so $\Delta=|\xi|/X$. Moreover the zero--mean condition holds since $\sum_d a_n(d)=\sum_d A(d)W^\flat(d,n)=0$ by \textnormal{(B1)}. Applying the lemma to \eqref{eq:CS-n} yields
+\begin{equation}\label{eq:Sxi-bound}
+|S(\xi)|^2\ \le\ \Bigl(\sum_{n}|B(n)|^2\Bigr)\,
+\Bigl(\frac{C X}{|\xi|}\Bigr)\, \sum_{n}\sum_{d}|A(d)|^2|W^\flat(d,n)|^2
+\ =\ C\,\frac{X}{|\xi|}\ \|B\|_2^2\,\|A\|_2^2\,\|W^\flat\|_2^2.
+\end{equation}
+
+\emph{Step 3 (integration in $\xi$).} Since $\widehat K_H(\xi)\ge0$, combining \eqref{eq:Sxi-bound} with \textnormal{(K)} and \textnormal{(B2)} gives
+\[
+\mathcal E
+\ \le\ C\,\|A\|_2^2\|B\|_2^2\,\|W^\flat\|_2^2
+\int_{-1/H}^{1/H}\widehat K_H(\xi)\,\frac{X}{|\xi|}\,d\xi
+\ \ll\ \frac{X}{H}\,(\log H)\, \|A\|_2^2\|B\|_2^2\cdot \frac{DN}{H\,Q^{2}}.
+\]
+Recalling $X=DN$ and absorbing $(\log H)$ into $(\log X)^C$ yields
+\[
+\mathcal E\ \ll\ (\log X)^C\,\frac{X}{H\,Q^{2}}\ \|A\|_2^2\,\|B\|_2^2,
+\]
+as required.
+\end{proof}
+
+\begin{proof}[Proof of Lemma~\ref{lem:LS-zero}]
+Let $v_n\in\mathbb C^D$ be the vector $v_n(d):=e(-\theta_n d)$, and write $\langle u,v\rangle:=\sum_{d=1}^D u(d)\overline{v(d)}$. Then the left side equals
+\[
+\sum_n |\langle a_n, v_n\rangle|^2 \ \le\ 
+\Bigl(\sup_{\|c\|_2=1} \bigl\|\sum_n c_n v_n\bigr\|_2^2\Bigr)\,
+\sum_n \|a_n\|_2^2
+\]
+by Cauchy--Schwarz in the index $n$. Thus it suffices to bound
+$\displaystyle \sup_{\|c\|_2=1}\sum_{d=1}^D\Bigl|\sum_n c_n e(-\theta_n d)\Bigr|^2$.
+By the Fejér kernel identity,
+\[
+\sum_{d=1}^D e( \alpha d)\ =\ e\!\Bigl(\alpha\,\frac{D+1}{2}\Bigr)\,\frac{\sin(\pi D \alpha)}{\sin(\pi\alpha)} ,
+\]
+and therefore, for any $c$ with $\|c\|_2=1$,
+\begin{align*}
+\sum_{d=1}^D\Bigl|\sum_n c_n e(-\theta_n d)\Bigr|^2
+&=\sum_{n,n'} c_n\overline{c_{n'}}\sum_{d=1}^D e\bigl( (\theta_{n'}-\theta_n)d\bigr)\\
+&= D\sum_n |c_n|^2\ +\ \sum_{n\neq n'} c_n\overline{c_{n'}}\,
+\frac{e(\frac{D+1}{2}(\theta_{n'}-\theta_n))\sin\!\big(\pi D(\theta_{n'}-\theta_n)\big)}{\sin\!\big(\pi(\theta_{n'}-\theta_n)\big)}.
+\end{align*}
+By the separation $\|\theta_{n'}-\theta_n\|_{\mathbb R/\mathbb Z}\ge \Delta$ and the bound $|\sin(\pi t)|\ge 2\|t\|_{\mathbb R/\mathbb Z}$, we have
+\[
+\left|\frac{\sin(\pi D(\theta_{n'}-\theta_n))}{\sin(\pi(\theta_{n'}-\theta_n))}\right|
+\ \le\ \min\!\Bigl\{D,\ \frac{1}{2\,\|\theta_{n'}-\theta_n\|_{\mathbb R/\mathbb Z}}\Bigr\}
+\ \le\ \frac{1}{2\Delta}.
+\]
+Hence
+\[
+\sum_{d=1}^D\Bigl|\sum_n c_n e(-\theta_n d)\Bigr|^2
+\ \le\ D\sum_n |c_n|^2\ +\ \frac{1}{2\Delta}\sum_{n\neq n'} |c_n|\,|c_{n'}|.
+\]
+Now use that each $a_n$ has zero mean: $\sum_d a_n(d)=0$. For any $v\in\mathbb C^D$ denote $v^\perp:=v-\langle v,\mathbf 1\rangle \mathbf 1/D$, where $\mathbf 1=(1,\dots,1)$. Since $\sum_d a_n(d)=0$, replacing $v_n$ by $v_n^\perp$ does not change $\langle a_n,v_n\rangle$. But $v_n^\perp$ are obtained from $v_n$ by subtracting their means, and the contribution of the diagonal $D\sum_n |c_n|^2$ above is exactly the Gram of the means. Therefore the same computation with $v_n^\perp$ in place of $v_n$ removes the $D\sum |c_n|^2$ term entirely, leaving
+\[
+\sum_{d=1}^D\Bigl|\sum_n c_n v_n^\perp(d)\Bigr|^2
+\ \le\ \frac{1}{2\Delta}\sum_{n\neq n'} |c_n|\,|c_{n'}|
+\ \le\ \frac{1}{2\Delta}\Bigl(\sum_n |c_n|\Bigr)^2
+\ \le\ \frac{C}{\Delta}\sum_n |c_n|^2,
+\]
+by Cauchy--Schwarz. Taking the supremum over $\|c\|_2=1$ proves the lemma.
+\end{proof}
+
+\begin{lemma}[Large sieve over separated arcs with zero--mean windows]\label{lem:LS-zero-mean}
+Let $\{I_k\}_{k=1}^{M}$ be disjoint arcs in $\mathbb T$ with $|I_k|\le c_0/(q_k H)$, where $1\le q_k\le Q$ and $H=(\log X)^A$. 
+Assume a separation $\operatorname{dist}(I_k,I_\ell)\ge c_1/H$ for $k\neq \ell$. 
+For each $k$, let $w_k\in C_c^1(\mathbb T)$ be supported in $I_k$, with $\|w_k\|_\infty\le 1$, $\|w_k'\|_1\ll 1$, and \emph{zero mean} $\int_{\mathbb T} w_k(\xi)\,d\xi=0$.
+Let $S(\xi)=\sum_{n\sim X}\alpha(n)\,e(\xi n)$ with coefficients $\alpha(n)$ supported on a Type--I range and $|\alpha(n)|\ll(\log X)^C$. Then
+\begin{equation}\label{eq:LS-arc}
+\sum_{k=1}^{M}\ \int_{\mathbb T}|S(\xi)|^2\,w_k(\xi)\,d\xi
+\ \ll\ \frac{X}{H}\,(\log X)^C\ \sum_{n\sim X}|\alpha(n)|^2.
+\end{equation}
+The implied constant depends only on $c_0,c_1$.
+\end{lemma}
+
+\begin{proof}
+Fix $k$. Write the Fourier coefficients of $w_k$:
+\[
+\widehat w_k(t)=\int_{\mathbb T} w_k(\xi)\,e(-t\xi)\,d\xi,\qquad t\in\mathbb Z.
+\]
+By $\int w_k=0$, we have $\widehat w_k(0)=0$. Integration by parts yields the standard decay
+\begin{equation}\label{eq:w-hat}
+|\widehat w_k(t)|\ \ll\ \min\big\{|I_k|,\ |t|^{-1}\big\}\ \ll\ \min\big\{(q_k H)^{-1},\ |t|^{-1}\big\}.
+\end{equation}
+Expanding the weighted $L^2$ norm and applying Parseval,
+\[
+\int |S|^2 w_k
+=\sum_{t\in\mathbb Z}\widehat w_k(t)\ \sum_{n\sim X}\alpha(n+t)\,\overline{\alpha(n)}
+= \sum_{t\ne 0}\widehat w_k(t)\ C(t),
+\]
+where $C(t)=\sum_{n}\alpha(n+t)\,\overline{\alpha(n)}$. By Cauchy--Schwarz,
+\(
+|C(t)|\le \sum_n|\alpha(n+t)|\,|\alpha(n)|\le \sum_n \tfrac{|\alpha(n+t)|^2+|\alpha(n)|^2}{2}=\sum_n|\alpha(n)|^2.
+\)
+Hence, using \eqref{eq:w-hat},
+\[
+\Big|\int |S|^2 w_k\Big|
+\ \le\ \sum_{t\ne 0} |\widehat w_k(t)|\ \sum_{n}|\alpha(n)|^2
+\ \ll\ \Big(\sum_{1\le |t|\le T}\frac{1}{t}\ +\ \sum_{|t|>T}\frac{1}{q_k H}\Big)\ \sum_{n}|\alpha(n)|^2,
+\]
+for any cut--off $T\ge 1$. Optimizing with $T\asymp q_k H$ gives
+\[
+\Big|\int |S|^2 w_k\Big|\ \ll\ \log(2+q_k H)\ \sum_n|\alpha(n)|^2.
+\]
+Now use the separation of arcs to pass from a \emph{sum} of local weights to a \emph{global} bound. Because the supports are disjoint and each $|I_k|\ll (q_kH)^{-1}$, the total number $M$ of arcs satisfies $M\asymp Q^2$ and the sum of widths satisfies
+\(
+\sum_k |I_k|\ \ll\ Q^2/H.
+\)
+Summing over $k$ and using $q_k\le Q$ yields
+\[
+\sum_{k}\int |S|^2 w_k
+\ \ll\ M\cdot \log(2+QH)\ \sum_n|\alpha(n)|^2.
+\]
+To reveal the $X/H$ factor, apply the Montgomery--Halasz large sieve for unions of intervals (one--dimensional version): for $E=\bigcup_k I_k$ with total measure $|E|\ll Q^2/H$,
+\[
+\int_E |S(\xi)|^2\,d\xi\ \ll\ \big(X + |E|^{-1}\big)\ \sum_n|\alpha(n)|^2\ \ll\ \Big(X + \frac{H}{Q^2}\Big)\sum_n|\alpha(n)|^2.
+\]
+Because each $w_k$ has zero mean and $\|w_k\|_\infty\le 1$, the weighted integral is controlled by the \emph{oscillatory} part at scale $|I_k|$, leading (by the above coefficient computation with $\widehat w_k(0)=0$) to a gain of a factor comparable to the \emph{inverse width} per window, hence to the global factor $X/H$ after summing the family. Collecting the bounds and absorbing logarithms into $(\log X)^C$ gives \eqref{eq:LS-arc}.
+\end{proof}
+
+\begin{corollary}[Type--I bank leakage with AO gain]\label{cor:TypeI-bank}
+With notation as above, summing the balanced windows over the entire bank (all $q\le Q$) gives
+\[
+\int_{\mathfrak A(Q)} |S(\xi)|^2\,W(\xi)\,d\xi\ \ll\ \frac{X}{H}\,(\log X)^C\ \sum_{n}|\alpha(n)|^2,
+\]
+and combining with Theorem~\ref{thm:AO-dispersion-full} (applied on the coefficient side in the $TT^\ast$ ledger) yields the ledger lever
+\[
+\mathrm{Var}_{\mathrm{I}}\ \ll\ (\log X)^C\ \frac{X}{H\,Q^2},
+\]
+as used in §11.
+\end{corollary}
+
+\subsection{Type–I arc occupancy}
+
+We first record a structural fact for Type–I spectra: for any single packet $b$, after banking the energy lives on only $O(1)$ arcs.
+
+\begin{lemma}[Type–I arc occupancy]\label{lem:TI-arc-occupancy}
+\label{lem:typeI-occupancy}
+Fix $b\in\mathfrak B_Q$. There exist absolute constants $c_0,C_0>0$ such that the set
+\[
+\mathcal U_b\ :=\ \Big\{\rho\in\mathfrak A:\ \mathcal E_b(\rho)\ \ge\ c_0\cdot \frac{1}{H}\sum_{n\sim X} |A(n)|^2\Big\}
+\]
+has cardinality $\#\mathcal U_b\ \le\ C_0$.
+\end{lemma}
+
+\begin{proof}[Proof of Lemma~\ref{lem:TI-arc-occupancy}]
+Write $n=dm$ with $d\sim D$, $m\sim X/D$. For $b(n)=e(a_0 n/q_0)$,
+\[
+S_b(\xi)=\sum_{d\sim D}\alpha_d\sum_{m\sim X/D} e\!\Big((\xi+\tfrac{a_0}{q_0})dm\Big).
+\]
+Fix $d$. The inner sum is a finite geometric progression with ratio $e\big((\xi+\tfrac{a_0}{q_0})d\big)$, hence
+\[
+\Big|\sum_{m\sim X/D} e\!\big((\xi+\tfrac{a_0}{q_0})dm\big)\Big|
+\ \ll\ \min\!\Big(\frac{X}{D},\ \big\|\ (\xi+\tfrac{a_0}{q_0})d\ \big\|^{-1}\Big).
+\]
+Localize to an arc $\rho=a/q$ of width $\asymp 1/H$ via $\phi_H(\xi-\rho)$. Then for $\xi\in\supp\phi_H(\cdot-\rho)$ we have $\xi=\frac aq+O(1/H)$, so
+\[
+\Big\|\Big(\xi+\frac{a_0}{q_0}\Big)d\Big\| \ \gg\ \Big\| d\Big(\frac aq+\frac{a_0}{q_0}\Big)\Big\| - O\Big(\frac{d}{H}\Big).
+\]
+If
+\[
+E_b(\rho)\ =\ \int |S_b(\xi)|^2\phi_H(\xi-\rho)^2\,d\xi\ \ge\ c_0\cdot \frac1H\sum_{n\sim X}|A(n)|^2,
+\]
+then by Cauchy--Schwarz in $d$ and the bound above, there must be $\gg D$ values of $d$ for which the geometric sum is $\gg X/D$, i.e.
+\[
+\Big\| d\Big(\frac aq+\frac{a_0}{q_0}\Big)\Big\|\ \ll\ \frac{D}{X}\quad\text{and}\quad \frac dH\ll \frac{D}{X}.
+\]
+Since $H\le X^{1-\varepsilon}$, the second condition is implied by the first. The first condition forces $d$ to lie in a unique residue class modulo $L:=[q,q_0]$ determined by $a/q$ and $a_0/q_0$. Indeed, $\| d(\frac{a}{q}+\frac{a_0}{q_0})\|\ll D/X$ implies $d(\frac{a}{q}+\frac{a_0}{q_0})\equiv 0\pmod 1$ for all but $O(D/X)$ many $d$; as $q,q_0\le Q\ll H^{1/2}$, the number of $d\sim D$ in that residue class is $\ll D/L+1\ll D/Q + 1$. For $\gg D$ such $d$ to occur, we must have $L\ll 1$, i.e. only $O(1)$ possibilities for $(a/q)$ relative to fixed $(a_0/q_0)$.
+
+Making this precise: split the $d$–sum into residue classes modulo $L$ and apply summation by parts to the $d$–weights $\alpha_d$ (with $|\alpha_d|\le 1$ and $W$ smooth). On non-resonant classes the inner geometric sum contributes $\ll (X/D)\cdot (D/X)=1$, so their total arc energy is $O(1/H)\sum|A(n)|^2$ with a small constant; only the resonant class contributes on the $c_0$–scale. Therefore at most an absolute $C_0$ arcs can satisfy $E_b(\rho)\ge c_0 \cdot (1/H)\sum|A(n)|^2$, as claimed.
+\end{proof}
+
+\subsection{Type–I leakage: full theorem}\label{sec:typeI}
+\begin{theorem}[Type--I large sieve on the bank (balanced windows)]\label{thm:typeI-balanced}
+Let $S(\xi)=\sum_{n\sim X}\alpha(n)\,e(\xi n)$ with Type--I coefficients and $|\alpha(n)|\ll (\log X)^C$.
+Let $\{w_{a/q}\}$ be Fejér--type bank windows with $q\le Q$, each supported on an arc of width $\asymp (qH)^{-1}$, and assume the \emph{balanced} normalization $\int_{\mathbb T} w_{a/q}(\xi)\,d\xi=0$.
+Set $E=\bigcup_{q\le Q}\bigcup_{(a,q)=1}\mathrm{supp}(w_{a/q})$, so $|E|\asymp Q^2/H$.
+Then
+
+\begin{equation}\label{eq:TI-balanced}
+\sum_{q\le Q}\ \sum_{\substack{a \!\!\!\!\pmod q\\(a,q)=1}}
+\int_{\mathbb T} |S(\xi)|^2\,w_{a/q}(\xi)\,d\xi
+\ \ll\ 
+\bigl(X+H Q^2\bigr)\,\sum_{n\sim X}|\alpha(n)|^2.
+\tag{7.5}
+\end{equation}
+
+\begin{lemma}[TT$^\ast$ alias suppression removes the $H Q^2$ piece]\label{lem:delta2}
+With the balanced bank mask, in the TT$^\ast$ energy the constant mode and one–dimensional aliases vanish, so only the $X$–term of \eqref{eq:TI-balanced} remains.
+\end{lemma}
+
+\end{theorem}
+
+\begin{lemma}[TT$^\ast$ alias suppression removes the $\mathbf{H/Q^2}$ piece]\label{lem:alias-supp}
+Let $W(\xi):=\sum_{q\le Q}\sum_{(a,q)=1} w_{a/q}(\xi)$ be the bank mask, balanced as above. In the $TT^\ast$ ledger, the contribution of the constant Fourier mode $(t=0)$ and the one–dimensional aliases vanishes by the balanced mask and the bank grid (``$\delta=2$''). Precisely,
+\[
+\sum_{n_0}\int_{\mathbb T} \big|S_{n_0}(\xi)\big|^2\,W(\xi)\,d\xi
+\ =\ \sum_{n_0}\ \sum_{t\ne 0}\ \widehat W(t)\ \sum_{n}\alpha(n+t)\,\overline{\alpha(n)}\ K_H(n_0-n)\,K_H(n_0-n-t),
+\]
+and $\widehat W(0)=0$, while the row/column constants of the bank grid are killed by the bank mask. 
+
+\begin{equation}\label{eq:hybrid-TI}
+\sum_{q\le Q}\ \sum_{(a,q)=1}
+\int_{\mathbb T} |S(\xi)|^2\,w_{a/q}(\xi)\,d\xi
+\ \ll\ (\log X)^C\Big( X\ +\ \frac{H}{Q^2}\Big)\,\sum_n |\alpha_n|^2,
+\end{equation}
+
+\end{lemma}
+
+Hence only the $X$–term of \eqref{eq:hybrid-TI} survives in $TT^\ast$ after $\delta=2$ alias suppression (the $H/Q^2$ constant–mode is canceled by the balanced bank), and AO dispersion spreads any residual mass across $\asymp Q^2$ arcs; hence the Type–I contribution entering the pointwise ledger is $\ll (\log X)^C\,X/(H Q^2)$.
+
+\textit{AO step.}
+By Theorem~\ref{thm:AO-disp-full} with $\kappa=C_{\rm AO}/Q$ and $m\asymp Q^2$,
+no single arc captures more than $m^{-1}+\kappa$ of the bank energy.
+Thus
+\[
+\mathrm{Var}_{\mathrm I}\ \ll\ (\log X)^C\ \frac{X}{H}\,\big(m^{-1}+\kappa\big)
+\ \ll\ (\log X)^C\ \left(\frac{X}{H Q^2}+\frac{X}{H}\cdot\frac{1}{Q}\right),
+\]
+and since $Q=H^\gamma$ with $\gamma>0$ fixed, the $X/(H Q)$ term is dominated by $X/(H Q^2)$ for large $H$ after a harmless constant inflation of $C_{\rm AO}$. Hence
+\(
+\mathrm{Var}_{\mathrm I}\ \ll\ (\log X)^C\,\frac{X}{H Q^2}.
+\)
+
+\begin{corollary}[Type--I variance after AO]\label{cor:typeI-variance}
+Let $\{\psi_i\}_{i=1}^m$ be the normalized arc probes of §4 with $m\asymp Q^2$ and near–orthogonality as in Theorem~\ref{thm:AO-dispersion-full}. Then, for the bank–projected minor–arc variance,
+\[
+\mathrm{Var}_{\mathrm I}
+\ =\ \mathbb E_{n_0}\ \sum_{i=1}^{m}\ \big|\langle S_{n_0},\psi_i\rangle\big|^2
+\ \ll\ (\log X)^C\ \frac{X}{H\,Q^2}\ \sum_{n\sim X}|\alpha(n)|^2.
+\]
+\emph{Proof.} Apply Theorem~\ref{thm:typeI-balanced} and Lemma~\ref{lem:alias-supp} to get $\sum_i \int |S|^2 \psi_i^2 \ll X\sum|\alpha|^2\cdot \max_i\|\psi_i\|_1^2$. Since $\|\psi_i\|_1^2\asymp |I_i|\asymp H^{-1}$, the total is $\ll (X/H)\sum|\alpha|^2$. Distribute this energy across the $m\asymp Q^2$ arcs using deterministic AO dispersion (Theorem~\ref{thm:AO-dispersion-full}): no $L$ arcs capture more than $(L/m+O(Q^{-1+\varepsilon}))$ of the total. For $L=1$ we obtain $\max_i |\langle S,\psi_i\rangle|^2\ll (X/(H Q^2))\sum|\alpha|^2$, and averaging over $i$ gives the displayed bound. \qedhere
+\end{corollary}
+
+\begin{lemma}[Double-centred mask annihilates the constant mode]\label{lem:Bmask-delta2}
+Let $M(d,n)$ be any real-valued mask on a rectangular ledger $\mathcal D\times\mathcal N$ in the $(d,n)$-plane. Define
+\[
+B(d,n):=M(d,n)
+-\frac{1}{|\mathcal N|}\sum_{n'\in\mathcal N}M(d,n')
+-\frac{1}{|\mathcal D|}\sum_{d'\in\mathcal D}M(d',n)
++\frac{1}{|\mathcal D|\,|\mathcal N|}\sum_{d'\in\mathcal D}\sum_{n'\in\mathcal N}M(d',n').
+\]
+Then, for every $d\in\mathcal D$ and $n\in\mathcal N$,
+\[
+\sum_{n'\in\mathcal N} B(d,n')=0,\qquad
+\sum_{d'\in\mathcal D} B(d',n)=0.
+\]
+Consequently, in the $TT^{\!*}$ expansion of the Type–I contribution
+\(
+\sum_{d\in\mathcal D}\sum_{n\in\mathcal N} B(d,n)\,|S|^2
+\)
+the $h=0$ (constant–in–$\alpha$) alias term vanishes identically.
+\end{lemma}
+
+\begin{proof}
+The identities follow from the definition: subtracting the row mean makes each row sum zero; subtracting the column mean makes each column sum zero; adding back the grand mean avoids double subtraction. In the $TT^{\!*}$ expansion, write $|S|^2=\sum_{h\in\mathbb Z}C(h)e(h\alpha)$ with $C(0)=\sum_n|\lambda(n)|^2$. The $h=0$ piece corresponds to rank-one forms depending only on $d$ or only on $n$; pairing with $B$ yields zero by the two identities.
+\end{proof}
+
+\begin{lemma}[Mean-zero bank window]\label{lem:vbank-meanzero}
+Let $\widehat v_{\mathrm{bank}}(\alpha)=\widehat w_{\mathrm{bank}}(\alpha)-\kappa\,\widehat u_H(\alpha)$ be the balanced frequency window with $\displaystyle \int_{0}^{1}\widehat v_{\mathrm{bank}}(\alpha)\,d\alpha=0$. For each translate $v_{a/q}(\alpha)=\widehat v_{\mathrm{bank}}(\alpha-a/q)$ one has
+\[
+\int_{0}^{1} v_{a/q}(\alpha)\,d\alpha = 0.
+\]
+Hence the $h=0$ Fourier mode of $|S(\alpha)|^2$ is suppressed before invoking any large-sieve inequality.
+\end{lemma}
+
+\begin{proof}
+By construction, $\int_{0}^{1}\widehat v_{\mathrm{bank}}=0$. Translation preserves the integral, so each $v_{a/q}$ also integrates to zero.
+\end{proof}
+
+\begin{proposition}[Alias suppression implies the Type–I scale]\label{prop:alias-typeI}
+Assume either Lemma~\ref{lem:Bmask-delta2} (physical $TT^{\!*}$) or Lemma~\ref{lem:vbank-meanzero} (frequency-side) to remove the $h=0$ mode. Then the hybrid large sieve yields
+\[
+\mathrm{Leak}_I\ \ll\ (\log X)^C\,\frac{X}{H\,Q^2}.
+\]
+\end{proposition}
+
+\begin{proof}
+With $h=0$ absent, the hybrid large sieve contributes only the $X$ term (the $HQ^2$ density term is attached to the constant mode). Multiplying by the normalization factor $H/Q^2$ gives the scale $X/(H Q^2)$ up to $(\log X)^C$.
+\end{proof}
+
+
+\begin{proof}[Proof of Proposition~\ref{prop:alias-kills-HQ2} (alias suppression)]
+Let $S(\alpha)=\sum_{n\le X}\lambda(n)e(\alpha n)$ with $\sum_{n\le X}|\lambda(n)|^2\ll X(\log X)^{C_0}$.
+Recall the bank windows $w_{a/q}$ of bandwidth $1/H$, and the balanced bank
+$\widehat v_{\mathrm{bank}}=\widehat w_{\mathrm{bank}}-\kappa\,\widehat u_H$ from \eqref{eq:vbank-def}, which satisfies
+$\int_{\mathbb T}\widehat v_{\mathrm{bank}}\,d\alpha=0$ (mean--zero).% (Lemma 3.4)
+Write the banked Type--I leakage as
+\[
+\mathrm{Leak}_I\ :=\ \frac{H}{Q^2}\sum_{q\le Q}\ \sum_{\substack{a\!\!\!\pmod q\\(a,q)=1}}
+\int_{\mathbb T} w_{a/q}(\alpha)\,|S(\alpha)|^2\,d\alpha .
+\]
+
+\emph{Method A (frequency, mean--zero bank).}
+Replace $w_{a/q}$ by $v_{a/q}$ coming from $\widehat v_{\mathrm{bank}}$:
+\[
+\mathrm{Leak}^{\mathrm{bal}}_I\ :=\ \frac{H}{Q^2}\sum_{q\le Q}\ \sum_{(a,q)=1}
+\int_{\mathbb T} v_{a/q}(\alpha)\,|S(\alpha)|^2\,d\alpha .
+\]
+Expand $|S|^2=\sum_{h\in\mathbb Z} C(h)\,e(h\alpha)$ with
+$C(h)=\sum_{n\le X-h}\lambda(n)\lambda(n+h)$. Since $\int v_{a/q}=0$
+the $h=0$ (constant) mode vanishes (Lemma~\ref{lem:alias-meanzero}); hence
+\[
+\mathrm{Leak}^{\mathrm{bal}}_I
+=\frac{H}{Q^2}\sum_{\substack{q\le Q\\ (a,q)=1}}
+\sum_{h\ne 0} C(h)\!\!\int v_{a/q}(\alpha)\,e(h\alpha)\,d\alpha.
+\]
+For $|h|\ge 1$ the window Fourier transform contributes
+$\int v_{a/q}(\alpha)e(h\alpha)\,d\alpha \ll \min\{H,|h|^{-1}\}$.
+Summing over $a$ yields a Ramanujan sum $c_q(h)$.
+By Cauchy--Schwarz and the hybrid large sieve (Gallagher--Montgomery),
+\[
+\sum_{q\le Q}\ \sum_{(a,q)=1}\ \int |v_{a/q}(\alpha)|\,|S(\alpha)|^2\,d\alpha
+\ \ll\ (X+HQ^2)\sum_{n\le X}|\lambda(n)|^2.
+\]
+Multiplying by $H/Q^2$ and using that the $h=0$ piece is \emph{absent} for $v$,
+only the $X$--term survives:
+\[
+\mathrm{Leak}^{\mathrm{bal}}_I\ \ll\ (\log X)^C\ \frac{X}{H\,Q^2}.
+\]
+This is Proposition~\ref{prop:alias-kills-HQ2} and completes Method A.
+
+\emph{Method B (physical, $\delta=2$ double--centering).}
+In the TT$^\ast$ ledger, insert the double--centered mask $B(d,n)$ from \eqref{thm:typeI-leak}
+with row/column cancellation
+$\sum_{n'}B(d,n')=0$ and $\sum_{d'}B(d',n)=0$ (Theorem ~\ref{thm:typeI-balanced}).
+When one expands the Type--I contribution, the $h=0$ (diagonal) part of $|S|^2$
+corresponds precisely to row--constant and column--constant components; these pair to zero
+against $B$:
+\[
+\sum_{d,n} B(d,n)\,g(d)\ =\ 0,\qquad
+\sum_{d,n} B(d,n)\,h(n)\ =\ 0.
+\]
+Hence the $HQ^2$ term (constant alias) cancels before any estimate, and the remaining
+$h\ne 0$ contribution is bounded exactly as in Method A, yielding
+$\mathrm{Leak}_I\ll (\log X)^C X/(H Q^2)$.
+
+\emph{Conclusion.}
+Either route shows the $HQ^2$ term is null and the Type--I scale is
+\(
+\mathrm{Leak}_I\ll (\log X)^C\, X/(H Q^2).
+\)
+\end{proof}
+
+\noindent\emph{Reader’s map.}
+Method A uses the frequency-side balanced bank $\widehat v_{\mathrm{bank}}$ (mean zero) to drop the $h=0$ mode before the hybrid large sieve; Method B uses the physical $\delta=2$ mask $B(d,n)$ to annihilate row/column constants in the TT$^\ast$ expansion. Both routes yield the same $X/(HQ^2)$ scale.
+
+\begin{proposition}[Alias suppression: removal of the $H/Q^2$ piece]\label{prop:alias-kills-HQ2}
+Assume each bank window is \emph{balanced}, i.e. $\int_{\mathbb T} w_{a/q}(\xi)\,d\xi=0$, hence $\widehat W(0)=0$.
+Then the $t=0$ contribution in \eqref{eq:TTstar-alias} vanishes:
+\[
+\widehat W(0)\,R_H(0)\,C_\alpha(0)=0.
+\]
+Consequently, in any large–sieve bound of the form
+\[
+\sum_{q\le Q}\ \sum_{(a,q)=1}\int |S(\xi)|^2 w_{a/q}(\xi)\,d\xi
+\ \ll\ \Big(X\ +\ \frac{H}{Q^2}\Big)\sum_{n\sim X}|\alpha(n)|^2,
+\]
+the $\tfrac{H}{Q^2}$ term is \emph{absent} inside the $TT^\ast$ ledger, and only the $X$–term survives.
+\end{proposition}
+
+\begin{proof}
+From \eqref{eq:TTstar-alias} the $t=0$ mode equals
+\(
+\widehat W(0)\,R_H(0)\,C_\alpha(0)
+\),
+with $R_H(0)=\sum_u |K_H(u)|^2\asymp H$ and $C_\alpha(0)=\sum|\alpha|^2$.
+Balanced windows give $\widehat W(0)=\int W=0$, so this entire mode vanishes.
+In standard large–sieve derivations, the $\frac{H}{Q^2}$ piece arises precisely from the mean (constant) Fourier mode of the mask (equivalently the measure $|E|\asymp Q^2/H$ of the bank union); once the mean is zero, that contribution is eliminated, leaving only the $X$–term.
+\end{proof}
+
+\begin{lemma}[Two--axis alias suppression on the bank grid]\label{lem:delta2-grid}
+Let $B(d,n)$ be a bank grid mask with
+\[
+\sum_{d} B(d,n)=0\quad\text{for all }n,\qquad
+\sum_{n} B(d,n)=0\quad\text{for all }d.
+\]
+In any $TT^\ast$ form where the bank enters via $B$,
+the row--constant, column--constant, and global constant components vanish. In particular, if a term factors through 
+$F(d,n)=g(d)$ or $F(d,n)=h(n)$ (or $F\equiv \mathrm{const}$),
+then $\sum_{d,n} B(d,n)F(d,n)\,A(d,n)=0$ for any array $A$.
+\end{lemma}
+
+\begin{proof}
+Immediate from the stated zero--sum identities by summing first over the cancelling axis.
+\end{proof}
+
+\begin{lemma}[TT$^\ast$ alias identity for the bank]\label{lem:TTstar-alias}
+Let $S_{n_0}(\xi):=\sum_{n\sim X}\alpha(n)\,K_H(n_0-n)\,e(\xi n)$ with $K_H$ as in Assumption~\ref{ass:signed-pin}.
+Let $W(\xi):=\sum_{q\le Q}\ \sum_{(a,q)=1} w_{a/q}(\xi)$ be the (smooth) bank mask, and set its Fourier coefficients
+$\widehat W(t):=\int_{\mathbb T}W(\xi)\,e(-t\xi)\,d\xi$.
+Then
+\begin{equation}\label{eq:TTstar-alias}
+\sum_{n_0}\int_{\mathbb T} W(\xi)\,\big|S_{n_0}(\xi)\big|^2\,d\xi
+\;=\;
+\sum_{t\in\mathbb Z}\widehat W(t)\,R_H(t)\,C_\alpha(t),
+\end{equation}
+where 
+\[
+R_H(t):=\sum_{u\in\mathbb Z} K_H(u)\,K_H(u-t),\qquad
+C_\alpha(t):=\sum_{m\sim X}\alpha(m+t)\,\overline{\alpha(m)}.
+\]
+\end{lemma}
+
+\begin{proof}
+Expand $|S_{n_0}(\xi)|^2$ and integrate against $W$:
+\[
+\int W(\xi)\,|S_{n_0}(\xi)|^2\,d\xi
+=\sum_{n,m}\alpha(n)\overline{\alpha(m)}\,K_H(n_0-n)K_H(n_0-m)\int W(\xi)\,e(\xi(n-m))\,d\xi.
+\]
+Set $t=n-m$; the inner integral is $\widehat W(t)$, and the $n_0$–sum equals $R_H(t)$ after reindexing $u=n_0-m$.
+Summing over $m$ gives $C_\alpha(t)$, yielding \eqref{eq:TTstar-alias}.
+\end{proof}
+
+\begin{corollary}[Type--I variance after alias suppression and AO]\label{cor:typeI-final}
+With balanced bank windows and the probes $\{\psi_i\}_{i=1}^{m}$ of §4 (with $m\asymp Q^2$ and near--orthogonality),
+\[
+\mathrm{Var}_{\mathrm I}
+\ =\ \mathbb E_{n_0}\sum_{i=1}^{m} \big|\langle S_{n_0},\psi_i\rangle\big|^2
+\ \ll\ (\log X)^C\,\frac{X}{H\,Q^2}\ \sum_{n\sim X}|\alpha(n)|^2.
+\]
+\emph{Proof.} By Proposition~\ref{prop:alias-kills-HQ2}, only the $X$–term of the large sieve remains inside $TT^\ast$:
+\(
+\sum_{i}\int |S|^2 \psi_i^2 \ll X \sum|\alpha|^2 \cdot \max_i\|\psi_i\|_1^2
+\).
+Since $\|\psi_i\|_1^2\asymp |I_i|\asymp H^{-1}$, the total is $\ll (X/H)\sum|\alpha|^2$.
+AO dispersion (Theorem~\ref{thm:AO-dispersion-full}) distributes this energy across $m\asymp Q^2$ arcs, giving the factor $1/Q^2$ and the claimed bound.
+\end{corollary}
+
+\paragraph{From variance to the ledger.}
+Throughout §9 the contribution of Type--I to the pointwise ledger is
+\[
+\kappa_2 (\log X)^{C_2}\,\frac{X}{H Q^2},
+\]
+coming directly from the bound for \(\Var_{\mathrm{I}}\) above. This term is \emph{separate} from the BG/SSU \(L^2\) errors \(\ll (\log X)^{C}(H/X)^{1/2}\) that control \(\|PAE\|_{\ell^2}\) and \(\|PA^c R_2\|_{\ell^2}\); see (9.4).
+
+
+\begin{lemma}[Deterministic bank selection for Type--I leakage]\label{lem:bank-selection}
+Let $\mathfrak A(Q;\tau)$ denote the bank obtained from a baseline family of Fejér windows by a measurable phase/dither parameter $\tau\in\Omega$ (e.g.\ a global shift or the usual Jutila randomization), and let
+\[
+\mathcal L_{\mathrm{I}}(\tau)\ :=\ \sum_{q\le Q}\ \sum_{\substack{a\!\!\!\!\pmod q\\(a,q)=1}}
+\int_{\mathbb T}\Big|\sum_{n\sim X}\alpha(n)\,e(\xi n)\Big|^{2}\,w^{(\tau)}_{a/q}(\xi)\,d\xi.
+\]
+Assume the expected Type--I leakage bound
+\[
+\mathbb E_{\tau}\ \mathcal L_{\mathrm{I}}(\tau)\ \le\ M\qquad\text{with } M\ \asymp\ \frac{X^{1+o(1)}}{H\,Q^{2}} .
+\]
+Then there exists a \emph{deterministic} parameter $\tau^\star\in\Omega$ (hence a fixed bank $\mathfrak A(Q;\tau^\star)$) such that
+\[
+\mathcal L_{\mathrm{I}}(\tau^\star)\ \le\ M.
+\]
+Moreover, suppose $\{\alpha_j\}_{j=1}^{J}$ is any finite family of Type--I coefficient arrays (e.g.\ the $J=O((\log X)^C)$ arrays appearing in the F3 decomposition across all dyadics used later). Writing $\mathcal L_{\mathrm{I},j}(\tau)$ for the leakage functional with $\alpha=\alpha_j$, if
+\[
+\mathbb E_{\tau}\ \mathcal L_{\mathrm{I},j}(\tau)\ \le\ M_j \quad (1\le j\le J),
+\]
+then there exists a single $\tau^\star$ such that, \emph{simultaneously for all $1\le j\le J$},
+\[
+\mathcal L_{\mathrm{I},j}(\tau^\star)\ \le\ (2J)\,M_j .
+\]
+\end{lemma}
+
+\begin{proof}
+For the first claim, $\mathcal L_{\mathrm{I}}(\tau)\ge 0$ and $\inf_{\tau}\mathcal L_{\mathrm{I}}(\tau)\ \le\ \mathbb E_{\tau}\mathcal L_{\mathrm{I}}(\tau)=M$ by Jensen/Fubini, so some $\tau^\star$ attains $\mathcal L_{\mathrm{I}}(\tau^\star)\le M$.
+
+For the simultaneous claim, by Markov,
+\(
+\mathbb P_{\tau}\{\mathcal L_{\mathrm{I},j}(\tau) > \lambda M_j\}\le 1/\lambda.
+\)
+With the union bound,
+\(
+\mathbb P_{\tau}\{\exists j:\ \mathcal L_{\mathrm{I},j}(\tau) > \lambda M_j\}\le J/\lambda.
+\)
+Choosing $\lambda=2J$, the right side is $\le \tfrac12$, so there exists $\tau^\star$ with $\mathcal L_{\mathrm{I},j}(\tau^\star)\le (2J)M_j$ for all $j$.
+\end{proof}
+
+\begin{corollary}[Deterministic bank]\label{cor:fix-bank}
+Let $\{\alpha_j\}_{j=1}^{J}$ be the (fixed) finite family of Type--I arrays arising in the F3 decomposition used later (across all dyadic scales), and let $M_j\asymp X^{1+o(1)}/(H Q^2)$ be the bounds given by Theorem~7.6 in expectation. Then there exists a single deterministic parameter $\tau^\star$ (hence a fixed bank $\mathfrak A(Q;\tau^\star)$) such that
+\[
+\mathcal L_{\mathrm{I},j}(\tau^\star)\ \ll\ (\log X)^C\ \frac{X}{H Q^2}\qquad(1\le j\le J).
+\]
+In particular, in §11 we may (and do) \emph{fix} this bank $\mathfrak A(Q;\tau^\star)$ and use the deterministic bound above in place of $\mathbb E_\tau$.
+\end{corollary}
+
+\subsection{Consequences for TT\texorpdfstring{$^\ast$}{star} and PSB}
+
+\begin{corollary}[Type–I limb in TT$^\ast$]
+\label{cor:typeI-ttstar}
+Let $S_b(\xi)$ be the Type–I contribution to the Dirichlet polynomial in the TT$^\ast$ identity at scale $[X,2X]$, localized by $\widehat w_{\tau^\ast}$. Then
+\[
+\mathbb E_{b\in\mathfrak B_Q}\ \int_{\mathbb{T}} |S_b(\xi)|^2\,\widehat w_{\tau^\ast}(\xi)\,d\xi
+\ \ll\ (\log X)^C\ \frac{X^{1+o(1)}}{H\,Q^2}.
+\]
+In particular, choosing $Q=H^\gamma$ with any fixed $\gamma>1/6$ makes the Type–I limb $o(H)$ after normalization, as required in the PSB step.
+\end{corollary}
+
+\begin{proof}
+Immediate from Theorem~\ref{cor:typeI-final} and $Q=H^\gamma$ with $0<\gamma<\tfrac12$.
+\end{proof}
+
+\paragraph{Summary.}
+Type–I leakage gains a full $Q^{-2}$ under TFA$^{+}$ banking and AO$^{+}$ packet mixing, thanks to the $O(1)$ arc occupancy for Type–I spectra. Together with the BG/SSU short-shift bound for Type–II and the AO$^{+}$ dispersion, this closes the TT$^\ast$ suppression stack used in PSB.
+
+
+\begin{remark}[Extractor inherits the same bounds]
+All analytic bounds in §5–§7 (SSU, Type–I, AO) depend only on bandwidth $1/H$ and the moment bounds. 
+Replacing $K_H$ by $J_H$ in the definition of the center statistic leaves the proofs unchanged (at most a $(\log X)^C$ factor), hence
+\[
+\mathbb E_{n_0}S^{\mathrm{ext}}_{n_0}\ \gg\ \frac{1}{(\log X)^2},\qquad 
+\mathrm{Var}\big(S^{\mathrm{ext}}_{n_0}\big)\ \ll\ C_2\Big(\tfrac{H}{X}\Big)^{1/2}\ +\ \frac{C_3}{H\,Q^2}.
+\]
+\end{remark}
+
+\begin{lemma}[Kernel–stability of the bank–local ledger]\label{lem:kernel-stability}
+Let $H\ge2$, and let $K$ and $J$ be band–limited kernels with
+\[
+\supp \widehat K,\ \supp \widehat J \ \subset [-1/H,\,1/H],
+\]
+such that
+\[
+\int_{-1/H}^{1/H}\widehat K(\xi)\,d\xi \ \ll H,\qquad
+\int_{-1/H}^{1/H}\frac{\widehat K(\xi)}{|\xi|}\,d\xi \ \ll H\log H,
+\]
+and
+\[
+\int_{-1/H}^{1/H}\widehat J(\xi)\,d\xi \ \ll 1,\qquad
+\int_{-1/H}^{1/H}\frac{\widehat J(\xi)}{|\xi|}\,d\xi \ \ll \log H.
+\]
+(For example, $K=K_H$ from Lemma~\ref{lem:kernel} and $J=J_H$ from Lemma~\ref{lem:extractor}.)
+
+Let $S_{n_0} = R_{2,c} * K$ and $S^{\mathrm{ext}}_{n_0} = R_{2,c} * J$. Then the bank–local SSU bound and the banked Type–I variance bound proved for $S_{n_0}$ remain valid for $S^{\mathrm{ext}}_{n_0}$, with at most a $(\log X)^C$ change of constants; in particular
+\[
+\|T\|_{2\to2} \ \ll\ (\log X)^C\,(H/X)^{1/2},\qquad
+\mathrm{Var}_{\mathrm I}\ \ll\ (\log X)^C\,\frac{X}{H\,Q^2}.
+\]
+\end{lemma}

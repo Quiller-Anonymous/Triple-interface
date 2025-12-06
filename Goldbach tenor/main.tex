@@ -1,0 +1,186 @@
+%========================================================
+%  main.tex  — Triple Interface to (Long) Goldbach
+%========================================================
+\DeclareUnicodeCharacter{2032}{\ensuremath{'}}
+\documentclass[11pt]{article}
+
+%------------ Page & fonts
+\usepackage[margin=1.1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{microtype}
+\usepackage{lmodern}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{bibliography.bib}
+\providecommand{\Z}{\mathbb{Z}}
+
+%------------ Math & theorems
+\usepackage{amsmath, amssymb, amsthm, amsfonts, mathtools, tabularx,enumitem}
+\DeclarePairedDelimiter{\angles}{\langle}{\rangle}
+\usepackage{thmtools}
+\newcommand{\F}{\mathcal{F}}
+\usepackage{bm}
+\usepackage{commath}
+\usepackage{enumitem}
+\usepackage{physics}
+\usepackage{graphicx}
+\declaretheorem[title=Theorem F,numberwithin=section]{theoremF}
+\allowdisplaybreaks
+\DeclareMathOperator{\dist}{dist}
+
+%------------ Custom abbreviations
+
+\newcommand{\ee}[1]{\mathrm{e}^{#1}}
+\newcommand{\ol}[1]{\overline{#1}}
+\newcommand{\ppart}{_+}
+\newcommand{\pospart}[1]{\left(#1\right)_{+}}
+\renewcommand{\Z}{\mathbb{Z}}
+\newcommand{\TFA}{\textup{TFA}}
+\newcommand{\AO}{\textup{AO}}
+\newcommand{\BG}{\textup{BG}}
+\newcommand{\PSB}{\textup{PSB}}
+\newcommand{\SSU}{\textup{SSU}}
+\newcommand{\R}{\mathbb{R}}
+
+%------------ Graphics (rare)
+\usepackage{graphicx}
+\usepackage{xcolor}
+
+%------------ Hyperlinks & clever references
+\usepackage[colorlinks,allcolors=blue!60!black]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+
+
+%------------ Bibliography (use your .bib file or comment out)
+% \usepackage[backend=biber,style=alphabetic,maxbibnames=9]{biblatex}
+% \addbibresource{ti_goldbach.bib}
+
+%========================================================
+%  Theorem environments
+%========================================================
+\numberwithin{equation}{section}
+\declaretheorem[name=Theorem,numberwithin=section]{theorem}
+\declaretheorem[name=Proposition,sibling=theorem]{proposition}
+\declaretheorem[name=Lemma,sibling=theorem]{lemma}
+\declaretheorem[name=Corollary,sibling=theorem]{corollary}
+\declaretheorem[name=Claim,sibling=theorem]{claim}
+\declaretheorem[name=Definition,sibling=theorem]{definition}
+\declaretheorem[name=Remark,sibling=theorem,style=remark]{remark}
+\declaretheorem[name=Example,sibling=theorem,style=remark]{example}
+
+%========================================================
+%  Custom commands & operators (match section files)
+%========================================================
+\newcommand{\llangle}{\langle\!\langle}
+\newcommand{\rrangle}{\rangle\!\rangle}
+\newcommand{\e}{\mathrm{e}}
+\newcommand{\ii}{\mathrm{i}}
+% \newcommand{\dd}{\mathrm{d}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\sgn}{\operatorname{sgn}}
+\renewcommand{\Res}{\operatorname{Res}}
+\newcommand{\Var}{\operatorname{Var}}
+\newcommand{\supp}{\operatorname{supp}}
+
+\newcommand{\TT}{\mathbb{T}}
+\newcommand{\T}{\mathbb{T}}
+\newcommand{\NN}{\mathbb{N}}
+\newcommand{\RR}{\mathbb{R}}
+
+\newcommand{\asympX}{\,\asymp\,}
+\renewcommand{\qq}{\quad}
+\newcommand{\qqand}{\quad\text{and}\quad}
+\newcommand{\avg}{\mathbb{E}}
+
+\DeclareMathOperator{\Sym}{Sym}
+\DeclareMathOperator{\Varop}{Var}
+
+% Short exponential
+\newcommand{\ex}[1]{\mathrm{e}^{2\pi\ii\, #1}}
+
+% Von Mangoldt and related
+\newcommand{\Lam}{\Lambda}
+\newcommand{\Lams}{\Lambda^\sharp}
+
+% Bank/window notations
+\newcommand{\wh}{\widehat}
+\newcommand{\whw}{\widehat{w}_{\tau^\ast}}
+\newcommand{\whK}{\widehat{K}}
+\newcommand{\whKh}{\widehat{K}_{H}}
+
+% Smoothing scale
+\newcommand{\HH}{H}
+\newcommand{\QQ}{Q}
+
+\newcommand{\cA}{\mathcal{A}}
+\newcommand{\PA}{P_{\mathcal{A}}} % Fourier projection to the bank
+\input{appendix_macros}
+
+%========================================================
+%  Title & metadata are in a separate file
+%========================================================
+
+\title{Goldbach and the Triple Interface Method:\\Banded TFA, Bilinear Geometry, and AO Dispersion}
+\author{Edited by A. Quiller}
+\date{\today}
+
+%========================================================
+%  Document
+%========================================================
+\newcommand{\bbT}{\mathbb{T}}
+\begin{document}
+\maketitle
+\input{sections/00_frontmatter}        % title, authors, abstract, MSC, keywords
+\tableofcontents
+
+%--------------------------------------------------------
+%  Introductory materials
+%--------------------------------------------------------
+\input{sections/01_intro}              % introduction + statement of main theorems
+\input{sections/02_notation}           % notation & standing conventions
+
+%--------------------------------------------------------
+%  Analytic interfaces
+%--------------------------------------------------------
+\input{sections/03_TFA}                % TFA$^{+}$: bank/window & alias suppression
+\input{sections/04_AO}                 % AO$^{+}$: packet mixing / dispersion on arcs
+\input{sections/05_BG}                 % BG$^{+}$ core (incidence + shearing + nonflat)
+\input{sections/05b_SSU}              % SSU: slope–shift uncertainty on a single tube
+
+%--------------------------------------------------------
+%  Type-I leakage and primes-from-bilinear
+%--------------------------------------------------------
+\input{sections/06_TypeI}              % Type-I leakage under the banked window
+\input{sections/07_PSB}                % PSB: TT$^\ast$ to prime positivity
+
+%--------------------------------------------------------
+%  Localization to every window / pinning layer
+%--------------------------------------------------------
+\input{sections/08_Sampling_Bernstein}  % Banked sampling + Bernstein (uniformizer)
+\input{sections/08b_FixedPin}        % Fixed nonnegative banked pin (Riesz product)
+
+%--------------------------------------------------------
+%  Arithmetic routing & final assembly
+%--------------------------------------------------------
+\input{sections/09_AP_SW}              % AP localization (Siegel–Walfisz at polylog moduli)
+\input{sections/10_FinalAssembly}      % End-to-end assembly and proof of the main theorem
+
+%--------------------------------------------------------
+%  Appendices (kernels, BS pair, incidence details, LS/Nazarov, base check)
+%--------------------------------------------------------
+\appendix
+\input{sections/A_Kernels}             % explicit $K_H$, $m_H$, $M_H$ and their norms
+\input{sections/B_Incidence}           % near-hyperbola incidence & degeneracy proofs
+\input{sections/C_BS}                  % Beurling–Selberg construction at bandwidth $1/H$
+\input{sections/D_LS}                  % Logvinenko–Sereda / Nazarov sampling details
+\input{sections/E_BaseCheck}           % finite computation threshold $\Phi$ (if included)
+
+%--------------------------------------------------------
+%  Bibliography
+%--------------------------------------------------------
+
+\nocite{*}
+\printbibliography
+
+\end{document}

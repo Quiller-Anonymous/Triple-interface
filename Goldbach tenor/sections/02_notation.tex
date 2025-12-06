@@ -1,0 +1,171 @@
+%========================================================
+%  Notation and standing conventions
+%========================================================
+% Notation section
+\providecommand{\Z}{\mathbb{Z}}
+\providecommand{\C}{\mathbb{C}}
+\providecommand{\wh}{\widehat}
+
+\section{Notation and standing conventions}\label{sec:notation}
+
+\begin{description}[style=nextline]
+
+\item[Epistemology and proof.]
+Terms like "unconditional proof" and "proof" will be used throughout the paper draft to describe the state of deductive closure absent human verification. As such, strictly speaking, they are only provisionally proven.
+
+\item[Transforms and convolution on $\mathbb{Z}_M$.]
+For $f:\{0,\dots,M-1\}\to\mathbb{C}$,
+\[
+\wh f(k)=\sum_{n=0}^{M-1} f(n)\,e^{-2\pi i kn/M},\qquad
+f(n)=\frac{1}{M}\sum_{k=0}^{M-1}\wh f(k)\,e^{2\pi i kn/M}.
+\]
+Convolution: $(f*g)(n)=\sum_m f(m)\,g(n-m)$. Parseval:
+$\sum_n |f(n)|^2=\frac{1}{M}\sum_k |\wh f(k)|^2$.
+
+\item[Asymptotic symbols.]
+We write $A\ll B$ or $A=O(B)$ if $|A|\le C\,B$ for some constant $C>0$ depending only on the fixed parameters indicated (by subscripts when needed), e.g.\ $A\ll_{\varepsilon} B$.  
+We write $A\asymp B$ if $A\ll B$ and $B\ll A$.  
+We write $A=X^{o(1)}$ to mean: for every $\eta>0$, $|A|\le X^{\eta}$ for all sufficiently large $X$ (with the same fixed parameters).  
+All implied constants may depend on $(\varepsilon,A,\gamma,C_W)$ unless otherwise stated.
+
+\item[Global scale and dyadics.]
+$X\to\infty$ is the main asymptotic parameter.  
+Dyadic variables satisfy $X^{\varepsilon}\le D,N\le X^{1-\varepsilon}$ with $DN\asymp X$.  
+We use the short--shift (smoothing) scale
+\[
+H=(\log X)^A,\qquad A\ge 10,
+\]
+and the bank parameter $Q=H^{\gamma}$ with fixed $0<\gamma<\tfrac12$.
+
+\item[Arithmetic functions.]
+$\mathbf{1}_E$ is the indicator of an event/set $E$.  
+$\mu$ is the M\"obius function, $\varphi$ Euler’s totient.  
+$\tau(n)$ is the divisor function.  
+$\Lambda(n)$ is von Mangoldt; $\Lambda^{\sharp}(n)=\log p$ if $n=p$ is prime, otherwise $0$.  
+We use $p$ for primes and $p^k$ for prime powers ($k\ge 2$).
+
+\item[Exponential notation and Fourier transforms.]
+\end{description}
+
+$e(z):=e^{2\pi i z}$.  
+On $\R$, for $f\in L^1(\R)$ we set
+\[
+\widehat f(\xi)=\int_{\R} f(t)\,e(-\xi t)\,dt,\qquad
+f(t)=\int_{\R} \widehat f(\xi)\,e(\xi t)\,d\xi.
+\]
+On $\Z$, for $F:\Z\to\C$ we use the Fourier series on $\mathbb T=\R/\Z$:
+\[
+\widehat F(\xi)=\sum_{n\in\Z} F(n)\,e(-\xi n),\qquad
+F(n)=\int_{\mathbb T}\widehat F(\xi)\,e(\xi n)\,d\xi.
+\]
+We write $\|\cdot\|_p$ for $L^p$ or $\ell^p$ norms as context dictates.
+
+\paragraph{Bank, projectors, and multipliers.}
+Let $\cA\subset\{0,\dots,M-1\}$ be the (alias-suppressed) bank: disjoint arcs of width $\asymp M/H$ around reduced $a/q$ with $q\le Q$.
+\begin{itemize}
+  \item \emph{Sharp bank projector.} $\PA$ is the orthogonal Fourier projection to $\cA$:
+  $\wh{(\PA f)}(k)=\mathbf{1}_{\cA}(k)\,\wh f(k)$. In time, $\PA f=K_{\cA}*f$ with
+  \[
+  K_{\cA}(n)=\frac{1}{M}\sum_{k\in\cA} e^{2\pi i kn/M}\qquad\text{(generally signed)}.
+  \]
+  \item \emph{Smoothed bank operator.} Choose $0\le \psi\le 1$ with $\supp\psi\subset\cA$ and $\psi\equiv 1$ on the middle third of each arc. Define $T_\psi$ by $\wh{(T_\psi f)}=\psi\,\wh f$. Then $\|T_\psi\|_{\ell^2\to \ell^2}\le 1$ and $T_\psi f=K_\psi * f$ with
+  $K_\psi(n)=\frac{1}{M}\sum_k \psi(k)\,e^{2\pi i kn/M}$ (signed).
+\end{itemize}
+We never assume time-domain kernels are nonnegative; all pointwise steps use the projector inequalities below.
+
+\textbf{Bank and arcs (TFA$^{+}$, AO$^{+}$).}
+$\mathfrak A=\bigcup_{j=1}^{J}\mathfrak a_j\subset\mathbb T$ is the union of disjoint “bank arcs” centered at rationals $a_j/q_j$ with $1\le q_j\le Q$, each of length $\asymp 1/H$.  
+$J\asymp Q^2$.  
+$\widehat w_{\tau^\ast}$ is the (nonnegative) banked spectral window supported on $\mathfrak A$ with total mass $\asymp Q^2/H$ (TFA$^{+}$).  
+When we partition $\mathfrak A$, we write $\psi_{\mathfrak a}\in C_c^\infty(\mathfrak a)$ for a smooth partition of unity.
+
+\paragraph{Local arc detectors (AO).}
+For each arc $I_i\subset\cA$, fix a nonnegative bump $\phi_i$ with $\supp\phi_i\subset I_i$ and $\int\phi_i\asymp |I_i|$. Set
+\[
+\psi_i:=\phi_i^{1/2}\big/\|\phi_i^{1/2}\|_{L^2},\qquad \|\psi_i\|_{2}=1.
+\]
+Their Gram matrix $G_{ij}=\angles{\psi_i,\psi_j}$ is diagonally dominant with off-diagonals
+$|G_{ij}|\ll Q^{-1+\varepsilon}$ (near-orthogonality). The $\psi_i$’s are \emph{frequency} bumps; they are not the global $\psi$ used in $T_\psi$.
+
+\paragraph{Fejér window at bandwidth $1/H$.}
+Let $\wh \Phi_H(\xi)$ be a nonnegative Fejér/triangle window supported on $|\xi|\lesssim 1/H$ with total mass $\asymp 1$.
+For the dyadic shells $\mathcal D_j=\{\xi:2^{-j-1}/H<|\xi|\le 2^{-j}/H\}$ define
+\[
+W_j := \sum_{\xi\in \mathcal D_j} |\wh \Phi_H(\xi)|,\qquad
+\sum_{j\ge 0}W_j\ll 1,\qquad \sum_{j\ge 0}2^{j/2}W_j\ll \log H.
+\]
+These are the only properties used in the SSU dyadic split.
+
+
+\begin{description}
+\item[Type–II (bilinear) sums.]
+Coefficient sequences $(\alpha_d)$, $(\beta_n)$ are supported on $[D,2D]$, $[N,2N]$, respectively.  
+The Type–II aggregate at level $k$ is
+\[
+A_k \ :=\ \sum_{dn=k}\alpha_d\,\beta_n\,
+W\!\Big(\tfrac dD,\tfrac nN\Big).
+\]
+We write
+\[
+\textstyle \mathrm{Corr}_H:=\frac{1}{H}\sum_{0<|\Delta|<H}\sum_k |A_{k+\Delta}\,\overline{A_k}\,|
+\]
+for the short–shift correlation average.
+
+\end{description}
+\begin{description}
+\item[Sheared coordinates and tubes (BG).]
+For a reduced slope $a/q$ we use the unimodular linear map
+\[
+\Phi_{a/q}:\ (d,n)\mapsto (u,v)=(qd-an,\ ad+qn),
+\]
+so that $d'n-d n'=(u'v-uv')/(a^2+q^2)$.  
+A (sheared) tube $T_\tau$ is a set of lattice points in $[D,2D]\times[N,2N]$ satisfying a slope constraint $|n/d-a/q|\ll H/X$ together with a short–shift constraint $|d'n-d n'|\ll H$.  
+We use $S_\tau=\Phi_{a/q}(T_\tau)$ for its image.
+
+\item[Short–shift operator and SSU.]
+The short–shift kernel in space is
+\[
+\mathcal K_H\big((d,n),(d',n')\big):=K_H(d'n-d n')\,W\!\Big(\tfrac dD,\tfrac nN\Big)\,W\!\Big(\tfrac{d'}D,\tfrac{n'}N\Big),
+\]
+and $(\mathbf T F)(d',n'):=\sum_{d,n}\mathcal K_H((d,n),(d',n'))F(d,n)$.  
+“SSU” (slope–shift uncertainty) denotes the key tube estimate
+\[
+\sum_{(d',n'),(d,n)\in T_\tau} F(d,n)\,K_H(d'n-d n')\,\overline{F(d',n')}
+\ \ll\ (\log X)^C\Big(\frac{H}{X}\Big)^{\!1/2}\ \sum_{T_\tau}|F|^2,
+\]
+uniformly over tubes $T_\tau$.
+
+\item[Circle method, major/minor arcs.]
+For $R_{2,c}(n)$ (smoothed Goldbach count in a residue class $c\bmod W$) we write its Fourier transform $\widehat{R_{2,c}}(\xi)$ on $\mathbb T$.  
+On each major arc $\mathfrak a_{a/q}\subset\mathfrak A$ we use the standard factorization
+\[
+\widehat{R_{2,c}}(\xi)\ =\ \mathfrak S_{a/q,c}\ \mathcal V(\xi-a/q)\ +\ \mathrm{Err}_{a/q}(\xi),
+\]
+where $\mathfrak S_{a/q,c}>0$ is the (localized) singular series and $\mathcal V\ge 0$ is the archimedean profile; $\mathrm{Err}_{a/q}$ is controlled by Type–I leakage, BG, and AO dispersion.  
+“Minor arcs’’ means $\mathbb T\setminus \mathfrak A$.
+
+\item[Smoothed local statistic.]
+The band-limited local count is
+\[
+\mathcal S(y)\ :=\ \sum_{n\in\Z} R_{2,c}(n)\,K_H(n-y),\qquad
+\mathcal T(y)\ :=\ \frac{\log^2 X}{H}\,\mathcal S(y).
+\]
+We frequently evaluate $\mathcal T$ on a grid $\mathcal G=\{X+j\Delta\}\cap[X,2X]$ with $\Delta=H/C_0$.
+
+\item[AP localization.]
+$W=(\log X)^B$ is the smooth modulus used for arithmetic progression localization (Siegel–Walfisz range).  
+Residues $c\bmod W$ are assumed admissible.  
+We write averages over classes as $\mathbb E_{a \bmod q}$ and over bank packets (AO) as $\mathbb E_{b\in\mathfrak B_Q}$.
+
+\end{description}
+
+\paragraph{Projection inequalities (used for pointwise steps).}
+Writing $R_2=M+E$ one has, for every even $N$,
+\[
+R_2(N)\ \ge\ (\PA M)(N)\ -\ \|\PA E\|_2\ -\ \|P_{\cA^c}R_2\|_2,
+\]
+and, with the smoothed multiplier $T_\psi$,
+\[
+R_2(N)\ \ge\ (T_\psi M)(N)\ -\ \|T_\psi E\|_2\ -\ \|(I-T_\psi)R_2\|_2.
+\]
+Lower bounds for $(\PA M)$ or $(T_\psi M)$ come from the \emph{bank-summed} singular series; the two $L^2$ terms are controlled by the BG/SSU and Type–I sections.

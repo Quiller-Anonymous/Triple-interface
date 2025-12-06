@@ -1,0 +1,122 @@
+%--------------------------------------------------------
+%  A1_Incidence.tex — Near-hyperbola incidence bounds
+%--------------------------------------------------------
+
+\section{Near-hyperbola incidence and tube overlaps}\label{app:incidence}
+
+Throughout this appendix we keep the standing parameters:
+\[
+X^\varepsilon\le D,N\le X^{1-\varepsilon},\quad DN\asymp X,\quad
+H=(\log X)^A,\quad Q=H^\gamma,\ 0<\gamma<\tfrac12,
+\]
+and a fixed weight $W\in C_c^\infty([1/2,2]^2)$ with $\|\partial^\alpha W\|_\infty\le C_W$ for $|\alpha|\le 3$.
+For integers $(d,n),(d',n')$ we write the antisymmetric form
+\[
+\mathsf B\bigl((d,n),(d',n')\bigr):=d'n-dn'.
+\]
+
+\begin{proposition}[Weighted near-hyperbola incidence]\label{prop:incidence-weighted}
+Let
+\[
+\mathcal I\ :=\ \sum_{d\sim D}\sum_{n\sim N}\sum_{d'\sim D}\sum_{n'\sim N}
+W\!\Big(\frac{d}{D},\frac{n}{N}\Big)\,W\!\Big(\frac{d'}{D},\frac{n'}{N}\Big)\,
+\mathbf 1_{\{\,|\mathsf B((d,n),(d',n'))|<H\,\}}.
+\]
+Then
+\begin{equation}\label{eq:incidence}
+\mathcal I\ \ll\ X^{o(1)}\,\Big(H(D+N)+X\Big).
+\end{equation}
+The same bound holds if the indicator is replaced by any nonnegative bump supported in $|\mathsf B|\ll H$.
+\end{proposition}
+
+\begin{proposition}[Near-hyperbola incidence]\label{prop:incidence}
+Let $W\in C_c^\infty([1/2,2]^2)$ with $\|\partial^\alpha W\|_\infty\le C_W$ for $|\alpha|\le 3$. For integers $D,N$ with $DN\asymp X$ and a parameter $H\le X^{1-\varepsilon}$, the number of quadruples $(d,n,d',n')$ with $d\sim D$, $n\sim N$, $d'\sim D$, $n'\sim N$, satisfying $|d'n-dn'|\le H$ and weighted by $W(d/D,n/N)W(d'/D,n'/N)$ is
+\[
+\sum_{\substack{d\sim D,\ n\sim N\\ d'\sim D,\ n'\sim N}}\!
+\mathbf 1_{\{|d'n-dn'|\le H\}}\,
+W\!\Big(\frac dD,\frac nN\Big)\,W\!\Big(\frac{d'}D,\frac{n'}N\Big)
+\ \ll\ (\log X)^C\big(H(D+N)+X\big).
+\]
+The implied constant depends only on $(\varepsilon,C_W)$.
+\end{proposition}
+
+\begin{proof}
+Insert the smooth indicator for $|d'n-dn'|\le H$ via the band-limited $K_H$:
+\[
+\mathbf 1_{\{|t|\le H\}}\ \le\ K_H(t),\qquad K_H\ge 0,\ \ \int K_H=H+O(1),\ \ \supp \widehat K_H\subset[-1/H,1/H].
+\]
+Then Poisson summation in $(d',n')$ gives
+\[
+\sum_{d',n'} K_H(d'n-dn')\,W'(\tfrac{d'}D,\tfrac{n'}N)
+=\sum_{u,v\in\mathbb Z} \widehat K_H(u\tfrac{n}{X}-v\tfrac{d}{X})\,\widehat W'\!(u,v),
+\]
+where $W'$ is $W$ scaled to $[D,2D]\times[N,2N]$ and $\widehat W'$ decays faster than any power. The $u=v=0$ term contributes $(H+O(1))\cdot \iint W' = H\cdot DN+O(DN)$. Summing over $(d,n)$ with $W(d/D,n/N)$ yields a main term $\ll H\cdot DN\cdot (1/D)(1/N) \asymp H X$.  
+
+For $(u,v)\ne(0,0)$, $\widehat K_H(\xi)$ vanishes unless $|\xi|\le 1/H$, i.e. $|u n - v d|\lesssim X/H$. Counting lattice points $(d,n)$ in strips $|u n-v d|\le X/H$ over the $D\times N$ box yields, by standard divisor geometry, $O\!\big((D+N)+X/H\big)$ points; summing over $O(1)$ relevant $(u,v)$ (since $\widehat W'$ decays rapidly) contributes $\ll (\log X)^C\big((D+N)+X/H\big)$. Multiplying by the outer sum in $(d',n')$ recovered by Poisson produces an error $\ll (\log X)^C\big(H(D+N)+X\big)$. This proves the claim.
+\end{proof}
+
+We also need an overlap bound for the sheared tube pack used in \S\ref{sec:BG} and \S\ref{sec:ssu}.
+
+\begin{lemma}[Tube overlap]\label{lem:tube-overlap}
+Let $\{T_{a/q}\}$ be the slope tubes of thickness $\delta\asymp H/X$ centered at rationals $a/q$ with $q\le Q$ (cf.\ \eqref{eq:BG.tube}). Then any point $(d,n)$ belongs to at most $O(1)$ tubes, and the number of tubes intersecting a fixed tube is $\ll (\log X)^C$.
+\end{lemma}
+
+\begin{proof}
+Slopes $a/q$ are $1/Q^2$-separated; a tube has angular aperture $\asymp \delta\cdot(D/N)$ in slope coordinates. Since $\delta\ll H/X$ and $Q=H^\gamma$ with $\gamma<\tfrac12$, only $O(1)$ neighbors in slope can meet at a given lattice site. The $(\log X)^C$ comes from dyadic shearing and edge effects; see the shearing map \eqref{eq:BG.shear}.
+\end{proof}
+
+%===========================
+% Incidence and degeneracy
+%===========================
+\section{Incidence and degeneracy lemmas}\label{app:incidence}
+
+Let $W\in C_c^\infty([1/2,2]^2)$ with $\|\partial^\alpha W\|_\infty\le C_W$ for $|\alpha|\le 2$. Let $D,N\in[X^\varepsilon,X^{1-\varepsilon}]$ with $DN\asymp X$. Throughout, implied constants may depend on $(\varepsilon, C_W)$ only.
+
+\begin{lemma}[Smoothed near-hyperbola incidence]\label{lem:incidence}
+For $H\le X^{1-\varepsilon}$,
+\[
+\sum_{d,d'\sim D}\sum_{n,n'\sim N}
+W\!\Big(\tfrac dD,\tfrac nN\Big)\,W\!\Big(\tfrac{d'}D,\tfrac{n'}N\Big)\,\mathbf 1_{\,|d'n-d n'|\le H}
+\ \ll\ C_W\big(H(D+N)+X\big).
+\]
+\end{lemma}
+
+\begin{proof}
+Fix $d'$ and count $(d,n,n')$ with $|d'n-dn'|\le H$. For each $d\sim D$, the condition determines an interval in $n$ of length $\ll 1+H/d$, contributing $\ll 1+H/D$. Summing over $d\sim D$ gives $\ll D+H$. Now sum over $n'\sim N$ and $d'\sim D$, with the smooth weights limiting boundary effects to $O(1)$; this yields $\ll (D+H)\cdot DN\asymp H(D+N)+X$. The $C_W$ factor tracks the cutoffs by repeated summation by parts in $d,n$.
+\end{proof}
+
+\begin{lemma}[Parallel-tube degeneracy]\label{lem:BG.degeneracy}
+Let $\mathcal T$ be any subfamily of sheared tubes whose slopes lie in an interval of width $\Delta$ around some fixed $a/q$. Then
+\[
+\sum_{T\in\mathcal T}\ \sum_{(d,n)\in T} W\!\Big(\tfrac dD,\tfrac nN\Big)
+\ \ll\ C_W\,\big(\Delta(D+N)+1\big)\,X^{o(1)}.
+\]
+\end{lemma}
+
+\begin{proof}
+Shear to slope/cross-slope coordinates $(u,v)$; tubes with slope width $\Delta$ project to vertical strips of total width $\ll \Delta(D+N)$ (modulo the lattice shear). The smooth weight restricts to a rectangle of area $\asymp X$; counting lattice points in vertical strips yields the bound. The $X^{o(1)}$ term covers benign lattice irregularity and the bounded overlaps of the tube pack.
+\end{proof}
+
+\section{Incidence Bound for Near-Hyperbola Lattice Points}
+
+\begin{lemma}[Incidence bound]\label{lem:incidence}
+Let $X$ be large, $D,N$ satisfy $X^{\varepsilon}\le D,N\le X^{1-\varepsilon}$ with $DN\asymp X$, and let $H\le X^{1-\varepsilon}$.  
+Then the number of quadruples $(d,n,d',n')$ with
+\[
+D\le d,d'\le 2D,\quad N\le n,n'\le 2N,\quad
+|d'n - dn' - \Delta|\le H
+\]
+is
+\[
+\ll_\varepsilon H(D+N) + X.
+\]
+\end{lemma}
+
+\begin{proof}
+The constraint $|d'n - dn' - \Delta|\le H$ defines integer points near a hyperbola.  
+Fixing $d,d'$, the condition determines $n'$ up to an interval of length $O(H/D)$.  
+Summing over $d,d'$ contributes $O(D^2\cdot H/D)=O(DH)$.  
+By symmetry, interchanging the roles of $(d,n)$ and $(d',n')$ contributes $O(NH)$.  
+Finally, the trivial bound $O(DN)\asymp X$ accounts for all remaining solutions.  
+Adding yields the stated bound.
+\end{proof}

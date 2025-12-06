@@ -1,0 +1,155 @@
+%========================================================
+%  Appendix A. Band-limited kernels and BS sandwiches
+%========================================================
+\appendix
+\section{Band-limited kernels and Beurling–Selberg sandwiches}\label{sec:appendix-kernels}
+
+Throughout $A\ge 10$, $H=(\log X)^A$, and implicit constants may depend on $(\varepsilon,A,C_W)$ only.
+
+%----------------------------------------
+
+\subsection*{Kernel elaboration}
+\begin{lemma}[Admissible band-limited kernel]\label{lem:kernel}
+For each $H\ge2$ define
+\[
+\widehat K_H(\xi)\ :=\ A_H\,|\xi|\,\mathbf{1}_{\{|\xi|\le 1/H\}}(\xi),
+\qquad A_H:=H.
+\]
+Let
+\[
+K_H(t)\ :=\ \int_{-1/H}^{1/H}\widehat K_H(\xi)\,e\!\left(\frac{\xi t}{X}\right)\,d\xi,
+\qquad e(z):=e^{2\pi i z}.
+\]
+Then $\widehat K_H(\xi)\ge0$, is even and compactly supported in $[-1/H,1/H]$, and
+\begin{equation}\label{eq:KH-moments-lemma}
+\int_{-1/H}^{1/H}\!\widehat K_H(\xi)\,d\xi\ \ll\ H,\qquad
+\int_{-1/H}^{1/H}\!\frac{\widehat K_H(\xi)}{|\xi|}\,d\xi\ \ll\ H\log H,
+\end{equation}
+with absolute implied constants. Moreover $K_H$ is real, even, and nonnegative-definite.
+\end{lemma}
+
+\begin{proof}
+The nonnegativity and support are immediate from the definition; evenness follows from $|\xi|$.
+Since $\widehat K_H$ is integrable and real-even, $K_H$ is real-even, and Bochner's theorem yields nonnegative-definiteness.
+
+For the moment bounds, compute explicitly:
+\[
+\int_{-1/H}^{1/H}\widehat K_H(\xi)\,d\xi
+= 2\int_{0}^{1/H} A_H\,\xi\,d\xi
+= \frac{A_H}{H^2}
+= \frac{1}{H}
+\ \ll\ H.
+\]
+Likewise,
+\[
+\int_{-1/H}^{1/H}\frac{\widehat K_H(\xi)}{|\xi|}\,d\xi
+= 2\int_{0}^{1/H} A_H\,d\xi
+= \frac{2A_H}{H}
+= 2
+\ \ll\ H\log H.
+\]
+This proves \eqref{eq:KH-moments-lemma}.
+\end{proof}
+
+\noindent\emph{Kernel moments.}
+All integrals in $\xi$ use the admissible kernel moments \eqref{eq:K-moments}, proved in Lemma~A.1 ((A.2)–(A.3)) of Appendix~A for our explicit model $\widehat K_H(\xi)=H\,\phi(H\xi)$.
+
+\subsection*{A concrete positive band-limited majorant}\label{subsec:KH}
+
+Fix an even $\eta\in C_c^\infty([-1,1])$ with $0\le \eta\le 1$, $\eta(0)=1$. Define
+\[
+  \widehat{K_H}(\xi)\ :=\ H\,\eta(\xi H)^2 \qquad (\xi\in\R),\qquad
+  K_H(t)\ :=\ \int_{\R}\widehat{K_H}(\xi)\,e(-\xi t)\,d\xi.
+\]
+Then $K_H$ is real, even, nonnegative definite, band-limited to $|\xi|\le 1/H$, and satisfies:
+\begin{align}
+  \int_{\R} K_H(t)\,dt \,=\, \widehat{K_H}(0)\,=\,H, \qquad
+  \|\widehat{K_H}\|_{L^1(\R)} \,\ll\, 1 \,\le\, H, \label{eq:KHmassL1}\\
+  \forall\,\tau\in(0,1/H]\!:\ \ 
+  \int_{\tau\le |\xi|\le 1/H}\frac{|\widehat{K_H}(\xi)|}{|\xi|}\,d\xi \ \ll\ H\,\log\frac{1}{\tau H}.
+  \label{eq:KHlogmom}
+\end{align}
+\emph{Remarks.} (i) \eqref{eq:KHmassL1} gives the $L^1$ size in frequency used in TT$^\ast$.  
+(ii) Taking $\tau=H^{-2}$ yields the logarithmic moment bound $ \ll H\log H$ used in §SSU.  
+(iii) If one prefers an explicit closed form, take $\eta=\vartheta\!\ast\!\vartheta$ with $\vartheta$ a $C^\infty$ bump on $[-\tfrac12,\tfrac12]$; then $\widehat{K_H}=H(\eta(\xi H))^2$ remains $\ge 0$ and compactly supported.
+
+%----------------------------------------
+\subsection*{Beurling–Selberg majorant/minorant for \texorpdfstring{$[-H,H]$}{[-H,H]}}\label{subsec:BS}
+
+There exist even, real $M_H,m_H\in L^1(\R)$ with $\supp\widehat{M_H},\supp\widehat{m_H}\subset[-1/H,1/H]$ such that
+\begin{equation}\label{eq:BSsandwich}
+  m_H(t)\ \le\ \mathbf{1}_{[-H,H]}(t)\ \le\ M_H(t)\qquad (t\in\R),
+\end{equation}
+and the following hold:
+\begin{align}
+  \int_{\R}\!\big(M_H(t)-m_H(t)\big)\,dt \ \ll\ 1, \qquad
+  \|\widehat{M_H}\|_{1}+\|\widehat{m_H}\|_{1}\ \ll\ H, \label{eq:BSl1}\\
+  \int_{|\xi|\le 1/H}\!\frac{|\widehat{M_H}(\xi)|+|\widehat{m_H}(\xi)|}{|\xi|}\,d\xi \ \ll\ H\log H. \label{eq:BSlog}
+\end{align}
+\emph{Remarks.} This is the classical Beurling–Selberg extremal pair for an interval, scaled to bandwidth $1/H$. One may cite, e.g., Vaaler’s explicit construction or standard Selberg–Beurling references. The $L^1$ and logarithmic moment bounds \eqref{eq:BSl1}–\eqref{eq:BSlog} are what the arguments in §§PSB/BG/AO use.
+
+\begin{proof}
+Fix $(d,n)$. The condition $(d,n)\in T(a/q,\Delta)$ is $|d'n-dn'|\le H$ with $d'/d$ in a $\asymp Q^{-2}$ window around $a/q$. Two distinct slopes $a/q\ne a'/q'$ give disjoint windows since $|a/q-a'/q'|\gg Q^{-2}$ and the short-axis thickness in slope is $\ll Q^{-2}$. Hence $(d,n)$ belongs to $O(1)$ tubes. The pairwise intersections for two slope families lie in a rectangle of long side $\asymp X$ and short side $\asymp X/H$, hence $O(1)$ per short-axis run. Summing the local bounds and invoking Proposition~\ref{prop:incidence} for the global counting yields the stated inequalities.
+\end{proof}
+
+%----------------------------------------
+\subsection*{Failed hypothesis: A fixed nonnegative banked pin}\label{subsec:fixed-pin}
+
+Initially, our Route B involved a fixed nonnegative banked pin instead of smoothed bank projection, as follows. It did not work.
+
+Let $\mathfrak A=\bigcup_{j=1}^{J}\mathfrak a_j$ be the AO$^+$ bank: disjoint arcs of width $\asymp 1/H$, $J\asymp Q^2$.
+Shrink each to its middle third $\mathfrak a'_j\subset\mathfrak a_j$ so that the Minkowski sum still lies in $\mathfrak A$.
+Choose $\phi_j\in C_c^\infty(\mathfrak a'_j)$ with $0\le\phi_j\le 1$ and $\int \phi_j\asymp 1/H$, and set
+\[
+  \Phi(\xi):=\sum_{j=1}^J \phi_j(\xi),\qquad \Psi(\xi):=\sqrt{\Phi(\xi)},\qquad
+  k:=\mathcal F^{-1}\Psi,\qquad K:=|k|^2.
+\]
+Then $K(n)\ge 0$, $\sum_{n\in\Z} K(n)=\big(\int\Psi\big)^2\asymp 1$, and $\widehat K=\Psi\ast\Psi$ is supported in $\mathfrak A$ (by the middle–thirds choice). Moreover,
+\begin{equation}\label{eq:pin-boost}
+  \forall\,\varepsilon\in(0,1):\quad
+  K_{\mathrm{pin}}\ :=\ \underbrace{K*K*\cdots*K}_{r\ \text{times}}\ \ \text{with } r\asymp \log(1/\varepsilon)
+  \ \Rightarrow\ 
+  K_{\mathrm{pin}}(0)\ge 1-\varepsilon,\ \ \sum_{n\neq 0}K_{\mathrm{pin}}(n)\le \varepsilon,
+\end{equation}
+and $\supp\,\widehat{K_{\mathrm{pin}}}\subset \mathfrak A$.
+This is the “fixed positive pin’’ formerly used in §\ref{sec:center-uniform}; \eqref{eq:pin-boost} follows from standard large–deviation for symmetric convolutions (or Young’s inequality).
+
+The pin was abandoned and replaced with bank projection when the pin was shown to be inadequate to prove full Goldbach. A two-pin solution may be necessary if we were to attempt to solve the twin primes conjecture, but that goes beyond the scope of this paper.
+
+%----------------------------------------
+\subsection*{Bernstein and sampling on a \texorpdfstring{$\ll H$}{<<H} grid}\label{subsec:bernstein-LS}
+
+\begin{lemma}[Bernstein]\label{lem:Bernstein}
+If $f\in L^\infty(\R)$ has $\supp\widehat f\subset[-\Lambda,\Lambda]$, then $\|f'\|_\infty\le 2\pi \Lambda\,\|f\|_\infty$. In particular,
+if $\supp\widehat f\subset[-1/H,1/H]$ and $|x-y|\le \Delta$, then
+$|f(x)-f(y)|\le (2\pi\,\Delta/H)\,\|f\|_\infty$.
+\end{lemma}
+
+\begin{lemma}[Band-limited sampling on a thick grid]\label{lem:LS-grid}
+Let $f$ be band-limited to a measurable $\Sigma\subset[-1/H,1/H]$ with $|\Sigma|\ll Q^2/H$. 
+Let $\mathcal G=\{X+j\Delta\}\cap[X,2X]$ with $\Delta=H/C_0$ and $C_0$ large.
+Then 
+\[
+  \|f\|_{L^\infty([X,2X])}\ \ll\ (\log X)^C\ \sup_{y\in\mathcal G}|f(y)|.
+\]
+If, in addition, $f(y)\ge \alpha$ on at least $(1-\delta)$ of the grid points with $\delta\le \log^{-B}X$, then
+$\inf_{[X,2X]} f \ge \tfrac12 \alpha$ for $B$ large (constants depend only on $(C_0,A)$).
+\end{lemma}
+
+\emph{Sketch.} Quantitative Logvinenko–Sereda (Kovrijkine/Nazarov) for band-limited functions on thick sets, with the bandwidth and $|\Sigma|$ dependence absorbed into $(\log X)^C$; then apply Lemma~\ref{lem:Bernstein} to pass from grid to continuum.
+
+%----------------------------------------
+\subsection*{Beurling–Selberg sandwich inequality}\label{subsec:BS-ineq}
+
+For any arithmetic function $F(n)$ supported on $[X,2X]$ and any $y\in[X,2X]$,
+\[
+  \sum_{|n-y|\le H} F(n)\ \ge\ \sum_{n} F(n)\,m_H(n-y),\qquad
+  \sum_{|n-y|\le H} F(n)\ \le\ \sum_{n} F(n)\,M_H(n-y),
+\]
+with $m_H,M_H$ as in \S\ref{subsec:BS}. The error between the two sides integrates to $O(1)$ uniformly in $y$ by \eqref{eq:BSl1}.
+This is the version used in §§no-long-gap and center–uniform.
+
+\bigskip
+
+\noindent\textbf{References for Appendix A.} 
+Classical constructions of Beurling–Selberg extremals and Vaaler’s explicit majorants/minorants for intervals; standard Bernstein inequality; quantitative Logvinenko–Sereda (Nazarov; Kovrijkine).

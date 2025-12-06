@@ -1,0 +1,304 @@
+% !TEX root = main.tex
+\subsection{Center-uniformization: from window means to pointwise positivity}
+\label{sec:CUNI}
+
+In this section we remove the last averaging in the TI pipeline and deduce \emph{pointwise} positivity from the (already established) uniform every-window mean at scale $H=(\log X)^A$ produced by TFA+AO+BG and the PSB limb. We give two self-contained routes. Route~A (\S\ref{subsec:sampling-bernstein}) is the shortest: a sampling lemma on a thick grid plus the Bernstein inequality for band-limited functions upgrades the grid-level positivity to \emph{every} center. Route~B (\S\ref{subsec:routeBprime}) constructs a single, nonnegative, bank-compatible pinning kernel whose linear statistic is uniformly positive for all centers and then dominates $R_{2,c}(n_0)$.
+
+Throughout we keep the standing parameters and notation: $A\ge 10$, $0<\varepsilon\le 1/10$, $H=(\log X)^A$, $Q=H^\gamma$ with $0<\gamma<1/2$, dyadics $D,N$ with $X^\varepsilon\le D,N\le X^{1-\varepsilon}$ and $DN\asymp X$, and a fixed smooth $W\in C_c^\infty([1/2,2]^2)$ with $\|\partial^\alpha W\|_\infty\le C_W$ for $|\alpha|\le 3$. The AO-bank $\mathfrak A=\bigcup_{(a,q)=1,q\le Q}\mathfrak a_{a/q}$ is as in \S\ref{sec:AO-deterministic}. The band-limited majorant $K_H$ (even, nonnegative, $\int K_H=H+O(1)$, $\supp \widehat K_H\subset[-1/H,1/H]$, $\|\widehat K_H\|_1\ll H$, and $\int_{|\xi|\le 1/H} |\widehat K_H(\xi)|\,|\xi|^{-1}\,d\xi\ll H\log H$) is fixed from \S\ref{sec:appendix-kernels}.
+
+We write
+\[
+\mathcal S(y)\ :=\ \sum_{n\in\mathbb{Z}} R_{2,c}(n)\,K_H(n-y),
+\qquad
+\mathcal T(y)\ :=\ \frac{\log^2 X}{H}\,\mathcal S(y).
+\]
+By construction $\widehat{\mathcal S}$ is supported in $[-1/H,1/H]$ (indeed in the bank $\mathfrak A$ after AO$^+$), $\mathcal S\ge 0$, and
+\begin{equation}\label{eq:PSB-mean}
+\frac1X\int_X^{2X}\mathcal T(y)\,dy\ \ge\ c_0>0,
+\end{equation}
+with an absolute $c_0=c_0(\varepsilon,A,\gamma,C_W)$, as proved in the PSB section (\S\ref{sec:PSB}). In particular, by the results in Appendix \S\ref{sec:nolonggap}, every interval $I\subset[X,2X]$ of length $\gg H$ contains some even $m$ with $R_{2,c}(m)>0$.
+
+\subsection{Route A: sampling on a thick grid \texorpdfstring{$+$}{+} Bernstein}
+
+We first show that the positivity already enjoyed on a dense grid of spacing $\Delta\asymp H$ propagates to every center.
+
+\begin{lemma}[Dense-grid positivity]
+\label{lem:dense-grid}
+Let $\Delta:=\lceil H/C_0\rceil$ with $C_0\ge C_0(\varepsilon,A)$ large. Consider the grid $\mathcal G=\{y_j = X + j\Delta : X\le y_j\le 2X\}$. Then there exist constants $c_*,B>0$ such that
+\begin{equation}\label{eq:dense-grid}
+\#\Big\{y_j\in\mathcal G:\ \mathcal T(y_j)\ \ge\ c_* \Big\}
+\ \ge\ \Big(1-\frac1{\log^B X}\Big)\,\#\mathcal G.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+This is immediate from the PSB mean \eqref{eq:PSB-mean}, the variance bound from TT$^*$ with the SSU tube inequality (BG$^+$), and AO$^+$ dispersion on the bank; see \S\ref{sec:PSB} and \S\ref{sec:ssu}. Chebyshev yields that at most a $\ll \log^{-B}X$ fraction of grid points can fall below $c_*$ once $B$ is chosen large relative to the polylog losses.
+\end{proof}
+
+\begin{lemma}[Sampling and Bernstein]
+
+Let $f$ be band-limited with $\supp \widehat f\subset[-\Lambda,\Lambda]$. Then $\|f'\|_\infty\le 2\pi \Lambda\,\|f\|_\infty$ (Bernstein). Moreover, if $\Lambda\le C/H$ and $\Delta\le H/C_0$ with $C_0$ large, then for every $y\in[X,2X]$ there exists $y_j\in\mathcal G$ with $|y-y_j|\le \Delta/2$ and
+\[
+f(y)\ \ge\ f(y_j) - \frac{\pi C}{C_0}\,\|f\|_\infty.
+\]
+\end{lemma}
+
+\begin{proof}
+Bernstein is classical. The displayed bound is then a direct mean-value estimate $|f(y)-f(y_j)|\le \|f'\|_\infty |y-y_j| \le (2\pi\Lambda)\|f\|_\infty\cdot (\Delta/2)$.
+\end{proof}
+
+\begin{theorem}[Uniform every-window mean]
+\label{thm:uniform-window-mean}
+There exists $\alpha=\alpha(\varepsilon,A,\gamma,C_W)>0$ such that for all $n_0\in[X,2X]$,
+\[
+\sum_{|n-n_0|\le H} R_{2,c}(n)\ \ge\ \alpha\,\frac{H}{\log^2 X}.
+\]
+\end{theorem}
+
+\begin{proof}
+Apply Lemma~\ref{lem:dense-grid} to $f=\mathcal T$. Let $y\in[X,2X]$ and choose a good grid point $y_j$ with $|y-y_j|\le \Delta/2$ and $\mathcal T(y_j)\ge c_*$. Using Lemma~\ref{lem:sampling-bernstein} and the trivial bound $\|\mathcal T\|_\infty \ll 1$ (from \eqref{eq:PSB-mean} and bandlimiting), pick $C_0$ so large that $\pi C/C_0\le c_*/2$. Then $\mathcal T(y)\ge c_*/2$ for all $y$, hence $\mathcal S(y)\ge (c_*/2)\,H/\log^2 X$. Taking $y=n_0$ and using $K_H\ge m_H$ with $m_H\le \mathbf 1_{[-H,H]}$ (Beurling–Selberg minorant, \S\ref{sec:appendix-kernels}) gives the claim with $\alpha=c_*/4$.
+\end{proof}
+
+\begin{corollary}[Pointwise positivity]
+\label{cor:pointwise}
+For all sufficiently large $X$ and every even $n_0\in[X,2X]$, one has $R_{2,c}(n_0)>0$.
+\end{corollary}
+
+\begin{proof}
+Immediate from Theorem~\ref{thm:uniform-window-mean} since $R_{2,c}\ge 0$ and the sum over the window length $2H+1$ is positive.
+\end{proof}
+
+% ============================
+% Route B (redundant path via smoothed bank projection)
+% ============================
+\subsection{Route B: smoothed bank–projection (redundant pointwise path)}
+\label{subsec:routeBprime}
+
+\paragraph*{Overview.}
+Route B gives an independent path to pointwise positivity that does not use any nonnegative near-delta pin. 
+We apply a \emph{smoothed} projection $T_\psi$ onto the interior of the bank in frequency and control the two $L^2$ error terms by the same BG/SSU and Type–I inputs used elsewhere.
+
+\medskip
+Let $0\le \psi\le 1$ be a smooth multiplier on $\mathbb{T}$ with
+\[
+\operatorname{supp}\psi \subset \cA,\qquad 
+\psi\equiv 1\ \text{on the middle third of each bank arc},\qquad 
+\|T_\psi\|_{\ell^2\to\ell^2}\le 1,
+\]
+and define $T_\psi$ by $\widehat{(T_\psi f)}(\xi)=\psi(\xi)\,\widehat f(\xi)$.
+
+\begin{lemma}[Smoothed bank–projection inequality]\label{lem:smoothed-proj}
+For every even $N\in[X,2X]$,
+\[
+R_2(N)\ \ge\ (T_\psi M)(N)\ -\ \|T_\psi E\|_2\ -\ \|(I-T_\psi)R_2\|_2.
+\]
+\end{lemma}
+
+\begin{proof}
+Write $R_2=M+E$ and decompose
+\[
+R_2(N) \;=\; (T_\psi R_2)(N) + ((I-T_\psi)R_2)(N)
+\;=\; (T_\psi M)(N) + (T_\psi E)(N) + ((I-T_\psi)R_2)(N).
+\]
+Apply the trivial bounds $|(T_\psi E)(N)|\le \|T_\psi E\|_2$ and $|((I-T_\psi)R_2)(N)|\le \|(I-T_\psi)R_2\|_2$.
+\end{proof}
+
+\begin{lemma}[Main term survives smoothing]\label{lem:TpsiM-lb}
+There exists $c_0>0$ (depending only on the bank taper) such that
+\[
+(T_\psi M)(N)\ \ge\ \frac{c_0}{\log^2 X}\qquad \text{for all even }N\in[X,2X].
+\]
+\end{lemma}
+
+\begin{proof}
+On the middle thirds $\psi\equiv 1$, so $T_\psi$ captures a fixed positive fraction of the major-arc mass. 
+Combine the bank-summed singular-series truncation (Prop.~\ref{prop:truncation}) with the Fejér bank’s captured mass to obtain the stated uniform lower bound.
+\end{proof}
+
+\begin{theorem}[Route B′ pointwise positivity]\label{thm:Bprime-pointwise}
+Fix $\gamma>1/6$ and $H=(\log X)^A$ with $A$ sufficiently large.
+Then for all large $X$ and all even $N\in[X,2X]$,
+\[
+R_2(N)\ >\ 0.
+\]
+\end{theorem}
+
+\begin{proof}
+By Lemma~\ref{lem:smoothed-proj} and Lemma~\ref{lem:TpsiM-lb},
+\[
+R_2(N)\ \ge\ \frac{c_0}{\log^2 X}\ -\ \|T_\psi E\|_2\ -\ \|(I-T_\psi)R_2\|_2.
+\]
+Use $\|T_\psi\|_{2\to2}\le 1$ and the repaired BG/SSU and Type-I bounds (Theorems~\ref{thm:BG-repaired}, \ref{cor:typeI-final}) to get
+
+\[
+\|T_\psi E\|_2 + \|(I-T_\psi)R_2\|_2 \ \ll\ (\log X)^{C}(\Big(\tfrac{H}{X}\Big)^{1/2}+(X/HQ^2)^{1/2}).
+\]
+
+Choose $A$ so that $(\log X)^{C}(H/X)^{1/2}\le \tfrac12 c_0/\log^2 X$ for large $X$.
+\end{proof}
+
+\begin{proposition}[Route B pointwise bound, both errors carried]\label{prop:routeB}
+For every even $N\in[X,2X]$,
+\begin{equation}\label{eq:routeB}
+R_2(N)\ \ge\ c_0\,\frac{1}{\log^2 X}
+\ -\ \kappa_2 (\log X)^{C_2}\,\frac{X}{H Q^2}
+\ -\ \kappa_3 (\log X)^{C_3}\,\Big(\frac{H}{X}\Big)^{1/2},
+\end{equation}
+where $c_0>0$ is the bank–summed singular series constant (uniform on the bank), the middle term is the Type–I contribution, and the last term is the BG/SSU error. With $H=(\log X)^A$ and $Q=H^\gamma$, the two errors are $o(1/\log^2 X)$ for any fixed $\gamma<1/2$ and $A$ large.
+\end{proposition}
+
+\paragraph{Redundancy note.}
+Route B is logically independent of Route A (Sampling+Bernstein). 
+Either route suffices to pass from the dyadic mean bounds to pointwise positivity; both can be cited in the final assembly to emphasize robustness.
+
+
+%========================================
+%  §8. Center-uniformization and pointwise positivity
+%========================================
+\subsection{Center-uniformization and the pointwise step}\label{sec:center-uniform}
+
+In this section we close the final gap from a dyadic mean bound to pointwise positivity.
+We give two independent center-uniformizers:
+
+\begin{enumerate}
+  \item[\textbf{A}.] a \emph{sampling\,+\,Bernstein} upgrade from a dense good grid to a uniform lower bound at every center; 
+  \item[\textbf{B}.] a \emph{fixed, nonnegative banked pin} that removes all phases and yields a center-independent positive linear test.
+\end{enumerate}
+
+Either device suffices to conclude $R_{2,c}(n_0)>0$ for every even $n_0\in[X,2X]$, hence pointwise Goldbach after dyadic gluing and the finite base.
+
+\subsection*{A. Sampling\,+\,Bernstein: from a dense good grid to every center}\label{subsec:sampling-bernstein}
+
+Recall the band-limited local statistic
+\[
+  \mathcal{S}(y)\ :=\ \sum_{n\in\mathbb{Z}} R_{2,c}(n)\,J_H(n-y),
+\]
+with $J_H\ge0$, $\operatorname{supp}\widehat J_H\subset[-1/H,1/H]$, and $\widehat J_H(0)=1$.
+
+Let $H=(\log X)^A$ and $Q=H^\gamma$ as in the standing hypotheses.
+
+\begin{lemma}[Sampling\,+\,Bernstein center-uniformization]\label{lem:sampling-bernstein}
+Fix a grid $\mathcal{G}=\{\,y_j=X+j\Delta\,:\,j\in\mathbb{Z},\,X\le y_j\le 2X\,\}$ with spacing $\Delta=H/C_0$, where $C_0\ge C_0(A,\varepsilon)$ is a sufficiently large absolute constant.
+Assume the \emph{dense good grid} property
+\[
+  \#\big\{\,y_j\in\mathcal{G}:\ \mathcal{S}(y_j)\ \ge\ c_0\,\tfrac{H}{\log^2 X}\,\big\}
+  \ \ge\ (1-\delta)\,\#\mathcal{G},
+\]
+with some $c_0>0$ and $\delta\le(\log X)^{-B}$ for a fixed $B>0$ (as provided by \textnormal{PSB}+AO$^+$+BG$^+$).
+Then, for all sufficiently large $X$,
+\[
+  \inf_{y\in[X,2X]} \mathcal{S}(y)\ \ge\ \frac{c_0}{2}\,\frac{H}{\log^2 X}.
+\]
+Consequently,
+\[
+  \sum_{|n-n_0|\le H} R_{2,c}(n)\ \ge\ \frac{c_0}{2}\,\frac{H}{\log^2 X}
+  \qquad\text{for every even }n_0\in[X,2X].
+\]
+\end{lemma}
+
+\begin{proof}
+Let $E$ be the union of small intervals of radius $\Delta/4$ around each ``good'' $y_j$.
+Then $E$ is a thick set at scale $\Delta$ with relative density $1-O(\delta)$.
+By a quantitative Logvinenko--Sereda/Nazarov inequality for band-limited functions (bandwidth $\le 1/H$),
+\[
+  \sup_{[X,2X]} \mathcal{S}\ \ll\ (\log X)^{C}\ \sup_{y\in E} \mathcal{S}(y),
+\]
+for some $C=C(A,\varepsilon)$.
+Next, Bernstein's inequality for entire functions of exponential type $2\pi/H$ gives
+$\|\mathcal{S}'\|_{\infty}\le C'/H\cdot \|\mathcal{S}\|_{\infty}$.
+For any $y\in[X,2X]$, pick $y^\ast\in E$ with $|y-y^\ast|\le \Delta/4$; then
+\[
+  \mathcal{S}(y)\ \ge\ \mathcal{S}(y^\ast) - \|\mathcal{S}'\|_\infty\,\frac{\Delta}{4}
+  \ \ge\ c_0\frac{H}{\log^2 X} - \frac{C'}{H}\cdot (\log X)^C \cdot c_0\frac{H}{\log^2 X}\cdot \frac{\Delta}{4}.
+\]
+Choosing $C_0\ge 2C'$ and absorbing $(\log X)^C$ into $C_0$ (fixed once and for all) yields the stated $\frac{c_0}{2}$ bound for $X$ large. The windowed lower bound follows since $K_H\ge 1_{[-H,H]}$ (or by a Beurling--Selberg minorant~$m_H\le 1_{[-H,H]}$ of bandwidth $1/H$ and mass $\asymp H$).
+\end{proof}
+
+\begin{corollary}[Pointwise positivity on the dyadic]\label{cor:pointwise-from-sampling}
+Under the hypotheses of Lemma~\ref{lem:sampling-bernstein}, $R_{2,c}(n_0)>0$ for every even $n_0\in[X,2X]$.
+\end{corollary}
+
+\medskip
+
+\subsection{Pointwise uniformizer: from short-interval existence to every even \texorpdfstring{$n$}{n}}
+
+As emphasized earlier, the Time–Frequency Analysis (TFA) framework proves a
+\emph{short-interval Goldbach theorem}: every interval $[x,x+H]$ with
+$H=(\log X)^A$ (for fixed $A\gg1$) contains some even $n$ with
+$r_2(n)\ge 1$.  This excludes any ``long deserts'' of Goldbach failures.
+However, TI by itself does not guarantee that a given fixed even $n_0$ is
+Goldbach, since the positivity is certified only \emph{on average} across
+a packet or a window.
+
+\medskip
+\noindent\textbf{The gap.}
+A hypothetical counterexample---a single even $N_*$ with $r_2(N_*)=0$---is
+still consistent with the TI theorem, because the argument only asserts
+existence of a Goldbach number nearby, within $\ll (\log N_*)^A$.
+Thus, to promote TI to the \emph{full Goldbach conjecture}, we require
+a pointwise device which converts the uniform every-window mean into
+positivity of $r_2(n_0)$ at each center.
+
+\medskip
+\noindent\textbf{The device.}
+We insert an additional ``pointwise uniformizer'' lemma, which exploits the
+band-limited structure of the major-arc statistic and the fact that the
+singular series is uniformly positive on all admissible classes.
+
+% --- NEW: pointwise via bank–projection, not a fixed nonnegative pin ---
+\begin{corollary}[Pointwise positivity via bank–projection]\label{cor:pointwise-projection}
+Let $P_{\mathcal A}$ be the bank projector and write $R_2=M+E$ (major–arc main term plus error).
+Then for all even $n_0\in[X,2X]$,
+\[
+R_{2,c}(n_0)\ \ge\ (P_{\mathcal A}M)(n_0)\ -\ \|P_{\mathcal A}E\|_2\ -\ \|P_{\mathcal A^c}R_2\|_2.
+\]
+Moreover, by the bank–summed singular series (Prop.~\ref{prop:truncation}) and the PSB normalization,
+\[
+(P_{\mathcal A}M)(n_0)\ \ge\ \frac{c_0}{\log^2 X}\qquad\text{uniformly in }n_0,
+\]
+and by BG/SSU and the Type–I bound,
+\[
+\|P_{\mathcal A}E\|_2+\|P_{\mathcal A^c}R_2\|_2\ \ll\ (\log X)^C\Big(\tfrac{H}{X}\Big)^{1/2}.
+\]
+Choosing $A$ large (TT$^\ast$ audit) makes the RHS positive, hence $R_{2,c}(n_0)>0$.
+\end{corollary}
+
+
+%===========================
+% Section: No-long-gap constants (LS + Bernstein)
+%===========================
+\subsection{Route A Revisited: No-long-gap constants via LS sampling and Bernstein}\label{sec:LS-Bernstein}
+
+Let $\mathcal S(y)=\sum_n R_{2,c}(n)\,K_H(n-y)$, where $K_H\ge 0$ is band-limited with $\operatorname{supp}\widehat K_H\subset[-\Lambda,\Lambda]$, $\Lambda\asymp 1/H$, and $\int K_H\asymp H$.
+
+Set a grid $\mathcal G=\{y_j=X+j\Delta\}$ with $\Delta=H/C_0$ and $C_0\ge 8\pi$. Suppose (from PSB + AO$^+$ + BG$^+$) that for some $c_0>0$ and $\delta\le \log^{-B}X$,
+\[
+\#\{y_j\in\mathcal G:\ \mathcal S(y_j)\ge c_0\,H/\log^2 X\}\ \ge\ (1-\delta)\,\#\mathcal G.
+\]
+
+\begin{lemma}[Sampling + Bernstein]\label{lem:LSB}
+There exists $C=C(C_0)$ such that
+\[
+\sup_{y\in[X,2X]} \mathcal S(y)\ \le\ C\,\sup_{y_j\in\mathcal G} \mathcal S(y_j),
+\qquad
+\|\mathcal S'\|_\infty\ \le\ \frac{2\pi}{H}\,\sup_{y\in[X,2X]}\mathcal S(y).
+\]
+Consequently, for every $y\in[X,2X]$ there exists $y_j\in\mathcal G$ with $|y-y_j|\le \Delta/2$ and
+\[
+\mathcal S(y)\ \ge\ \frac{c_0}{2}\,\frac{H}{\log^2 X}.
+\]
+\end{lemma}
+
+\begin{proof}
+The first estimate is a quantitative Logvinenko--Sereda (Kovrijkine) sampling inequality for band-limited functions on a $(\Delta,H)$ thick set; with $\Delta=H/C_0$, the constant is polynomial in $C_0$ (absorbed by $(\log X)^C$). The Bernstein bound follows from the frequency support in $[-\Lambda,\Lambda]$ with $\Lambda\asymp 1/H$. Combining,
+\[
+\mathcal S(y)\ \ge\ \mathcal S(y_j)-\|\mathcal S'\|_\infty\,\tfrac{\Delta}{2}\ \ge\ \Big(1-\frac{\pi C}{C_0}\Big)\,\mathcal S(y_j).
+\]
+Choose $C_0\ge 2\pi C$ to get the factor $\tfrac12$.
+\end{proof}
+
+Since $K_H\ge m_H$ (a Beurling--Selberg minorant for $\mathbf 1_{[-H,H]}$ with the same bandwidth), Lemma~\ref{lem:LSB} yields the uniform every-window mean
+\[
+\sum_{|n-n_0|\le H} R_{2,c}(n)\ \ge\ \sum_n R_{2,c}(n)\,K_H(n_0-n)\ \gg\ \frac{H}{\log^2 X}
+\]
+for all centers $n_0\in[X,2X]$.

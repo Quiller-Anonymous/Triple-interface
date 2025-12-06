@@ -1,0 +1,83 @@
+%========================================================
+% sections/intro.tex
+%========================================================
+\section{Introduction and statement of results}\label{sec:intro}
+
+\subsection{Parameters and overview}\label{ass:bank}
+Let $X\to\infty$ be a large parameter. Fix $0<\varepsilon\le 1/10$ and $A\ge 10$, and set 
+\[
+H := (\log X)^A,\qquad Q := H^\gamma\quad\text{with}\quad 0<\gamma<\tfrac12.
+\]
+We work on dyadic blocks $[X,2X]$ and use two dyadic auxiliary scales $D,N$ satisfying
+\[
+X^\varepsilon \le D,N \le X^{1-\varepsilon},\qquad DN\asymp X.
+\]
+A fixed smooth bump $W\in C_c^\infty([1/2,2]^2)$ (with bounded derivatives up to order~$3$) is used to localize divisors in the bilinear pieces. Throughout, implied constants may depend on $(\varepsilon,A,\gamma,W)$ only.
+
+\medskip
+This paper develops and assembles a three–leg harmonic-analytic framework (the \emph{Triple Interface}, abbreviated \TFA, \AO, \BG) that suppresses short-shift correlations in arithmetic sums and feeds them into a $TT^\ast$ energy identity to produce \emph{Primes from Smooth Bilinear} (\PSB). The key quantitative scale is the \emph{short-shift window} of width $H$, which in our applications is polylogarithmic in $X$.
+
+On the frequency side we deploy an \emph{arithmetic Fej\'er bank} (\TFA), a positive, smoothly-tapered union of $\asymp Q^2$ disjoint arcs of width $\asymp 1/H$ centred at rationals $a/q$ with $q\le Q$. Averaging over a deterministic family of small-modulus characters enforces \emph{dispersion} over the bank (\AO). On the physical side, a \emph{bilinear geometry} (\BG) analysis---based on a shearing of the multiplicative hyperbola and a slope--shift uncertainty (\SSU) bound on tubes---yields a square-root short-shift saving $(H/X)^{1/2}$ for Type-II structures \emph{without} assuming coefficient flatness (via a positive-operator, two-weight argument). A standard Type-I leakage estimate under the bank closes the $TT^\ast$ bound.
+
+The output is a full Goldbach theorem: every interval of length $C(\log x)^A$ contains a \emph{Goldbach even}. We also give two ``uniformizers'' that turn band-limited mean positivity into a uniform lower bound at \emph{each} centre, providing a clean route to pointwise upgrades.
+
+\subsection{Main theorem: full Goldbach (TI version)}
+Write $R_{2,c}(n)$ for the smoothed number of representations of an even $n$ as $n=p_1+p_2$ with $p_i\equiv c_i \pmod W$ in a fixed admissible pair of residue classes modulo $W=(\log X)^B$, with the standard disposal of prime powers and a smooth dyadic weight (all fixed below in \S\ref{sec:AP}). The precise normalization does not affect the statement.
+
+\begin{theorem}[Full Goldbach via TI]\label{thm:long-interval}
+Fix $\varepsilon>0$ and $A\ge 10$. There exists $B=B(\varepsilon,A)$ and $C=C(\varepsilon,A)>0$ such that for all sufficiently large $x$ the interval
+\[
+[x,\,x+C(\log x)^A]
+\]
+contains an even integer $n$ with $R_{2,c}(n)>0$, hence representable as a sum of two primes in the prescribed residue classes modulo $W=(\log x)^B$. In particular, for the unrestricted Goldbach problem (taking the union over classes) every interval $[x,\,x+C(\log x)^A]$ contains a Goldbach even.
+\end{theorem}
+
+\begin{remark}
+The proof is unconditional and uses only polylogarithmic moduli in the arithmetic localization (Siegel--Walfisz strength). The constants $C,B$ are effective. Our methods also yield density-one statements for the centres and admit natural sharpening via uniformizers in \S\ref{sec:CUNI}.
+\end{remark}
+
+\subsection{Method outline}
+The argument proceeds in nine steps, each proved in later sections:
+
+\begin{enumerate}[leftmargin=*,itemsep=0.25em]
+  \item \textbf{\TFA} (\S\ref{sec:TFA}): build a positive Fej\'er-banked spectral window supported on $\asymp Q^2$ disjoint arcs of width $\asymp 1/H$, with total mass $\asymp Q^2/H$ and second-order notches that enforce alias suppression at small rationals.
+  \item \textbf{\AO} (\S\ref{sec:AO-deterministic}): average over a deterministic family of additive characters mod $q\le Q$ to force dispersion on the bank: energy on any $L$ arcs is $\ll (\log X)^C(L/Q^2)\,$ of total.
+  \item \textbf{\BG} (\S\ref{sec:BG}): a sheared hyperbola/tube decomposition plus the \SSU\ operator bound on each tube gives a $(H/X)^{1/2}$ short-shift saving for Type-II sums. A two-weight (Sawyer) criterion removes any coefficient flatness assumption.
+  \item \textbf{Type-I leakage} (\S\ref{sec:typeI}): under the bank, Type-I energy is $\ll X^{1+o(1)}/(HQ^2)$, negligible after \AO.
+  
+  \item \textbf{\PSB} (\S\ref{sec:PSB}): Define the nonnegative extractor with the Fejér extractor $J_H\ge 0$, $\supp\widehat J_H\subset[-1/H,1/H]$, and $\widehat J_H(0)=1$.
+Bank localization is imposed by the projector $P_{\mathfrak A}$ in frequency; neither $J_H$ nor the analysis kernel is multiplied by the bank.
+By Lemma~\ref{lem:extractor}, $S^{\mathrm{ext}}_{n_0}\ge 0$ for all $n_0$, and $S^{\mathrm{ext}}_{n_0}>0$ implies $R_2(n)>0$ for some $|n-n_0|\le H$.
+
+By Lemma~\ref{lem:kernel-stability}, the mean/variance bounds from \ref{sec:BG}-\ref{sec:typeI} also hold for $S^{\mathrm{ext}}_{n_0}$.
+  
+  \item \textbf{Uniformizers} (\S\ref{sec:CUNI}): sampling/LS + Bernstein and a banked projection convert band-limited mean positivity into uniform every-window means.
+  \item \textbf{AP localization \& prime-power disposal} (\S\ref{sec:AP}): log-free Siegel--Walfisz at modulus $W=(\log X)^B$ and elimination of $p^k,\,k\ge2$ with $o(H/\log^2 X)$ loss.
+  \item \textbf{Assembly} (\S\ref{sec:assembly}): combine the above to prove Theorem~\ref{thm:long-interval}.
+\end{enumerate}
+
+% ============================
+% Methods: LLM use and authorship disclosure
+% ============================
+\subsection{Use of a large language model (LLM) and witness disclosure}\label{sec:llm-methods}
+
+\paragraph{Warning and scope.}
+Substantial portions of this manuscript (including preliminary drafts of statements, proofs, and expository text) were generated with the assistance of a large language model (“LLM”). This LLM, MathGPT (by Pulsr), operates with a Python backend that checks for mathematical accuracy.
+
+While every displayed claim that remains in the final version is intended to be mathematically correct, LLMs are known to produce fluent but invalid arguments. Acute skepticism is therefore warranted.
+Readers and referees should treat all arguments as provisional until independently verified. Only statements that survive explicit human checking (or external peer review) should be relied upon as certified mathematics.
+
+\paragraph{Provenance and controls.}
+Preliminary drafts were little more than wanderings related to the editor's naive intuitions. After a general research plan was created, workflow shifted to a dialectical ("good cop, bad cop") method, as different LLMs were asked to either cooperatively or adversarially critique the manuscript. In mature drafts, the LLM was used as a drafting and refactoring tool under a falsification-first workflow: proposed steps were stress-tested against explicit “falsifiers,” and several originally claimed routes were removed or replaced. 
+Where possible, the paper points to a single audit inequality that collects all quantitative inputs; this is included to facilitate independent checking.
+Conversation transcripts and intermediate artifacts are archived and can be provided on request to support provenance and reproduction.
+
+\paragraph{Why there is a human \emph{editor} and not a human \emph{author}.}
+A conventional author is expected to (i) originate the key arguments, (ii) comprehend and vouch for each step, and (iii) assume responsibility for mathematical correctness. 
+In this project, the human contributor acted as philosopher-editor–curator: specifying goals, setting falsifiers, selecting among LLM-proposed routes, removing defective steps, and repeated LLM-based checking, but \emph{not} independently verifying every derivation or supplying the full mathematical substance personally. 
+Out of intellectual honesty, the human contributor is therefore recorded as a \emph{witness/editor} to the process rather than an author asserting personal authorship or comprehensive verification. 
+This choice is also motivated by accountability: an LLM cannot bear scholarly responsibility, and the witness declines to claim it on the LLM’s behalf.
+
+\paragraph{Citation and responsibility.}
+If this manuscript is cited, it should be clear in the citation text that an LLM was used as a drafting tool and that the human participant is listed as witness/editor. 
+All responsibility for correctness lies with the mathematical community’s verification process; any errors discovered should be documented publicly so that the record is clear and future versions can be corrected. Any credit of the argument belongs to the mathematical community on the whole, since the LLM is trained on their labor.

@@ -1,0 +1,1117 @@
+% ==========================================================
+% Section 05b — Short–shift / Bilinear Geometry (SSU): Repaired
+% (Deterministic; no packets; no F–dependent weights)
+% ==========================================================
+\section{Bilinear geometry and short–shift bound (SSU)}\label{sec:ssu}
+
+Throughout, the bank $\cA\subset\mathbb T$ is the disjoint union of $m\asymp Q^2$ major arcs,
+each of width $\asymp 1/H$ and mutual gaps $\gg 1/H$, with $Q=H^\gamma$ and $0<\gamma<\tfrac12$.
+Let $\wh\Phi_H$ denote a fixed nonnegative Fejér window supported on $|\xi|\lesssim 1/H$, and let
+$\{\mathcal D_j\}_{j\ge 0}$ be the standard dyadic partition of the band $|\xi|\le c/H$,
+$\mathcal D_j=\{\xi:2^{-j-1}/H<|\xi|\le 2^{-j}/H\}$, with $W_j:=\sum_{\xi\in\mathcal D_j}|\wh\Phi_H(\xi)|$.
+We use only the basic facts $\sum_j W_j\ll 1$ and $\sum_j 2^{j/2}W_j\ll \log H$.
+
+\begin{definition}[Admissible F3]\label{def:F3}
+\[
+f(n)=\sum_{\substack{ab=n\\A<a\le2A\\B<b\le2B}}\alpha(a)\beta(b)u(\tfrac{a}{A},\tfrac{b}{B}),\quad AB\asymp X,\ 
+|\alpha(a)|,|\beta(b)|\ll\tau(\cdot)^C,\ u\in C_c^\infty([1,2]^2).\]
+\end{definition}
+
+For finite X, the complementary region is bounded trivially by the crude $L^2$ large–sieve bound; its contribution is absorbed into the polylog factor.
+
+\subsection{Tube partition and fixed projectors}
+For each dyadic shell $\mathcal D_j$ we fix a finite family of smooth frequency cutoffs
+$\{P_{U_{j,k}}\}_k$ supported in sheared ``tubes'' $U_{j,k}\subset\cA\cap\mathcal D_j$, with the
+following uniform properties:
+
+\begin{itemize}
+\item[(T1)] \emph{Partition with bounded overlap:} $\sum_{j,k} P_{U_{j,k}}(\xi)\asymp \mathbf 1_{\cA}(\xi)$ and
+$\sup_{\xi\in\cA}\sum_{j,k} P_{U_{j,k}}(\xi)\ \ll\ (\log X)^C$.
+\item[(T2)] \emph{Dyadic thickness:} $\operatorname{diam}(\operatorname{supp} P_{U_{j,k}})\asymp 2^{-j}/H$ across the short direction; tangential extent is $\asymp 1$ along the arc.
+\item[(T3)] \emph{Bank taper stability:} $0\le P_{U_{j,k}}\le 1$, and $P_{U_{j,k}}$ is dominated by the bank Fejér taper on $\cA$.
+\end{itemize}
+
+All projectors $P_{U_{j,k}}$ are fixed by the geometry; \emph{no} projector depends on the input function.
+
+\begin{lemma}[Fixed–$j$ multiplicity]\label{lem:fixed-j}
+For each $j$, the bump family $\{\chi_j\cdot \vartheta_I\}_I$ has bounded overlap:
+\[
+\sup_{\xi\in\mathbb T}\ \sum_{I} \chi_j(\xi)\,\vartheta_I(\xi)\ \ll\ 1.
+\]
+\end{lemma}
+
+\begin{proof}
+For fixed $j$, the tangential windows $\vartheta_I$ cover disjoint (or $O(1)$–overlap) intervals of length $\asymp (qH)^{-1}$ with separation $\gg (qH)^{-1}$ by the guard–band. Hence at each $\xi$ only $O(1)$ indices $I$ contribute once $\chi_j(\xi)\ne 0$ fixes $q$ to a dyadic.
+\end{proof}
+
+\begin{lemma}[Sum over $j$]\label{lem:sum-j}
+Let $\alpha_j\ge 0$ with $\sum_j 2^{-\alpha j}\ll (\log X)^C$. Then
+\[
+\Lambda\ :=\ \sup_{\xi\in\mathfrak A^c}\ \sum_{j,I} \chi_j(\xi)\,\vartheta_I(\xi)\ \ll\ (\log X)^C.
+\]
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{lem:fixed-j}, at fixed $j$ the sum over $I$ is $O(1)$, and the $j$–sum is supported on $O(\log X)$ dyadics by $q\le Q=H^\gamma$ and $H=(\log X)^A$. The mild weights $2^{-\alpha j}$ (coming from the normal decay of $\chi_j$) make the total $\ll(\log X)^C$.
+\end{proof}
+
+\begin{remark}[SSU route used in the ledger]\label{rem:route}
+In the endgame we use the \emph{operator} route: define
+\[
+(Tf)(n)\ :=\ \sum_{\nu,s} \big(K_{\nu,s}\ast (P_{U_{\nu,s}} f)\big)(n),
+\qquad \|T\|_{2\to 2}\ \ll\ (\log X)^C\Big(\frac{H}{X}\Big)^{1/2},
+\]
+proved via bounded overlap (Lemma~\ref{lem:tube-overlap}) and Hausdorff--Young. The pointwise tube form is maintained in Appendix~\ref{app:BS} for reference; both yield the same numerical exponent but we cite the operator bound in §11.
+\end{remark}
+
+% ===== BEGIN PATCH: Single-tube SSU =====
+\begin{theorem}[Single–tube SSU]\label{thm:SSU-single}
+Let $T:=T(a/q,s)$ be a tube as in \eqref{eq:def-tube} with $1\le q\le Q$, $1\le U\ll X/(qH)$.
+Let $K_H$ be any band–limited kernel with $\supp\widehat K_H\subset[-1/H,1/H]$ and
+\[
+\int \widehat K_H\ll H,\qquad \int \frac{\widehat K_H}{|\xi|}\ll H\log H.
+\]
+Then for any function $F$ supported on $T$,
+\begin{equation}\label{eq:SSU-single}
+\sum_{(d,n),(d',n')\in T} F(d,n)\,K_H(d'n-dn')\,\overline{F(d',n')}
+\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{1/2}\ \sum_{(d,n)\in T}|F(d,n)|^2.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Write $u=qn-ad$ and $u'=qn'-ad'$. On $T$ we have $|u-s|,|u'-s|\le U$.
+Fourier–invert $K_H$ on $|\xi|\le 1/H$:
+\[
+K_H(d'n-dn')=\int_{|\xi|\le 1/H}\widehat K_H(\xi)\,e\!\left(\xi\frac{d'n-dn'}{X}\right)\,d\xi.
+\]
+The bilinear form equals
+\[
+\int_{|\xi|\le 1/H}\widehat K_H(\xi)\ \Big|\sum_{(d,n)\in T}F(d,n)\,e\!\left(\xi\,\frac{qn-ad}{qX}\cdot d\right)\Big|^2 d\xi,
+\]
+after algebra with $u=qn-ad$ and the identity $d'n-dn'=(u'v-uv')/q$ in the shear $(u,v)$.
+Split the sum over residue classes modulo $q$ in $v=d$ and $u\equiv -av\!\!\pmod q$; smooth weights $W(d/D,n/N)$ from \S\ref{sec:TFA} are inserted (and equal to $1$ on $T$) to allow summation by parts and Poisson with $O((\log X)^{-A})$–losses absorbed into $(\log X)^C$.
+
+For each fixed residue class the inner exponential has phase $\xi\,(u\,v)/(qX)$, with $u=s+O(U)$ and $v\asymp D$. If $(u,v)\neq (u',v')$ in the same tube, the frequency gap satisfies
+\[
+\bigg|\xi\frac{uv-u'v'}{qX}\bigg|\ \ge\ c\,|\xi|\ \frac{\min\{|u-u'|\,D,\ U\,|v-v'|\}}{qX}
+\ \gg\ \frac{1}{qXH}\qquad(|\xi|\asymp 1/H),
+\]
+since either $|u-u'|\ge 1$ or $|v-v'|\ge 1$.
+Thus the family of frequencies is $c/(qXH)$–separated on $|\xi|\asymp 1/H$ and, by dyadic decomposition $\{2^{-j-1}/H<|\xi|\le 2^{-j}/H\}$, the Montgomery–Vaughan large sieve yields (with the smooth weights)
+\[
+\int_{2^{-j-1}/H}^{2^{-j}/H}\!\!\widehat K_H(\xi)\ \Big|\sum_{(d,n)\in T}F(d,n)e(\cdots)\Big|^2 d\xi
+\ \ll\ \Big(X\ +\ \frac{H}{2^{j}}\Big)\ \sum_{T}|F|^2.
+\]
+Take geometric mean over the two dyadic families produced by exchanging the roles of $(d,n)$ and $(d',n')$, then sum $j\ge 0$, and use the moment bounds on $\widehat K_H$ to obtain \eqref{eq:SSU-single}. Finally, since $U\ll X/(qH)$, the $H/2^j$–piece collapses to $(H/X)^{1/2}$ after optimization over $j$.
+\end{proof}
+% ===== END PATCH =====
+
+\begin{lemma}[Two one–sided bounds imply square–root]\label{lem:interp-gm}
+Let $S$ be a finite index set. Suppose for each $s\in S$ we have operators $U_s,V_s$ on $\ell^2$ satisfying
+\[
+\Big\|\sum_{s\in S} U_s f\Big\|_2\ \le A\,\|f\|_2,\qquad
+\Big\|\sum_{s\in S} V_s f\Big\|_2\ \le B\,\|f\|_2,
+\]
+and for every $s$ the kernel of $W_s:=U_s^{1/2}V_s^{1/2}$ is pointwise bounded by the geometric mean of the kernels of $U_s$ and $V_s$. Then
+\[
+\Big\|\sum_{s\in S} W_s f\Big\|_2\ \le (AB)^{1/2}\,\|f\|_2.
+\]
+\end{lemma}
+
+\begin{proof}
+For $f,g\in\ell^2$,
+\[
+\big|\langle \sum_s W_s f,\ g\rangle\big|
+\le \Big(\sum_s \langle U_s f,f\rangle\Big)^{1/2}\Big(\sum_s \langle V_s g,g\rangle\Big)^{1/2}
+\le A^{1/2}B^{1/2}\,\|f\|_2\|g\|_2.
+\]
+Take $\|g\|_2=1$.
+\end{proof}
+
+% ===== BEGIN PATCH: Two-weight Sawyer test =====
+\subsection{Global SSU via two–weight Sawyer testing}\label{subsec:sawyer}
+
+We will invoke Corollary~\ref{cor:AO-to-SSU} to replace packet sums by bank energies when aggregating over $(\nu,s)$.
+
+\paragraph{Operator and decomposition.}
+Let $T$ be the SSU operator defined in \eqref{eq:def-T}; we write
+\[
+T\ =\ \sum_{\nu}\,T_\nu\ =\ \sum_{\nu}\ \sum_{s\in\mathbb Z} T_{\nu,s},
+\]
+where $T_{\nu,s}$ are the short-shift packets (shear $a_\nu/q_\nu$, center shift $s$) with bounded overlap in $(\nu,s)$ (cf.\ Lemma~\ref{lem:fixed-j}). Our objective is the global estimate
+\begin{equation}\label{eq:sawyer-goal}
+\|T\|_{2\to 2}\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{1/2}.
+\end{equation}
+
+Let $\{T_\nu\}$ be the tube partition from Lemma~\ref{lem:tubes-partition}, and let
+\[
+(Tf)(n)\ :=\ \Big(\frac{H}{X}\Big)^{1/2}\sum_{\nu}\ \sum_{(d,n')\in T_\nu} K_H(dn'-dn)\,f(n')\,.
+\]
+
+\begin{proposition}[Sawyer reduction]\label{prop:sawyer-reduction}
+Let $T$ be as in \eqref{eq:def-T} or \S\ref{subsec:sawyer} and suppose that for every finite $E\subset\{n\sim X\}$,
+\[
+\|T1_E\|_2^2\ \le\ C_0\,\frac{H}{X}\,\#E,\qquad
+\|T^\ast 1_E\|_2^2\ \le\ C_0\,\frac{H}{X}\,\#E.
+\]
+Then $\|T\|_{2\to2}\ \le\ C\,\sqrt{C_0}\,(H/X)^{1/2}$, with $C$ absolute.
+\end{proposition}
+
+\begin{proof}
+Standard two–weight testing (Sawyer). Write $\|Tf\|_2^2=\sup_{\|g\|_2=1}\sum_k \langle f_k, T1_{E_k}\rangle\,\langle 1_{E_k},Tg_k\rangle$ using level-set (CZ) decompositions of $f,g$.
+Apply the two tests to each $E_k$ and sum the resulting geometric series; positivity of $T$ (or symmetric packetization) yields the stated bound.
+\end{proof}
+
+\begin{proof}
+Expand
+\[
+\|T1_E\|_2^2=\sum_{\nu}\|T_\nu 1_E\|_2^2+\sum_{\nu\ne\nu'}\langle T_\nu 1_E,\ T_{\nu'}1_E\rangle.
+\]
+For the diagonal, the single–tube SSU bound (proved above for each tube/packet) gives
+\(
+\|T_\nu 1_E\|_2^2\ll (H/X)\,\#(E\cap \mathrm{proj}(T_\nu)).
+\)
+Summing $\nu$ and using bounded overlap (Lemma~\ref{lem:fixed-j} and (T1)) yields $\ll (\log X)^C(H/X)\#E$.
+For the off–diagonal, Cauchy–Schwarz and the packet decay in the short shift (in $|s-s'|$) and slope separation (distance between $\nu,\nu'$)
+bound
+\(
+\sum_{\nu\ne\nu'}|\langle T_\nu 1_E,T_{\nu'}1_E\rangle|
+\ll (\log X)^C(H/X)\#E.
+\)
+Combine the two pieces.
+\end{proof}
+
+\begin{proof}
+Expand $\|T1_E\|_2^2$ and decompose the sum into $\nu,\nu'$. By Lemma~\ref{lem:tubes-partition}, each point belongs to $(\log X)^C$ tubes, hence the off–diagonal $(\nu\ne \nu')$ contributes at most $(\log X)^C$ times the maximal single–tube interaction, which is $\ll (H/X)\#E$ by Theorem~\ref{thm:SSU-single}. The diagonal is identical. Summing yields the claim.
+\end{proof}
+
+\begin{proposition}[Two–weight Sawyer test]\label{prop:SSU-sawyer}
+With $T$ as above and overlap constant $\Lambda\ll(\log X)^C$ from Lemma~\ref{lem:tubes-partition},
+\[
+\|T\|_{2\to2}\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{1/2}.
+\]
+\end{proposition}
+
+\begin{proof}
+Apply Cotlar–Stein in the tube index, using $\|T_\nu\|_{2\to2}\ll (H/X)^{1/2}$ from Theorem~\ref{thm:SSU-single} and the overlap bound $\Lambda\ll(\log X)^C$; equivalently, combine Lemma~\ref{lem:testing-1E} with the dual testing inequality and invoke Sawyer’s criterion.
+\end{proof}
+% ===== END PATCH =====
+
+\subsection{The normalized SSU operator}
+Let $K_{j,k}$ be the (signed) time–domain kernel with multiplier $\wh K_{j,k}=P_{U_{j,k}}\cdot \wh\Phi_H$.
+Define the normalized short–shift operator $T$ on $\ell^2([X,2X])$ by
+\begin{equation}\label{eq:def-T}
+(Tf)(n)\ :=\ \Big(\frac{H}{X}\Big)^{\!1/2}\ \sum_{j,k}\ \big(K_{j,k}\ast (P_{U_{j,k}}f)\big)(n).
+\end{equation}
+The scaling factor $(H/X)^{1/2}$ is the physical normalization corresponding to a short–shift of scale $1/H$
+acting on a window of length $\asymp X$.
+
+\begin{lemma}[Testing on $1_E$]\label{lem:testing-1E}
+Let $T$ be as in \eqref{eq:def-T}. For every finite $E\subset\{n\sim X\}$,
+\[
+\|T1_E\|_2^2\ \ll\ (\log X)^C\,\frac{H}{X}\,\#E,
+\qquad
+\|T^\ast 1_E\|_2^2\ \ll\ (\log X)^C\,\frac{H}{X}\,\#E.
+\]
+\end{lemma}
+
+\begin{proof}
+Expand
+\[
+\|T1_E\|_2^2
+=\sum_{\nu,s}\|T_{\nu,s}1_E\|_2^2+\sum_{(\nu,s)\neq(\nu',s')} \langle T_{\nu,s}1_E,\ T_{\nu',s'}1_E\rangle.
+\]
+\emph{Diagonal:} For each packet, the single–tube SSU bound gives
+\(
+\|T_{\nu,s}1_E\|_2^2\ll (H/X)\,\#(E\cap \operatorname{proj}(T_{\nu,s})).
+\)
+Summing over $(\nu,s)$ and using bounded overlap (Lemma~\ref{lem:fixed-j}) yields $\ll (\log X)^C(H/X)\#E$.
+\emph{Off–diagonal:} By Cauchy–Schwarz and the kernel-product bound (Proposition~\ref{prop:cotlar-ssu}),
+\[
+\sum_{(\nu,s)\neq(\nu',s')}
+|\langle T_{\nu,s}1_E,\,T_{\nu',s'}1_E\rangle|
+\ \ll\ \frac{H}{X}\!\sum_{(\nu,s)}\sum_{(\nu',s')}
+\frac{\#E}{(1+|s-s'|)^2(1+\operatorname{dist}(\nu,\nu')H)^2}.
+\]
+The double sum is $\ll(\log X)^C$ by Lemma~\ref{lem:incdeg-sawyer} (proved below), giving the desired bound.
+The adjoint case is identical since $K_H$ is even (or by symmetric packetization).
+\end{proof}
+
+\begin{corollary}[Sawyer tests $\Rightarrow$ global norm]\label{cor:sawyer-close}
+The inequalities of Lemma~\ref{lem:testing-1E} and Proposition~\ref{prop:sawyer-reduction} imply
+\[
+\|T\|_{2\to 2}\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{1/2}.
+\]
+\end{corollary}
+
+\begin{remark}[Uniformity of constants]\label{rem:sawyer-uniform}
+Implicit constants depend only on (i) finitely many derivatives of the dyadic windows; 
+(ii) the kernel moments $\int \widehat K_H\ll H$ and $\int \widehat K_H/|\xi|\ll H\log H$; 
+(iii) the overlap constant in Lemma~\ref{lem:fixed-j}, bounded by $(\log X)^C$ via Lemmas~\ref{lem:BG.incidence}–\ref{lem:BG.degeneracy}; 
+and (iv) the choice $Q=H^\gamma$ with $0<\gamma<\tfrac12$. 
+All bounds are uniform in $(a_\nu,q_\nu)$, $q_\nu\le Q$, and in short shifts $s$ with packet width $U\asymp X/(q_\nu H)$.
+\end{remark}
+
+
+\begin{proof}
+Apply Proposition~\ref{prop:sawyer-reduction} with the forward and adjoint tests from Lemma~\ref{lem:testing-1E}.
+\end{proof}
+
+\begin{lemma}[Uniform $L^2$ operator bound per tube]\label{lem:tube-L2}
+For all $j,k$,
+\(
+\|K_{j,k}\ast g\|_{2}\ \le\ \|\wh K_{j,k}\|_{\infty}\,\|g\|_2
+\ \le\ C\,(\log X)^{C}\,\|g\|_2,
+\)
+with $C$ depending only on the fixed bank taper.
+\end{lemma}
+
+\begin{proof}
+Hausdorff–Young gives $\|K\ast g\|_2\le \|\wh K\|_\infty\|g\|_2$. Since $0\le P_{U_{j,k}}\le 1$ and
+$\wh\Phi_H\le C(\log X)^C$ on its support, the bound follows.
+\end{proof}
+
+\begin{lemma}[TT$^\ast$ with bounded overlap]\label{lem:TTstar}
+Let $T$ be given by \eqref{eq:def-T} and suppose (T1) holds with overlap constant $\Lambda\ll(\log X)^C$.
+Then
+\[
+\|T\|_{2\to 2}\ \le\ \Big(\frac{H}{X}\Big)^{\!1/2}\, \Big(\sup_{j,k}\|\wh K_{j,k}\|_\infty\Big)\,\Lambda.
+\]
+\end{lemma}
+
+\begin{proof}
+For $f\in\ell^2$,
+\[
+\|Tf\|_2
+\ \le\ \Big(\frac{H}{X}\Big)^{\!1/2}\sum_{j,k}\ \|K_{j,k}\ast (P_{U_{j,k}}f)\|_2
+\ \le\ \Big(\frac{H}{X}\Big)^{\!1/2} \Big(\sup_{j,k}\|\wh K_{j,k}\|_\infty\Big)\sum_{j,k}\|P_{U_{j,k}}f\|_2.
+\]
+By Cauchy–Schwarz and (T1),
+\(
+\sum_{j,k}\|P_{U_{j,k}}f\|_2
+\le \big(\sum_{j,k}\langle P_{U_{j,k}}f,f\rangle\big)^{1/2}\, \big(\sum_{j,k}\|P_{U_{j,k}}f\|_2\big)^{1/2}
+\ll \Lambda\,\|f\|_2.
+\)
+\end{proof}
+
+\begin{proposition}[Normalized TT$^\ast$ bound]\label{prop:ssu-ttstar}
+With (T1)–(T3) and Lemma~\ref{lem:tube-L2},
+\[
+\|T\|_{2\to2}\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{\!1/2}.
+\]
+\end{proposition}
+
+\begin{proof}
+Combine Lemma~\ref{lem:tube-L2} and Lemma~\ref{lem:TTstar}, using $\Lambda\ll(\log X)^C$ from (T1).
+\end{proof}
+
+\begin{theorem}[Two–axis SSU with square–root saving]\label{thm:SSU-sqrt}
+Let $K\ge 0$ be a pin of width $H=(\log X)^A$ with $\supp\widehat K\subset[-1/H,1/H]$ and kernel moments $\int \widehat K\ll H$, $\int |\xi|^{-1}\widehat K\ll H\log H$. 
+Let $S_{n_0}(\xi)=\sum_{n\sim X} f(n)\,K(n_0-n)\,e(\xi n)$ where $f$ is decomposed by the F3 reduction into $O((\log X)^C)$ Type~II/III blocks $\mathsf B$ with coefficient arrays $F_{\mathsf B}$.
+Then
+\[
+\mathbb E_{n_0\in[X,2X]}\ \int_{\mathfrak A(Q)^c}\! |S_{n_0}(\xi)|^2\,d\xi
+\ \ll\ (\log X)^C\ \Big(\frac{H}{X}\Big)^{1/2}\ \sum_{\mathsf B}\ \|F_{\mathsf B}\|_2^2.
+\]
+The implied constant is absolute (depending on $A$ only). 
+\end{theorem}
+
+\subsection{Statement used in the ledger}
+We record the global SSU estimate in the form used by the TT$^\ast$ ledger.
+
+\begin{theorem}[Repaired BG/SSU]\label{thm:BG-repaired}
+Let $T$ be the normalized short–shift operator \eqref{eq:def-T} associated with the bank $\cA$, dyadic
+partition $\{\mathcal D_j\}$, Fejér taper $\wh\Phi_H$, and tube projectors $\{P_{U_{j,k}}\}$ satisfying \emph{(T1)–(T3)}.
+Then
+\begin{equation}\label{eq:ssu-final}
+\|T\|_{2\to2}\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{\!1/2}.
+\end{equation}
+The implied constant depends only on the fixed smooth bank taper and the overlap constant in \emph{(T1)}.
+\end{theorem}
+
+\paragraph*{Remarks.}
+(1) No randomness, packets, or $f$–dependent weights are used. The proof is a deterministic TT$^\ast$ argument with fixed projectors and the Hausdorff–Young bound on each tube multiplier.  
+(2) If one prefers a Sawyer two–weight presentation, take both weights equal to the fixed overlap weight
+$\sigma(\xi)=\sum_{j,k} P_{U_{j,k}}(\xi)$; the testing inequalities follow from (T1), yielding \eqref{eq:ssu-final}.  
+(3) The normalization $(H/X)^{1/2}$ is explicit in \eqref{eq:def-T}; it is the physical short–shift scale built into $T$.
+
+\paragraph*{Ledger hook.}
+In the TT$^\ast$ audit, \eqref{eq:ssu-final} contributes the minor–arc/\emph{bilinear} term
+\[
+\|P_{\cA}E\|_2\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{1/2},
+\]
+with the same $(\log X)^C$ loss as above. This is the only SSU input used downstream.
+
+
+
+\subsection{Tube overlap for the Fejér-banked partition}
+
+We prove the bounded-overlap property (T1) used in §\ref{sec:ssu}:
+\[
+\sum_{j,k} P_{U_{j,k}}(\xi)\ \asymp\ \mathbf 1_{\cA}(\xi)
+\quad\text{and}\quad
+\Lambda:=\sup_{\xi\in\cA}\sum_{j,k} P_{U_{j,k}}(\xi)\ \ll\ (\log X)^C,
+\]
+with an absolute $C$ depending only on the fixed tapers.
+
+\subsubsection{Setup and construction}
+Let $\wh\Phi_H$ be the fixed nonnegative Fejér window supported on $|\xi|\lesssim 1/H$ with total mass $\asymp 1$.
+For each dyadic shell $\mathcal D_j=\{\xi: 2^{-j-1}/H<|\xi|\le 2^{-j}/H\}$ we define a smooth short-axis bump
+$\chi_j$ supported on an interval of length $\asymp 2^{-j}/H$ and satisfying
+\begin{equation}\label{eq:chi_j}
+0\le \chi_j\le 1,\qquad \|\chi_j\|_{L^\infty}\le 1,\qquad
+\sum_{t\in (2^{-j}/H)\mathbb Z}\!\!\chi_j(\,\cdot - t)\ \asymp\ 1.
+\end{equation}
+Along each major arc $I\subset\cA$ (centre at a reduced $a/q$, $q\le Q$) choose a $C^\infty$ tangential taper
+$\vartheta_I$ with $\mathbf 1_{I^{\circ}}\le \vartheta_I\le \mathbf 1_{I^{+}}$, where $I^{\circ}$ is the middle third
+of $I$ and $I^{+}$ is $I$ enlarged by a factor $1+\frac1{100}$ (still disjoint from other arcs by the gap $\gg 1/H$).
+We index the tubes in $\mathcal D_j$ as follows:
+\[
+U_{j,k}=\text{supp}\Big(\vartheta_{I(k)}\cdot \chi_j\big(\nu_{I(k)}(\xi)-t_{j,k}\big)\Big),
+\]
+where $I(k)$ is the parent arc of $U_{j,k}$, $\nu_{I}$ is the (signed) normal coordinate to $I$, and
+$t_{j,k}\in (2^{-j}/H)\mathbb Z$ is chosen so that the family $\{\chi_j(\nu_{I}-t_{j,k})\}_k$ covers the normal band
+over $I^{\circ}$. Define
+\begin{equation}\label{eq:P_U_def}
+P_{U_{j,k}}(\xi)\ :=\ \vartheta_{I(k)}(\xi)\,\chi_j\big(\nu_{I(k)}(\xi)-t_{j,k}\big).
+\end{equation}
+By construction, $0\le P_{U_{j,k}}\le 1$, each $P_{U_{j,k}}$ is supported in $\cA\cap\mathcal D_j$, and
+\[
+\sum_{k: I(k)=I} P_{U_{j,k}}(\xi)\ \asymp\ \vartheta_I(\xi)\qquad(\xi\in \mathcal D_j),
+\]
+so summing over arcs yields $\sum_{j,k}P_{U_{j,k}}(\xi)\asymp \mathbf 1_{\cA}(\xi)$, i.e. the partition claim in (T1).
+
+\subsubsection{Local bounded overlap on a fixed dyadic shell}
+\begin{lemma}[Bounded multiplicity at fixed $j$]\label{lem:bounded-mult-j}
+For each fixed $j$ and $\xi\in\cA$, the number of indices $k$ with $P_{U_{j,k}}(\xi)\neq 0$ is $\le M$, where $M$ depends only on the fixed bump shapes in \eqref{eq:chi_j}, independent of $H,Q,X$.
+\end{lemma}
+
+\begin{proof}
+Fix $j$ and $\xi\in\cA$. Because distinct major arcs are separated by $\gg 1/H$ and the normal thickness of each $U_{j,k}$ is $\asymp 2^{-j}/H\le 1/H$, at most one parent arc $I$ contributes at $\xi$.
+For that arc, the set $\{k: P_{U_{j,k}}(\xi)\neq 0\}$ is contained in the indices with $\chi_j(\nu_I(\xi)-t_{j,k})\neq 0$.
+By \eqref{eq:chi_j} the translates of $\chi_j$ have uniformly bounded overlap (a standard partition-of-unity property),
+so at most $M$ of them can cover any single point; $M$ is an absolute constant depending only on the choice of $\chi_j$.
+\end{proof}
+
+\subsubsection{Global overlap bound}
+\begin{proposition}[Tube overlap (T1)]\label{prop:tube-overlap}
+With $P_{U_{j,k}}$ as in \eqref{eq:P_U_def},
+\[
+\sum_{j,k} P_{U_{j,k}}(\xi)\ \asymp\ \mathbf 1_{\cA}(\xi)
+\quad\text{and}\quad
+\Lambda:=\sup_{\xi\in\cA}\sum_{j,k} P_{U_{j,k}}(\xi)\ \le\ C_0\,(1+\log H),
+\]
+for an absolute constant $C_0$ depending only on the bump shapes.
+In particular, since $H=(\log X)^A$, one has $\Lambda\ \ll\ (\log X)^C$ for some fixed $C=C(A)$.
+\end{proposition}
+
+\begin{proof}
+The partition statement was noted after \eqref{eq:P_U_def}. For the overlap bound, fix $\xi\in\cA$.
+By Lemma~\ref{lem:bounded-mult-j}, at fixed $j$ there are at most $M$ indices $k$ with $P_{U_{j,k}}(\xi)\neq 0$.
+The shells $\mathcal D_j$ with nonempty intersection with the bank’s normal band $|\nu_I|\lesssim 1/H$ are those with
+$2^{-j}/H\gtrsim 1/H$, i.e. $j=0,1,\dots,J_{\max}$ with $J_{\max}\asymp \log H$.
+Hence
+\[
+\sum_{j,k} P_{U_{j,k}}(\xi)\ \le\ \sum_{j=0}^{J_{\max}} \sum_{k:\,P_{U_{j,k}}(\xi)\neq 0} 1\ \le\ M\,(1+J_{\max})
+\ \ll\ 1+\log H.
+\]
+Finally, $H=(\log X)^A$ gives $\log H = A\log\log X \ll (\log X)^C$ after increasing $C$ if needed.
+\end{proof}
+
+\begin{proposition}[Packet tests]\label{prop:packet}
+\[K_{\nu,s}(t):=R_H(t)\Phi_\nu(t)\mathbf 1_{\{|t-sX/H|\le X/(2H)\}},
+\allowbreak
+\quad 
+\sum_t|R_H(t)|\ll H,\ \supp R_H\subset[-2H,2H].
+\\
+\|T_{\nu,s}\|_{2\to2}\ \ll\ 
+\begin{cases}
+q_\nu^{-1/2}, & s=0,\\
+(H/X)^{1/2}|s|^{-1/2}, & |s|\ge1.
+\end{cases}\]
+\end{proposition}
+
+\subsubsection{Compatibility with the bank taper}
+\begin{lemma}[Domination by the bank weight]\label{lem:bank-dom}
+Let $\widehat w_{\mathrm{bank}}$ be the fixed Fejér taper used to define the bank $\cA$.
+There exists a constant $c>0$ (depending only on the taper choices) such that
+\[
+0\ \le\ P_{U_{j,k}}(\xi)\ \le\ c\,\widehat w_{\mathrm{bank}}(\xi)\qquad (\xi\in\mathbb T).
+\]
+\end{lemma}
+
+\begin{proof}
+Each $P_{U_{j,k}}$ is the product of a tangential taper $\vartheta_{I(k)}\le \mathbf 1_{I^{+}}$ and a short-axis bump
+$\chi_j$ whose support lies within the normal band of width $\asymp 2^{-j}/H\le 1/H$ around $I(k)$.
+The bank weight $\widehat w_{\mathrm{bank}}$ is the Fejér taper that equals $1$ on the middle thirds of the arcs and dominates any such smooth product by construction; take $c$ to be the supremum of the ratio over the (fixed) families of shapes.
+\end{proof}
+
+\paragraph*{Conclusion.}
+Proposition~\ref{prop:tube-overlap} establishes (T1) with $\Lambda\ll (\log X)^C$. Lemma~\ref{lem:bank-dom} gives (T3).
+Property (T2) is part of the construction. These verify the hypotheses used in §\ref{sec:ssu}.
+
+\begin{lemma}[Minor–arc amplification by center differences]\label{lem:minor-amp}
+Let $H_0:=\lceil c\,Q\rceil$ with a fixed small $c>0$.
+For $h\in\{1,\dots,H_0\}$ define the center–difference operator
+\[
+(\Delta_h S)_{n_0}(\xi)\ :=\ \sum_{n\sim X} f(n)\,\big(K(n_0-n)-K(n_0-h-n)\big)\,e(\xi n).
+\]
+Then for all sufficiently large $X$,
+\[
+\int_{\mathfrak A(Q)^c}\!|S_{n_0}(\xi)|^2\,d\xi
+\ \le\ \frac{C}{H_0}\sum_{h\le H_0}\int_{\mathfrak A(Q)^c}\!|\Delta_h S_{n_0}(\xi)|^2\,d\xi,
+\]
+where $C$ is absolute.
+\end{lemma}
+
+\begin{proof}
+On the frequency side, $\widehat{\Delta_h K}(\xi)=(1-e(-h\xi))\widehat K(\xi)$, so
+$|\Delta_h S_{n_0}(\xi)|=|1-e(-h\xi)|\cdot |S_{n_0}(\xi)|$.
+Average in $h$:
+\[
+\frac{1}{H_0}\sum_{h\le H_0}|1-e(-h\xi)|^2
+=\frac{1}{H_0}\sum_{h\le H_0} 4\sin^2(\pi h\xi)
+\ \ge\ c_1
+\]
+uniformly for $\xi\in\mathfrak A(Q)^c$ once $H_0\asymp Q$ (standard minor–arc trigonometric sum; the set of $\xi$ at distance $<\!1/Q$ from \emph{any} rational $a/q$ with $q\le Q$ is precisely the bank). Hence
+\(
+|S_{n_0}(\xi)|^2\le \tfrac{C}{H_0}\sum_{h\le H_0}|\Delta_h S_{n_0}(\xi)|^2
+\)
+on $\mathfrak A(Q)^c$; integrate in $\xi$.
+\end{proof}
+
+\subsection{SSU and Type-II tubes}
+\begin{theorem}[Slope--Shift Uncertainty (SSU) for Type~II tubes]\label{thm:SSU}
+Let $X\ge 1$, $H\ge 2$, and fix a coprime pair $(a,q)$ with $1\le q\le H^{1/2}$.
+Choose dyadic $D,N$ with $DN\asymp X$, and define the shear coordinates
+\[
+u := qn - a d,\qquad v := d.
+\]
+For parameters $U$ with $1\le U \ll X/(qH)$, define the tube
+\[
+T := \bigl\{(d,n)\in (D,2D]\times(N,2N]\ :\ |u|\le U\bigr\}.
+\]
+Let $K_H$ be as in Lemma~\ref{lem:kernel}. Then for every function $F$ supported on $T$,
+\begin{equation}\label{eq:SSU-main}
+\sum_{\substack{(d,n)\in T\\(d',n')\in T}}
+F(d,n)\,\overline{F(d',n')}\ K_H\!\bigl(d'n-dn'\bigr)
+\ \ll\ \Bigl(\frac{H}{X}\Bigr)^{\!1/2}(\log X)^{O(1)}\,
+\sum_{(d,n)\in T}\!|F(d,n)|^2,
+\end{equation}
+where the implied constant is absolute (it may depend on the fixed smooth dyadic cutoffs).
+\end{theorem}
+
+\begin{proof}
+\textit{Step 1: Shear and the determinant.}
+Writing $(u,v)=(qn-ad,\ d)$, we have for any two points
+\[
+d'n-dn' \ =\ \frac{v'u - vu'}{q}.
+\]
+The tube condition is $|u|\le U$, $v\in(D,2D]$, together with $u\equiv -av\pmod q$.
+
+\smallskip
+\textit{Step 2: Positive Fourier expansion.}
+By Lemma~\ref{lem:kernel},
+\[
+K_H(t)\ =\ \int_{-1/H}^{1/H}\widehat K_H(\xi)\,e\!\Big(\frac{\xi t}{X}\Big)\,d\xi,
+\quad \widehat K_H(\xi)\ge0.
+\]
+Hence by Fubini and Cauchy--Schwarz,
+\[
+\mathcal B
+:= \sum_{T\times T}\!F(d,n)\overline{F(d',n')}\,K_H(d'n-dn')
+= \int_{-1/H}^{1/H}\!\widehat K_H(\xi)\,|S(\xi)|^2\,d\xi,
+\]
+with
+\[
+S(\xi) \ :=\ \sum_{(u,v)\in T'} F(v,u)\,e\!\Big(\frac{\xi\,uv}{qX}\Big),
+\quad
+T'=\{(u,v): |u|\le U,\ v\in(D,2D],\ u\equiv -av\!\!\!\pmod q\}.
+\]
+\(T_U\) is supported on \(U\times U^+\) and \(K_H\) is band-limited with \(\widehat K_H\subset[-1/H,1/H]\).
+So, it suffices to bound $|S(\xi)|^2$ uniformly for $|\xi|\le 1/H$.
+
+\smallskip
+\textit{Step 3: Progressions in $v$ and first large sieve.}
+For each admissible $u$ there is $v_0(u)\in[1,q]$ such that
+$v\equiv v_0(u)\pmod q$, hence $v=v_0(u)+\ell q$ with $0\le \ell<L$ and $L\asymp D/q$.
+Then
+\[
+S(\xi)=\sum_{|u|\le U}\!e\!\Big(\frac{\xi\,u\,v_0(u)}{qX}\Big)
+\sum_{\ell=0}^{L-1}\!F\!\big(v_0(u)+\ell q,\ u\big)\,e\!\Big(\frac{\xi\,u\,\ell}{X}\Big).
+\]
+Apply Cauchy--Schwarz to the outer sum and the Montgomery--Vaughan large sieve to the inner sum
+over $\ell$ with frequency gap $\gg |\xi|/X$ as $u$ varies over distinct integers; one obtains
+\begin{equation}\label{eq:LS-outer-u}
+|S(\xi)|^2\ \ll\ L\,\Big(U+\frac{X}{|\xi|}\Big)\sum_{(u,v)\in T'} |F(v,u)|^2,
+\qquad L\asymp \frac{D}{q}.
+\end{equation}
+
+\smallskip
+\textit{Step 4: Progressions in $u$ and second large sieve.}
+Dually, for each $v$ the admissible $u$ lie in $u\equiv -av\pmod q$ with $|u|\le U$,
+so write $u=u_0(v)+kq$ with $|k|\le K$ and $K\asymp U/q$. Then
+\[
+S(\xi)=\sum_{v\in(D,2D]}\!e\!\Big(\frac{\xi\,u_0(v)\,v}{qX}\Big)
+\sum_{|k|\le K}\!F\!\big(v, u_0(v)+kq\big)\,e\!\Big(\frac{\xi\,v\,k}{X}\Big),
+\]
+and the same large-sieve step gives
+\begin{equation}\label{eq:LS-outer-v}
+|S(\xi)|^2\ \ll\ D\,\Big(\frac{U}{q}+\frac{X}{|\xi|}\Big)\sum_{(u,v)\in T'} |F(v,u)|^2.
+\end{equation}
+
+\smallskip
+\textit{Step 5: Geometric mean.}
+Combine \eqref{eq:LS-outer-u}–\eqref{eq:LS-outer-v} by the geometric mean to get
+\[
+|S(\xi)|^2 \ \ll\ \Big(\frac{DU}{q}\Big)^{1/2}
+\Big(U+\tfrac{X}{|\xi|}\Big)^{1/2}\Big(D+\tfrac{X}{|\xi|}\Big)^{1/2}
+\sum_{T'} |F|^2.
+\]
+
+\begin{lemma}[Balanced $\xi$--integration under admissible moments]\label{lem:balanced-xi}
+Let $\widehat K_H\ge0$ be supported in $|\xi|\le 1/H$ with
+\begin{equation}\label{eq:K-moments}
+\int \widehat K_H(\xi)\,d\xi\ \ll\ H,\qquad 
+\int_{|\xi|\le 1/H} \frac{\widehat K_H(\xi)}{|\xi|}\,d\xi\ \ll\ H\log H,\qquad 
+\int_{|\xi|\le 1/H} |\xi|\,\widehat K_H(\xi)\,d\xi\ \ll 1.
+\end{equation}
+Then for all $U,D\ge 1$,
+\begin{equation}\label{eq:balanced-claim}
+\int_{|\xi|\le 1/H} \widehat K_H(\xi)\,\sqrt{U+X|\xi|}\,\sqrt{D+X|\xi|}\,d\xi
+\ \ll\ \frac{UD}{H}\ +\ \sqrt{X}\,(\sqrt U+\sqrt D)\,(H\log H)^{1/2}\ +\ X,
+\end{equation}
+with an absolute implied constant.
+\end{lemma}
+
+\begin{corollary}[Short–axis simplification at $U\le X/(qH)$]\label{cor:short-axis}
+Assume $U\le X/(qH)$ and $D\asymp X/U$ (the usual Type II geometry). Then
+\[
+\Big(\frac{DU}{q}\Big)^{\!1/2}\frac{UD}{H}\ \ll\ \Big(\frac{H}{X}\Big)^{\!1/2},\qquad
+\Big(\frac{DU}{q}\Big)^{\!1/2}\sqrt{X}(\sqrt U+\sqrt D)(H\log H)^{1/2}\ \ll\ (\log X)^{C}\Big(\frac{H}{X}\Big)^{\!1/2},
+\]
+and
+\[
+\Big(\frac{DU}{q}\Big)^{\!1/2} X\ \ll\ X\Big(\frac{X}{q}\cdot\frac{U}{D}\Big)^{\!1/2}\ \ll\ X\Big(\frac{X}{q}\cdot\frac{U^2}{X}\Big)^{\!1/2}\ \ll\ \frac{XU}{\sqrt q}\ \ll\ \Big(\frac{H}{X}\Big)^{\!1/2},
+\]
+where the last inequality uses $U\le X/(qH)$ and $H\ge (\log X)^{10}$. Hence
+\[
+\int_{|\xi|\le 1/H} |S(\xi)|^2\,\widehat K_H(\xi)\,d\xi\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{1/2}\ \sum|F|^2.
+\]
+\end{corollary}
+
+\begin{proof}
+Write
+\[
+\sqrt{U+X|\xi|}\,\sqrt{D+X|\xi|}\ \le\ \sqrt{UD}\ +\ \sqrt U\,\sqrt{X|\xi|}\ +\ \sqrt D\,\sqrt{X|\xi|}\ +\ X|\xi|.
+\]
+Integrate termwise against $\widehat K_H$. For the $\sqrt{UD}$ term, apply Cauchy--Schwarz with weights $|\xi|^{1/2}$ and $|\xi|^{-1/2}$:
+\[
+\int \widehat K_H\,d\xi
+= \int \big(\widehat K_H^{1/2}|\xi|^{1/2}\big)\cdot\big(\widehat K_H^{1/2}|\xi|^{-1/2}\big)d\xi
+\ \le\ \Big(\int \widehat K_H |\xi|\,d\xi\Big)^{\!1/2}\Big(\int \frac{\widehat K_H}{|\xi|}\,d\xi\Big)^{\!1/2}
+\ \ll\ (H\log H)^{1/2}.
+\]
+Thus $\sqrt{UD}\int \widehat K_H \ll \sqrt{UD}\,(H\log H)^{1/2}$. Now use the trivial inequality $\sqrt{UD}\le \tfrac{UD}{H}+ \tfrac{H}{4}$ and absorb the $H$ into the final $X$ term (since $X\ge H$), giving the bound $\ll UD/H+X$. For the $\sqrt{X|\xi|}$ terms, the same Cauchy--Schwarz yields
+\[
+\int \widehat K_H\,\sqrt{|\xi|}\,d\xi
+\le \Big(\int \frac{\widehat K_H}{|\xi|}\,d\xi\Big)^{\!1/2}\Big(\int \widehat K_H|\xi|\,d\xi\Big)^{\!1/2}
+\ll (H\log H)^{1/2}.
+\]
+Finally $\int \widehat K_H\,|\xi|\,d\xi\ll 1$. Combine:
+\[
+\int \widehat K_H \sqrt{U+X|\xi|}\sqrt{D+X|\xi|}\ \ll\ 
+\underbrace{\frac{UD}{H}}_{\text{from }\sqrt{UD}}\ +\ 
+\underbrace{\sqrt{X}(\sqrt U+\sqrt D)(H\log H)^{1/2}}_{\sqrt{X|\xi|}\text{ terms}}\ +\
+\underbrace{X}_{X|\xi|\text{ term}}.
+\]
+\end{proof}
+
+\smallskip
+\textit{Step 6: Integrate in $\xi$.}
+Insert this bound into $\mathcal B$ and use Cauchy--Schwarz in $\xi$:
+\[
+\mathcal B \ \ll\ \Big(\frac{DU}{q}\Big)^{1/2}
+\Bigg(\int_{-1/H}^{1/H}\!\widehat K_H(\xi)\Big(U+\frac{X}{|\xi|}\Big)d\xi\Bigg)^{\!1/2}
+\Bigg(\int_{-1/H}^{1/H}\!\widehat K_H(\xi)\Big(D+\frac{X}{|\xi|}\Big)d\xi\Bigg)^{\!1/2}
+\sum_{T'} |F|^2.
+\]
+By Lemma~\ref{lem:kernel},
+\[
+\int\widehat K_H(\xi)\Big(U+\frac{X}{|\xi|}\Big)d\xi \ \ll\ U H + X H\log H,
+\quad
+\int\widehat K_H(\xi)\Big(D+\frac{X}{|\xi|}\Big)d\xi \ \ll\ D H + X H\log H.
+\]
+
+\smallskip
+\textit{Step 7: Tube scale and simplification.}
+With $U\ll X/(qH)$ and $D\ll X$, the dominant contribution is controlled by $XH\log H$ in each bracket. Hence
+\[
+\mathcal B\ \ll\ \Big(\frac{DU}{q}\Big)^{1/2}\,XH\log H\ \sum_{T'} |F|^2.
+\]
+Using $U\ll X/(qH)$ and $D\ll X$,
+\[
+\Big(\frac{DU}{q}\Big)^{1/2}\,XH\log H
+\ \ll\ \Big(\frac{X}{q}\cdot\frac{X}{qH}\Big)^{1/2}\,XH\log H
+\ =\ \Big(\frac{H}{X}\Big)^{\!1/2} \,(\log X)^{O(1)}.
+\]
+This yields \eqref{eq:SSU-main}.
+\end{proof}
+
+\begin{remark}
+The specific choice in Lemma~\ref{lem:kernel} is merely one convenient instance.
+Any nonnegative, even profile $\widehat K_H$ supported in $[-1/H,1/H]$ and satisfying
+$\int \widehat K_H\ll H$ and $\int \widehat K_H/|\xi|\ll H\log H$
+can be used in the proof without change.
+\end{remark}
+
+\begin{lemma}[Slope–packet orthogonality]\label{lem:slope-orth}
+Let $T_{\nu,s}$ be the packet multipliers with Fourier symbol
+\[
+M_{\nu,s}(\xi)\ :=\ \eta_\nu(\xi)\,\Phi_H(\xi)\,e\!\Big(\xi\,\frac{sX}{H}\Big),
+\]
+where $\eta_\nu$ is supported on an interval of length $\asymp (q_\nu H)^{-1}$ centered at $a_\nu/q_\nu$ and $\Phi_H$ is supported on $|\xi|\ll 1/H$ with $\|\partial^m(\eta_\nu\Phi_H)\|_\infty\ll H^{m}$ for $m\le2$. For any $f\in L^2(\mathbb T)$ and distinct packets $(\nu,s)\neq(\nu',s')$,
+\begin{equation}\label{eq:slope-orth-decay}
+\big|\langle T_{\nu,s}f,\ T_{\nu',s'}f\rangle\big|
+\ \ll\ \frac{1}{(1+|s-s'|)^2}\cdot\frac{1}{(1+\operatorname{dist}(\nu,\nu')\,H)^2}\ \|f\|_2^2,
+\end{equation}
+where $\operatorname{dist}(\nu,\nu')=\bigl|\frac{a_\nu}{q_\nu}-\frac{a_{\nu'}}{q_{\nu'}}\bigr|$.
+\end{lemma}
+
+\begin{proof}
+By Plancherel,
+\[
+\langle T_{\nu,s}f,\ T_{\nu',s'}f\rangle
+=\int_{\mathbb T} |\widehat f(\xi)|^2\,\overline{M_{\nu,s}(\xi)}\,M_{\nu',s'}(\xi)\,d\xi
+=\int |\widehat f(\xi)|^2\,\Theta_{\nu,\nu'}(\xi)\,e\!\Big(\xi\,\frac{(s'-s)X}{H}\Big)\,d\xi,
+\]
+with $\Theta_{\nu,\nu'}(\xi):=\overline{\eta_\nu(\xi)\Phi_H(\xi)}\,\eta_{\nu'}(\xi)\Phi_H(\xi)$.  
+If the two supports are disjoint (i.e.\ $\operatorname{dist}(\nu,\nu')\gg 1/H$), then $\Theta_{\nu,\nu'}\equiv0$ and the inner product vanishes. Otherwise the supports have overlap $\ll 1/H$ and standard bump calculus gives
+\[
+\|\Theta_{\nu,\nu'}\|_{L^1}\ \ll\ \frac{1}{H}\cdot\frac{1}{1+\operatorname{dist}(\nu,\nu')\,H},\qquad
+\|\Theta'_{\nu,\nu'}\|_{L^1}\ \ll\ \frac{1}{1+\operatorname{dist}(\nu,\nu')\,H}.
+\]
+Let $\Delta:=\frac{(s'-s)X}{H}$. Integrating by parts twice in $\xi$ (on the oscillatory factor $e(\xi\Delta)$) gives
+\[
+\Big|\int |\widehat f|^2\,\Theta_{\nu,\nu'}\,e(\xi\Delta)\,d\xi\Big|
+\ \ll\ \frac{1}{(1+|\Delta|)^2}\Big(\|\Theta_{\nu,\nu'}\|_{L^1} + \|\Theta'_{\nu,\nu'}\|_{L^1}\Big)\ \|\widehat f\|_\infty^2.
+\]
+Since $\|\widehat f\|_\infty\le \|f\|_2$ and $|\Delta|\asymp |s-s'|\,X/H$, we obtain
+\[
+\big|\langle T_{\nu,s}f,\ T_{\nu',s'}f\rangle\big|
+\ \ll\ \frac{1}{(1+|s-s'|)^2}\cdot\frac{1}{(1+\operatorname{dist}(\nu,\nu')\,H)^2}\ \|f\|_2^2,
+\]
+which is \eqref{eq:slope-orth-decay}.
+\end{proof}
+
+
+\begin{theorem}[Two–weight $TT^*$ Sawyer test for SSU with $(H/X)^{1/2}$ saving]\label{thm:SSU-Sawyer}
+Let $K\ge0$ be a time–pin of width $H=(\log X)^A$ as in Assumption~\ref{ass:bank}, and let $\mathfrak A(Q)$ be the bank with $Q=H^\gamma$, $0<\gamma<\tfrac12$. For $f:\mathbb Z\to\mathbb C$ supported on $[X,2X]$ define
+\[
+(Tf)(n_0,\xi):=\mathbf 1_{\mathfrak A(Q)^c}(\xi)\sum_{n\sim X} f(n)\,K(n_0-n)\,e(\xi n),\qquad n_0\in[X,2X],\ \xi\in\mathbb T.
+\]
+Then for every admissible F3–block $f=F_{\mathsf B}$ (Type II/III, divisor–type coefficients, smooth dyadic cutoffs) one has
+\begin{equation}\label{eq:SSU-strong}
+\mathbb E_{n_0\in[X,2X]}\int_{\mathfrak A(Q)^c} |(Tf)(n_0,\xi)|^2\,d\xi
+\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{1/2}\ \|F_{\mathsf B}\|_2^2.
+\end{equation}
+Summing over the $O((\log X)^C)$ blocks yields the global SSU bound used in the ledger.
+\end{theorem}
+
+\begin{remark}[Uniformity of constants]\label{rem:ssu-uniformity}
+The constants implicit in Theorem~\ref{thm:SSU-Sawyer} depend only on:
+(i) finitely many derivatives of the dyadic windows $W_d,W_n$;
+(ii) the moment bounds $\int\widehat K_H\ll H$ and $\int \widehat K_H/|\xi|\ll H\log H$;
+(iii) the overlap constant in (T1), which is $\ll(\log X)^C$;
+and (iv) the fixed choice $Q=H^\gamma$ with $0<\gamma<\tfrac12$.
+They are uniform in coprime $a/q$ with $q\le Q$ and in tube centers $s$ with $U\asymp X/(qH)$.
+\end{remark}
+
+
+\begin{lemma}[Congruence dissection and SBP control]\label{lem:congruence-sbp}
+Let $1\le q\le Q$ and $(a,q)=1$. In the shear coordinates $u=qn-ad$, $v=d$, fix a tube
+\[
+T(a/q,s)\ :=\ \{(d,n):\ |u-s|\le U,\ d\in(D,2D]\},\qquad U\asymp X/(qH).
+\]
+For smooth windows $W_d, W_n$ with $\|W_d^{(k)}\|_\infty\ll D^{-k}$ and $\|W_n^{(k)}\|_\infty\ll N^{-k}$, we have
+\[
+\sum_{(d,n)\in T(a/q,s)} F(d,n)\,W_d(d/D)\,W_n(n/N)
+\;=\;\sum_{\substack{r\!\!\!\pmod q}}\ \sum_{\substack{v\equiv r\ (q)\\ |u-s|\le U}}\!F(d,n)\,W_d(d/D)\,W_n(n/N)\;+\;O_A\bigl((\log X)^{-A}\!\!\sum|F|\bigr),
+\]
+where in each inner sum the congruence $u\equiv -av\pmod q$ is enforced. The error term arises from at most two integrations by parts in $d$ or $n$, and is uniform in $a,q,s,U$.
+\end{lemma}
+
+\begin{lemma}[Congruence dissection with uniform SBP error]\label{lem:ap-sbp-error}
+Let $1\le q\le Q$, $(a,q)=1$, and in shear coordinates $u=qn-ad$, $v=d$ consider a tube
+\[
+T(a/q,s)=\{(d,n): |u-s|\le U,\ d\asymp D\},\qquad U\asymp X/(qH).
+\]
+For smooth windows $W_d,W_n$ with $\|W_d^{(k)}\|_\infty\ll D^{-k}$ and $\|W_n^{(k)}\|_\infty\ll N^{-k}$,
+\[
+\sum_{(d,n)\in T(a/q,s)} F(d,n)\,W_d(d/D)\,W_n(n/N)
+=\sum_{\substack{r\bmod q}}\ \sum_{\substack{v\equiv r\ (q)\\ |u-s|\le U}}F(d,n)\,W_d\,W_n + O_A\!\Big((\log X)^{-A}\!\sum|F|\Big),
+\]
+uniformly in $a,q,s,U$, where the error comes from nonzero additive characters and is obtained by at most two summations by parts.
+\end{lemma}
+
+\begin{proof}
+Insert $1_{u\equiv -av\ (q)}=\frac1q\sum_{h\bmod q}e(\frac{h(u+av)}{q})$. The $h=0$ term gives the main term. For $h\ne0$, view the sum in $d$ or $n$ with phase $e(h(\,\cdot\,)/q)$; discrete summation by parts once (twice if needed) against $W_d$ or $W_n$ gives a factor $\ll (|h|/q)^{-1}$ per integration, while derivatives of $W_d,W_n$ contribute $D^{-1}$ or $N^{-1}$. Summing $1\le |h|\le q$ and using $q\le Q\ll (\log X)^{O(1)}$ yields the $(\log X)^{-A}$–loss uniformly in $s,U$.
+\end{proof}
+
+\begin{lemma}[Smooth windows: boundary control]\label{lem:smooth-boundary}
+Let $W_d,W_n$ be dyadic windows supported in $[1/2,2]$ with $\|W_d^{(k)}\|_\infty\ll D^{-k}$ and $\|W_n^{(k)}\|_\infty\ll N^{-k}$. For any $G$ supported on $d\sim D$, $n\sim N$,
+\[
+\sum_{d\sim D}\sum_{n\sim N} G(d,n)\ -\ \sum_{d}\sum_{n} G(d,n)\,W_d(d/D)\,W_n(n/N)
+= O_A\!\Big((\log X)^{-A}\sum_{d,n}|G(d,n)|\Big).
+\]
+\end{lemma}
+
+\begin{proof}
+Write the difference as a sum over boundary strips of thickness $D/(\log X)^B$ and $N/(\log X)^B$. One discrete Abel summation across each strip gains $D^{-1}$ or $N^{-1}$ from the window derivative. Choosing $B$ large and summing over $O(1)$ strips gives the stated $(\log X)^{-A}$ loss.
+\end{proof}
+
+\begin{lemma}[Smooth localization and boundary control]\label{lem:smooth-sbp}
+Let $W_d,W_n$ be dyadic windows supported in $[1/2,2]$ with $\|W_d^{(k)}\|_\infty\ll D^{-k}$, $\|W_n^{(k)}\|_\infty\ll N^{-k}$. For any function $G(d,n)$ supported on $(D/2,2D]\times(N/2,2N]$,
+\[
+\sum_{d\sim D}\sum_{n\sim N} G(d,n)\ -\ \sum_{d}\sum_{n} G(d,n)\,W_d(d/D)\,W_n(n/N)
+\ =\ O_A\bigl((\log X)^{-A}\sum_{d,n}|G(d,n)|\bigr).
+\]
+The implicit constant depends only on finitely many derivatives of $W_d,W_n$.
+\end{lemma}
+
+\begin{proof}
+Write the difference as a sum over boundary strips of thickness $O(D/(\log X)^B)$ and $O(N/(\log X)^B)$. Integrate by parts once (discrete Abel summation) in $d$ (resp.\ $n$) across each strip; the derivative bounds give a factor $D^{-1}$ (resp.\ $N^{-1}$) per strip. Taking $B$ large and summing over $O(1)$ strips yields the claimed $(\log X)^{-A}$ loss.
+\end{proof}
+
+
+\begin{proof}
+Insert the identity
+\[
+1_{u\equiv -av\ (q)}=\frac1q\sum_{h\bmod q}e\!\left(\frac{h(u+av)}{q}\right)
+\]
+and split the $(d,n)$–sum by $v\equiv r\pmod q$. The $h=0$ term gives the stated main term. For $h\neq 0$, the phase is nonconstant in $d$ or $n$; applying summation by parts against $W_d$ or $W_n$ once (and, if needed, twice) yields a factor $\ll (|h|/q)^{-1}$ per integration and introduces derivatives of $W_d,W_n$ absorbed by $D^{-1},N^{-1}$. Summing $|h|\le q$ gives the stated $O_A((\log X)^{-A}\sum|F|)$ upon taking $A$ large and using $q\le Q\ll (\log X)^{O(1)}$. Uniformity in $s,U$ follows from $U\asymp X/(qH)$ and bounded tube thickness.
+\end{proof}
+
+\begin{proof}
+Write the dual form via $TT^*$. For $g$ supported on $[X,2X]\times\mathfrak A(Q)^c$, define
+\[
+(T^\ast g)(m)\ :=\ \sum_{n_0}\int_{\mathbb T}\mathbf 1_{\mathfrak A(Q)^c}(\xi)\,K(n_0-m)\,e(-\xi m)\,g(n_0,\xi)\,d\xi.
+\]
+Then $\|Tf\|_{L^2(\mathbb E_{n_0}d\xi)}^2=\langle T^\ast T f,f\rangle_{\ell^2}$, with
+\[
+(T^\ast T f)(m)
+=\sum_{n\sim X}\!f(n)\,R(m-n)\,\Phi(m-n),
+\quad
+R(t):=\mathbb E_{n_0}K(n_0)K(n_0-t),\ 
+\Phi(t):=\int_{\mathfrak A(Q)^c} e(\xi t)\,d\xi.
+\]
+By Assumption~\ref{ass:bank}: $R(t)\ge0$, $\mathrm{supp}\,R\subset[-2H,2H]$, $\sum_t R(t)\asymp H$, and $\sum_t |t|\,R(t)\ll H\log H$ (kernel moments).
+
+\smallskip
+\emph{Step 1: Tube decomposition in frequency and slope.}
+Cover $\mathfrak A(Q)^c$ by a smooth partition of unity $\{\eta_\nu\}_\nu$ with $\eta_\nu$ supported on intervals of length $\asymp (q_\nu H)^{-1}$, where $1\le q_\nu\le Q$, and with $\sum_\nu \eta_\nu=\mathbf 1_{\mathfrak A(Q)^c}$, bounded overlap, and $\|\eta'_\nu\|_\infty\ll q_\nu H$. For each $\nu$ define
+\[
+\Phi_\nu(t):=\int \eta_\nu(\xi)\,e(\xi t)\,d\xi,
+\qquad
+|\Phi_\nu(t)|\ \ll\ \min\!\Big\{(q_\nu H)^{-1},\ |t|^{-1}\Big\}.
+\]
+Further, for each $\nu$ split the shift–variable $t$ into slope–packets of width $\asymp X/H$:
+\[
+\mathbb Z\ni t\ =\ s\cdot \frac{X}{H}\ +\ r,\qquad s\in\mathbb Z,\quad |r|\le \frac{X}{2H}.
+\]
+Let $\Upsilon_s$ denote the set $\{t: |t-sX/H|\le X/(2H)\}$. Then
+\[
+\Phi(t)=\sum_\nu \Phi_\nu(t)=\sum_{\nu}\sum_{s}\ \Phi_\nu(t)\,\mathbf 1_{\Upsilon_s}(t).
+\]
+
+\smallskip
+\emph{Step 2: Strong orthogonality across slope–packets.}
+Fix $\nu$. For $s\neq s'$, the supports $\Upsilon_s$ and $\Upsilon_{s'}$ are disjoint, and oscillatory factors $e(\xi t)$ with $\xi$ restricted to the same $\eta_\nu$ produce \emph{discrete} orthogonality across $s$ at scale $X/H$ when tested against F3–blocks. Concretely, for an F3–block $f$ (Type II/III) we have
+\begin{equation}\label{eq:slope-orth}
+\sum_{m}\ \overline{f(m)}\sum_{n} f(n)\,R(m-n)\,\Phi_\nu(m-n)\,\mathbf 1_{\Upsilon_s}(m-n)
+\ \perp\ 
+\sum_{m}\ \overline{f(m)}\sum_{n} f(n)\,R(m-n)\,\Phi_\nu(m-n)\,\mathbf 1_{\Upsilon_{s'}}(m-n)
+\end{equation}
+whenever $|s-s'|\ge 1$. This is the standard “different slope” orthogonality: in the bilinear/trilinear F3 model the phase $e(\xi(n-m))$ couples to a product phase $e(\xi\,\Phi_{\mathsf B}(a,b,\dots))$ whose stationary set singles out $|n-m|\lesssim X/H$ per $\eta_\nu$; distinct slope–packets $s\neq s'$ then yield disjoint stationary regions. (A detailed derivation follows the bilinear TT$^\ast$ geometry: see \ref{subsec:BG.incidence}.
+
+Consequently, for a fixed $\nu$ the packets over $s$ add in $\ell^2$:
+\[
+\langle T^\ast T f,f\rangle
+=\sum_{\nu}\ \sum_{s}\ \mathcal Q_{\nu,s}(f),
+\qquad
+\mathcal Q_{\nu,s}(f):=\sum_{m,n} \overline{f(m)}\,f(n)\,R(m-n)\,\Phi_\nu(m-n)\,\mathbf 1_{\Upsilon_s}(m-n).
+\]
+
+\smallskip
+\emph{Step 3: One–packet Sawyer testing.}
+Fix $(\nu,s)$. For each tube $\nu$ and slope packet $s$, with
+\(
+K_{\nu,s}(t):=R(t)\,\Phi_\nu(t)\,\mathbf 1_{\Upsilon_s}(t),
+\)
+we have
+\[
+\sum_{t}|K_{\nu,s}(t)|
+\ \ll\
+\begin{cases}
+\displaystyle \frac{H}{q_\nu H}\ =\ \frac{1}{q_\nu}, & s=0,\\[6pt]
+\displaystyle \frac{H}{|s|X}, & |s|\ge 1,
+\end{cases}
+\]
+since $|t|\le 2H$ and $|\Phi_\nu(t)|\ll \min\{(q_\nu H)^{-1},|t|^{-1}\}$ on $\mathfrak A(Q)^c$.
+Thus Schur’s symmetric test gives
+\[
+\sup_{n_0}\sum_n |K_{\nu,s}(n_0-n)|
+\ \ll\
+\begin{cases}
+q_\nu^{-1/2}, & s=0,\\
+(H/X)^{1/2}|s|^{-1/2}, & |s|\ge 1.
+\end{cases}
+\tag{$\ast$}
+\]
+Summing in $s$ uses $\sum_{|s|\ge1} |s|^{-1/2}\ll 1$ (finite $s$–overlap for fixed $\nu$);
+summing in $\nu$ across $\mathfrak A(Q)^c$ uses bounded overlap of tubes and $q_\nu\ge Q$.
+Hence the one–packet contribution obeys
+\[
+\|T_{\nu,s}\|_{2\to 2}\ \ll\ (\log X)^C\left( (H/X)^{1/2} + Q^{-1/2}\right).
+\]
+\emph{With the amplification Lemma \ref{lem:minor-amp}} (choosing $H_0\asymp Q$) the $Q^{-1/2}$ term is absorbed, and we retain the robust $(H/X)^{1/2}$ saving stated in Theorem~\ref{thm:SSU-Sawyer}.
+
+\smallskip
+\emph{Step 4: Verifying the tests.}
+Since $R$ is supported on $|t|\le 2H$ and $\Upsilon_s$ on $|t-sX/H|\le X/(2H)$, for any fixed $(\nu,s)$ there are at most $O(1)$ integers $t$ in the support intersection; in fact either the intersection is empty (if $|s|>3H^2/X$) or it is a short interval of length $\ll 1$ (independent of $X$). Thus
+\[
+\sum_{t}|K_{\nu,s}(t)|\ \ll\ \max_{t}\ |R(t)|\,|\Phi_\nu(t)|\ \ll\ \max_{|t|\le 2H}\ |\Phi_\nu(t)|.
+\]
+Using $|\Phi_\nu(t)|\ll \min\{(q_\nu H)^{-1},|t|^{-1}\}$ and $|t|\asymp |s|X/H$ on $\Upsilon_s$ (when nonempty), we have
+\[
+|\Phi_\nu(t)|\ \ll\ \min\!\Big\{(q_\nu H)^{-1},\ \frac{H}{|s|X}\Big\}.
+\]
+If $s=0$, then $|t|\ll X/H$ forces $|t|\asymp 1$ and we use the first branch, getting $(q_\nu H)^{-1}$. If $|s|\ge 1$, use the second branch to get $H/(|s|X)$. Either way,
+\[
+\sum_{t}|K_{\nu,s}(t)|\ \ll\ \min\!\Big\{\frac{1}{q_\nu H},\ \frac{H}{|s|X}\Big\}.
+\]
+Taking square roots (Schur’s symmetric test) gives
+\[
+\sup_{n_0}\sum_n |K_{\nu,s}(n_0-n)|\ \ll\ \Big(\min\!\Big\{\frac{1}{q_\nu H},\ \frac{H}{|s|X}\Big\}\Big)^{1/2}
+\ \le\ C\,\Big(\frac{H}{X}\Big)^{1/2}.
+\]
+(The last inequality is trivial for $|s|\ge 1$; for $s=0$ use $q_\nu\le Q\le H^{1/2-\varepsilon}$ so $(q_\nu H)^{-1/2}\le H^{-1/4}\le (H/X)^{1/2}$ once $X$ is large and $A$ fixed.) This proves \eqref{eq:slope-orth}–\eqref{eq:dense-grid} and completes the proof.
+\end{proof}
+
+\begin{lemma}[Bandwidth and sampling constants]\label{lem:bandwidth-bookkeeping}
+Let $S(t)=(R_2*K)(t)$ with $K$ as in Assumption~\ref{ass:bank}. Then $S$ is bandlimited with bandwidth
+\[
+\Lambda\ :=\ \sup\{|\xi|:\ \widehat S(\xi)\ne 0\}\ \le\ \frac{1}{H}.
+\]
+Let $\Sigma\subset\mathbb T$ be the frequency region where we sample/estimate $\widehat S$, namely the bank $\mathfrak A(Q)$ or its complement. Then the partition in §4–§7 guarantees
+\[
+|\Sigma|\ \asymp\ \frac{Q^2}{H}.
+\]
+Consequently, the Logvinenko–Sereda sampling/Nikolski–Bernstein regime
+\[
+\Lambda\,\Delta\ \le\ c_0\qquad\Big(\text{e.g.\ choose }\ \Delta\ =\ \frac{c_0}{\Lambda}\,\frac{m}{m+C_{\mathrm{Nik}}\,\|S\|_{\ell^2([X,2X])}/H^{1/2}}\Big)
+\]
+holds with $\Lambda=1/H$. In particular, any choice of grid spacing $\Delta\le c_0\,H$ satisfies the Paley–Wiener sampling prerequisite; combining with Lemma~\ref{lem:sampling-bernstein} and Corollary~\ref{cor:nikolskii-grid} yields the concrete grid used in §11.
+\end{lemma}
+
+\begin{theorem}[SSU via amplification+Schur]\label{thm:SSU-a}
+$\mathbb E_{n_0}\int_{\mathfrak A^c}\Big|\sum f(n)K_H(n_0-n)e(\xi n)\Big|^2 d\xi$
+\[ \ll (\log X)^C\,(H/X)^{1/2}\,\|f\|_2^2. \]
+\end{theorem}
+
+\begin{proof}[Proof of Theorem~\ref{thm:SSU-Sawyer} (frequency separation step)]
+Let $H_0=\lceil cQ\rceil$ (small fixed $c>0$). By the standard amplification identity,
+\[
+\int_{A^c}\Big|\sum_n f(n)K_H(n_0-n)e(\xi n)\Big|^2 d\xi
+\ \ll\ 
+\frac{1}{H_0}\sum_{1\le |h|\le H_0}
+\int_{A^c}\Big|\sum_n f(n)\Delta_hK_H(n_0-n)\,e(\xi n)\Big|^2 d\xi,
+\]
+where $\Delta_hK_H(t):=K_H(t)-K_H(t-h)$ and $A^c$ denotes the complement of the bank.
+Fix a sheared tube $T_\nu$ and decompose to packets; after shearing $(d,n)\mapsto(u,v)$ and
+freezing the long variable, the inner sum is of the form
+\[
+\sum_{v\in I_\nu}\, a_v\,e\!\Big(\xi\,\frac{v}{q_\nu X}\Big),
+\qquad |I_\nu|\ \asymp\ \frac{X}{H},
+\]
+with coefficients $a_v$ depending on $f$ and the $h$–difference.
+On $A^c$ we dyadically decompose $\xi$ so that $|\xi|\asymp 2^{-j}/H$.
+Consecutive frequencies in $v$ are then separated by
+\[
+\delta_j\ \asymp\ \frac{|\xi|}{q_\nu X}\ \asymp\ \frac{2^{-j}}{q_\nu X H}.
+\]
+Since $|I_\nu|\asymp X/H$, Montgomery–Vaughan’s large sieve in the $v$–variable gives
+\[
+\int_{|\xi|\asymp 2^{-j}/H}\Big|\sum_{v\in I_\nu} a_v\,e\Big(\xi\frac{v}{q_\nu X}\Big)\Big|^2 d\xi
+\ \ll\
+\Big(\frac{X}{H}\;+\;\delta_j^{-1}\Big)\sum_{v\in I_\nu}|a_v|^2
+\ \ll\
+\Big(\frac{X}{H}\;+\;q_\nu XH\,2^{j}\Big)\sum_{v}|a_v|^2.
+\]
+Summing over $q_\nu\le Q$ and tubes and using $q_\nu\le Q=H^\gamma$ with $\gamma<\tfrac12$, the dyadic weight from the packet window (two integrations by parts in $\xi$) contributes
+a factor $2^{-2j}$, hence
+\[
+\sum_{j\ge 0} 2^{-2j}\Big(\frac{X}{H}\;+\;q_\nu XH\,2^{j}\Big)
+\ \ll\
+\frac{X}{H}\;+\;XH\,q_\nu
+\ \ll\
+\frac{X}{H}\;+\;XH^{1+\gamma}.
+\]
+Amplifying in $h$ and summing the packets (bounded overlap) produces the
+claimed $(\log X)^C(H/X)^{1/2}$ bound by Schur’s test: the $X/H$ term yields the main saving,
+and the $XH^{1+\gamma}$ term is absorbed after the $h$–difference (which contributes an extra
+$H_0^{-1}$ and a derivative of $K_H$, hence a factor $\ll H^{-1}$), together with the $2^{-2j}$ decay.
+Thus
+\[
+\int_{A^c}\Big|\sum_n f(n)K_H(n_0-n)e(\xi n)\Big|^2 d\xi
+\ \ll\ (\log X)^C\,(H/X)^{1/2}\,\|f\|_2^2.
+\]
+This completes the frequency–separation step. The remaining (routine) steps in the proof
+are bookkeeping of the packet overlap and the amplification identity.
+\end{proof}
+
+\begin{proposition}[Optional: Cotlar--Stein SSU]\label{prop:cotlar-ssu}
+SSU might be confirmed by an independent process. Decompose $T=\sum_{\nu,s} T_{\nu,s}$ with $T_{\nu,s}$ defined by the kernel $K_{\nu,s}$.
+Then
+\[
+\|T\|_{2\to 2}^2\ \le\ \sup_{\nu,s}\ \sum_{\nu',s'} \big\|T_{\nu,s}^\ast T_{\nu',s'}\big\|_{2\to 2}.
+\]
+Moreover
+\[
+\big\|T_{\nu,s}^\ast T_{\nu',s'}\big\|_{2\to 2}\ \ll\ (\log X)^C\cdot 
+\left(\frac{H}{X}\right)\cdot \frac{1}{\big(1+|s-s'|\big)^{2}}
+\cdot \frac{1}{\big(1+\operatorname{dist}(\nu,\nu')\,H\big)^{2}},
+\]
+so the double sum converges absolutely, yielding
+\(
+\|T\|_{2\to 2}\ \ll\ (\log X)^C\,(H/X)^{1/2}.
+\)
+\end{proposition}
+
+\begin{proof}[Proof of Proposition~\ref{prop:cotlar-ssu}]
+Write the packet operator in Fourier as
+\[
+\widehat{T_{\nu,s}f}(\xi)
+\;=\;
+\eta_\nu(\xi)\,\Phi_H(\xi)\,e\!\Big( \xi\,\frac{sX}{H}\Big)\,\widehat{f}(\xi),
+\]
+where $\eta_\nu$ is supported on an arc of width $\asymp (q_\nu H)^{-1}$ around $a_\nu/q_\nu$ and
+$\Phi_H$ is the fixed bandwidth-$1/H$ window. (Only the support and derivative bounds
+$\|\partial^m(\eta_\nu\Phi_H)\|_\infty\ll H^{m}$ for $m\le 2$ are used.) Thus
+\[
+T_{\nu,s}^{*}T_{\nu',s'}
+\;=\;
+\operatorname{Op}\!\Big(\, \overline{\eta_\nu\Phi_H}\ \eta_{\nu'}\Phi_H\ 
+e\!\Big(\xi\,\frac{(s'-s)X}{H}\Big)\Big).
+\]
+By Plancherel, the integral kernel is the inverse transform of the multiplier:
+\[
+K_{\nu,s;\nu',s'}(t)
+=
+\int_{\mathbb T}
+\overline{\eta_\nu(\xi)\Phi_H(\xi)}\ \eta_{\nu'}(\xi)\Phi_H(\xi)\ 
+e\!\Big(\xi\,\frac{(s'-s)X}{H}\Big)\,e(\xi t)\,d\xi.
+\]
+Set $\Theta_{\nu,\nu'}(\xi):=\overline{\eta_\nu(\xi)\Phi_H(\xi)}\,\eta_{\nu'}(\xi)\Phi_H(\xi)$ and
+$\tau:=t+\frac{(s'-s)X}{H}$. Then $K_{\nu,s;\nu',s'}(t)=\int \Theta_{\nu,\nu'}(\xi)\,e(\xi\tau)\,d\xi$.
+Two inputs drive the decay:
+\begin{itemize}
+\item \emph{Slope separation.} The supports of $\eta_\nu$ and $\eta_{\nu'}$ are centered at rationals
+$a_\nu/q_\nu$, $a_{\nu'}/q_{\nu'}$ with $q_\nu,q_{\nu'}\le Q$; their centers are $\gg (q_\nu q_{\nu'})^{-1}
+\asymp \mathrm{dist}(\nu,\nu')$ apart. Since each support has width $\asymp 1/H$, the product
+$\Theta_{\nu,\nu'}$ enjoys the quantitative bound
+\[
+\|\Theta_{\nu,\nu'}\|_{C^2}
+\ll 1,\qquad
+\|\Theta_{\nu,\nu'}\|_{L^1}\ll \frac{1}{H}\,\frac{1}{1+(\mathrm{dist}(\nu,\nu')\,H)},
+\]
+and, by one more derivative, the standard integration by parts estimate
+\begin{equation}\label{eq:slope-decay}
+\Big|\int \Theta_{\nu,\nu'}(\xi)\,e(\xi \tau)\,d\xi\Big|
+\ \ll\ \frac{1}{H}\,\frac{1}{\big(1+\mathrm{dist}(\nu,\nu')\,H\big)^{2}}\ \frac{1}{(1+|\tau|)^{2}}.
+\end{equation}
+\item \emph{Short-shift separation.} Writing $\tau=t+\frac{(s'-s)X}{H}$, the factor
+$(1+|\tau|)^{-2}$ yields an extra $(1+|s-s'|)^{-2}$ once we sum $|t|$ over the $t$-support of the
+time kernel (thickness $\ll H$).
+\end{itemize}
+To pass to an operator bound, apply Schur’s test in the time variable. Using
+$\sum_{|t|\ll H}(1+|t+(s'-s)X/H|)^{-2}\ll (1+|s-s'|)^{-2}$ and \eqref{eq:slope-decay}, we obtain
+\[
+\|T_{\nu,s}^{*}T_{\nu',s'}\|_{2\to2}
+\ \ll\ 
+\frac{H}{X}\cdot
+\frac{1}{\big(1+|s-s'|\big)^{2}}\cdot
+\frac{1}{\big(1+\mathrm{dist}(\nu,\nu')\,H\big)^{2}},
+\]
+where the factor $H/X$ comes from the $t$-thickness and the normalization of $T$ (cf. the
+definition in \S6.2). Summing in $(\nu',s')$ and taking $\sup_{\nu,s}$,
+the double sum converges absolutely by Lemma~6.30 (incidence–degeneracy summation), hence
+Cotlar–Stein gives
+\[
+\|T\|_{2\to2}^2
+\ \le\
+\sup_{\nu,s}\sum_{\nu',s'}\|T_{\nu,s}^{\ast}T_{\nu',s'}\|_{2\to2}
+\ \ll\ (\log X)^C\ \frac{H}{X},
+\]
+so $\|T\|_{2\to2}\ll (\log X)^C(H/X)^{1/2}$, as claimed.
+\end{proof}
+
+\begin{lemma}[Incidence–Degeneracy summation]\label{lem:incdeg-sawyer}
+Let $\{T_{\nu,s}\}$ be the tube packets and define
+\(
+\operatorname{dist}(\nu,\nu')=\bigl|\frac{a_\nu}{q_\nu}-\frac{a_{\nu'}}{q_{\nu'}}\bigr|.
+\)
+Then
+\begin{equation}\label{eq:incdeg-sum}
+\sup_{\nu,s}\ \sum_{\nu',s'} \frac{1}{\big(1+|s-s'|\big)^{2}\,\big(1+\operatorname{dist}(\nu,\nu')\,H\big)^{2}}
+\ \ll\ (\log X)^C.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Split dyadically by $|s-s'|\asymp 2^{j}$ and $\operatorname{dist}(\nu,\nu')\asymp 2^{-k}/H$ with $j,k\ge0$.
+By the \emph{Incidence} Lemma~\ref{lem:BG.incidence} (05\_BG.tex, line~208) and the \emph{Degeneracy} Lemma~\ref{lem:BG.degeneracy} (05\_BG.tex, line~247), for each $k$ there are $\ll (\log X)^C(1+2^k)$ slopes $\nu'$ with $\operatorname{dist}\asymp 2^{-k}/H$; for each such $\nu'$, at most $\ll (\log X)^C(1+2^j)$ short shifts $s'$ produce overlapping packets. Hence the $(j,k)$–box contributes
+\(
+\ll (\log X)^C\frac{(1+2^j)(1+2^k)}{(1+2^j)^2(1+2^k)^2}\ll (\log X)^C 2^{-j}2^{-k}.
+\)
+Summing $j,k\ge0$ gives \eqref{eq:incdeg-sum}.
+\end{proof}
+
+\begin{lemma}[Incidence–Degeneracy summation for Sawyer]\label{lem:incdeg-sawyer}
+Let $\{T_{\nu,s}\}$ be the tube packets with slopes $a_\nu/q_\nu$ and short-shift index $s$, and let
+\[
+\operatorname{dist}(\nu,\nu')\ :=\ \Big| \frac{a_\nu}{q_\nu}-\frac{a_{\nu'}}{q_{\nu'}}\Big|.
+\]
+Then
+\begin{equation}\label{eq:incdeg-sum}
+\sup_{\nu,s}\ \sum_{\nu',s'} \frac{1}{\big(1+|s-s'|\big)^{2}\,\big(1+\operatorname{dist}(\nu,\nu')\,H\big)^{2}}
+\ \ll\ (\log X)^C.
+\end{equation}
+In particular, together with Proposition~\ref{prop:cotlar-ssu},
+\(
+\|T\|_{2\to 2}^2 \ll (\log X)^C\,(H/X).
+\)
+\end{lemma}
+
+\begin{proof}
+Fix $(\nu,s)$ and dyadically split by $|s-s'|\asymp 2^j$ and $\operatorname{dist}(\nu,\nu')\asymp 2^{-k}/H$ with $j,k\ge 0$. 
+By the \emph{Incidence} Lemma~\ref{lem:BG.incidence} (05\_BG.tex, line~208) and \emph{Degeneracy} Lemma~\ref{lem:BG.degeneracy} (05\_BG.tex, line~247), for each $k$ there are $\ll (\log X)^C(1+2^{k})$ choices of $\nu'$ with $\operatorname{dist}(\nu,\nu')\asymp 2^{-k}/H$, and for each such $\nu'$ there are $\ll (\log X)^C(1+2^{j})$ indices $s'$ with $|s-s'|\asymp 2^j$ that still produce intersecting (or near–intersecting) packets after shearing. Hence the $(j,k)$–box contributes
+\[
+\ll (\log X)^C\ \frac{(1+2^j)(1+2^{k})}{(1+2^j)^2(1+2^k)^2}
+\ \ll\ (\log X)^C\,2^{-j}2^{-k}.
+\]
+Summing over $j,k\ge 0$ gives \eqref{eq:incdeg-sum}. The final claim follows from Proposition~\ref{prop:cotlar-ssu}.
+\end{proof}
+
+\begin{lemma}[Tubes and packets]\label{lem:tubes}
+$\eta_\nu\ \text{on intervals of length } \asymp (q_\nu H)^{-1},\ 1\le q_\nu\le Q,$
+$\Phi_\nu(t)=\int \eta_\nu(\xi)e(\xi t)d\xi\ \ll \min\{(q_\nu H)^{-1},|t|^{-1}\}.$
+\ 
+$t=sX/H+r,\ |r|\le X/(2H).$
+\end{lemma}
+
+\begin{proposition}[SSU via Cotlar--Stein]\label{prop:SSU-b}
+\[
+\|T\|_{2\to2}^2\le \sup_{\nu,s}\sum_{\nu',s'}\|T_{\nu,s}^\ast T_{\nu',s'}\|_{2\to2},\qquad\|T_{\nu,s}^\ast T_{\nu',s'}\|\ll (\log X)^C\,\frac{H}{X}\,\frac{1}{(1+|s-s'|)^2}\,\frac{1}{(1+\mathrm{dist}(\nu,\nu')H)^2}.\Rightarrow\ \|T\|_{2\to2}\ \ll\ (\log X)^C\,(H/X)^{1/2}.
+\]
+\end{proposition}

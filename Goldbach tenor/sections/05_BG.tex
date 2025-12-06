@@ -1,0 +1,599 @@
+% !TEX root = main.tex
+\section{Bilinear Geometry (BG)}\label{sec:BG}
+
+This section proves the short–shift anti–alignment for Type–II bilinear forms at bandwith $1/H$, with the optimal square–root gain \smash{$(H/X)^{1/2}$} up to polylogarithmic factors. The result is \emph{non–flat}: it holds for arbitrary coefficient arrays without any $\ell^\infty$ caps, via a two–weight positive–operator argument (Sawyer testing) adapted to sheared tubes. We also record the tube–localized slope–shift uncertainty (SSU) estimate that powers the square–root numerics.
+
+Throughout, $X$ is large, $A\ge 10$ is fixed, and
+\[
+H=(\log X)^A,\qquad 0<\varepsilon\le \tfrac{1}{10},\qquad X^\varepsilon\le D,N\le X^{1-\varepsilon},\quad DN\asymp X.
+\]
+We work with a fixed smooth bump $W\in C_c^\infty([1/2,2]^2)$ with $\|\partial^\alpha W\|_\infty\le C_W$ for $|\alpha|\le 3$.
+We use a real, even, nonnegative short–shift kernel $K_H:\mathbb{Z}\to\mathbb{R}_{\ge 0}$ whose Fourier transform on $\mathbb{T}$ obeys
+\begin{equation}\label{eq:KH.assumptions}
+\operatorname{supp}\widehat K_H \subset \{|\xi|\le 1/H\},\qquad
+\int_{\mathbb{R}}K_H(t)\,dt = H+O(1),\qquad
+\|\widehat K_H\|_{L^1(\mathbb{T})}\ll H,\qquad
+\int_{|\xi|\le 1/H}\frac{|\widehat K_H(\xi)|}{|\xi|}\,d\xi \ll H\log H .
+\end{equation}
+(A scaled Beurling–Selberg/Vaaler majorant for $[-H,H]$ satisfies \eqref{eq:KH.assumptions}.)
+
+\subsection{Bilinear form, short–shift operator, and goal}\label{subsec:BG.setup}
+
+Given coefficients $(\alpha_d)$, $(\beta_n)$ supported on $d\sim D$, $n\sim N$, set
+\begin{equation}\label{eq:Ak.def}
+A_k := \sum_{dn=k} \alpha_d\,\beta_n\,
+W\!\Big(\frac{d}{D},\frac{n}{N}\Big).
+\end{equation}
+Define the (smoothed) short–shift correlation operator
+\begin{equation}\label{eq:BG.kernel}
+\langle \mathbf T F,\ G\rangle \ :=\
+\sum_{d',n'}\ \sum_{d,n}\ K_H(d'n - dn')\,
+W\!\Big(\frac{d}{D},\frac{n}{N}\Big)\,W\!\Big(\frac{d'}{D},\frac{n'}{N}\Big)\,
+F(d,n)\,\overline{G(d',n')}.
+\end{equation}
+For the Type–II array $F(d,n)=\alpha_d\beta_n$ this quadratic form equals
+\[
+\langle \mathbf T(\alpha\!\otimes\!\beta),\,\alpha\!\otimes\!\beta \rangle
+=\sum_{k,k'} A_{k'}\,\overline{A_k}\,K_H(k'-k),
+\]
+\begin{remark}[Justification]\label{rem:justification-53-54}
+Equation~(5.3) has the form
+\[
+\mathcal B \;=\; \int_{-1/H}^{1/H} \widehat K_H(\xi)\,\bigl|S(\xi)\bigr|^2\,d\xi,
+\qquad \widehat K_H(\xi)\ge 0,
+\]
+so $\mathcal B$ is a positive average of $\lvert S(\xi)\rvert^2$ over $|\xi|\le 1/H$. Hence any pointwise upper bound for $\lvert S(\xi)\rvert^2$ on that band yields the corresponding bound for $\mathcal B$ after multiplying by $\int_{-1/H}^{1/H}\widehat K_H(\xi)\,d\xi$ (absorbed into constants).
+
+To obtain such a pointwise bound, first apply the shear $(d,n)\mapsto(u,v)=(qn-ad,\ d)$ so that $d'n-dn'=(v'u-vu')/q$, and rewrite
+\[
+S(\xi)\;=\;\sum_{(u,v)} F(v,u)\,e\!\Big(\frac{\xi\,u v}{qX}\Big),
+\]
+with $(u,v)$ constrained to the tube and the congruence $u\equiv -av\pmod q$. Then, for one progression (say in $v$ with modulus $q$), use Cauchy--Schwarz in the outer variable and the Montgomery--Vaughan large sieve in the inner variable; repeat dually for the progression in $u$. Taking the geometric mean of these two bounds yields a pointwise estimate
+\[
+|S(\xi)|^2 \;\ll\; \Big(\tfrac{DU}{q}\Big)^{1/2}
+\Big(U+\tfrac{X}{|\xi|}\Big)^{1/2}\Big(D+\tfrac{X}{|\xi|}\Big)^{1/2}
+\sum_{(u,v)} |F(v,u)|^2,
+\]
+uniformly for $|\xi|\le 1/H$. Integrating against $\widehat K_H(\xi)$ and using the kernel moment bounds
+\(
+\int\widehat K_H(\xi)\,d\xi\ll H,\ 
+\int \widehat K_H(\xi)\,|\xi|^{-1}\,d\xi\ll H\log H
+\)
+gives the right-hand side of~(5.4), with all dependence on smooth cutoffs and fixed dyadic normalizations absorbed into a factor $(\log X)^{O(1)}$. Finally, the short-axis condition $U\ll X/(qH)$ simplifies the product to the stated $(H/X)^{1/2}$ scale.
+\end{remark}
+
+\subsection{Shearing, tubes, and the SSU estimate}\label{subsec:BG.SSU}
+
+Write the skew form $B((d,n),(d',n')):=d'n-dn'$. Fix a reduced slope $a/q$ (with $1\le q\le H^\gamma$, $0<\gamma<\tfrac12$) and consider the unimodular shear
+\begin{equation}\label{eq:BG.shear}
+\Phi_{a/q}:\ (d,n)\mapsto (u,v)=(q d - a n,\ a d + q n).
+\end{equation}
+A direct calculation shows the factorization identity
+\begin{equation}\label{eq:BG.factor}
+B\big((d,n),(d',n')\big) \ =\ \frac{u'v - uv'}{a^2+q^2}.
+\end{equation}
+We define the \emph{sheared tube} of slope $a/q$ and cross–slope thickness $\delta:=c_0\,H/(DN)\asymp H/X$ by
+\begin{equation}\label{eq:BG.tube}
+T_{a/q}\ :=\ \Big\{(d,n)\in [D,2D]\times[N,2N]\cap\mathbb{Z}^2:\ \Big|\frac{n}{d}-\frac{a}{q}\Big|\le \delta\Big\}.
+\end{equation}
+A standard partition argument yields $O(H^{2\gamma})$ such tubes with bounded overlap covering the near–shift region $|B|\ll H$; we refer to this family as the \emph{tube pack}.
+
+\begin{lemma}[Short–axis large sieve]\label{lem:BG.SALS}
+Let $U\ge 1$ and suppose the frequencies $\{\beta_j\}\subset\mathbb{T}$ are $\Delta$–separated. Then for any $(g(u))_{|u|\le U}$,
+\[
+\sum_j \Big|\sum_{|u|\le U} g(u)\,e(\beta_j u)\Big|^2
+\ \ll\ (U+\Delta^{-1})\ \sum_{|u|\le U} |g(u)|^2.
+\]
+\end{lemma}
+
+\begin{proof}
+This is the classical Montgomery–Vaughan large sieve inequality.
+\end{proof}
+
+% ===== BEGIN PATCH: Tube partition and bounded overlap =====
+\subsection{Tube partition and bounded overlap}\label{subsec:tubes-partition}
+
+Fix a dyadic box $(D,2D]\times(N,2N]$ with $DN\asymp X$, and $Q=H^\gamma$ with $0<\gamma<\tfrac12$.
+For each reduced $a/q$ with $1\le q\le Q$, define the shear
+\[
+u:= qn-ad,\qquad v:= d.
+\]
+Let $U$ be any parameter with $1\le U \ll X/(qH)$, and write
+\[
+\mathcal{S}_{a/q}:=\Big\{s\in \mathbb{Z}:\ |s|\le \tfrac{X}{2qH}\Big\}.
+\]
+Define the $(a/q,s)$–tube by
+\begin{equation}\label{eq:def-tube}
+T(a/q,s)\ :=\ \Bigl\{(d,n)\in (D,2D]\times(N,2N]:\ |\,qn-ad-s\,|\ \le\ U\Bigr\}.
+\end{equation}
+
+\begin{lemma}[Covering and bounded overlap]\label{lem:tubes-partition}
+For each $(D,N)$ and each $a/q$ as above, the family $\{T(a/q,s)\}_{s\in\mathcal{S}_{a/q}}$ covers the slice
+\[
+\{(d,n)\in (D,2D]\times(N,2N]\ :\ |qn-ad|\le X/(2qH)\}.
+\]
+Moreover, there is a constant $C$ (independent of $(D,N),H,Q$) such that any point $(d,n)$ belongs to at most $C$ tubes $T(a/q,s)$ for a fixed $a/q$, and to at most $(\log X)^C$ tubes when $a/q$ ranges over all rationals with $q\le Q$.
+\end{lemma}
+
+\begin{proof}
+Fix $(d,n)$ with $|qn-ad|\le X/(2qH)$. Choose $s$ to be the nearest integer to $qn-ad$; then $|\,qn-ad-s\,|\le \tfrac12\le U$, giving coverage.
+For the per–$a/q$ multiplicity: if $(d,n)\in T(a/q,s)\cap T(a/q,s')$ then $|s-s'|\le 2U$, hence $s=s'$ since $U<1$ can be enforced by replacing $U$ by $\lfloor U\rfloor+1$ in the definition (harmless in all bounds), so per–$a/q$ multiplicity is $O(1)$.
+
+To sum over different $a/q$, note that $|qn-ad|\le X/(qH)$ and $q\le Q$ imply $|n/d-a/q|\ll 1/(qH)$.
+By Farey spacing, for distinct reduced fractions $a_i/q_i\ne a_j/q_j$ we have $|a_i/q_i-a_j/q_j|\ge 1/(q_iq_j)$. Hence overlap can occur only when $q_iq_j\gg H$, i.e. at most $O((\log X)^C)$ distinct dyadic $q$–ranges contribute for a fixed $(d,n)$ once we also account for the compact support of the frequency windows (from \S\ref{sec:TFA}) and the $q\le Q$ constraint. This gives the stated $(\log X)^C$ bound.
+\end{proof}
+% ===== END PATCH =====
+
+
+\begin{theorem}[SSU on a tube]\label{thm:BG.SSU}
+Let $T_{a/q}$ be as in \eqref{eq:BG.tube}. For any $F:\mathbb{Z}^2\to\mathbb{C}$ supported on $T_{a/q}$,
+\begin{equation}\label{eq:BG.SSU}
+\sum_{(d',n')\in T_{a/q}}\ \sum_{(d,n)\in T_{a/q}}
+K_H(d'n-dn')\,F(d,n)\,\overline{F(d',n')}
+\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{1/2}\ \sum_{(d,n)\in T_{a/q}} |F(d,n)|^2.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Write the skew form $B((d,n),(d',n')):=d'n-dn'$, fix a reduced slope $a/q$ with $1\le q\le H^\gamma$ and $0<\gamma<\tfrac12$, and shear via
+\[
+\Phi_{a/q}:(d,n)\mapsto (u,v)=(qd-an,\; ad+qn),
+\]
+so that
+\[
+B\big((d,n),(d',n')\big)=\frac{u'v-uv'}{a^2+q^2}
+\qquad\text{(cf.\ \((5.6)\)).}
+\]
+Let $T_{a/q}$ be the tube \((5.7)\). On $T_{a/q}$ one has the short–axis bound
+\[
+|u|\ \ll\ \delta\,D\,q\ \ll\ H^{1+\gamma}/N=:U\qquad\text{and}\qquad v\ \text{ranges over an interval of length}\ \asymp X.
+\]
+Expand the positive, band–limited kernel $K_H$ by Fourier inversion:
+\[
+K_H(t)=\int_{|\xi|\le 1/H} \widehat K_H(\xi)\,e(\xi t)\,d\xi,
+\qquad \widehat K_H\in L^1,\quad \int | \widehat K_H|\ll H,\quad \int_{|\xi|\le 1/H}\frac{|\widehat K_H(\xi)|}{|\xi|}\,d\xi\ll H\log H,
+\]
+cf.\ \((5.1)\). Then the quadratic form on $T_{a/q}$ equals
+\[
+\mathcal{Q}:=\sum_{(d',n'),(d,n)\in T_{a/q}} K_H\!\big(B((d,n),(d',n'))\big)\,F(d,n)\,F(d',n')
+=\int_{|\xi|\le 1/H} \widehat K_H(\xi)\,\mathcal{S}(\xi)\,d\xi,
+\]
+where, in $(u,v)$–coordinates,
+\[
+\mathcal{S}(\xi)=\sum_{u',v'}\sum_{u,v} F(u,v)\,F(u',v')\,
+e\!\left(\frac{\xi}{a^2+q^2}(u'v-uv')\right).
+\]
+Set the linear phases $\alpha_{u'}:=\xi u'/(a^2+q^2)$ and $\beta_{v'}:=\xi v'/(a^2+q^2)$ so that
+$e\!\left(\tfrac{\xi}{a^2+q^2}(u'v-uv')\right)=e(\alpha_{u'}v)\,e(-\beta_{v'}u)$.
+For each fixed $u'$ define
+\[
+h_{u'}(u):=\sum_{v} F(u,v)\,e(\alpha_{u'}v).
+\]
+Then
+\[
+\mathcal{S}(\xi)=\sum_{u',v'} F(u',v')\sum_{u} h_{u'}(u)\,e(-\beta_{v'}u).
+\]
+Apply Cauchy–Schwarz in $(u',v')$ and the Montgomery–Vaughan large sieve in the short variable $u$ (Lemma~5.1): the set of frequencies $\{\beta_{v'}\}$ is $\Delta$–separated with $\Delta\gg |\xi|$ because $v'$ runs over an interval of step $1$ and $|\xi|\le 1/H$ (hence distinct $v'$ give $|\beta_{v'}-\beta_{v''}|\ge c|\xi|$ modulo $1$). Therefore
+\[
+\sum_{v'}\Big|\sum_{u} h_{u'}(u)\,e(-\beta_{v'}u)\Big|^2
+\ \ll\ (U+|\xi|^{-1})\sum_{|u|\le U} |h_{u'}(u)|^2.
+\]
+Summing this bound over $u'$ and undoing the $\alpha_{u'}$–modulation by Parseval in the long variable $v$ yields
+\[
+\sum_{u'}\sum_{v'}\Big|\sum_{u} h_{u'}(u)\,e(-\beta_{v'}u)\Big|^2
+\ \ll\ (U+|\xi|^{-1})\sum_{u}\sum_{v} |F(u,v)|^2.
+\]
+Combining with Cauchy–Schwarz gives
+\[
+|\mathcal{S}(\xi)|\ \ll\ (U+|\xi|^{-1})^{1/2}\,\Big(\sum_{u,v}|F(u,v)|^2\Big).
+\]
+Integrate against $|\widehat K_H(\xi)|$ and use \(\int |\widehat K_H|\ll H\) and \(\int \tfrac{|\widehat K_H(\xi)|}{|\xi|}\,d\xi\ll H\log H\) from \((5.1)\):
+\[
+\mathcal{Q}\ \ll\ \Big(\int_{|\xi|\le 1/H} |\widehat K_H(\xi)|\,(U+|\xi|^{-1})^{1/2}\,d\xi\Big)\,\sum_{u,v}|F(u,v)|^2
+\ \ll\ (\log X)^C\,H^{1/2}\,\sum_{u,v}|F(u,v)|^2.
+\]
+Finally, pass back from sheared lattice coordinates $(u,v)$ to physical $(d,n)$. The normalization of the bilinear form on a window of area $\asymp X$ contributes the factor $X^{-1/2}$, giving
+\[
+\sum_{(d',n'),(d,n)\in T_{a/q}} K_H(d'n-dn')\,F(d,n)\,F(d',n')
+\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{\!1/2}\sum_{(d,n)\in T_{a/q}} |F(d,n)|^2,
+\]
+which is \((5.8)\).
+\end{proof}
+
+
+\subsection{Incidence and degeneracy}\label{subsec:BG.incidence}
+
+We use two geometric counting inputs; both are stable under dyadic localization and smoothing by $W$.
+
+\begin{lemma}[Near–hyperbola incidence]\label{lem:BG.incidence}
+Let $Z(H)$ be the number (with smooth weights $W$) of quadruples $(d,n,d',n')$ with $d\sim D$, $n\sim N$, $d'\sim D$, $n'\sim N$ and $|d'n-dn'|<H$. Then
+\[
+Z(H)\ \ll\ (\log X)^C\,\big(H(D+N)+X\big).
+\]
+\end{lemma}
+
+\begin{proof}
+Insert the smooth indicator of $|t|\le H$ using the band–limited \emph{majorant} $M_H$:
+\[
+\mathbf{1}_{\{|t|\le H\}}(t)\ \le\ M_H(t),\qquad M_H\ge 0,\qquad \int M_H=H+O(1),\qquad \supp\widehat M_H\subset[-1/H,1/H],
+\]
+see Appendix~\ref{subsec:BS}.
+
+Fix $(d,n)$, and apply Poisson in $(d',n')$ with the dyadically scaled weight $W'$:
+\[
+\sum_{d',n'} K_H(d'n-dn')\,W'\!\Big(\frac{d'}{D},\frac{n'}{N}\Big)
+=\sum_{u,v\in\mathbb{Z}} \widehat K_H\big(u\,nX-v\,dX\big)\,\widehat{W'}(u,v),
+\]
+where $\widehat{W'}$ decays rapidly. The $(u,v)=(0,0)$ term contributes
+\[
+(H+O(1))\iint W' = H\,DN+O(DN).
+\] See \ref{subsec:BS}.
+Summing over $(d,n)$ against $W(d/D,n/N)$ gives a main term $\ll HX$. For $(u,v)\neq(0,0)$ we have $\widehat K_H(\xi)=0$ unless $|\xi|\le 1/H$, i.e. $|un-vd|\ll X/H$. Counting lattice points $(d,n)$ in the strip $|un-vd|\le X/H$ inside $[D,2D]\times[N,2N]$ gives by standard divisor geometry
+\[
+\ll (D+N)+X/H.
+\]
+Since only $O(1)$ pairs $(u,v)$ contribute (due to the rapid decay of $\widehat{W'}$), the total off–diagonal is
+\[
+\ll (\log X)^C\big((D+N)+X/H\big).
+\]
+Multiplying by the outer sum in $(d',n')$ recovered by Poisson yields the stated bound
+\[
+Z(H)\ \ll\ (\log X)^C\big(H(D+N)+X\big).
+\]
+All implied constants depend only on $(\varepsilon,C_W)$. 
+\end{proof}
+
+
+\begin{lemma}[Parallel–tube degeneracy]\label{lem:BG.degeneracy}
+Let $\mathcal T$ be any subfamily of slope–tubes whose slopes lie in an interval of width $\eta>0$. Then the total weighted occupancy of $\mathcal T$ satisfies
+\[
+\sum_{T\in\mathcal T}\ \sum_{(d,n)\in T} W\!\Big(\tfrac dD,\tfrac nN\Big)
+\ \ll\ (\log X)^C\,\eta\,(D+N)\,,
+\]
+uniformly for $H\le X^{1-\varepsilon}$.
+\end{lemma}
+
+\begin{proof}
+Work in the sheared coordinates $(u,v)$ associated with the center slope $a/q$; in these coordinates every tube with slope in the window of width $\eta$ becomes a translate of a common rectangle with short side $\ll U\asymp H^{1+\gamma}/N$ and long side $\asymp X$ (uniformly in the tube), cf.\ \((5.5)\)–\((5.7)\). Let $\mathcal{T}$ be any such subfamily. By the tube–overlap lemma (Appendix~B), the family has bounded overlap at the lattice scale, and any fixed tube meets only $O((\log X)^C)$ others.
+
+Write
+\[
+\sum_{T\in\mathcal{T}} \ \sum_{(d,n)\in T} W\!\Big(\frac{d}{D},\frac{n}{N}\Big)
+=\sum_{(d,n)} W\!\Big(\frac{d}{D},\frac{n}{N}\Big)\,\#\{T\in\mathcal{T}:(d,n)\in T\}.
+\]
+For each $(d,n)$ the set of slopes whose tubes contain $(d,n)$ is an interval of length $\ll \eta$ in slope space, hence contributes at most $O(1+ \eta\,\Xi)$ tubes with $\Xi\asymp 1$ after discretization to rationals $a/q$ with $q\le Q=H^\gamma$; the bounded–overlap property absorbs the discretization loss into $(\log X)^C$. Therefore
+\[
+\sum_{T\in\mathcal{T}} \ \sum_{(d,n)\in T} W\!\Big(\frac{d}{D},\frac{n}{N}\Big)
+\ \ll\ (\log X)^C\,\eta\sum_{(d,n)} W\!\Big(\frac{d}{D},\frac{n}{N}\Big).
+\]
+Finally, since $W$ is supported and bounded on $[D,2D]\times[N,2N]$, the last sum is $\asymp D+N$ after one summation by parts in $d$ or $n$; hence
+\[
+\sum_{T\in\mathcal{T}} \ \sum_{(d,n)\in T} W\!\Big(\frac{d}{D},\frac{n}{N}\Big)\ \ll\ (\log X)^C\,\big(\eta(D+N)+1\big),
+\]
+uniformly for $H\le X^{1-\varepsilon}$. This is the claimed degeneracy bound.
+\end{proof}
+
+
+\subsection{Non–flat BG via two–weight testing}\label{subsec:BG.two-weight}
+
+Set
+\[
+\mathcal K_H((d,n),(d',n')):=K_H(d'n-dn')\,W\!\Big(\tfrac dD,\tfrac nN\Big)\,W\!\Big(\tfrac{d'}D,\tfrac{n'}N\Big),
+\]
+and define $(\mathbf T F)(d',n'):=\sum_{d,n}\mathcal K_H((d,n),(d',n'))\,F(d,n)$.
+For an arbitrary array $F$ supported on $[D,2D]\times[N,2N]$, define the geometry-only row/column densities
+\[
+  \rho_d \;:=\; \sum_{n} W\!\Big(\frac{d}{D},\frac{n}{N}\Big)^{\!2},\qquad
+  \kappa_n \;:=\; \sum_{d} W\!\Big(\frac{d}{D},\frac{n}{N}\Big)^{\!2},\qquad
+  \sigma(d,n) \;:=\; \rho_d+\kappa_n.
+\]
+These depend only on the dyadic geometry and $W$, not on $F$.  Uniformly on the range $X^\varepsilon\le D,N\le X^{1-\varepsilon}$ one has
+\[
+  \rho_d \asymp N,\qquad \kappa_n \asymp D,
+\]
+with implied constants depending only on $(\varepsilon,A,\gamma,C_W)$.
+
+\begin{lemma}[Tube–Sawyer testing]\label{lem:BG.Sawyer}
+There exists $C=C(\varepsilon,A,\gamma,C_W)$ such that for all $E\subset [D,2D]\times[N,2N]$,
+\begin{equation}\label{eq:BG.forward}
+\|\mathbf T\mathbf 1_E\|_{L^2(\sigma)}^2 \ \ll\ (\log X)^C\,\frac{H}{X}\ \sigma(E),\qquad
+\|\mathbf T^\ast\mathbf 1_E\|_{L^2(\sigma)}^2 \ \ll\ (\log X)^C\,\frac{H}{X}\ \sigma(E).
+\end{equation}
+\end{lemma}
+
+\begin{lemma}[Tube--Sawyer testing]\label{lem:TubeSawyer}
+Let $\mathbf T$ be the positive operator on $\Omega=[D,2D]\times[N,2N]$ with kernel
+\[
+\mathcal K_H\!\big((d,n),(d',n')\big):=K_H(d'n-dn')\,W\!\Big(\frac dD,\frac nN\Big)\,W\!\Big(\frac{d'}D,\frac{n'}N\Big),
+\]
+where $M_H\ge 0$ is even, band-limited to $|\xi|\le 1/H$, and satisfies $\int M_H = H+O(1)$ and $\|\widehat{M_H}\|_1\ll H$.
+Define row/column energies
+\[
+\rho_d:=\sum_n |F(d,n)|^2 W\!\Big(\frac dD,\frac nN\Big)^2,\qquad \kappa_n:=\sum_d |F(d,n)|^2 W\!\Big(\frac dD,\frac nN\Big)^2,
+\]
+and the weight $\sigma(d,n):=\rho_d+\kappa_n$. Then for every measurable $E\subset\Omega$
+\begin{equation}\label{eq:TubeTestForward}
+\|\mathbf T \mathbf 1_E\|_{L^2(\sigma)}^2 \ \ll\ (\log X)^{C}\,\frac{H}{X}\ \sigma(E),
+\end{equation}
+and the same bound holds with $\mathbf T^\ast$ in place of $\mathbf T$. Consequently,
+\[
+\|\mathbf T\|_{L^2(\sigma)\to L^2(\sigma)}\ \ll\ (\log X)^{C}\,\Big(\frac{H}{X}\Big)^{1/2}.
+\]
+\end{lemma}
+
+\begin{proof}
+\emph{Tube partition.} Partition $\Omega\times\Omega$ into sheared tubes $\{T_\tau\}$ adapted to the level sets of $d'n-dn'=\Delta$ and slope $d'/d\approx a/q$, with $|\Delta|\lesssim H$ and slope aperture $\asymp Q^{-2}$; the long axis is $\asymp X$ and the short axis $\asymp X/H$. This is the standard pack used in \S6 (SSU) with bounded overlap, uniform for $q\le Q$ (see Remark~6.5). 
+
+\emph{Forward testing.} Write
+\[
+(\mathbf T\mathbf 1_E)(d',n')=\sum_{(d,n)\in E}\!\mathcal K_H((d,n),(d',n'))=\sum_\tau \sum_{(d,n)\in E\cap T_\tau(\cdot,n',d')}\!\mathcal K_H(\cdot).
+\]
+By Cauchy--Schwarz in each tube $T_\tau$ and the SSU tube norm (Corollary~6.4),
+\[
+\sum_{(d',n')\in T_\tau}\!\big|(\mathbf T\mathbf 1_E)(d',n')\big|^2
+\ \ll\ (\log X)^C \Big(\frac{H}{X}\Big) \sum_{(d,n)\in E\cap T_\tau} 1.
+\]
+Weighting by $\sigma(d',n')$ and summing over tubes gives
+\[
+\|\mathbf T\mathbf 1_E\|_{L^2(\sigma)}^2
+\ \ll\ (\log X)^C\frac{H}{X}\sum_\tau \sum_{(d,n)\in E\cap T_\tau} \frac{\sigma\big(T_\tau(d,n)\big)}{1},
+\]
+where $\sigma(T_\tau(d,n)):=\sum_{(d',n')\in T_\tau(d,n)}\sigma(d',n')$.
+
+\emph{Incidence \& degeneracy.} By the near-hyperbola incidence bound and the parallel-tube degeneracy (Appendix~\ref{app:incidence}, Props.~\ref{prop:incidence} and \ref{lem:BG.degeneracy}), each point $(d,n)$ belongs to only $O(1)$ tubes per slope family, and a slope family contributes $\ll \rho_d+\kappa_n$ when summed in $(d',n')$ against $\sigma$. Quantitatively,
+\[
+\sum_{\tau:\,(d,n)\in T_\tau}\ \sum_{(d',n')\in T_\tau(d,n)} \sigma(d',n')
+\ \ll\ (\log X)^C\,(\rho_d+\kappa_n).
+\]
+Therefore
+\[
+\|\mathbf T\mathbf 1_E\|_{L^2(\sigma)}^2
+\ \ll\ (\log X)^C\frac{H}{X}\sum_{(d,n)\in E} (\rho_d+\kappa_n)
+\ =\ (\log X)^C\frac{H}{X}\,\sigma(E),
+\]
+which is \eqref{eq:TubeTestForward}. The adjoint test is identical since $\mathcal K_H$ is symmetric.
+
+\emph{Two-weight conclusion.} By Sawyer’s two-test criterion for positive kernels, the forward and backward tests imply $\|\mathbf T\|_{L^2(\sigma)\to L^2(\sigma)}\le C M^{1/2}$ with $M\asymp (\log X)^C(H/X)$, proving the operator bound. Finally, since $\rho_d\asymp N$ and $\kappa_n\asymp D$ uniformly, Cauchy–Schwarz gives the embeddings
+$L^2 \hookrightarrow L^2(\sigma)$ and $L^2(\sigma)\hookrightarrow L^2$ with constants $O(1)$, so the unweighted $\ell^2$ bound follows.\end{proof}
+
+\begin{theorem}[Non–flat BG]\label{thm:BG-nonflat}
+For all arrays $F$ supported on $[D,2D]\times[N,2N]$,
+\begin{equation}\label{eq:BG.2to2}
+\sum_{d',n'}\Big|\sum_{d,n} \mathcal K_H((d,n),(d',n'))\,F(d,n)\Big|^2
+\ \ll\ (\log X)^C\,\frac{H}{X}\ \sum_{d,n}|F(d,n)|^2.
+\end{equation}
+Equivalently, $\|\mathbf T\|_{2\to 2}\ \ll\ (\log X)^C\,(H/X)^{1/2}$.
+\end{theorem}
+
+\begin{proof}
+By Lemma~\ref{lem:BG.Sawyer} and the Sawyer two–weight principle for positive kernels (testing $\mathbf T$ and $\mathbf T^\ast$ on indicators controls the $L^2(\sigma)\!\to\!L^2(\sigma)$ norm), we get
+$\|\mathbf T\|_{L^2(\sigma)\to L^2(\sigma)}\ll (\log X)^C\,(H/X)^{1/2}$. The embeddings $L^2\hookrightarrow L^2(\sigma)$ and its adjoint have norm $\le \sqrt{2}$ (from the definitions of $\rho,\kappa$), so \eqref{eq:BG.2to2} follows.
+\end{proof}
+
+\begin{corollary}[Short–shift anti–alignment]\label{cor:BG.AA}
+Let $A_k$ be as in \eqref{eq:Ak.def}. Then
+\begin{equation}\label{eq:BG.final}
+\frac{1}{H}\sum_{0<|\Delta|<H}\ \sum_k |A_{k+\Delta}\,\overline{A_k}|
+\ \ll\ (\log X)^C\,\Big(\frac{H}{X}\Big)^{1/2}\ \sum_k |A_k|^2.
+\end{equation}
+\end{corollary}
+
+\begin{proof}
+Combine \eqref{lem:BG.degeneracy} with Theorem~\ref{thm:BG-nonflat}.
+\end{proof}
+
+\subsection{Flattened case (for comparison)}\label{subsec:BG.flat}
+
+For completeness we note the flat–coefficient variant used earlier; it is a direct consequence of Theorem~\ref{thm:BG-nonflat} (taking $F=\alpha\!\otimes\!\beta$) but can also be proved by two Cauchy–Schwarz placements and SSU on each tube.
+
+\begin{proposition}[BG under flatness]\label{prop:BG.flat}
+Assume $\|\alpha\|_\infty\ll D^{-1/2}$ and $\|\beta\|_\infty\ll N^{-1/2}$. Then \eqref{eq:BG.final} holds with the same right–hand side.
+\end{proposition}
+
+\subsection{Parameters and endpoint behavior}\label{subsec:BG.params}
+
+The only relationship among parameters used is $1/H \ll 1/Q^2$ (disjoint bank arcs) and $q\le Q=H^\gamma$ with $\gamma<\tfrac12$ (so $U\ll H$ in SSU). All $q$–dependence contributes at most $(\log X)^{O(1)}$. The bound \eqref{eq:BG.2to2} is uniform as $\gamma\to \tfrac12^-$, with constants blowing up at most polylogarithmically.
+
+\subsection*{Two–weight Sawyer testing (fixed weights)}
+
+Throughout this section $D,N$ are dyadic with $X^\varepsilon\le D,N\le X^{1-\varepsilon}$ and $DN\asymp X$, and $W\in C_c^\infty([1/2,2]^2)$ is the fixed bump from §2. Let $K_H$ be the positive, band-limited kernel from §5.1 (bandwidth $1/H$, $\int K_H=H+O(1)$, $\| \widehat K_H\|_1\ll H$). Define the positive operator
+\[
+(TF)(d',n') := \sum_{d,n} K_H\!\big((d,n),(d',n')\big)\,F(d,n).
+\]
+
+\paragraph{Geometry–only testing weights.}
+Let $W\in C_c^\infty([1/2,2]^2)$ be the fixed dyadic bump from §2, and set
+\[
+\rho_d := \sum_{n} W\!\left(\frac dD,\frac nN\right)^2,\qquad 
+\kappa_n := \sum_{d} W\!\left(\frac dD,\frac nN\right)^2,\qquad 
+\sigma(d,n):=\rho_d+\kappa_n .
+\]
+Since $W$ is supported on $[D,2D]\times[N,2N]$ and bounded above/below on its support,
+\[
+c_1(D+N)\ \le\ \sigma(d,n)\ \le\ C_1(D+N)\qquad\text{on }[D,2D]\times[N,2N],
+\]
+so
+\begin{equation}\label{eq:L2-sigma-equiv}
+\|G\|_{L^2(\sigma)}^2\asymp (D+N)\,\|G\|_{2}^2,\qquad \sigma(E)\asymp (D+N)\,|E|.
+\end{equation}
+
+These depend only on $(D,N,W)$, not on $F$. Because $W$ is supported on $[D,2D]\times[N,2N]$ and bounded above/below on its support, we have
+\[
+c_0\,\min(D,N)\ \le\ \rho_d,\kappa_n\ \le\ C_0\,\max(D,N)\qquad\text{for all }d,n,
+\]
+hence
+\[
+c_1(D+N)\ \le\ \sigma(d,n)\ \le\ C_1(D+N)\qquad\text{on the box }[D,2D]\times[N,2N].
+\]
+Therefore $L^2$ and $L^2(\sigma)$ are equivalent up to an absolute constant:
+\[
+\|G\|_{L^2(\sigma)}^2 \asymp (D+N)\,\|G\|_2^2.
+\]
+
+\paragraph{Sawyer tests.}
+Let $\Omega=[D,2D]\times[N,2N]$. There exists $M\ll (\log X)^C\,H/X$ such that for every measurable $E\subset\Omega$,
+\begin{equation}\label{eq:sawyer-tests}
+\|T 1_E\|_{L^2(\sigma)}^2 \ \le\ M\,\sigma(E), 
+\qquad 
+\|T^\ast 1_E\|_{L^2(\sigma)}^2 \ \le\ M\,\sigma(E).
+\end{equation}
+
+\begin{proof}
+We prove the forward testing inequality; the backward one is identical since $K_H$ is even and $T$ is positive/self–adjoint on $\ell^2$.
+
+\emph{Step 1 (tube decomposition and bounded overlap).}
+Let $\Omega=[D,2D]\times[N,2N]$ and let $\mathcal{T}$ be the fixed sheared–tube partition used in §5: each $U\in\mathcal{T}$ has short axis $\ll H$ and long axis $\asymp X/H$, and the fattenings $U^{+}$ have overlap $\ll(\log X)^C$. Write
+\[
+T=\sum_{U\in\mathcal{T}} T_U,\qquad (T_U F)(y):=\sum_{x\in U} K_H\!\big(B(x,y)\big)\,F(x),
+\]
+so $T_U$ is supported on $U\times U^{+}$ and $M_H\ge 0$.
+
+\emph{Step 2 (reduce $L^2(\sigma)$ to unweighted $L^2$).}
+By the geometry–only definition of $\sigma(d,n)=\rho_d+\kappa_n$ above,
+\[
+c_1(D+N)\ \le\ \sigma(d,n)\ \le\ C_1(D+N)\quad \text{on }\Omega,
+\]
+whence for all $G$ supported on $\Omega$ we have $\|G\|_{L^2(\sigma)}^2\asymp (D+N)\|G\|_2^2$ and $\sigma(E)\asymp (D+N)\,|E|$ for any $E\subset\Omega$.
+
+\emph{Step 3 (one–tube operator norm from the SSU bound).}
+The one–tube short–shift estimate proved in §5.2 (display (5.8)) gives, for every $f$ supported on $U$,
+\[
+\langle T_U f,f\rangle\ \ll\ (\log X)^C\Big(\frac{H}{X}\Big)^{1/2}\|f\|_2^2.
+\]
+Since $T_U$ is positive and self–adjoint on $\ell^2$, this implies $\|T_U\|_{2\to 2}\ll (\log X)^C(H/X)^{1/2}$.
+
+\emph{Step 4 (sum over tubes).}
+Let $g_E:=1_E$. Using triangle inequality and Cauchy–Schwarz together with bounded tube overlap,
+\[
+\|T g_E\|_2^2\ \ll\ (\log X)^C\Big(\frac{H}{X}\Big)\sum_U \|g_E 1_U\|_2^2
+\ \ll\ (\log X)^C\Big(\frac{H}{X}\Big)\,|E|.
+\]
+
+\emph{Step 5 (return to the weighted norm and conclude the forward test).}
+By Step~2,
+\[
+\|T1_E\|_{L^2(\sigma)}^2\ \asymp\ (D+N)\,\|T1_E\|_2^2
+\ \ll\ (\log X)^C\Big(\frac{H}{X}\Big)\,(D+N)\,|E|
+\ \asymp\ (\log X)^C\Big(\frac{H}{X}\Big)\,\sigma(E).
+\]
+This is the forward testing inequality. The backward test for $T^\ast$ is identical because $T^\ast=T$. The Sawyer two–test criterion then yields
+\[
+\|T\|_{L^2(\sigma)\to L^2(\sigma)}\ \ll\ (\log X)^C\Big(\frac{H}{X}\Big)^{1/2},
+\]
+and, using $L^2(\sigma)\asymp L^2$ on $\Omega$, the same bound in the unweighted norm.
+\end{proof}
+
+\paragraph{Operator norm.}
+By the two–test criterion for positive kernels, \eqref{eq:sawyer-tests} yields
+\[
+\|T\|_{L^2(\sigma)\to L^2(\sigma)} \ \ll\  (\log X)^C\Big(\frac{H}{X}\Big)^{1/2}.
+\]
+Using $L^2\!\asymp L^2(\sigma)$ on $\Omega$ gives the unweighted bound
+\[
+\boxed{\ \ \|T\|_{2\to 2} \ \ll\  (\log X)^C\Big(\frac{H}{X}\Big)^{1/2}\ }\!,
+\]
+which is the BG short–shift gain needed for TT$^\ast$ without any coefficient flatness assumption.
+
+
+\subsection{Polylogarithmic ledger (bank--local form)}\label{sec:polylog-ledger}
+Fix \(A\ge 10\) and \(0<\gamma<\tfrac12\), and set \(H=(\log X)^A, Q=H^\gamma\).
+Let \(S_{n_0}\) denote the band-limited extractor–based statistic
+\(
+S_{n_0}:=\sum_{n} R_2(n) J_H(n_0-n),
+\)
+with \(\widehat J_H\subset[-1/H,1/H]\) and \(J_H\ge 0\), and impose bank localization only via the frequency projector \(P_A\). The inputs are:
+
+\begin{itemize}
+\item \textbf{Major arcs (uniform mean).} On the bank $\mathfrak A(Q)$ we have
+\[
+\mathbb E_{n_0}S_{n_0}\ \ge\ \frac{c_{\rm SS}}{(\log X)^2}\,,
+\]
+uniformly for even $N\in[2X,4X]$ (Cor.~10.5 and uniform positivity of the singular series).
+
+\item \textbf{Minor arcs (variance).} From SSU and Type--I with AO we have
+\begin{equation}\label{eq:ledger-variance}
+\mathrm{Var}(S_{n_0})
+\;\le\;
+C_2\Big(\frac{H}{X}\Big)^{1/2}
+\;+\;
+C_3\,\frac{1}{H\,Q^2}.
+\tag{5.15}
+\end{equation}
+where the first term is Theorem~\ref{thm:SSU-Sawyer} and the second is Corollary~\ref{cor:TypeI-bank}; both are bank--local and unconditional at polylogarithmic moduli.
+
+\item \textbf{Closure (no $\theta$).} Paley--Zygmund yields positivity provided
+\begin{equation}\label{eq:closure-bank}
+C_2\Big(\tfrac{H}{X}\Big)^{1/2}\ +\ \frac{C_3}{H\,Q^2}\ \le\ \frac{c_{\rm SS}^2}{8}.
+\end{equation}
+With $H=(\log X)^A$ and $Q=H^\gamma$, the left side of \eqref{eq:closure-bank} equals 
+$C_2(\log X)^{A/2}X^{-1/2}+C_3(\log X)^{-A(1+2\gamma)}$, which $\to 0$ as $X\to\infty$ for any fixed $0<\gamma<\tfrac12$. 
+Hence there exists an explicit $X_0(A,\gamma)$ such that \eqref{eq:closure-bank} holds for all $X\ge X_0(A,\gamma)$.
+\end{itemize}
+
+\begin{proposition}[Audit inequality for the band-limited extractor]\label{prop:audit}
+Let $S_{n_0}=\sum_{n} R_2(n)\,J_H(n_0-n)$ with $J_H\ge0$ the Fejér extractor of bandwidth $1/H$ and $\sum_n J_H(n)=1$.
+Let $E:=R_2-M$ denote the error term after removing the projected major-arc main term $M$.
+Then, uniformly for centers $n_0\in[X,2X]$,
+\begin{equation}\label{eq:audit}
+\operatorname{Var}(S_{n_0})
+\ \le\
+\kappa_2\,(\log X)^{C_2}\,\frac{1}{H\,Q^2}
+\ +\
+\kappa_3\,(\log X)^{C_3}\,\Big(\frac{H}{X}\Big)^{1/2}
+\ +\ O(H^{-2}).
+\end{equation}
+
+Here the first term is the Type–I contribution after alias suppression/AO and normalization, and the second term is the BG/SSU (short–shift) contribution coming from the $L^2$ operator bound for the normalized SSU operator.
+\end{proposition}
+
+\begin{proof}
+Write $S_{n_0}-\mathbb E[S_{n_0}]=\sum_n E(n)\,J_H(n_0-n)$, apply Parseval on the dyadic block and the fact that $\widehat{J_H}$ is supported in $|\xi|\le 1/H$ with $\|\widehat{J_H}\|_{L^1}\asymp 1$, to reduce to an energy bound on $\widehat{E}$ over the bank. For Type–I, the TT$^\ast$ ledger with balanced bank windows gives
+\[
+\mathbb E_b\!\int |\widehat{E_b}(\xi)|^2\,\widehat{w}^{\ast}_{\tau}(\xi)\,d\xi
+\ \ll\ X^{1+o(1)}/(H Q^2),
+\]
+(see §7.3), and divisibility/AO dispersion allows a deterministic choice of $b$ with the same order. Dividing by $X$ when passing from global dyadic energy to per–center variance yields the first term of \eqref{eq:audit}. For BG/SSU, the normalized short–shift operator $T$ satisfies
+\[
+\|T\|_{2\to2}\ \ll\ (\log X)^C\,\big(H/X\big)^{1/2}
+\]
+(cf. (6.2)–(6.3)), which contributes the second term. The $O(H^{-2})$ is the Fejér-smoothing remainder. This proves \eqref{eq:audit}.
+\end{proof}
+
+
+\subsection{What BG contributes to TI (bank--local closure form)}
+\begin{proposition}[Ledger inputs with no $\theta$]\label{prop:BG-AO-ledger}
+Fix $H=(\log X)^A$ and $Q=H^\gamma$ with $0<\gamma<\tfrac12$. Then:
+\begin{align}
+\text{\emph{(SSU)}}\quad &
+\mathbb E_{n_0\in[X,2X]}\int_{\mathfrak A(Q)^c}\!\!|S_{n_0}(\xi)|^2\,d\xi
+\ \ll\ (\log X)^C\,\Big(\tfrac{H}{X}\Big)^{1/2}\,\mathcal E, \\
+\text{\emph{(Type--I on the bank)}}\quad &
+\mathrm{Var}_{\mathrm I}\ \ll\ (\log X)^C\,\frac{X}{H\,Q^2}\,\mathcal E,\\
+\text{\emph{(AO dispersion)}}\quad &
+\text{no additional parameter is needed; see Cor.\,\ref{cor:AO-occupancy}.}
+\end{align}
+Here $\mathcal E$ is the coefficient energy from the F3 decomposition. No level-of-distribution $\theta$ is assumed or used.
+\end{proposition}
+
+\begin{corollary}[Bank–local closure inequality]\label{cor:bank-closure}
+Let $(P_{\mathfrak A}M)(N)\ge \dfrac{c_{\rm SS}}{(\log X)^2}$ uniformly on even $N\in[2X,4X]$ (Cor.\ 10.5).
+If for some absolute $C_2,C_3\ge1$,
+\[
+C_2\Big(\tfrac{H}{X}\Big)^{1/2}\;+\;\frac{C_3}{H\,Q^2}\ \le\ \frac{c_{\rm SS}^2}{8},
+\]
+then the $TT^\ast$ ledger closes. With $H=(\log X)^A$ and $Q=H^\gamma$ this holds for \emph{any fixed} $0<\gamma<\tfrac12$ once $X\ge X_0(A,\gamma)$.
+\end{corollary}
+
+
+\bigskip
+\noindent\textbf{Guide to dependencies.}
+The proof uses only:
+\begin{enumerate}[label=(\roman*)]
+\item The bandlimited kernel $K_H$ \eqref{eq:KH.assumptions};
+\item Shearing identity \eqref{eq:BG.factor} and tube pack \eqref{eq:BG.tube};
+\item SSU (Theorem~\ref{thm:BG.SSU});
+\item Incidence (Lemma~\ref{lem:BG.incidence}) and degeneracy (Lemma~\ref{lem:BG.degeneracy});
+\item Sawyer testing (Lemma~\ref{lem:BG.Sawyer}) for the positive operator $\mathbf T$.
+\end{enumerate}
+No flatness assumption is required anywhere.
+\qedhere

@@ -1,0 +1,146 @@
+% ==========================================================
+% Option B: Signed bank-projection inequality for pointwise positivity
+% ==========================================================
+\subsection{Route B Revisited: A signed bank–projection inequality}\label{sec:bank-projection}
+
+We work on the (discrete) torus $\mathbb{Z}_M$ with Fourier conventions
+\[
+\widehat f(k)=\sum_{n=0}^{M-1} f(n)\,e^{-2\pi i kn/M},
+\qquad
+f(n)=\frac{1}{M}\sum_{k=0}^{M-1} \widehat f(k)\,e^{2\pi i kn/M}.
+\]
+Let $\mathcal{A}\subset\{0,\dots,M-1\}$ be the \emph{bank} (union of major arcs), and let $P_{\mathcal{A}}$ denote the orthogonal Fourier projection onto~$\mathcal{A}$:
+\[
+\widehat{(P_{\mathcal{A}} f)}(k)=\mathbf{1}_{\mathcal{A}}(k)\,\widehat f(k),
+\qquad
+P_{\mathcal{A}^c}=I-P_{\mathcal{A}}.
+\]
+Write the Goldbach sum in a dyadic block as
+\[
+R_2(n)=M(n)+E(n),
+\]
+where $M$ is the standard major-arc main term (archimedean profile times the singular series) and $E$ is the remainder.
+
+\begin{theorem}[Bank–projection lower bound]\label{thm:bank-projection}
+For every $N\in\mathbb{Z}_M$ one has
+\begin{equation}\label{eq:bank-proj-pointwise}
+R_2(N)\ \ge\ (P_{\mathcal{A}} M)(N)\ -\ \|P_{\mathcal{A}}E\|_{\ell^2}\ -\ \|P_{\mathcal{A}^c}R_2\|_{\ell^2}.
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Decompose at $N$:
+\[
+R_2(N)\ =\ (P_{\mathcal{A}}R_2)(N) + (P_{\mathcal{A}^c}R_2)(N)
+\ =\ (P_{\mathcal{A}}M)(N)+(P_{\mathcal{A}}E)(N)+(P_{\mathcal{A}^c}R_2)(N).
+\]
+Take absolute values on the error terms and use the trivial $\ell^\infty\!\le\!\ell^2$ bound:
+\[
+|(P_{\mathcal{A}}E)(N)|\ \le\ \|P_{\mathcal{A}}E\|_{\ell^2},\qquad
+|(P_{\mathcal{A}^c}R_2)(N)|\ \le\ \|P_{\mathcal{A}^c}R_2\|_{\ell^2}.
+\]
+Rearranging gives \eqref{eq:bank-proj-pointwise}.
+\end{proof}
+
+\begin{remark}[Why this bypasses the “pin trade-off”]
+The kernel of $P_{\mathcal{A}}$ is a \emph{signed} (not everywhere nonnegative) trigonometric polynomial with Fourier transform $1_{\mathcal{A}}$.
+We no longer need a near-delta, nonnegative, bank-limited kernel (which is impossible when $|\mathcal{A}|/M\ll 1$ by the pin trade-off): instead, we use a signed projector and control its effect by $L^2$ energies.
+\end{remark}
+
+\subsection*{How \eqref{eq:bank-proj-pointwise} yields pointwise positivity}
+Assume:
+\begin{enumerate}
+\item[(i)] (\emph{Uniform major-arc positivity}) There exists $c_0>0$ such that
+\[
+(P_{\mathcal{A}}M)(N)\ \ge\ \frac{c_0}{\log^2 X}\qquad\text{for all even }N\in[X,2X].
+\]
+This follows from the usual major-arc factorization and a uniform lower bound for the singular series on~$\mathcal{A}$.
+
+\item[(ii)] (\emph{Bank energy of the error is small}) For some $C_1$,
+
+\begin{equation}\label{eq:routeB-L2}
+\|P_AE\|_{\ell^2}+\|P_{A^c}R_2\|_{\ell^2}
+\ \ll\ 
+(\log X)^C\Bigg[
+\Big(\frac{H}{X}\Big)^{1/2}
+\ +\
+\Big(\frac{X}{H\,Q^2}\Big)^{1/2}
+\Bigg].
+\end{equation}
+
+\noindent
+Consequently, by Cauchy–Schwarz and $\sum_n J_H(n)\asymp H$,
+\begin{equation}\label{eq:routeB-to-variance}
+\mathrm{Var}(S_{n_0})
+\ \ll\ 
+(\log X)^C\Big(\frac{H}{X}\Big)^{1/2}
+\ +\ 
+(\log X)^C\,\frac{1}{H\,Q^2}.
+\end{equation}
+
+\item[(iii)] (\emph{Minor-arc energy is small})
+\[
+\|P_{\mathcal{A}^c}R_2\|_{\ell^2}\ \le\ C_2\,(\log X)^{C_2}\,\Big(\frac{H}{X}\Big)^{1/2}
+\]
+for some $C_2$, by the same limb (the minor-arc remainder sits orthogonally to the bank).
+\end{enumerate}
+Inserting (i)–(iii) into \eqref{eq:bank-proj-pointwise} yields
+\[
+R_2(N)\ \ge\ \frac{c_0}{\log^2 X}\ -\ C(\log X)^{C}\,\Big(\frac{H}{X}\Big)^{1/2}\,,
+\]
+uniformly in even $N\in[X,2X]$. 
+Choosing parameters so that the right-hand side is $>0$ (this is the same TT$^\ast$ closure that governed the mean positivity) gives \emph{pointwise} positivity for every $N$ in the block.
+
+\subsection*{A smoothed variant (optional)}
+Let $\psi:\{0,\dots,M-1\}\to[0,1]$ be a weight with $\psi\equiv 1$ on the middle thirds of the bank and $\psi\equiv 0$ off $\mathcal{A}$.
+Define the Fourier multiplier $T_\psi$ by $\widehat{(T_\psi f)}(k)=\psi(k)\,\widehat f(k)$.
+Then for every $N$,
+\[
+R_2(N)\ \ge\ (T_\psi M)(N)\ -\ \|T_\psi E\|_{\ell^2}\ -\ \|(I-T_\psi)R_2\|_{\ell^2}.
+\]
+This buys a margin against edge effects on $\mathcal{A}$ at the cost of replacing $P_{\mathcal{A}}$ by $T_\psi$; the same $L^2$ controls apply since $\|T_\psi\|_{\ell^2\to\ell^2}\le 1$.
+\qedhere
+
+\subsection{Ledger of constants (explicit closure)}
+
+Combining PSB with the two $L^2$ errors and the projected main term, for each even $N\in[X,2X]$ we have
+\begin{equation}\label{eq:pointwise-ledger}
+R_2(N)\ \ge\ \frac{c_0}{\log^2 X}\ -\ \kappa_2\,(\log X)^{C_2}\,\frac{X}{H Q^2}\ -\ \kappa_3\,(\log X)^{C_3}\,\Big(\frac{H}{X}\Big)^{1/2},
+\end{equation}
+where $c_0>0$ is the bank–summed singular series constant and the two error terms come from Type–I leakage and BG/SSU, respectively. 
+\noindent\emph{Parenthetical:} the middle term \(\kappa_2(\log X)^{C_2} X/(H Q^2)\) is the Type--I
+variance contribution from §7, while the last term \(\kappa_3(\log X)^{C_3}(H/X)^{1/2}\) is the BG/SSU \(L^2\) error.
+
+
+With the parameter choice $H=(\log X)^A$ and $Q=H^\gamma$, \eqref{eq:pointwise-ledger} becomes
+\[
+R_2(N)\ \ge\ \frac{c_0}{\log^2 X}\ -\ \kappa_2\,(\log X)^{C_2-A(1-2\gamma)}\ -\ \kappa_3\,(\log X)^{C_3+A/2}\,X^{-1/2}.
+\]
+For any fixed $\gamma<\tfrac12$, the last term decays with $X$, and choosing $A$ large forces the middle term to be $o(1/\log^2 X)$. In particular, for any fixed $0<\gamma<\tfrac12$, once $X\ge X_0(A,\gamma)$ the right–hand side is $>0$, hence $R_2(N)>0$.
+
+Equivalently, the TT$^\ast$ “polylog ledger” reads
+\[
+\underbrace{\frac{1}{H}}_{\text{bank mass}}
+\cdot
+\underbrace{\frac{1}{Q^2}}_{\text{AO dispersion}}
+\cdot
+\underbrace{\Big(\frac{H}{X}\Big)^{1/2}}_{\text{BG/SSU}}
+\cdot
+\underbrace{(\log X)^C}_{\text{harmless loss}}
+\ = o(1)\qquad\text{as $X\to\infty$ for any fixed $0<\gamma<\tfrac12$,}
+\]
+using $H=(\log X)^A$ and $Q=H^\gamma$.
+
+\paragraph{Constants ledger.}
+All three quantities in \eqref{eq:bank-proj-pointwise} are already present in the analytic ledger:
+\[
+\begin{array}{rl}
+\text{Main term:} & (P_{\mathcal{A}} M)(N)\ \ge\ \displaystyle\frac{c_0}{\log^2 X}, \\[1.0ex]
+\text{Bank error:} & \|P_{\mathcal{A}}E\|_{\ell^2}\ \ll\ (\log X)^{C_1}\,(H/X)^{1/2}, \\[0.5ex]
+\text{Minor-arc energy:} & \|P_{\mathcal{A}^c}R_2\|_{\ell^2}\ \ll\ (\log X)^{C_2}\,(H/X)^{1/2}.
+\end{array}
+\]
+
+Type--I leakage: contributes \(\ll (\log X)^{C_2}\,X/(H Q^2)\) via the variance bound in §7 (see \ref{lem:alias-supp} and the displayed estimate for \(\Var_{\mathrm{I}}\)).
+
+Thus the same TT$^\ast$ choice of $A,\gamma$ that conquered the mean positivity also ensures the pointwise bound is positive, provided $c_0$ (from the singular series lower bound) dominates the polylog losses.

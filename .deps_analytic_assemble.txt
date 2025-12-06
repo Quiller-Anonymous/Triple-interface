@@ -1,0 +1,17 @@
+/Users/benjaminnelson/.elan/toolchains/leanprover--lean4---v4.26.0-rc2/lib/lean/Init.olean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/mathlib/.lake/build/lib/lean/Mathlib.olean
+unknown module prefix 'Goldbach'
+
+No directory 'Goldbach' or file 'Goldbach.olean' in the search path entries:
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/Cli/.lake/build/lib/lean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/batteries/.lake/build/lib/lean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/Qq/.lake/build/lib/lean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/aesop/.lake/build/lib/lean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/proofwidgets/.lake/build/lib/lean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/importGraph/.lake/build/lib/lean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/LeanSearchClient/.lake/build/lib/lean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/plausible/.lake/build/lib/lean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/mathlib/.lake/build/lib/lean
+/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/build/lib/lean
+/Users/benjaminnelson/.elan/toolchains/leanprover--lean4---v4.26.0-rc2/lib/lean
+/Users/benjaminnelson/.elan/toolchains/leanprover--lean4---v4.26.0-rc2/lib/lean

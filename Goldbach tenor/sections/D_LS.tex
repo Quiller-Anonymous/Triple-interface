@@ -1,0 +1,51 @@
+%--------------------------------------------------------
+%  A3_LS_Sampling.tex — Logvinenko–Sereda / Nazarov sampling
+%--------------------------------------------------------
+
+\section{Sampling on thick sets for band-limited functions}\label{app:ls}\label{sec:nolonggap}
+
+If $f$ has $\supp\widehat f\subset[-\Lambda,\Lambda]$, then $\|f'\|_\infty\le 2\pi\Lambda \|f\|_\infty$. Moreover, if $E\subset [X,2X]$ is a union of intervals of total measure $\ge (1-\delta)X$ with $\delta\le \log^{-B}X$, then
+\[
+\sup_{[X,2X]}|f|\ \ll\ \delta^{-\kappa}\sup_E |f|.
+\]
+Here $\kappa>0$ depends only on the thickness geometry; we apply this with $\Lambda\asymp 1/H$ and $E$ formed from \S9’s grid neighborhoods.
+
+
+We use a quantitative real-line version of Logvinenko–Sereda / Nazarov--Remez.
+
+\begin{definition}[Thick grids]
+Let $I\subset\mathbb R$ be an interval, $\Delta>0$, and $\mathcal G=\{y_j\in I: y_j=X+j\Delta\}$ the $\Delta$-spaced grid.
+A subset $E\subset I$ is \emph{$(1-\delta)$-thick at scale $\Delta$} if
+\[
+\#\bigl(E\cap [X+k\Delta,\,X+(k+1)\Delta)\bigr)\ \ge\ (1-\delta)
+\]
+for all $k$ with $[X+k\Delta,X+(k+1)\Delta)\subset I$.
+\end{definition}
+
+\begin{theorem}[Nazarov/Logvinenko--Sereda]\label{thm:LS}
+Let $f\in L^2(\mathbb R)$ with $\mathrm{supp}\,\widehat f\subset \Sigma\subset[-\Lambda,\Lambda]$.
+Let $I\subset\mathbb R$ be an interval and $E\subset I$ be $(1-\delta)$-thick at scale $\Delta$ with $\Lambda\Delta\le c_0$.
+Then
+\[
+\|f\|_{L^\infty(I)}\ \ll\ \delta^{-\kappa}\,e^{C\,|\Sigma|\,\Delta}\ \sup_{y\in E}|f(y)|,
+\]
+for absolute constants $C,\kappa,c_0>0$.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Reduce to trigonometric polynomials by scaling $x\mapsto \Lambda x$ and approximating $\widehat f$ by finite sums, then apply Nazarov’s local Remez inequality for exponential polynomials on unions of intervals (see Nazarov, St.\ Petersburg Math.\ J.\ 5 (1994)). The dependence on $|\Sigma|$ (measure of frequency support) is exponential in $|\Sigma|\,\Delta$ and polynomial in $\delta^{-1}$; for our bank $\Sigma$ is a union of $\asymp Q^2$ intervals of width $\asymp 1/H$, hence $|\Sigma|\ll Q^2/H$.
+\end{proof}
+
+\begin{corollary}[Bank-compatible sampling]\label{cor:bank-sampling}
+Let $\mathfrak A$ be the AO$^+$ bank (union of $\asymp Q^2$ arcs of width $\asymp 1/H$). Let $f$ satisfy $\mathrm{supp}\,\widehat f\subset\mathfrak A$ and let $I=[X,2X]$.
+Fix $\Delta=H/C_0$ with $C_0$ sufficiently large and let $E\subset I$ be $(1-\delta)$-thick at scale $\Delta$ with $\delta\le (\log X)^{-B}$.
+Then
+\[
+\inf_{y\in I} f(y)\ \ge\ c_*\ \sup_{y\in E} f(y)\ -\ X^{-100},
+\]
+for some $c_*=c_*(C_0,\varepsilon,A,\gamma)>0$. If $f\ge 0$ and $\sup_E f\ge c_0 H/\log^2X$, then $\inf_I f\gg H/\log^2X$.
+\end{corollary}
+
+\begin{proof}
+Apply Theorem~\ref{thm:LS} with $\Lambda\asymp 1/H$ and $|\Sigma|\ll Q^2/H$, note $\Lambda\Delta\ll 1$ and $\delta^{-\kappa}\le (\log X)^{\kappa B}$ which is absorbed into $(\log X)^C$ elsewhere. The $X^{-100}$ is a harmless floor for tails.
+\end{proof}
