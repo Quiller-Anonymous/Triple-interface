@@ -1,5 +1,5 @@
-# save as scripts/make_chunk_module.py and run:
-#   python3 scripts/make_chunk_module.py \
+# save as scripts/make_chunk.module.py and run:
+#   python3 scripts/make_chunk.module.py \
 #     Goldbach/Base/data/chunk_100002_200000.csv \
 #     Goldbach/FiniteBase/Generated_100002_200000.lean
 
@@ -7,14 +7,14 @@
 from pathlib import Path
 import sys, runpy
 
-CSV = Path("Goldbach/Base/data/chunk_100002_200000.csv")
-OUT = Path("Goldbach/FiniteBase/Generated_100002_200000.lean")
+
 
 sys.argv = [sys.argv[0], str(CSV), str(OUT)]
-runpy.run_path("scripts/make_chunk.module.py", run_name="__main__")
-
-
-import sys, csv, pathlib
+# Only set sys.argv and recursively invoke if not already running with arguments
+if len(sys.argv) < 3:
+    sys.argv = [sys.argv[0], str(CSV), str(OUT)]
+    runpy.run_path("scripts/make_chunk.module.py", run_name="__main__")
+    sys.exit(0)
 
 csv_path = pathlib.Path(sys.argv[1])
 out_path = pathlib.Path(sys.argv[2])

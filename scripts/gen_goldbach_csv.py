@@ -34,7 +34,7 @@ def find_goldbach_pair(N: int, is_prime):
     return None
 
 def main():
-    # Make sure LO/Hl are sane
+    # Make sure LO/HI are sane
     lo = LO if LO % 2 == 0 else LO + 1  # start at even
     hi = HI
     if lo < 4:

@@ -7,7 +7,7 @@ namespace Goldbach.Base.Chunks
 open Goldbach.Base
 open Goldbach.FiniteBase
 
-theorem Chunk100002_200000 : FiniteBaseOn 100002 200000 := by
+theorem finiteBase_chunk100002_200000 : FiniteBaseOn 100002 200000 := by
   classical
   intro N hE hLo hHi
   let t := Goldbach.FiniteBase.Generated_100002_200000.table
@@ -20,12 +20,13 @@ theorem Chunk100002_200000 : FiniteBaseOn 100002 200000 := by
       exact ⟨pq.1, pq.2, hp, hq, hsum⟩
   | none =>
       -- If your CSV fully covers [100002,200000] this case should be unreachable.
-      -- You can replace this with a dedicated coverage lemma once you add it.
-      exact False.elim (by
-        -- placeholder until you add coverage: mark clearly as unreachable
-        have : False := by
-          -- e.g. later: `have : N ∈ keyset := ...`; contradiction
-          admit
-        exact this)
+      -- Use the coverage lemma to show this case is impossible.
+      have hcov := Goldbach.FiniteBase.Generated_100002_200000.table_covers N hLo hHi
+      -- hcov : ∃ pq, Goldbach.FiniteBase.Generated_100002_200000.table.get? N = some pq
+      cases hcov with pq hpq
+      -- But we are in the `none` case, so this is a contradiction
+      have : False := by
+        rw [hpq] at *; contradiction
+      exact False.elim this
 
 end Goldbach.Base.Chunks

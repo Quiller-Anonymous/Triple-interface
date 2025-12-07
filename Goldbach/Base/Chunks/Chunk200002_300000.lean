@@ -1,7 +1,5 @@
-/-
-+  Goldbach/Base/Chunks/Chunk200002_300000.lean
-+  Chunk: certifies Goldbach for even numbers in [200002, 300000].
-+-/
+/-  Goldbach/Base/Chunks/Chunk200002_300000.lean
+   Chunk: certifies Goldbach for even numbers in [200002, 300000]. -/
 +import Goldbach.Base.FiniteBaseDefs
 +import Goldbach.FiniteBase.Generated
 +

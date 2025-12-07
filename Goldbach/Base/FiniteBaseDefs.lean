@@ -31,7 +31,7 @@ lemma even_lt_even_add_two {b N : ℕ} (hb : Even b) (hN : Even N) (h : b < N) :
   rcases hb with ⟨k, rfl⟩
   rcases hN with ⟨m, rfl⟩
   have hk : k < m := by
-    -- from 2*k < 2*m deduce k < m
+    -- From 2*k < 2*m deduce k < m
     have : 2 * k < 2 * m := by simpa [two_mul] using h
     exact Nat.lt_of_mul_lt_mul_left this
   have : 2 * (k + 1) ≤ 2 * m := Nat.mul_le_mul_left _ (Nat.succ_le_of_lt hk)
