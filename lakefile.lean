@@ -39,6 +39,7 @@ lean_lib «Goldbach» where
     -- `Goldbach.FiniteBase.Generated,
     -- `Goldbach.FiniteBase.FromGenerated,
     -- `Goldbach.FiniteBase,
+    `Goldbach.Base.FiniteBaseDefs,
 
     -- If you want to compile *one* chunk, temporarily add it here:
     -- `Goldbach.Base.Chunks.Chunk100002_200000

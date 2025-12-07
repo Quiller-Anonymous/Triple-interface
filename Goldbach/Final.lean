@@ -4,8 +4,7 @@ import Goldbach.ClosureBridge
 import Goldbach.AnalyticPointwise
 
 open scoped Real
-open Goldbach
-open Goldbach.Analytic
+open Goldbach Goldbach.Bridge Goldbach.Analytic Goldbach.Base
 
 namespace Goldbach.Final
 

@@ -1,11 +1,13 @@
--- Goldbach/ClosureBridge.lean
 import Mathlib
 import Goldbach.Rep
 import Goldbach.Windows
+import Goldbach.AnalyticPointwise
+import Goldbach.Base.FiniteBaseDefs
+
 -- If Lean can't find `le_div_iff`, uncomment the next line:
 -- import Mathlib.Algebra.Order.Field
 
-open Goldbach.Rep Goldbach.Windows
+open Nat Goldbach.Rep Goldbach.Windows Goldbach.Base Goldbach.Analytic
 
 namespace Goldbach.Bridge
 
@@ -66,5 +68,19 @@ theorem goldbach_from_global_pointwise
     have hpt := gclosure (X:=N) hXN
     have : N ∈ EvenIn N H := Goldbach.Windows.mem_EvenIn_self hEven
     exact closurePointwise_to_rep hpt this
+
+theorem goldbach_conditional
+    (w : Goldbach.Analytic.PointwiseWitness) :
+    ∀ {N : ℕ}, Nat.Even N → w.X0 ≤ N → GoldbachRep N :=
+by
+  intro N hEven hge
+  -- use the bridge lemma directly from the Bridge namespace:
+  exact Goldbach.Bridge.pointwise_to_rep (X0 := w.X0) (H := w.H)
+    (S := w.S) (c0 := w.c0) (ε := w.ε)
+    w.global hEven hge
+
+namespace Goldbach.Bridge
+  export Goldbach.ClosureBridge (pointwise_to_rep)
+end Goldbach.Bridge
 
 end Goldbach.Bridge
