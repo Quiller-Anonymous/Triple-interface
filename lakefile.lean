@@ -15,7 +15,7 @@ Add more roots later *only when needed*.
 lean_lib «Goldbach» where
   roots := #[
     -- Base & primitives
-    `Goldbach.Base.FiniteBaseDefs,
+   -- `Goldbach.Base.FiniteBaseDefs,
     `Goldbach.Params,
 
     -- Core pipeline (lightweight)
@@ -41,7 +41,7 @@ lean_lib «Goldbach» where
     -- `Goldbach.FiniteBase,
 
     -- If you want to compile *one* chunk, temporarily add it here:
-   `Goldbach.Base.Chunks.Chunk100002_200000
+    -- `Goldbach.Base.Chunks.Chunk100002_200000
   ]
 
 /- Optional exe (macOS is fine); keep commented out if you don’t need a binary.
