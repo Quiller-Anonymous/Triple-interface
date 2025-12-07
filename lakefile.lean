@@ -8,34 +8,43 @@ require mathlib from git
   "https://github.com/leanprover-community/mathlib4"
 
 /--
-Build only the minimal modules needed for the finite-conditional pipeline.
-(We **do not** glob every submodule; this avoids analytic cycles and stale imports.)
+Build only the modules we know compile now.
+Add more roots later *only when needed*.
 -/
 @[default_target]
 lean_lib «Goldbach» where
   roots := #[
-    -- Core pipeline
+    -- Base & primitives
+    `Goldbach.Base.FiniteBaseDefs,
+    `Goldbach.Params,
+
+    -- Core pipeline (lightweight)
     `Goldbach.Rep,
     `Goldbach.Windows,
     `Goldbach.ClosureBridge,
 
-    -- Analytic bridge layer (algebra-only)
-    `Goldbach.AnalyticGlobal,
+    -- Analytic “shim” layer (your small admit-free wrapper)
     `Goldbach.AnalyticPointwise,
-    `Goldbach.BankPieces,
-    `Goldbach.AnalyticAssemble,
 
-    -- Finite base (generated table + wrapper)
-    `Goldbach.FiniteBase.Generated,      -- the big table you generated
-    --`Goldbach.FiniteBase.FromGenerated,  -- the Cert builder using that table
-    `Goldbach.FiniteBase,                -- (keep if this re-exports the Cert API)
+    -- Final wrapper
+    `Goldbach.Final,
 
-    -- Witness + final statement
-    `Goldbach.BuildWitness,
-    `Goldbach.Final
+    -- Leave these commented until the code is in place & compiling:
+    -- `Goldbach.BuildWitness,
+    -- `Goldbach.AnalyticGlobal,
+    -- `Goldbach.BankPieces,
+    -- `Goldbach.AnalyticAssemble,
+
+    -- Finite base (HUGE): keep commented until you’re ready
+    -- `Goldbach.FiniteBase.Generated,
+    -- `Goldbach.FiniteBase.FromGenerated,
+    -- `Goldbach.FiniteBase,
+
+    -- If you want to compile *one* chunk, temporarily add it here:
+   `Goldbach.Base.Chunks.Chunk100002_200000
   ]
 
-/- Optional exe, keep commented out if you don’t want linking on macOS
+/- Optional exe (macOS is fine); keep commented out if you don’t need a binary.
 lean_exe finiteConditional where
   root := `FiniteConditional
 -/
