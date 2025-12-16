@@ -19,3 +19,5 @@ noncomputable def H_scale (p : GoldbachParams) (X : ℝ) : ℝ :=
 /-- Auxiliary scale `Q(X) = H(X)^γ`. -/
 noncomputable def Q_scale (p : GoldbachParams) (X : ℝ) : ℝ :=
   Real.rpow (H_scale p X) p.gamma
+
+def X0 : Nat := 100000

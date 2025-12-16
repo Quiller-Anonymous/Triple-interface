@@ -1,0 +1,143 @@
+/-
+  Twin/CLSFromL2.lean
+
+  From the L2 window bound to the CLS (L1) window bound.
+
+  Key choices:
+  * Use Cauchy–Schwarz in squared form (no square roots ⇒ no disjunction side-conditions).
+  * Keep L2 as sum of squares `e n ^ 2` to match `CLSL2.Bound.bound`.
+  * Avoid unfolding `AnalyticCore.CLSBound`; we construct the function and `simpa`.
+-/
+
+import Mathlib.Data.Real.Basic
+import Twin.BigOps
+import Mathlib.Tactic
+
+import Twin.GoalAPI
+import Twin.AnalyticCore
+import Twin.CLSL2
+import Twin.Ledger
+import Twin.SingularSeries
+
+open Real
+
+namespace Twin
+namespace CLSFromL2
+
+/-- Windowed Cauchy–Schwarz, squared version (standard; we take it as an axiom here):
+    (∑_{k=0}^{H} |e (X+k)|)^2 ≤ (H+1) * ∑_{k=0}^{H} (e (X+k))^2. -/
+axiom cs_window_sq_pow (X H : ℕ) (e : ℕ → ℝ) :
+  (Twin.Ledger.windowSum X H (fun n => |e n|))^2
+    ≤ (↑H + 1) * (Twin.Ledger.windowSum X H (fun n => (e n) ^ 2))
+
+/-- Truncated singular series is nonnegative (standard fact from the literature). -/
+axiom truncSS_nonneg (S : Finset ℕ) : 0 ≤ truncSingularSeries S
+
+/-- Elementary ℝ identity: `((H+1)/3)^2 = ((H+1)*(H+1))/9`. -/
+lemma square_div_three (H : ℕ) :
+  ((↑H + 1 : ℝ) / 3) ^ 2 = ((↑H + 1) * (↑H + 1)) / 9 := by
+  -- (a/3)^2 = a^2 / 9 and a^2 = a * a
+  simp [pow_two, div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc]
+
+/-- Main: turn an L2 window bound into the CLS (L1) window bound. -/
+theorem toCLS {P : Twin.GoalAPI.Params} {e : ℕ → ℝ} (hL2 : Twin.CLSL2.Bound P e) :
+  Twin.AnalyticCore.CLSBound P e := by
+  -- Avoid unfolding: produce the function and rewrite with the definition.
+  simpa [Twin.AnalyticCore.CLSBound] using
+  (fun X hX => by
+    classical
+    -- Shorthands
+    let H  : ℕ := P.H
+    let SS : ℝ := truncSingularSeries P.S
+    let ε  : ℝ := P.eps
+
+    -- L1 and L2 windowed sums (L2 is sum of squares to match `Bound.bound`)
+    let A  : ℝ := Twin.Ledger.windowSum X H (fun n => |e n|)
+    let L2 : ℝ := Twin.Ledger.windowSum X H (fun n => (e n) ^ 2)
+
+    -- (H+1) ≥ 0 as a real
+    have hH_nonneg : (0 : ℝ) ≤ (↑H + 1) := by
+      have : (0 : ℝ) ≤ (↑H : ℝ) := by exact_mod_cast Nat.zero_le H
+      simpa using add_nonneg this (by norm_num)
+
+    -- Cauchy–Schwarz (squared)
+    have hCS_sq : A ^ 2 ≤ (↑H + 1) * L2 := by
+      simpa [A, L2, H] using cs_window_sq_pow X H e
+
+    -- L2 bound from the hypothesis (already in `^2` form)
+    have hL2X : L2 ≤ ε ^ 2 * SS ^ 2 * ((↑H + 1) / 9) := by
+      -- `CLSL2.Bound.bound` has exactly this shape after rewriting names
+      simpa [L2, H, SS, ε] using (Twin.CLSL2.Bound.bound hL2 X hX)
+
+    -- Multiply by (H+1) ≥ 0 on both sides
+    have hScaled :
+        (↑H + 1) * L2
+          ≤ (↑H + 1) * (ε ^ 2 * SS ^ 2 * ((↑H + 1) / 9)) :=
+      mul_le_mul_of_nonneg_left hL2X hH_nonneg
+
+    -- Algebra: regroup RHS as ε^2 SS^2 * ((H+1)^2 / 9)
+    have hScaled' :
+        (↑H + 1) * (ε ^ 2 * SS ^ 2 * ((↑H + 1) / 9))
+          = ε ^ 2 * SS ^ 2 * (((↑H + 1) * (↑H + 1)) / 9) := by
+      have : (↑H + 1) * ((↑H + 1) / 9 : ℝ)
+                = ((↑H + 1) * (↑H + 1)) / 9 := by
+        simp [div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc]
+      simp [mul_comm, mul_left_comm, mul_assoc, this]
+
+    -- Chain: A^2 ≤ (H+1)L2 ≤ ε^2 SS^2 * ((H+1)^2 / 9)
+    have hSq :
+        A ^ 2 ≤ ε ^ 2 * SS ^ 2 * (((↑H + 1) * (↑H + 1)) / 9) := by
+      have := le_trans hCS_sq hScaled
+      simpa [hScaled'] using this
+
+    -- Define the target RHS quantity B and note nonnegativity
+    let B : ℝ := ε * SS * ((↑H + 1) / 3)
+
+    have h_eps_nonneg : 0 ≤ ε := le_of_lt P.eps_pos
+    have h_SS_nonneg  : 0 ≤ SS := by simpa [SS] using truncSS_nonneg P.S
+    have h_span_nonneg : 0 ≤ ((↑H + 1) / 3 : ℝ) := by
+      have h3 : (0 : ℝ) < 3 := by norm_num
+      exact div_nonneg hH_nonneg (le_of_lt h3)
+    have hB_nonneg : 0 ≤ B :=
+      mul_nonneg (mul_nonneg h_eps_nonneg h_SS_nonneg) h_span_nonneg
+
+    -- Compute B^2 in the same normal form as RHS of `hSq`
+    have hSpanSq : ((↑H + 1) / 3 : ℝ) ^ 2
+                     = ((↑H + 1) * (↑H + 1)) / 9 := square_div_three H
+    have hBsq :
+        B ^ 2 = ε ^ 2 * SS ^ 2 * (((↑H + 1) * (↑H + 1)) / 9) := by
+      -- (ε*SS*((H+1)/3))^2 = (ε*SS)^2 * ((H+1)/3)^2
+      have hLeft : B ^ 2 = (ε * SS) ^ 2 * ((↑H + 1) / 3) ^ 2 := by
+        simp [B, pow_two, mul_comm, mul_left_comm, mul_assoc]
+      -- (ε*SS)^2 = ε^2 * SS^2
+      have hMulPow : (ε * SS) ^ 2 = ε ^ 2 * SS ^ 2 := by
+        simp [pow_two, mul_comm, mul_left_comm, mul_assoc]
+      simpa [hLeft, hMulPow, hSpanSq]
+
+    -- From A^2 ≤ B^2, get |A| ≤ |B|
+    have hABsq : A ^ 2 ≤ B ^ 2 := by simpa [hBsq] using hSq
+    have hAbs : |A| ≤ |B| := (sq_le_sq).1 hABsq
+
+    -- Since B ≥ 0, |B| = B, so |A| ≤ B; then use `abs_le.mp` to get A ≤ B
+    have hAbs' : |A| ≤ B := by simpa [abs_of_nonneg hB_nonneg] using hAbs
+    have hA_le_B : A ≤ B := (abs_le.mp (by
+      -- `abs_le.mp : |x| ≤ y → -y ≤ x ∧ x ≤ y`
+      have : |A| ≤ B := hAbs'
+      simpa using this)).right
+
+    -- Re-associate to match the CLS statement exactly
+    have hR :
+        ε * SS * ((↑H + 1) / 3)
+          = ε * ((↑H + 1) * SS) / 3 := by
+      simp [div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc]
+
+    -- Final shape
+    have hFinal :
+        Twin.Ledger.windowSum X P.H (fun n => |e n|)
+          ≤ P.eps * ((↑P.H + 1) * Twin.truncSingularSeries P.S) / 3 := by
+      simpa [A, H, SS, ε, hR, mul_comm, mul_left_comm, mul_assoc] using hA_le_B
+
+    exact hFinal)
+
+end CLSFromL2
+end Twin

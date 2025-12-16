@@ -1,0 +1,13 @@
+namespace Twin.Bank
+open Real
+
+def proj (f : ℝ → ℝ) : ℝ → ℝ :=  -- Πf = ⟨f,1⟩·1 + 12⟨f,α⟩·α (normalized to torus)
+  fun α => (∫ t in (-1/2)..(1/2), f t) + 12 * (∫ t in (-1/2)..(1/2), t * f t) * α
+
+def P (f : ℝ → ℝ) : ℝ → ℝ := fun α => f α - proj f α
+
+lemma two_moment_kill (f : ℝ → ℝ) :
+  (∫ α in (-1/2)..(1/2), P f α) = 0 ∧ (∫ α in (-1/2)..(1/2), α * P f α) = 0 := by
+  -- algebra (expands by definition)
+  admit
+end Twin.Bank

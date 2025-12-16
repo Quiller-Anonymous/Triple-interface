@@ -1,14 +1,21 @@
-# Lake build outputs & vendored deps
-.lake/
-build/
+# Lake/Lean build artefacts
+.lake/build/
+.lake/packages/
+*.olean
+*.ilean
+*.c
+*.o
+*.trace
+*.hash
+*.dynlib
+*.dylib
 
-# Node artifacts (ProofWidgets etc.)
-**/node_modules/
-**/dist/
-**/.lake/build/js/
+# Vendored deps (let CI fetch instead)
+vendor/
 
-# macOS cruft
+# Python caches
+__pycache__/
+*.pyc
+
+# OS cruft
 .DS_Store
-
-# VS Code
-.vscode/

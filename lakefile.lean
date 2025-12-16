@@ -2,50 +2,18 @@ import Lake
 open Lake DSL
 
 package «Goldbach» where
+  -- keep package-level options (if any)
 
-/-- Pull mathlib4 from the official repo. -/
 require mathlib from git
   "https://github.com/leanprover-community/mathlib4"
 
-/--
-Build only the modules we know compile now.
-Add more roots later *only when needed*.
--/
-@[default_target]
+-- === Goldbach library ===
 lean_lib «Goldbach» where
-  roots := #[
-    -- Base & primitives
-   -- `Goldbach.Base.FiniteBaseDefs,
-    `Goldbach.Params,
 
-    -- Core pipeline (lightweight)
-    `Goldbach.Rep,
-    `Goldbach.Windows,
-    `Goldbach.ClosureBridge,
+-- === Twin-primes library ===
+lean_lib «Twin» where
 
-    -- Analytic “shim” layer (your small admit-free wrapper)
-    `Goldbach.AnalyticPointwise,
-
-    -- Final wrapper
-    `Goldbach.Final,
-
-    -- Leave these commented until the code is in place & compiling:
-    -- `Goldbach.BuildWitness,
-    -- `Goldbach.AnalyticGlobal,
-    -- `Goldbach.BankPieces,
-    -- `Goldbach.AnalyticAssemble,
-
-    -- Finite base (HUGE): keep commented until you’re ready
-    -- `Goldbach.FiniteBase.Generated,
-    -- `Goldbach.FiniteBase.FromGenerated,
-    -- `Goldbach.FiniteBase,
-    `Goldbach.Base.FiniteBaseDefs,
-
-    -- If you want to compile *one* chunk, temporarily add it here:
-    -- `Goldbach.Base.Chunks.Chunk100002_200000
-  ]
-
-/- Optional exe (macOS is fine); keep commented out if you don’t need a binary.
-lean_exe finiteConditional where
-  root := `FiniteConditional
--/
+-- === Aggregator target: build BOTH on `lake build` ===
+@[default_target]
+lean_lib «All» where
+  roots := #[`All]   -- see All.lean below

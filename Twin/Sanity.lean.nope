@@ -1,0 +1,7 @@
+-- Twin/Sanity.lean
+import Mathlib.Analysis.InnerProductSpace.PiL2
+import Twin.BigOps
+
+#check Real.sqrt
+#check Finset.sum
+#check Inner.euuclidean  -- should fail (deliberately) so you see errors are local
