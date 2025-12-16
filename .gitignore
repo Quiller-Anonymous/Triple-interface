@@ -11,7 +11,7 @@
 *.dylib
 
 # Vendored deps (let CI fetch instead)
-vendor/
+# vendor/
 
 # Python caches
 __pycache__/
