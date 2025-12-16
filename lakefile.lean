@@ -5,7 +5,7 @@ package «Goldbach» where
   -- keep package-level options (if any)
 
 require mathlib from git
-  "https://github.com/leanprover-community/mathlib4"
+  "https://github.com/leanprover-community/mathlib4"  @ "v4.26.0-rc2"
 
 -- === Goldbach library ===
 lean_lib «Goldbach» where
