@@ -10,8 +10,10 @@
 *.dynlib
 *.dylib
 
+
+
 # Vendored deps (let CI fetch instead)
-# vendor/
+HideMe/
 
 # Python caches
 __pycache__/
