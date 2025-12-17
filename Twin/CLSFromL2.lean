@@ -74,8 +74,8 @@ theorem toCLS
               simpa [pow_two, mul_comm, mul_left_comm, mul_assoc]
                 using (mul_pow (ε * SS) (Real.sqrt (N / 9)) (2 : ℕ))
       _   = (ε ^ 2 * SS ^ 2) * (N / 9) := by
-              simp [pow_two, Real.mul_self_sqrt hα_nonneg,
-                    mul_comm, mul_left_comm, mul_assoc]
+              rw [pow_two, pow_two, Real.mul_self_sqrt hα_nonneg]
+              ring
       _   = ε ^ 2 * SS ^ 2 * (N / 9) := by
               simp [mul_comm, mul_left_comm, mul_assoc]
 
@@ -108,7 +108,7 @@ theorem toCLS
       have : ε * SS * (N / 3) = (ε * SS) * (N / 3) := by simp [mul_assoc]
       simpa [this, div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc]
     -- use hA_prod + span to get ε*SS*(N/3), then rewrite to (ε*SS*N)/3
-    have hA_le' : A ≤ ε * SS * (N / 3) := by simpa [span] using hA_prod
+    have hA_le' : A ≤ ε * SS * (N / 3) := by rw [← span]; exact hA_prod
     simpa [this] using hA_le'
 
   -- Present exactly as: ε * SS * (↑H+1) / 3

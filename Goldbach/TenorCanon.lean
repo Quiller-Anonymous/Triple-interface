@@ -13,6 +13,12 @@ open Goldbach.Windows
 open Goldbach.Rep
 open Goldbach.AnalyticAssemble
 
+noncomputable def major_canonical :
+  MajorBound (10^6) (10^4) (1.0) (0.05) Mcanon :=
+by
+  intro X N hX hN
+  simpa using Goldbach.AO_Major.major_lb_window (X := X) (N := N) hX hN
+
 /-- Your bank–projected main term on even inputs (define when you wire AO). -/
 noncomputable def Mcanon : ℕ → ℝ := fun _ => 0  -- placeholder; replace with AO main term
 

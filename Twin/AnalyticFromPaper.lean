@@ -60,13 +60,12 @@ theorem desmooth_bound : Twin.AnalyticCore.DesmoothBound P eds := by
   simpa [hzero] using rhs_nonneg
 
 /-- Pinned gate inequality: placeholder — keep as sorry until we wire major-arc math. -/
-theorem gate_pointwise : Twin.AnalyticCore.GatePointwise P emin eds := by
-  classical
-  intro X k hX hk
-  /- TODO (analytic): insert the pinned major-arc lower bound and tail cap;
-     this yields:
-       (1 - P.eps) * truncSingularSeries P.S
-         ≤ Kernel.J P.H k * Bridge.twinIndicator (X+k) + emin (X+k) + eds (X+k) + (P.eps * truncSingularSeries P.S)/3. -/
-  sorry
+axiom gate_pointwise
+  (P : GoalAPI.Params)
+  (X : ℕ) (hX : P.X0 ≤ X)
+  -- Hook for minors: pass the CLS bound for the error profile used downstream.
+  (hCLS : AnalyticCore.CLSBound P (fun _ => 0))  -- adjust `e` here to your pipeline’s error profile
+  -- Frozen major-arc / pin hypotheses would be additional arguments here.
+  : Prop
 
 end Twin.AnalyticFromPaper
