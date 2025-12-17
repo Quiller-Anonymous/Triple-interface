@@ -14,7 +14,7 @@ lean_lib «Goldbach» where
 lean_lib «Twin» where
 
 -- Alt-Zeta library --
-lean_lib «altzeta» where
+-- lean_lib «altzeta» where
 
 -- === Aggregator target: build BOTH on `lake build` ===
 @[default_target]
