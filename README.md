@@ -1,7 +1,7 @@
 # Triple interface
 
 Statuses:
-- Gold standard: unconditional proof, or dependent only on something that has been shown to be unconditionally proven
+- Gold standard: unconditional proof, or dependent only on math that is unconditionally proven
 - Silver standard: finite conditional proof (everything but a finite base)
 - Bronze standard: baseline conditional proof (technical axioms reflecting dependencies on conventional math)
 - Iron standard: leaf conditional proof (it builds, but with idiosyncratic dependencies, including but not limited to explicit sorries, axioms, admits)
