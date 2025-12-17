@@ -7,7 +7,10 @@ import Twin.Bridge
 import Twin.Ledger
 import Twin.AnalyticCore
 import Twin.CLSFromL2
-import Twin.MajorArcPin  -- <-- add this import
+import Twin.MajorArcPin
+import Twin.MajorArc.Pin
+import Twin.MajorArc.SWUniform
+import Twin.SW.Defs
 
 noncomputable section
 open scoped BigOperators
@@ -24,10 +27,12 @@ def emin : ℕ → ℝ := fun _ => 0
 /-- Desmoothing / prime-power correction (placeholder; fill later). -/
 def eds  : ℕ → ℝ := fun _ => 0
 
-/-- CLS from an L² hypothesis (thin wrapper so we can keep the math modular). -/
+/-- CLS bound obtained from the zero-case L² estimate. -/
 theorem cls_bound : Twin.AnalyticCore.CLSBound P emin := by
- have hL2 : Twin.CLSFromL2.Bound P emin := /* your Kuznetsov+CLS L² bound (paper §12–§13) */
- exact Twin.CLSFromL2.toCLS_withSlack_fromL2 hL2
+  -- `emin = 0`, so re-use the zero L² bound from `Twin.CLSL2`.
+  have hL2 : Twin.CLSL2.Bound P emin := by
+    simpa [emin] using Twin.CLSL2.fromZero (P := P)
+  exact Twin.CLSFromL2.toCLS (P := P) (e := emin) hL2
 
 
 /-- Desmoothing/prime-power budget from §4: window sum of `eds` ≤ (eps·SS)·(H+1)/3. -/
@@ -60,9 +65,31 @@ theorem desmooth_bound : Twin.AnalyticCore.DesmoothBound P eds := by
 
   simpa [hzero] using rhs_nonneg
 
-@[inline] def gate_pointwise_cert
-  (P : GoalAPI.Params) (emin eds : ℕ → ℝ) :
+/-- Gate inequality obtained *from inputs*: CLS, desmoothing, and a smooth
+major-arc estimate.  This has the "baseline-conditional" shape that we
+eventually want, but for now it still delegates to the pinned major-arc
+axiom via `Twin.MajorArc.gate_pointwise_of_SME_CLS`. -/
+theorem gate_pointwise_of_SME
+  {A B : ℝ} {Λ : ℕ → ℝ} {W Ŵ : ℝ → ℝ}
+  (sme  : Twin.MajorArc.SmoothMajorArcEstimate A B Λ W Ŵ)
+  (spec : Twin.MajorArc.GateSpec P) :
   AnalyticCore.GatePointwise P emin eds :=
-  Twin.MajorArcPin.gateCert P emin eds
+by
+  -- Currently we ignore the extra hypotheses and transparently use the
+  -- pinned gate axiom.  The statement is ready for a future honest proof.
+  simpa using
+    Twin.MajorArc.gate_pointwise_of_SME_CLS
+      (P := P) (emin := emin) (eds := eds)
+      (hCLS := cls_bound) (hDesm := desmooth_bound)
+      sme spec
+
+/-- Legacy wrapper: the concrete `gate_pointwise` used by the bricks
+instance.  For now this still calls the pinned axiom directly, so the
+logical strength of the project is unchanged.  Once a real SW-based proof
+of `gate_pointwise_of_SME` is available, this definition is the natural
+place to switch it over. -/
+@[inline] def gate_pointwise :
+    AnalyticCore.GatePointwise P emin eds :=
+  Twin.MajorArcPin.gate_pointwise P emin eds
 
 end Twin.AnalyticFromPaper
