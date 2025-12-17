@@ -18,4 +18,13 @@ axiom gate_pointwise
   (P : Params) (emin eds : ℕ → ℝ) :
   AnalyticCore.GatePointwise P emin eds
 
+-- still in Twin/MajorArcPin.lean
+namespace MajorArcPin
+
+@[inline] def gateCert (P : Params) (emin eds : ℕ → ℝ) :
+    AnalyticCore.GatePointwise P emin eds :=
+  gate_pointwise P emin eds
+
+end MajorArcPin
+
 end Twin.MajorArcPin

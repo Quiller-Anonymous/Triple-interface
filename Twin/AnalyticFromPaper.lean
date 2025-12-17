@@ -7,6 +7,7 @@ import Twin.Bridge
 import Twin.Ledger
 import Twin.AnalyticCore
 import Twin.CLSFromL2
+import Twin.MajorArcPin  -- <-- add this import
 
 noncomputable section
 open scoped BigOperators
@@ -59,13 +60,9 @@ theorem desmooth_bound : Twin.AnalyticCore.DesmoothBound P eds := by
 
   simpa [hzero] using rhs_nonneg
 
-/-- Pinned gate inequality: placeholder — keep as sorry until we wire major-arc math. -/
-axiom gate_pointwise
-  (P : GoalAPI.Params)
-  (X : ℕ) (hX : P.X0 ≤ X)
-  -- Hook for minors: pass the CLS bound for the error profile used downstream.
-  (hCLS : AnalyticCore.CLSBound P (fun _ => 0))  -- adjust `e` here to your pipeline’s error profile
-  -- Frozen major-arc / pin hypotheses would be additional arguments here.
-  : Prop
+@[inline] def gate_pointwise_cert
+  (P : GoalAPI.Params) (emin eds : ℕ → ℝ) :
+  AnalyticCore.GatePointwise P emin eds :=
+  Twin.MajorArcPin.gateCert P emin eds
 
 end Twin.AnalyticFromPaper

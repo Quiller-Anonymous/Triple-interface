@@ -19,6 +19,12 @@ open Real
 
 /-! ## √-helpers (proved) -/
 
+/-! ## (Optional) Positivity of the truncated singular series
+    Replace this axiom with your real lemma if available. -/
+axiom truncSS_nonneg_of_ge3
+  (S : Finset ℕ) (hS : ∀ p ∈ S, 3 ≤ p) :
+  0 ≤ truncSingularSeries S
+
 /-- For `a,b ≥ 0`, we have `sqrt (a+b) ≤ sqrt a + sqrt b`. -/
 lemma sqrt_add_le (a b : ℝ) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     sqrt (a + b) ≤ sqrt a + sqrt b := by
@@ -76,12 +82,6 @@ lemma sqrt_mul_split_of_nonneg (a b : ℝ) (ha : 0 ≤ a) (hb : 0 ≤ b) :
 export Twin.LedgerExtra
   ( window_l1_le_sqrt_span_mul_window_l2
     sqrt_span_mul_sqrt_span_div9 )
-
-/-! ## (Optional) Positivity of the truncated singular series
-    Replace this axiom with your real lemma if available. -/
-axiom truncSS_nonneg_of_ge3
-  (S : Finset ℕ) (hS : ∀ p ∈ S, 3 ≤ p) :
-  0 ≤ truncSingularSeries S
 
 end Compat
 end Twin
