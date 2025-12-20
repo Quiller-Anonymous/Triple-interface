@@ -1,5 +1,7 @@
 # Triple interface
 
+hi bumbler!
+
 Statuses:
 - Platinum standard: unconditional proof with independent third party verification
 - Gold standard: unconditional proof, or dependent only on math that is unconditionally proven
