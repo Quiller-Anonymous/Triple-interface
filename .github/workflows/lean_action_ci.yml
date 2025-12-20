@@ -69,7 +69,7 @@ jobs:
     strategy:
       matrix:  
         chunk_range: ${{ fromJson(needs.discover-chunks.outputs.chunk_ranges) }}
-      max-parallel: 180  # Use all Pro plan concurrent jobs! 
+      max-parallel: 40  # Use all Pro plan concurrent jobs! 
       fail-fast: false  # Continue other jobs even if one fails
     
     steps:
