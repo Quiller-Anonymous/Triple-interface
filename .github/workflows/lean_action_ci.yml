@@ -2,34 +2,34 @@ name: Build All Chunks (Parallel)
 
 on:
   push:
+    paths:  
+      - 'Goldbach/FiniteBase/Chunks/**'
+      - '. github/workflows/lean_action_ci.yml'
+  pull_request:
     paths: 
       - 'Goldbach/FiniteBase/Chunks/**'
-      - '. github/workflows/build_chunks_parallel.yml'
-  pull_request:
-    paths:
-      - 'Goldbach/FiniteBase/Chunks/**'
-  workflow_dispatch:
+  workflow_dispatch: 
 
-jobs: 
+jobs:  
   # Job 1: Discover what chunks exist and create the build plan
-  discover-chunks: 
+  discover-chunks:  
     runs-on: ubuntu-latest
     outputs:
-      total_chunks: ${{ steps.count. outputs.total }}
+      total_chunks: ${{ steps. count. outputs.total }}
       chunk_ranges: ${{ steps.create-matrix.outputs.ranges }}
     steps:
       - uses: actions/checkout@v4
       
       - name: Count total chunks
         id: count
-        run: |
+        run:  |
           cd Goldbach/FiniteBase/Chunks
           total=$(ls -1 Chunk*_verified.lean 2>/dev/null | wc -l)
           echo "total=$total" >> $GITHUB_OUTPUT
           echo "Found $total chunk files to build"
       
       - name: Create build matrix
-        id:  create-matrix
+        id: create-matrix
         run: |
           cd Goldbach/FiniteBase/Chunks
           
@@ -67,27 +67,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 360  # 6 hours per job
     strategy:
-      matrix: 
+      matrix:  
         chunk_range: ${{ fromJson(needs.discover-chunks.outputs.chunk_ranges) }}
-      max-parallel: 40  # Use all Pro concurrent jobs
+      max-parallel: 180  # Use all Pro plan concurrent jobs! 
       fail-fast: false  # Continue other jobs even if one fails
     
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up Lean
-        uses: leanprover/lean-action@v1
+      - name:  Set up Lean
+        uses:  leanprover/lean-action@v1
     
       - name:  Fetch dependencies
         run: lake update
       
-      - name: Build chunks ${{ matrix.chunk_range }}XX
+      - name:  Build chunks ${{ matrix.chunk_range }}XX
         id: build
         run: |
           cd Goldbach/FiniteBase/Chunks
           
           # Build all chunks with this tens digit
-          prefix=$(printf "%02d" ${{ matrix.chunk_range }})
+          prefix=$(printf "%02d" ${{ matrix. chunk_range }})
           
           echo "=========================================="
           echo "Building Group:  Chunk${prefix}X"
@@ -96,7 +96,7 @@ jobs:
           echo ""
           
           # Find all matching chunks
-          matching_chunks=(Chunk${prefix}*_verified. lean)
+          matching_chunks=(Chunk${prefix}*_verified.lean)
           
           # Check if any files match
           if [ !  -f "${matching_chunks[0]}" ]; then
@@ -127,7 +127,7 @@ jobs:
             
             chunk_start=$(date +%s)
             
-            if lake build "Goldbach. FiniteBase.Chunks.$module" 2>&1 | tee "build_${module}.log"; then
+            if lake build "Goldbach. FiniteBase.Chunks.$module" 2>&1 | tee "build_${module}. log"; then
               chunk_end=$(date +%s)
               duration=$((chunk_end - chunk_start))
               echo "✓ SUCCESS: $module (${duration}s)"
@@ -152,7 +152,7 @@ jobs:
           echo "=========================================="
           echo "GROUP ${{ matrix.chunk_range }} SUMMARY"
           echo "=========================================="
-          echo "Total chunks:     ${#matching_chunks[@]}"
+          echo "Total chunks:    ${#matching_chunks[@]}"
           echo "Successful:      ${#successful_chunks[@]}"
           echo "Failed:          ${#failed_chunks[@]}"
           echo "Total time:      ${minutes}m ${seconds}s"
@@ -175,22 +175,22 @@ jobs:
       - name: Upload build logs
         if: always()
         uses: actions/upload-artifact@v4
-        with: 
+        with:  
           name: build-logs-group-${{ matrix.chunk_range }}
-          path:  Goldbach/FiniteBase/Chunks/build_*. log
+          path:  Goldbach/FiniteBase/Chunks/build_*.log
           retention-days: 7
       
       - name: Upload build artifacts
         if: success()
         uses: actions/upload-artifact@v4
-        with:
+        with: 
           name: build-artifacts-group-${{ matrix.chunk_range }}
           path: . lake/build/lib/Goldbach/FiniteBase/Chunks/Chunk${{ matrix.chunk_range }}*. olean
-          retention-days: 1
+          retention-days:  1
 
   # Job 3: Collect results and report overall status
   summary:
-    needs: [discover-chunks, build-chunks]
+    needs:  [discover-chunks, build-chunks]
     runs-on: ubuntu-latest
     if: always()  # Run even if some builds failed
     steps:
@@ -201,14 +201,14 @@ jobs:
           pattern: build-logs-group-*
           path: all-logs
       
-      - name:  Analyze results
+      - name: Analyze results
         if: always()
         run: |
           echo "=========================================="
           echo "FINAL BUILD SUMMARY"
           echo "=========================================="
-          echo "Total chunks found: ${{ needs.discover-chunks.outputs.total_chunks }}"
-          echo "Build status:  ${{ needs.build-chunks. result }}"
+          echo "Total chunks found:  ${{ needs.discover-chunks. outputs.total_chunks }}"
+          echo "Build status: ${{ needs.build-chunks.result }}"
           echo ""
           
           # Count successes and failures from logs
@@ -216,13 +216,13 @@ jobs:
             success_count=$(grep -r "✓ SUCCESS:" all-logs/ 2>/dev/null | wc -l)
             failure_count=$(grep -r "✗ FAILED:" all-logs/ 2>/dev/null | wc -l)
             
-            echo "Successful builds: $success_count"
-            echo "Failed builds:      $failure_count"
+            echo "Successful builds:  $success_count"
+            echo "Failed builds:     $failure_count"
             echo ""
             
             if [ $failure_count -gt 0 ]; then
               echo "FAILED CHUNKS:"
-              grep -r "✗ FAILED:" all-logs/ | sed 's/.*✗ FAILED: /  /' | sort -u
+              grep -r "✗ FAILED:" all-logs/ | sed 's/.*✗ FAILED:  /  /' | sort -u
               echo ""
             fi
           fi
