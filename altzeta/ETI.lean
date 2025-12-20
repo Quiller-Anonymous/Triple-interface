@@ -23,10 +23,9 @@ structure ETI where
   /- (E3) masked short-shift uniformity constant (not used directly here, but recorded). -/
   C_AO_SSU : ℝ
   hAOSSU : 1 ≤ C_AO_SSU
-deriving Repr
 
 /-- Baseline ledger using ETI's pin and variance scale. -/
 def ETI.margin (E : ETI) (L : Ledger) : ℝ :=
-  margin E.c0 E.εH L E.Sch
+  AltZeta.margin E.c0 E.εH L E.Sch
 
 end AltZeta

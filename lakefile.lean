@@ -13,8 +13,10 @@ lean_lib «Goldbach» where
 -- === Twin-primes library ===
 lean_lib «Twin» where
 
--- Alt-Zeta library --
--- lean_lib «altzeta» where
+-- === Twin-primes library ===
+lean_lib «TwinSW» where
+
+lean_lib «AltZeta» where
 
 -- === Aggregator target: build BOTH on `lake build` ===
 @[default_target]

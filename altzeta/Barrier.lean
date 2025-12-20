@@ -6,6 +6,7 @@ import Mathlib.Data.Real.Sqrt
 import Mathlib.Tactic
 import AltZeta.Core
 import AltZeta.ETI
+import AltZeta.ExplicitFormula
 
 noncomputable section
 open scoped BigOperators
@@ -58,16 +59,37 @@ Conclusion:
 * No off-line zero exists in the effective band.
 -/
 theorem band_zero_free_same_x
-  (I : Inputs)
+  (I : Inputs) (K : AltZetaKernel) (band : SpectralBand)
   -- pick x in [X, 2X] with positive margin gap
   (x : ℝ) (hxV : ValidX I.E.W x) (hB : BarrierHolds I x)
   -- EF-as-inequality at this same x (baseline-conditional interface)
-  (hEF : OffLineZeroInBand → ∃ δ : ℝ, 0 < δ ∧
-           δ * Real.sqrt x ≤ I.G.CGamma - M_of I + Real.sqrt x * I.Env.S_cert)
-  : ¬ OffLineZeroInBand := by
+  (hEF :
+      EFHypothesis
+        { W := I.E.W, x := x, hx := hxV,
+          CGamma := I.G.CGamma, M := M_of I, S := I.Env.S_cert,
+          kernel := K, band := band })
+  : ¬ OffLineZeroInBand
+        { W := I.E.W, x := x, hx := hxV,
+          CGamma := I.G.CGamma, M := M_of I, S := I.Env.S_cert,
+          kernel := K, band := band } := by
+  classical
+  let setup :
+      EFSetup :=
+    { W := I.E.W,
+      x := x,
+      hx := hxV,
+      CGamma := I.G.CGamma,
+      M := M_of I,
+      S := I.Env.S_cert,
+      kernel := K,
+      band := band }
+  change ¬ OffLineZeroInBand setup
   intro hz
   rcases hxV with ⟨_hxL, _hxU, hxpos⟩
-  rcases hEF hz with ⟨δ, hδ, hineq⟩
+  have hEF' : ∃ δ : ℝ, 0 < δ ∧
+        δ * Real.sqrt x ≤ I.G.CGamma - M_of I + Real.sqrt x * I.Env.S_cert := by
+    simpa [setup] using hEF hz
+  rcases hEF' with ⟨δ, hδ, hineq⟩
   have hmargin' : M_of I > I.G.CGamma + Real.sqrt x * I.Env.S_cert := hB
   exact barrier_contradiction_same_x (x:=x) (δ:=δ) (M:=M_of I)
     (CGamma:=I.G.CGamma) (S:=I.Env.S_cert) hxpos hδ hmargin' hineq

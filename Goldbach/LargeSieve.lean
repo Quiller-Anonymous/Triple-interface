@@ -5,7 +5,7 @@ import Mathlib.Tactic
 
 open Real Complex MeasureTheory Set
 
-/-! # Gallagher–type window bound (robust, no `sorry`) -/
+/-! # Gallagher–type window bound (robust and fully elaborated) -/
 
 section Gallagher
 

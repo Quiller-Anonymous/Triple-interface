@@ -30,7 +30,15 @@ theorem _finiteConditional_N10
   (finiteBase : Goldbach.FiniteBase.Cert W.X0)
   (hE10 : Goldbach.Windows.IsEven 10) :
   ∃ p q, Nat.Prime p ∧ Nat.Prime q ∧ p + q = 10 := by
-  -- Final theorem takes a witness + finite base and yields all even N ≥ 4
-  have H := Goldbach.Final.goldbach_unconditional (w := W) finiteBase
+  -- Turn the certificate into the `FiniteBaseUpTo` form expected by `goldbach_final`.
+  have finiteBaseUpTo :
+      Goldbach.Base.FiniteBaseUpTo W.X0 := by
+    intro N hEven h4 hN
+    have hWin : Goldbach.Windows.IsEven N :=
+      Goldbach.Windows.isEven_of_even hEven
+    exact finiteBase hWin h4 hN
+  -- Combine the analytic witness with the finite base.
+  have H := Goldbach.Final.goldbach_final (w := W) finiteBaseUpTo
+  have hEven10 : Even 10 := Goldbach.Windows.even_of_isEven hE10
   have h4 : 4 ≤ 10 := by decide
-  simpa using H (N := 10) hE10 h4
+  simpa using H (N := 10) hEven10 h4

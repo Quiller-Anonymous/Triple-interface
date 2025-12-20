@@ -15,6 +15,14 @@ lemma isEven_of_even {n : ℕ} (h : Even n) : IsEven n := by
   have hdiv : 2 ∣ n := ⟨k, by simpa [two_mul] using hk⟩
   simpa [IsEven] using Nat.mod_eq_zero_of_dvd hdiv
 
+/-- Convert `IsEven n` back to the standard `Even n`. -/
+lemma even_of_isEven {n : ℕ} (h : IsEven n) : Even n := by
+  refine ⟨n / 2, ?_⟩
+  have h' : n % 2 = 0 := h
+  have hx : 2 * (n / 2) = n := by
+    simpa [h', add_comm, add_left_comm, add_assoc] using Nat.mod_add_div n 2
+  simpa [two_mul, mul_comm, add_comm, add_left_comm, add_assoc] using hx.symm
+
 -- Make `filter (fun n => IsEven n)` work without extra imports
 instance : DecidablePred IsEven := by
   intro n; dsimp [IsEven]; infer_instance
@@ -61,7 +69,7 @@ lemma mem_IccShift_center {N H : ℕ} : N ∈ IccShift N H := by
 
 /-- `N` is always in its own centered window. -/
 lemma self_mem_IccShift (N H : ℕ) : N ∈ IccShift N H := by
-  -- Make the target literally a `Finset.image … (Finset.range …)` membership
+  -- Make the target literally a `Finset.image (fun k => N + k) (Finset.range (H+1))` membership
   unfold IccShift
   -- 0 ∈ Finset.range (H+1)
   have h0 : 0 ∈ Finset.range (H + 1) := Finset.mem_range.mpr (Nat.succ_pos _)
@@ -74,6 +82,6 @@ lemma mem_EvenIn_of_mem_IccShift_and_even
     {N H : ℕ} (hIn : N ∈ IccShift N H) (hE : IsEven N) :
     N ∈ EvenIn N H := by
   unfold EvenIn
-  simpa [List.mem_filter] using And.intro hIn hE
+  simpa [Finset.mem_filter] using And.intro hIn hE
 
 end Goldbach.Windows

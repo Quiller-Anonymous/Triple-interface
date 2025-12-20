@@ -58,7 +58,7 @@ lemma windowSum_indicator_eq_mass (X H : ℕ) :
       (fun n => Twin.Kernel.J H (n - X) * Twin.Bridge.twinIndicator n)
     = Twin.Bridge.localizedTwinMass X H := by
   classical
-  -- expand both sides as ∑_{k=0}^H …
+  -- expand both sides as ∑_{k=0}^H ...
   unfold Twin.Ledger.windowSum Twin.Ledger.windowSumN Twin.Bridge.localizedTwinMass
   -- rewrite (X+k) - X = k in ℕ
   have : ∀ k, Twin.Kernel.J H ((X + k) - X) * Twin.Bridge.twinIndicator (X + k)

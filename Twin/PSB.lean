@@ -52,7 +52,7 @@ theorem assemble_lower_bound
       ≥ c * Twin.Ledger.windowSum X H L
         -   Twin.Ledger.windowSum X H E := by
   classical
-  -- Work with an explicit finite set S = {0,…,H}
+  -- Work with an explicit finite set S = {0,...,H}
   set S := Finset.range (H+1)
   have hsum :
       S.sum (fun k => (c * L (X + k) - E (X + k)))

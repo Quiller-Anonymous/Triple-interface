@@ -36,7 +36,7 @@ theorem assemble_lower_bound_onWindow
         -   Twin.Ledger.windowSum X H E := by
   classical
   set S := Finset.range (H+1)
-  -- Turn "k ≤ H" into membership in S = {0,…,H}.
+  -- Turn "k ≤ H" into membership in S = {0,...,H}.
   have hptS :
       ∀ k ∈ S,
         c * L (X + k) - E (X + k)

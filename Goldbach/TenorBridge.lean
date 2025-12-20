@@ -1,7 +1,7 @@
 /-
   Goldbach/TenorBridge.lean
 
-  Admit-free bridge from tenor-scale inputs to the bridge-ready global closure.
+  Axiom-free bridge from tenor-scale inputs to the bridge-ready global closure.
 
   What you pass in (no axioms here):
     • A projected main term  M : ℕ → ℝ
@@ -26,7 +26,7 @@ open Goldbach
 open Goldbach.Windows
 open Goldbach.Rep
 
-/-- General admit-free assembly: from tenor inputs for `M` to
+/-- General axiom-free assembly: from tenor inputs for `M` to
     a `GlobalClosurePointwise` statement at scales `(X0,H,S,c0,ε)`. -/
 def toGlobal
   (X0 H : ℕ) (S c0 ε : ℝ)

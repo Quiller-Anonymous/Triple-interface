@@ -44,9 +44,11 @@ lemma err_off_bound {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
   |E_off X N| ≤ BG_Calib.δ_off caps :=
   BG_Calib.err_off_bound (C:=caps) (S:=S_BG) (K_BG:=K_BG) (P_BG:=P_BG) hX hN
 
--- BG_Calib.lean (example signature)
-def my_Mproj : ℕ → ℝ := ...                   -- the projected main term used in Tenor
-theorem db_canonical :
-  Goldbach.BankPieces.DecompBounds (10^6) (10^4) (1.0) (ε₁) (ε₂) my_Mproj := ...
+/-!
+  When you have a concrete projected main term together with the corresponding
+  `Goldbach.BankPieces.DecompBounds` witness, import it here and feed it into
+  the tenor bridge. This file only collects the calibration facts, so no
+  additional placeholders are required.
+-/
 
 end Goldbach.BG

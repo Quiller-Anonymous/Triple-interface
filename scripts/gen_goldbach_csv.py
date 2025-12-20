@@ -41,7 +41,7 @@ def main():
         lo = 4
 
     # Precompute primes up to HI
-    print(f"[gen_goldbach_csv] Sieving primes up to {hi}…")
+    print(f"[gen_goldbach_csv] Sieving primes up to {hi}...")
     is_prime = sieve_primes(hi)
 
     OUTPUT_CSV.parent.mkdir(parents=True, exist_ok=True)
@@ -49,7 +49,7 @@ def main():
     total = 0
     missing = []
 
-    print(f"[gen_goldbach_csv] Generating Goldbach pairs for even N in [{lo}, {hi}]…")
+    print(f"[gen_goldbach_csv] Generating Goldbach pairs for even N in [{lo}, {hi}]...")
     for N in range(lo, hi + 1, 2):
         total += 1
         pq = find_goldbach_pair(N, is_prime)

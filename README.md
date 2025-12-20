@@ -1,6 +1,7 @@
 # Triple interface
 
 Statuses:
+- Platinum standard: unconditional proof with independent third party verification
 - Gold standard: unconditional proof, or dependent only on math that is unconditionally proven
 - Silver standard: finite conditional proof (everything but a finite base)
 - Bronze standard: baseline conditional proof (technical axioms reflecting dependencies on conventional math)

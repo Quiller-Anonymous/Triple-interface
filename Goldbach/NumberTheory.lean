@@ -53,8 +53,8 @@ lemma prod_one_sub_ge_one_sub_sum {α} [DecidableEq α]
         have : 0 ≤ ∑ i in s, x i := Finset.sum_nonneg (fun i hi => h0s i hi)
         exact this)
       (by
-        -- we only need `∑ x i ≤ |s|` ⇒ certainly ≤ 1+… but the two–variable lemma
-        -- is applied pairwise across the induction (no explicit global bound required).
+        -- it suffices that `∑ x i ≤ ∑ i∈s 1`, and the inductive two-variable argument
+        -- handles the growth without any additional global bound.
         have : ∑ i in s, x i ≤ ∑ i in s, (1 : ℝ) :=
           Finset.sum_le_sum (fun i hi => h1s i hi)
         exact le_trans this (by simpa))
@@ -134,7 +134,7 @@ lemma sum_recip_sq_le_one_third (T : Finset ℕ) (hT : ∀ m ∈ T, 4 ≤ m) :
           ∑ m in Finset.Icc 4 M, ((1 : ℝ) / (m - 1 : ℝ) - (1 : ℝ) / m)
             = (1 / (3 : ℝ)) - (1 / (M : ℝ)) := by
         classical
-        -- write Icc 4 M as {4,5,...,M} and telescope
+        -- write `Icc 4 M` as the consecutive sequence from 4 to `M` and telescope
         -- Expand partial sums and cancel; endpoints remain.
         -- (Short direct proof using pairwise cancellation:)
         refine Finset.induction_on (Finset.Icc 4 M) ?base ?step

@@ -68,7 +68,7 @@ def check (entries : Array Entry) (capX0? : Option Nat) : IO Unit := do
 
   let maxP := entries.foldl (init := 0) (fun acc e => acc.max (e.p.max e.q))
   IO.println s!"[Check] X0={X0}, maxN={maxN}, maxP={maxP}"
-  IO.println s!"[Check] sieving up to {maxP}…"
+  IO.println s!"[Check] sieving up to {maxP}..."
   let pset := primeSetUpTo maxP
 
   -- need one row for every even N in [4..X0]

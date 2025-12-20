@@ -107,7 +107,7 @@ def TenorHyp.mkPack
 , M := M, major := major, bank := bank }
 
 /-- Backwards-compatible wrapper so older call sites can keep writing
-    `Goldbach.main_pointwise_lower_bound …`. -/
+    `Goldbach.main_pointwise_lower_bound X0 H S c0 ε`. -/
 theorem main_pointwise_lower_bound
   (X0 H : ℕ) (S c0 ε : ℝ) (hyp : AnalyticHyp X0 H S c0 ε) :
   ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →

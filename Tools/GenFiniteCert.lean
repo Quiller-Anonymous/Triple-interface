@@ -95,7 +95,7 @@ def findPair (N : Nat) (ps : Std.HashSet Nat) (primes : Array Nat) : Option (Nat
 def genAll (X0 : Nat) : IO (Array Entry) := do
   if X0 < 4 then
     throw <| IO.userError s!"X0 must be ≥ 4 (got {X0})"
-  IO.println s!"[Gen] Sieve up to {X0}…"
+  IO.println s!"[Gen] Sieve up to {X0}..."
   let ps := primeSetUpTo X0
   let primes := primesUpTo ps X0
   IO.println s!"[Gen] primes found: {primes.size}"

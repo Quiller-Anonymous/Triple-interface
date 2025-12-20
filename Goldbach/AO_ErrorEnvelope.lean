@@ -18,15 +18,16 @@ import Goldbach.AO_AssembleEnvelope
   Hook points:
   Provide these in your analytic files (KernelTail, MellinTrunc, SmoothLoss, BG_Bank):
 
-  * a concrete `channels : Goldbach.AO_AssembleEnvelope.Channels` with
-      E_kernel, E_mellin, E_smooth, E_off
+  * define `channels : Goldbach.AO_AssembleEnvelope.Channels`
+      specifying the four error terms `E_kernel`, `E_mellin`, `E_smooth`, `E_off`
 
-  * a concrete `caps : Goldbach.AO_AssembleEnvelope.Caps` with
-      δ_kernel, δ_mellin, δ_smooth, δ_off and their nonnegativity
+  * define `caps : Goldbach.AO_AssembleEnvelope.Caps`
+      providing the numerical caps and nonnegativity proofs
 
-  * instances:
-      instance : Goldbach.AO_AssembleEnvelope.Decomposition channels := ...
-      instance : Goldbach.AO_AssembleEnvelope.Bounds channels caps := ...
+  * register instances
+      `instance : Goldbach.AO_AssembleEnvelope.Decomposition channels`
+      `instance : Goldbach.AO_AssembleEnvelope.Bounds channels caps`
+    by pointing to the lemmas proved in your analytic files
 
   For now you can keep these instances in those files; this file stays agnostic.
 -/

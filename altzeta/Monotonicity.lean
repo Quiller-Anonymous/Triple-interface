@@ -81,4 +81,26 @@ lemma margin_mono_increase_H_B
   have := sub_le_sub_left this (c0 - (L.C1 * εH))
   simpa [margin, sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this
 
+/-- Increasing the pin level `c₀` can only increase the margin (other inputs fixed). -/
+lemma margin_mono_increase_c0 {c01 c02 εH : ℝ} (L : Ledger) (Sch : Schedule)
+    (hc : c01 ≤ c02) :
+    margin c01 εH L Sch ≤ margin c02 εH L Sch := by
+  unfold margin
+  have := add_le_add_right hc (-(L.C1 * εH + L.C2 / max Sch.H 1 + L.C3 * exp (-(Sch.B))))
+  simpa [add_comm, add_left_comm, add_assoc, sub_eq_add_neg] using this
+
+/-- Decreasing `ε_H` raises the margin (assuming the ledger constant `C1 ≥ 0`). -/
+lemma margin_mono_decrease_eps {c0 ε1 ε2 : ℝ} (L : Ledger) (Sch : Schedule)
+    (hε : ε2 ≤ ε1) :
+    margin c0 ε2 L Sch ≥ margin c0 ε1 L Sch := by
+  unfold margin
+  have hprod : L.C1 * ε2 ≤ L.C1 * ε1 :=
+    mul_le_mul_of_nonneg_left hε L.hC1
+  have hsum :
+      L.C1 * ε2 + (L.C2 / max Sch.H 1 + L.C3 * Real.exp (-(Sch.B)))
+        ≤ L.C1 * ε1 + (L.C2 / max Sch.H 1 + L.C3 * Real.exp (-(Sch.B))) :=
+    add_le_add_right hprod _
+  have := sub_le_sub_left hsum c0
+  simpa [add_comm, add_left_comm, add_assoc, sub_eq_add_neg] using this
+
 end AltZeta

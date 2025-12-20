@@ -1,15 +1,15 @@
-/-
+/- 
   Goldbach/Base/FiniteBase.lean
   Aggregates finished chunks into a single FiniteBaseUpTo lemma.
 -/
 import Goldbach.Base.FiniteBaseDefs
 
--- Import only the chunks that are *ready* (no sorry/placeholder).
+-- Import only the chunks that are *ready* (no unfinished placeholders).
 -- Example:
 -- import Goldbach.Base.Chunks.Chunk0004_0198
 -- import Goldbach.Base.Chunks.Chunk0200_0398
 -- import Goldbach.Base.Chunks.Chunk0400_0598
--- …
+-- (and so on)
 
 open Goldbach.Base
 

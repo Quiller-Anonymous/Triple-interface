@@ -1,26 +1,21 @@
 /-
   Twin/FiniteCS.lean
-  Small “finite Cauchy–Schwarz” helpers we treat as axioms (standard facts).
+  ------------------
+  Compatibility shim: finite-window Cauchy–Schwarz lemmas backed by Mathlib.
+  Formerly these were axioms; we now simply re-export the proved lemmas from
+  `Twin.WindowCS`.
 -/
-import Mathlib
-import Twin.Ledger
+import Twin.WindowCS
 
 noncomputable section
-open scoped BigOperators
 
-namespace Twin.FiniteCS
+namespace Twin
+namespace FiniteCS
 
-/-- Finite Cauchy–Schwarz on the window:  L¹ ≤ √(H+1) · √(L²). -/
-axiom window_l1_le_sqrt_span_mul_window_l2
-  (X H : ℕ) (f : ℕ → ℝ) :
-  Twin.Ledger.windowSum X H (fun n => |f n|)
-    ≤ Real.sqrt ((H : ℝ) + 1) *
-      Real.sqrt (Twin.Ledger.windowSum X H (fun n => (f n)^2))
+export Twin.WindowCS
+  ( window_l1_le_sqrt_span_mul_window_l2
+    sqrt_span_mul_sqrt_span_div9
+    sqrt_span_div9 )
 
-/-- Elementary algebra on the span length:
-    √(H+1) · √((H+1)/9) = (H+1)/3. -/
-axiom sqrt_span_mul_sqrt_span_div9 (H : ℕ) :
-  Real.sqrt ((H : ℝ) + 1) * Real.sqrt (((H : ℝ) + 1) / 9)
-    = ((H : ℝ) + 1) / 3
-
-end Twin.FiniteCS
+end FiniteCS
+end Twin
