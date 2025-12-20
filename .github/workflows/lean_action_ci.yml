@@ -15,10 +15,10 @@ jobs:
   discover-chunks:  
     runs-on: ubuntu-latest
     outputs:
-      total_chunks: ${{ steps. count. outputs.total }}
-      chunk_ranges: ${{ steps.create-matrix.outputs.ranges }}
+      total_chunks: ${{ steps. count.outputs.total }}
+      chunks: ${{ steps.set-matrix.outputs.chunks }}
     steps:
-      - uses: actions/checkout@v4
+      - uses:  actions/checkout@v4
       
       - name: Count total chunks
         id: count
@@ -28,164 +28,81 @@ jobs:
           echo "total=$total" >> $GITHUB_OUTPUT
           echo "Found $total chunk files to build"
       
-      - name: Create build matrix
-        id: create-matrix
+      - name: Generate chunk list
+        id: set-matrix
         run: |
           cd Goldbach/FiniteBase/Chunks
           
-          # Find the highest chunk number
-          max_chunk=0
-          for f in Chunk*_verified.lean; do
-            if [ -f "$f" ]; then
-              # Extract the 3-digit chunk number (e.g., 067 from Chunk067_e_verified.lean)
-              num=$(echo "$f" | sed 's/Chunk\([0-9]\+\)_.*/\1/')
-              if [ "$num" -gt "$max_chunk" ]; then
-                max_chunk=$num
-              fi
-            fi
-          done
+          # Create a JSON array of all chunk identifiers
+          chunks=$(ls -1 Chunk*_verified.lean 2>/dev/null | \
+            sed 's/Chunk\([0-9]*_[a-z]*\)_verified. lean/\1/' | \
+            jq -R -s -c 'split("\n") | map(select(length > 0))')
           
-          echo "Highest chunk number: $max_chunk"
-          
-          # Create ranges based on actual max (e.g., if max is 099, we need ranges 0-9)
-          max_range=$((max_chunk / 10))
-          ranges="["
-          for i in $(seq 0 $max_range); do
-            if [ $i -gt 0 ]; then
-              ranges="$ranges,"
-            fi
-            ranges="$ranges$i"
-          done
-          ranges="$ranges]"
-          
-          echo "ranges=$ranges" >> $GITHUB_OUTPUT
-          echo "Build matrix:  $ranges"
+          echo "chunks=$chunks" >> $GITHUB_OUTPUT
+          echo "Generated matrix with $(echo $chunks | jq 'length') chunks"
+          echo "First few chunks: $(echo $chunks | jq '. [:5]')"
 
   # Job 2: Build chunks in parallel
-  build-chunks: 
+  build-chunks:  
     needs: discover-chunks
     runs-on: ubuntu-latest
     timeout-minutes: 360  # 6 hours per job
     strategy:
       matrix:  
-        chunk_range: ${{ fromJson(needs.discover-chunks.outputs.chunk_ranges) }}
+        chunk: ${{ fromJson(needs.discover-chunks.outputs.chunks) }}
       max-parallel: 40  # Use all Pro plan concurrent jobs! 
-      fail-fast: false  # Continue other jobs even if one fails
+      fail-fast:  false  # Continue other jobs even if one fails
     
-    steps:
+    steps: 
       - uses: actions/checkout@v4
       
       - name:  Set up Lean
         uses:  leanprover/lean-action@v1
     
-      - name:  Fetch dependencies
+      - name: Fetch dependencies
         run: lake update
       
-      - name:  Build chunks ${{ matrix.chunk_range }}XX
+      - name: Build chunk ${{ matrix. chunk }}
         id: build
         run: |
           cd Goldbach/FiniteBase/Chunks
           
-          # Build all chunks with this tens digit
-          prefix=$(printf "%02d" ${{ matrix. chunk_range }})
+          chunk_id="${{ matrix.chunk }}"
+          module="Chunk${chunk_id}_verified"
           
           echo "=========================================="
-          echo "Building Group:  Chunk${prefix}X"
+          echo "Building:  $module"
           echo "Time started: $(date)"
           echo "=========================================="
-          echo ""
           
-          # Find all matching chunks
-          matching_chunks=(Chunk${prefix}*_verified.lean)
-          
-          # Check if any files match
-          if [ !  -f "${matching_chunks[0]}" ]; then
-            echo "No chunks found matching Chunk${prefix}*_verified. lean"
-            echo "This group is empty - skipping"
-            exit 0
-          fi
-          
-          echo "Found ${#matching_chunks[@]} chunk files in this group:"
-          printf '  %s\n' "${matching_chunks[@]}"
-          echo ""
-          
-          # Track progress
-          failed_chunks=()
-          successful_chunks=()
           start_time=$(date +%s)
           
-          # Build each chunk
-          chunk_num=0
-          for chunk_file in "${matching_chunks[@]}"; do
-            chunk_num=$((chunk_num + 1))
-            module=$(basename "$chunk_file" . lean)
-            
-            echo "----------------------------------------"
-            echo "[$chunk_num/${#matching_chunks[@]}] Building:  $module"
-            echo "Time:  $(date +%H:%M:%S)"
-            echo "----------------------------------------"
-            
-            chunk_start=$(date +%s)
-            
-            if lake build "Goldbach. FiniteBase.Chunks.$module" 2>&1 | tee "build_${module}. log"; then
-              chunk_end=$(date +%s)
-              duration=$((chunk_end - chunk_start))
-              echo "✓ SUCCESS: $module (${duration}s)"
-              successful_chunks+=("$module")
-            else
-              chunk_end=$(date +%s)
-              duration=$((chunk_end - chunk_start))
-              echo "✗ FAILED: $module (${duration}s)"
-              failed_chunks+=("$module")
-            fi
-            echo ""
-          done
-          
-          # Calculate total time
-          end_time=$(date +%s)
-          total_duration=$((end_time - start_time))
-          minutes=$((total_duration / 60))
-          seconds=$((total_duration % 60))
-          
-          # Print summary
-          echo ""
-          echo "=========================================="
-          echo "GROUP ${{ matrix.chunk_range }} SUMMARY"
-          echo "=========================================="
-          echo "Total chunks:    ${#matching_chunks[@]}"
-          echo "Successful:      ${#successful_chunks[@]}"
-          echo "Failed:          ${#failed_chunks[@]}"
-          echo "Total time:      ${minutes}m ${seconds}s"
-          echo "Time completed:  $(date)"
-          echo "=========================================="
-          
-          # List failures if any
-          if [ ${#failed_chunks[@]} -gt 0 ]; then
-            echo ""
-            echo "FAILED CHUNKS:"
-            printf '  ✗ %s\n' "${failed_chunks[@]}"
-            echo ""
-            echo "Check the logs above for error details"
-            exit 1
+          if lake build "Goldbach. FiniteBase.Chunks.$module" 2>&1 | tee "build_${module}. log"; then
+            end_time=$(date +%s)
+            duration=$((end_time - start_time))
+            echo "✓ SUCCESS: $module (${duration}s)"
+            exit 0
           else
-            echo ""
-            echo "✓ All chunks in group ${{ matrix.chunk_range }} built successfully!"
+            end_time=$(date +%s)
+            duration=$((end_time - start_time))
+            echo "✗ FAILED: $module (${duration}s)"
+            exit 1
           fi
       
       - name: Upload build logs
         if: always()
         uses: actions/upload-artifact@v4
         with:  
-          name: build-logs-group-${{ matrix.chunk_range }}
+          name: build-logs-${{ matrix.chunk }}
           path:  Goldbach/FiniteBase/Chunks/build_*.log
           retention-days: 7
       
       - name: Upload build artifacts
         if: success()
         uses: actions/upload-artifact@v4
-        with: 
-          name: build-artifacts-group-${{ matrix.chunk_range }}
-          path: . lake/build/lib/Goldbach/FiniteBase/Chunks/Chunk${{ matrix.chunk_range }}*. olean
+        with:  
+          name: build-artifacts-${{ matrix.chunk }}
+          path: . lake/build/lib/Goldbach/FiniteBase/Chunks/Chunk${{ matrix. chunk }}_verified.olean
           retention-days:  1
 
   # Job 3: Collect results and report overall status
@@ -198,8 +115,8 @@ jobs:
         if: always()
         uses: actions/download-artifact@v4
         with:
-          pattern: build-logs-group-*
-          path: all-logs
+          pattern: build-logs-*
+          path:  all-logs
       
       - name: Analyze results
         if: always()
@@ -217,7 +134,7 @@ jobs:
             failure_count=$(grep -r "✗ FAILED:" all-logs/ 2>/dev/null | wc -l)
             
             echo "Successful builds:  $success_count"
-            echo "Failed builds:     $failure_count"
+            echo "Failed builds: $failure_count"
             echo ""
             
             if [ $failure_count -gt 0 ]; then
@@ -231,7 +148,7 @@ jobs:
           
           if [ "${{ needs.build-chunks.result }}" == "success" ]; then
             echo ""
-            echo "🎉 SUCCESS!  All chunk groups built successfully!"
+            echo "🎉 SUCCESS!  All chunks built successfully!"
             echo ""
             echo "Next steps:"
             echo "  1. All chunks are now compiled"
@@ -240,10 +157,10 @@ jobs:
             exit 0
           else
             echo ""
-            echo "⚠️  Some chunks failed to build"
+            echo "⚠️ Some chunks failed to build"
             echo ""
             echo "Action items:"
-            echo "  1. Check the job logs for failed groups"
+            echo "  1. Check the job logs for failed chunks"
             echo "  2. Review error messages for specific chunks"
             echo "  3. Build logs are available for 7 days"
             exit 1
