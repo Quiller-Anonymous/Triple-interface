@@ -15,6 +15,17 @@ open Goldbach.Compat
 class BankAbsDeviation (X0 H : ℕ) (S ε : ℝ) (M : ℕ → ℝ) : Prop :=
   (bound :
     ∀ {X N}, X0 ≤ X → N ∈ EvenIn X H → |(R N : ℝ) - M N| ≤ ε * S)
+
+/--
+A “bank decomposition witness” expected by `TenorBridge`.  It simply
+packages the absolute-deviation estimate and registers it as an
+instance, matching the arity used elsewhere (`… ε δ M`).
+-/
+structure DecompBounds (X0 H : ℕ) (S ε δ : ℝ) (M : ℕ → ℝ) : Prop where
+  abs : BankAbsDeviation X0 H S ε M
+
+attribute [instance] DecompBounds.abs
+
 /--
 `lower_bound` no longer depends on a specific lemma name.
 It takes `absDeviation` as an argument: any proof that for each
