@@ -14,7 +14,7 @@ Statuses:
 
 Aims to solve:
 1. Goldbach conjecture
--- Current status: finite conditional
+-- Current status: finite conditional?
 
 2. Twin primes conjecture
 -- Current status: leaf conditional (analytic engine builds, but depends on unconditional Goldbach + one major arc axiom + axioms for proofs existing in literature)
