@@ -1,19 +1,169 @@
-name: Lean Action CI
+name: Build Chunks (Parallel)
 
 on:
   push:
+    paths:
+      - 'Goldbach/FiniteBase/Chunks/**'
+      - '. github/workflows/build_chunks_parallel.yml'
   pull_request:
+    paths:
+      - 'Goldbach/FiniteBase/Chunks/**'
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  # Step 1: Discover all chunk files and create build matrix
+  discover-chunks:
+    runs-on:  ubuntu-latest
+    outputs: 
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      total_chunks: ${{ steps.set-matrix.outputs.total_chunks }}
+      total_groups: ${{ steps.set-matrix.outputs.total_groups }}
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Discover and group chunk files
+        id: set-matrix
+        run:  |
+          cd Goldbach/FiniteBase/Chunks
+          
+          # Get all chunk files, sorted
+          mapfile -t all_chunks < <(ls -1 Chunk*_verified.lean | sort)
+          total_chunks=${#all_chunks[@]}
+          echo "Found $total_chunks chunk files"
+          
+          # Calculate chunks per group (aim for 40 groups to use all Pro concurrent jobs)
+          num_groups=40
+          chunks_per_group=$(( (total_chunks + num_groups - 1) / num_groups ))
+          
+          echo "Will create $num_groups groups with ~$chunks_per_group chunks each"
+          
+          # Create groups as JSON array
+          groups="["
+          for group_idx in $(seq 0 $((num_groups - 1))); do
+            start_idx=$((group_idx * chunks_per_group))
+            end_idx=$((start_idx + chunks_per_group - 1))
+            
+            # Don't go past the end
+            if [ $end_idx -ge $total_chunks ]; then
+              end_idx=$((total_chunks - 1))
+            fi
+            
+            # Only create group if start_idx is valid
+            if [ $start_idx -lt $total_chunks ]; then
+              if [ $group_idx -gt 0 ]; then
+                groups="$groups,"
+              fi
+              groups="$groups{\"id\":$group_idx,\"start\":$start_idx,\"end\":$end_idx}"
+            fi
+          done
+          groups="$groups]"
+          
+          echo "matrix=$groups" >> $GITHUB_OUTPUT
+          echo "total_chunks=$total_chunks" >> $GITHUB_OUTPUT
+          echo "total_groups=$(echo "$groups" | jq '. | length')" >> $GITHUB_OUTPUT
+          
+          echo "Matrix: $groups"
+
+  # Step 2: Build chunks in parallel (40 jobs at once on Pro)
+  build-chunk-groups:
+    needs: discover-chunks
+    runs-on:  ubuntu-latest
+    timeout-minutes: 360  # 6 hour timeout per group
+    strategy:
+      matrix: 
+        group: ${{ fromJson(needs. discover-chunks.outputs.matrix) }}
+      max-parallel: 40  # Use all Pro concurrent jobs
+      fail-fast: false  # Keep going even if some groups fail
+    
+    steps: 
+      - uses: actions/checkout@v4
+      
       - name: Set up Lean
         uses: leanprover/lean-action@v1
-      - name: Fetch dependencies
+      
+      - name:  Fetch dependencies
         run: lake update
-      - name: Build
-        run: lake build
+      
+      - name: Build chunk group ${{ matrix.group. id }}
+        run: |
+          cd Goldbach/FiniteBase/Chunks
+          
+          # Get the chunk files for this group
+          mapfile -t all_chunks < <(ls -1 Chunk*_verified.lean | sort)
+          
+          start=${{ matrix.group.start }}
+          end=${{ matrix.group.end }}
+          
+          echo "Building chunks from index $start to $end"
+          echo "First file: ${all_chunks[$start]}"
+          echo "Last file: ${all_chunks[$end]}"
+          
+          # Build each chunk in this group
+          failed_chunks=()
+          for idx in $(seq $start $end); do
+            chunk_file="${all_chunks[$idx]}"
+            if [ -n "$chunk_file" ]; then
+              # Extract module name (remove .lean extension)
+              module_name=$(basename "$chunk_file" .lean)
+              
+              echo ""
+              echo "=========================================="
+              echo "Building:  Goldbach. FiniteBase.Chunks.$module_name"
+              echo "File: $chunk_file ($(($idx + 1))/${#all_chunks[@]})"
+              echo "=========================================="
+              
+              if lake build "Goldbach.FiniteBase.Chunks.$module_name"; then
+                echo "✓ Success:  $module_name"
+              else
+                echo "✗ Failed: $module_name"
+                failed_chunks+=("$module_name")
+              fi
+            fi
+          done
+          
+          # Report failures
+          if [ ${#failed_chunks[@]} -gt 0 ]; then
+            echo ""
+            echo "=========================================="
+            echo "FAILED CHUNKS IN GROUP ${{ matrix.group.id }}:"
+            printf '%s\n' "${failed_chunks[@]}"
+            echo "=========================================="
+            exit 1
+          else
+            echo ""
+            echo "=========================================="
+            echo "✓ All chunks in group ${{ matrix.group.id }} built successfully!"
+            echo "=========================================="
+          fi
+      
+      - name: Upload build artifacts for this group
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-group-${{ matrix.group.id }}
+          path: . lake/build/lib/Goldbach/FiniteBase/Chunks/
+          retention-days: 1
+
+  # Step 3: Summary job to report overall status
+  build-summary:
+    needs: [discover-chunks, build-chunk-groups]
+    runs-on:  ubuntu-latest
+    if: always()
+    steps:
+      - name: Report build summary
+        run: |
+          echo "=========================================="
+          echo "BUILD SUMMARY"
+          echo "=========================================="
+          echo "Total chunks:  ${{ needs.discover-chunks. outputs.total_chunks }}"
+          echo "Total groups: ${{ needs.discover-chunks.outputs. total_groups }}"
+          echo "Status: ${{ needs.build-chunk-groups.result }}"
+          echo "=========================================="
+          
+          if [ "${{ needs.build-chunk-groups.result }}" != "success" ]; then
+            echo "⚠️  Some chunk groups failed to build"
+            echo "Check the individual group logs above for details"
+            exit 1
+          else
+            echo "✓ All chunk groups built successfully!"
+          fi
