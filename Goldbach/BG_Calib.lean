@@ -219,6 +219,91 @@ lemma ppMidband_bound
   unfold ppMidbandCount C_pp
   exact le_rfl
 
+/-- Cardinality of the midband: all offsets with `H < |k| ≤ U` inside `[-U,U]`. -/
+lemma card_midband {H U : ℕ} (hHU : H ≤ U) :
+    (midband H U).card = 2 * (U - H) := by
+  classical
+  -- partition of the full band into `|k| ≤ H` and its complement
+  have hpart := Finset.filter_card_add_filter_neg_card_eq_card
+    (s := Finset.Icc (-(U : ℤ)) (U : ℤ))
+    (p := fun k => (H : ℤ) < |k|)
+  -- card of full band
+  have hcard_full : (Finset.Icc (-(U : ℤ)) (U : ℤ)).card = 2 * U + 1 := by
+    simpa using (Finset.card_Icc (a := (-(U : ℤ))) (b := (U : ℤ)))
+  -- identify the inner part `|k| ≤ H` with `S_BG H`
+  have hinner :
+      (Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun k => |k| ≤ (H : ℤ))
+        = BG_Identity.S_BG := by
+    ext k
+    constructor
+    · intro hk
+      rcases Finset.mem_filter.mp hk with ⟨hkU, hkH⟩
+      -- from |k| ≤ H we get -(H:ℤ) ≤ k ≤ H
+      have hkneg : (-(H : ℤ)) ≤ k := by
+        have : |k| = Int.natAbs k := rfl
+        have habs : (|k| : ℤ) = Int.natAbs k := rfl
+        have hk' : k ≥ -(H : ℤ) := by
+          have : (-(H : ℤ)) ≤ k := by
+            have hkabs := hkH
+            have : (H : ℤ) ≥ |k| := hkH
+            have : - (H : ℤ) ≤ k := by
+              have := Int.neg_le.mpr (abs_nonneg k)
+              linarith
+            exact this
+          exact this
+        have hkpos : k ≤ (H : ℤ) := by
+          have : |k| ≤ (H : ℤ) := hkH
+          have : k ≤ (H : ℤ) := by
+            have := neg_abs_le k
+            linarith
+          exact this
+        have hkU' : -(H : ℤ) ≤ k ∧ k ≤ (H : ℤ) := ⟨hkneg, hkpos⟩
+        simpa [BG_Identity.S_BG] using hkU'
+      -- the previous block already produced membership
+      simpa [BG_Identity.S_BG] using hkneg
+    · intro hk
+      -- k ∈ [-H,H] implies |k| ≤ H and also k ∈ [-U,U] by H ≤ U
+      have hk' : -(H : ℤ) ≤ k ∧ k ≤ (H : ℤ) := by
+        simpa [BG_Identity.S_BG] using hk
+      have hkH : |k| ≤ (H : ℤ) := by
+        have hkpos := hk'.2
+        have hkneg := hk'.1
+        have habs : |k| = max k (-k) := rfl
+        have : |k| ≤ (H : ℤ) := by
+          have hkpos' : k ≤ (H : ℤ) := hkpos
+          have hkneg' : -k ≤ (H : ℤ) := by linarith
+          have hmax : max k (-k) ≤ (H : ℤ) := by
+            have hkpos'' : max k (-k) ≤ (H : ℤ) := by
+              have h1 : k ≤ (H : ℤ) := hkpos'
+              have h2 : -k ≤ (H : ℤ) := hkneg'
+              have := max_le_iff.mpr ⟨h1, h2⟩
+              exact this
+            exact hkpos''
+          simpa using hmax
+        simpa using this
+      have hkU : k ∈ Finset.Icc (-(U : ℤ)) (U : ℤ) := by
+        have hknegU : (-(U : ℤ)) ≤ k := by linarith
+        have hkposU : k ≤ (U : ℤ) := by linarith
+        exact Finset.mem_Icc.mpr ⟨hknegU, hkposU⟩
+      exact Finset.mem_filter.mpr ⟨hkU, hkH⟩
+  -- card of inner part
+  have hcard_inner :
+      ((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun k => |k| ≤ (H : ℤ))).card
+        = 2 * H + 1 := by
+    simpa [hinner, BG_Identity.card_S_BG] 
+  -- now convert the partition identity
+  have hmid :
+      (midband H U).card
+        + ((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun k => |k| ≤ (H : ℤ))).card
+        = (Finset.Icc (-(U : ℤ)) (U : ℤ)).card := by
+    simpa [midband, Finset.filter_neg_eq_filter_not] using hpart.symm
+  -- rearrange to isolate the midband count
+  have : (midband H U).card = (2 * U + 1) - (2 * H + 1) := by
+    have := congrArg Nat.cast hmid
+    nlinarith
+  -- simple algebra: (2U+1) - (2H+1) = 2*(U-H)
+  nlinarith
+
 /-- A uniform upper bound for the singular series on the working window.  -/
 class SigmaUpperOnWindow where
   Cσ : ℝ
