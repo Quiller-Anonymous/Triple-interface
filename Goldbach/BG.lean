@@ -28,12 +28,12 @@ open Real
 open BigOperators
 open Classical
 
-/-- BG caps assembled from the two finitary bounds (currently 0,0). -/
+/-- BG caps assembled from the two finitary bounds. -/
 noncomputable def caps : BG_Calib.Caps :=
 { kernel_l1_cap     := kernel_l1_cap
-, payload_linf_cap  := payload_linf_cap
+, payload_cap       := payload_cap
 , kernel_l1_nonneg  := kernel_l1_nonneg
-, payload_linf_nonneg := payload_linf_nonneg }
+, payload_nonneg    := payload_nonneg }
 
 /-- The BG off-channel error term. -/
 noncomputable def E_off (X N : ℕ) : ℝ :=
@@ -41,7 +41,7 @@ noncomputable def E_off (X N : ℕ) : ℝ :=
 
 /-- Window bound in the exact shape Calib proves. -/
 lemma err_off_bound {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-  |E_off X N| ≤ BG_Calib.δ_off caps :=
+  |E_off X N| ≤ BG_Calib.δ_off caps N :=
   BG_Calib.err_off_bound (C:=caps) (S:=S_BG) (K_BG:=K_BG) (P_BG:=P_BG) hX hN
 
 /-!

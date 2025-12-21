@@ -10,6 +10,8 @@ import Goldbach.Analytic.MajorBoundFromSigma
 import Goldbach.Analytic.NumericSigma
 import Goldbach.BankPieces.DecompFromBound
 import Goldbach.BankPieces.Bounds.Working
+import Goldbach.BankPieces.Bounds.FromCertificate
+import Goldbach.BankPieces.Cert.Working
 
 /-
 Canonical analytic inputs: a main term, a major bound (axiomatized),
@@ -36,56 +38,15 @@ by
   refine major_of_sigma_lower_S1 (A:=SigmaLowerOn_working) (c0:=0.05) (two_le_of_mem:=?_) (hc0:=hc0)
   intro X N hX hN; exact two_le_of_window hX hN
 
-/- Concrete bank decomposition witness: replace the placeholders below with your
-   actual analytic components and bounds, then delete the admits. -/
-namespace BankWitness
-
-open Goldbach.BankPieces
-
--- PLACEHOLDER: your analytic components for the bank error decomposition.
-def AOcomp : ℕ → ℝ := fun _ => 0  -- TODO: replace
-def BGcomp : ℕ → ℝ := fun _ => 0  -- TODO: replace
-
--- PLACEHOLDER: proof that R - M = AO + BG on the working window.
-theorem hDecomp :
-  ∀ {X N}, Goldbach.Analytic.X0 ≤ X → N ∈ Windows.EvenIn X Goldbach.Analytic.H →
-    (R N : ℝ) - mainTermHL N = AOcomp N + BGcomp N := by
-  -- TODO: supply your decomposition lemma
-  intro X N hX hN; admit
-
--- PLACEHOLDER: bound on AOcomp.
-theorem hAO :
-  ∀ {X N}, Goldbach.Analytic.X0 ≤ X → N ∈ Windows.EvenIn X Goldbach.Analytic.H →
-    |AOcomp N| ≤ (0.005 : ℝ) := by
-  -- TODO: supply your AO bound
-  intro X N hX hN; admit
-
--- PLACEHOLDER: bound on BGcomp.
-theorem hBG :
-  ∀ {X N}, Goldbach.Analytic.X0 ≤ X → N ∈ Windows.EvenIn X Goldbach.Analytic.H →
-    |BGcomp N| ≤ (0.005 : ℝ) := by
-  -- TODO: supply your BG bound
-  intro X N hX hN; admit
-
--- Derived pointwise 1% bound on R - M over the working window.
-theorem bound_working :
-  ∀ {X N}, Goldbach.Analytic.X0 ≤ X → N ∈ Windows.EvenIn X Goldbach.Analytic.H →
-    |(R N : ℝ) - mainTermHL N| ≤ (0.01 : ℝ) * (1 : ℝ) :=
-  Goldbach.BankPieces.Working.bound_working AOcomp BGcomp hDecomp hAO hBG
-
--- Concrete DecompBounds instance expected by TenorBridge.
+/-- Concrete bank decomposition witness from the certified 1% bound. -/
 noncomputable def decomp_canonical :
-  Goldbach.BankPieces.DecompBounds Goldbach.Analytic.X0 Goldbach.Analytic.H (1 : ℝ) (0.01 : ℝ) 0
-    mainTermHL :=
-  Goldbach.BankPieces.decomp_of_bound (X0:=Goldbach.Analytic.X0) (H:=Goldbach.Analytic.H)
-    (S:=1) (ε:=0.01) (δ:=0) (M:=mainTermHL)
-    (h:=by intro X N hX hN; simpa using bound_working (X:=X) (N:=N) hX hN)
-
-end BankWitness
+  Goldbach.BankPieces.DecompBounds X0 H (1 : ℝ) (0.01 : ℝ) 0 mainTermHL :=
+  Goldbach.BankPieces.FromCertificate.decomp_canonical_from_cert
+    (bank_cert_bound := Goldbach.BankPieces.Cert.Working.bank_cert_bound)
 
 -- Register the bank witness so the corresponding BankAbsDeviation instance is available.
 instance : Goldbach.BankPieces.DecompBounds (10^6) (10^4) (1.0) (0.01) 0 mainTermHL :=
-  BankWitness.decomp_canonical
+  decomp_canonical
 
 /-- Analytic hypothesis at the canonical scales, built from the (axiomatized) inputs. -/
 noncomputable def analyticHypCanonical :

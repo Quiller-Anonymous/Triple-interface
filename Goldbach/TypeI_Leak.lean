@@ -20,11 +20,14 @@ open Goldbach.BG_Tenor
 /-- Type–I envelope (current placeholder) is 0. -/
 def δTI (X : ℕ) : ℝ := 0
 
-/-- Proven windowwise bound for Type–I channel (trivial with δTI=0). -/
+/-- Proven windowwise bound for Type–I channel (trivial with δTI=0).
+    We use the canonical cutoff `U = H` in `BG_Identity.errTI`. -/
 theorem errTI_bound :
-  ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H → |errTI X N| ≤ δTI X := by
+  ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+    |BG_Identity.errTI H X N| ≤ δTI X := by
   intro X N _hX _hN
-  have h0 : |errTI X N| = 0 := by simp [errTI]
+  have h0 : |BG_Identity.errTI H X N| = 0 := by
+    simp [BG_Identity.errTI, BG_Identity.outerBand]
   simpa [δTI] using (le_of_eq h0)
 
 /-- Calibration for Type–I (trivial with δTI=0). -/

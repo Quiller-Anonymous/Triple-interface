@@ -13,11 +13,11 @@ namespace BankPieces
 
 open Goldbach
 
-/-- General constructor: if you can prove `|(R N) - M N| ≤ ε * S` on the window,
-    you obtain `DecompBounds` (δ is currently unused). -/
+/-- General constructor from a proved pointwise absolute deviation. -/
 def decomp_of_bound
-  {X0 H : ℕ} {S ε δ : ℝ} {M : ℕ → ℝ}
-  (h : ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H → |(R N : ℝ) - M N| ≤ ε * S) :
+  {X0 H : ℕ} {S ε : ℝ} {δ : ℝ} {M : ℕ → ℝ}
+  (h : ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
+        |(R N : ℝ) - M N| ≤ ε * S) :
   DecompBounds X0 H S ε δ M :=
 { abs := { bound := by intro X N hX hN; exact h hX hN } }
 
