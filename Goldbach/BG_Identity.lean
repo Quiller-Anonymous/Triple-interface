@@ -280,6 +280,26 @@ lemma ppInnerCount_window_le
   have h := ppInnerCount_le_twoHplus1 (H:=BankParams.H) (N:=N)
   exact_mod_cast h
 
+/-- Prime-power contamination count on the canonical window is bounded by `Cpp_canon`. -/
+lemma ppContam_le_canon {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    (ppInnerCount H N : ℝ) ≤ BG_Calib.Cpp_canon := by
+  -- from window membership, N ≥ X ≥ X0
+  have hNX : X ≤ N := by
+    rcases Finset.mem_filter.mp hN with ⟨hwin, _heven⟩
+    rcases Finset.mem_image.mp hwin with ⟨k, hk_range, hk_eq⟩
+    have hk_nonneg : 0 ≤ k := Nat.zero_le _
+    have hk_le : k ≤ H := by
+      have : k < H + 1 := Finset.mem_range.mp hk_range
+      linarith
+    have : (X : ℤ) + k = N := by exact_mod_cast hk_eq
+    nlinarith
+  have hN_ge_X0 : X0 ≤ N := le_trans hX hNX
+  -- use the proved 16-bound and compare to the chosen Cpp_canon = 20
+  have hpp16 : ppInnerCount H N ≤ 16 := ppInnerCount_le_16 (N:=N) hN_ge_X0
+  have hcpp : (16 : ℝ) ≤ BG_Calib.Cpp_canon := by norm_num [BG_Calib.Cpp_canon]
+  have := le_trans (by exact_mod_cast hpp16) hcpp
+  simpa using this
+
 /-- Type-I tail: sum of payload×full kernel over the outer band `H < |k| ≤ U`. -/
 noncomputable def errTI (X N : ℕ) : ℝ :=
   ∑ k in outerBand, P_BG X N k * K_full k
