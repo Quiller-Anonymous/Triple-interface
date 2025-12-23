@@ -1078,6 +1078,22 @@ lemma bank_decomp :
     _ = errTI X N + errBG X N := by
       simp [errBG, errTI]
 
+/-- Decompose the full convolution into the in-window part plus the tail. -/
+lemma conv_full_eq_conv_ref_add_tail {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    conv_full X N = conv_ref X N + errTI X N := by
+  have hdecomp := bank_decomp (X:=X) (N:=N) hX hN
+  have herrbg : errBG X N = 0 := rfl
+  have : conv_full X N - conv_ref X N = errTI X N := by
+    nlinarith [hdecomp, herrbg]
+  nlinarith
+
+/-- On the window, rewrite `R - conv_full` in terms of the in-window gap and the tail. -/
+lemma R_minus_conv_full {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    (Goldbach.Rep.R N : ℝ) - conv_full X N
+      = (Goldbach.Rep.R N : ℝ) - conv_ref X N - errTI X N := by
+  have hcf := conv_full_eq_conv_ref_add_tail (X:=X) (N:=N) hX hN
+  nlinarith
+
 /-- Full-bank projector using the Λ/log payload (Route A). -/
 noncomputable def conv_full_divlog (U X N : ℕ) : ℝ :=
   ∑ k in (Finset.Icc (-(U:ℤ)) (U:ℤ)),
