@@ -8,8 +8,6 @@ namespace Goldbach.BG_Bank
 open Real
 open scoped BigOperators
 
-set_option diagnostics true
-
 -- If these are not already present in this file, keep them here.
 noncomputable def Λ (n : ℕ) : ℝ := if Nat.Prime n then Real.log n else 0
 noncomputable def wX (_X n : ℕ) : ℝ := 1

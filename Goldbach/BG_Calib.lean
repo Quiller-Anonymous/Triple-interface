@@ -461,4 +461,21 @@ lemma tail_budget
     nlinarith
   linarith
 
+/-- Canonical constants for the analytic calibration on the Goldbach window. -/
+noncomputable def δAO_canon  : ℝ := 39 / 10000          -- 0.0039
+noncomputable def Mswap_canon : ℝ := 1 / 500             -- 0.002
+noncomputable def Cpp_canon   : ℝ := 20
+noncomputable def δTI_canon   : ℝ := 1 / 10000           -- 0.0001
+
+/-- Inner-band bridge budget with the chosen `Mswap` and `C_pp`. -/
+noncomputable def δbridge_canon : ℝ :=
+  ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon + Cpp_canon / (BG_Identity.Ucut : ℝ)
+
+/-- δ_bridge + δ_TI + δ_AO comfortably below 1%. -/
+lemma budget_ok_on_window :
+    δbridge_canon + δTI_canon + δAO_canon ≤ (1 : ℝ) / 100 := by
+  -- evaluate the rationals explicitly
+  norm_num [δbridge_canon, δTI_canon, δAO_canon, Mswap_canon, Cpp_canon,
+    BG_Identity.Ucut, H, X0]
+
 end Goldbach.BG_Calib

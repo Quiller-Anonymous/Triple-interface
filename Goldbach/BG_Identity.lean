@@ -999,6 +999,11 @@ lemma bankOp_full_minus_ref_bound :
   have htail := errTI_bound_closed (X:=X) (N:=N) hX hN
   simpa [hrewrite] using htail
 
+/-- Canonical wrapper: tail gap on the Goldbach window. -/
+lemma tail_gap_canonical {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    |conv_full X N - conv_ref X N| ≤ payload_cap N * C_tail_closed :=
+  bankOp_full_minus_ref_bound (X:=X) (N:=N) hX hN
+
 /-- The inner band of the full tent coincides with `S_BG` (since `H ≤ Ucut`). -/
 lemma innerBand_eq_SBG : innerBand = S_BG := by
   apply Finset.ext
