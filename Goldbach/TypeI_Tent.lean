@@ -16,6 +16,8 @@ import Mathlib
 open scoped BigOperators
 open Finset
 
+noncomputable section
+
 namespace Goldbach.TypeI_Tent
 
 /-- Finite cutoff as a fixed multiple of `H` (we take 4·H). -/
@@ -37,22 +39,20 @@ def isInner (H : ℕ) (k : ℤ) : Bool :=
   decide (Int.natAbs k ≤ H)
 
 /-- A fat triangular tent supported on `|k| ≤ U`, decaying linearly to 0 at |k|=U. -/
-def tentRef (H : ℕ) (k : ℤ) : ℝ :=
+noncomputable def tentRef (H : ℕ) (k : ℤ) : ℝ :=
   let U : ℝ := (Ucut H : ℝ)
   let x : ℝ := (Int.natAbs k : ℝ)
   max 0 (1 - x / U)
 
 /-- Type-I tail: sum of payload×tent over the outer band `H < |k| ≤ U`. -/
-def errTI (P : ℕ → ℕ → ℤ → ℝ) (H X N : ℕ) : ℝ :=
-  let U := Uℤ H
-  ∑ k in (Finset.Icc (-U) U).filter (fun k => isTail H k),
-    P X N k * tentRef H k
+noncomputable def errTI (P : ℕ → ℕ → ℤ → ℝ) (H X N : ℕ) : ℝ :=
+  let band : Finset ℤ := Finset.Icc (-(Uℤ H)) (Uℤ H)
+  Finset.sum (band.filter fun k => isTail H k) (fun k => P X N k * tentRef H k)
 
 /-- In-window contribution (reference tent) over `|k| ≤ H`. -/
-def innerRef (P : ℕ → ℕ → ℤ → ℝ) (H X N : ℕ) : ℝ :=
-  let U := Uℤ H
-  ∑ k in (Finset.Icc (-U) U).filter (fun k => isInner H k),
-    P X N k * tentRef H k
+noncomputable def innerRef (P : ℕ → ℕ → ℤ → ℝ) (H X N : ℕ) : ℝ :=
+  let band : Finset ℤ := Finset.Icc (-(Uℤ H)) (Uℤ H)
+  Finset.sum (band.filter fun k => isInner H k) (fun k => P X N k * tentRef H k)
 
 /-- Simple arithmetic: for positive `H`, the cutoff exceeds `H`. -/
 lemma U_gt_H {H : ℕ} (hH : 0 < H) : (H : ℤ) < Uℤ H := by
@@ -60,7 +60,7 @@ lemma U_gt_H {H : ℕ} (hH : 0 < H) : (H : ℤ) < Uℤ H := by
     calc
       H < 4 * H := by nlinarith
       _ = Ucut H := rfl
+  simp only [Uℤ]
   exact_mod_cast this
 
 end Goldbach.TypeI_Tent
-

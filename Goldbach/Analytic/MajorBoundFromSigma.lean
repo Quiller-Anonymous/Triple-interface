@@ -4,10 +4,7 @@
 
   No axioms/sorries: you supply the σ-lower bound for your working window.
 -/
-import Mathlib.Analysis.SpecialFunctions.Log
-import Mathlib.Data.Nat.Parity
-import Mathlib.Data.Real.Basic
-import Mathlib.Algebra.BigOperators.Basic
+import Mathlib
 
 import Goldbach.SingularSeries   -- sigma, C2Const
 import Goldbach.MainTerm         -- M

@@ -206,90 +206,55 @@ lemma payload_bound_window
         else 0)|
   ≤ (Real.log ((N:ℝ) + 1))^2 := by
     let S := Finset.filter (fun n : ℕ => (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k) (Finset.Icc 2 (N - 2))
-    have h_sum_S :
-        Finset.sum (Finset.Icc 2 (N - 2))
-          (fun n =>
-            if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
-            then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
-            else 0)
-        = Finset.sum S
-            (fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))) := by
-      classical
-      -- `sum_filter` moves the indicator into a filtered domain.
-      have := (Finset.sum_filter
-        (s := Finset.Icc 2 (N - 2))
-        (p := fun n : ℕ => (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k)
-        (f := fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))))
-      -- `sum_filter` is oriented the other way, so take its symmetry.
-      simpa [S] using this.symm
-    have :
-      |Finset.sum S (fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n)))|
-        ≤ (Real.log ((N:ℝ) + 1))^2 := by
-      classical
-      calc
-        |Finset.sum S (fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n)))|
-            ≤ Finset.sum S
-                (fun n => |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|) := by
-              simpa using
-                (Finset.abs_sum_le_sum_abs
-                  (s := S)
-                  (f := fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))))
-        _ ≤ Finset.sum S (fun _ => (Real.log ((N:ℝ) + 1))^2) := by
-              apply Finset.sum_le_sum
-              intro n hn
-              have hn' : n ∈ Finset.Icc 2 (N - 2) := (Finset.mem_filter.mp hn).1
-              have hcond : ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k ) := (Finset.mem_filter.mp hn).2
-              have hterm' :
-                  |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|
-                    ≤ (Real.log ((N:ℝ) + 1))^2 := by
-                simpa [hcond] using (hterm n hn')
-              simpa using hterm'
-        _ ≤ S.card • (Real.log ((N:ℝ) + 1))^2 := by
-              apply Finset.sum_le_card_nsmul
-              intro n hn
-              have hn' : n ∈ Finset.Icc 2 (N - 2) := (Finset.mem_filter.mp hn).1
-              have hcond : ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k ) := (Finset.mem_filter.mp hn).2
-              have hterm' :
-                  |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|
-                    ≤ (Real.log ((N:ℝ) + 1))^2 := by
-                simpa [hcond] using (hterm n hn')
-              simpa using hterm'
-        _ ≤ 1 • (Real.log ((N:ℝ) + 1))^2 := by
-              have hcard_nat : S.card ≤ 1 := by
-                simpa [S] using card_filter_offset_le_one N k
-              have hcard : (S.card : ℝ) ≤ 1 := by exact_mod_cast hcard_nat
-              have hlog : 0 ≤ (Real.log ((N:ℝ) + 1))^2 := sq_nonneg _
-              -- use monotonicity of multiplication by a nonnegative constant
-              have := mul_le_mul_of_nonneg_right hcard hlog
-              simpa [nsmul_eq_mul, one_mul] using this
-        _ = (Real.log ((N:ℝ) + 1))^2 := one_nsmul _
-    -- replace original sum with the filtered version, then apply the bound above
-    simpa [h_sum_S] using this
+    have h_sum_S : ∑ n in Finset.Icc 2 (N - 2), if (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k then wX X n * Λ n * (wX X (N - n) * Λ (N - n)) else 0
+      = ∑ n in S, (wX X n * Λ n * (wX X (N - n) * Λ (N - n))) := by
+        exact Finset.sum_if_eq_sum_filter
+    rw [h_sum_S]
+    calc
+      |∑ n in S, wX X n * Λ n * (wX X (N - n) * Λ (N - n))|
+        ≤ ∑ n in S, |wX X n * Λ n * (wX X (N - n) * Λ (N - n))| := Finset.abs_sum_le_sum_abs _ _
+      _ ≤ ∑ n in S, (Real.log ((N:ℝ) + 1))^2 := by
+          apply Finset.sum_le_sum
+          intro n hn
+          simp only [Finset.mem_filter] at hn
+          have hcond : ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k ) := hn.2
+          rw [if_pos hcond]
+          exact hterm n hn.1
+      _ ≤ S.card • (Real.log ((N:ℝ) + 1))^2 := by
+          apply Finset.sum_le_card_nsmul
+          intro n hn
+          simp only [Finset.mem_filter] at hn
+          have hcond : ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k ) := hn.2
+          rw [if_pos hcond]
+          exact hterm n hn.1
+      _ ≤ 1 • (Real.log ((N:ℝ) + 1))^2 := by
+          apply nsmul_le_nsmul_of_nonneg_right
+          · exact card_filter_offset_le_one N k
+          · exact sq_nonneg _
+      _ = (Real.log ((N:ℝ) + 1))^2 := one_nsmul _
 
   -- Put everything together: factor 1/(log X)^2 out of the absolute value
   unfold P_BG payload_cap
   calc
     |(1 / (Real.log (X:ℝ))^2) *
-      Finset.sum (Finset.Icc 2 (N - 2))
-        (fun n =>
-          if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+      ∑ n in Finset.Icc 2 (N - 2),
+        (if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
           then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
           else 0)|
         = |1 / (Real.log (X:ℝ))^2| *
-          |Finset.sum (Finset.Icc 2 (N - 2))
-             (fun n =>
-               if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
-               then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
-               else 0)| := by simpa [abs_mul]
+          |∑ n in Finset.Icc 2 (N - 2),
+             (if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+              then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+              else 0)| := by simpa [abs_mul]
     _ = (1 / (Real.log (X:ℝ))^2) *
-          |Finset.sum (Finset.Icc 2 (N - 2))
-             (fun n =>
-               if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
-               then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
-               else 0)| := by simpa [hlogXabs]
+          |∑ n in Finset.Icc 2 (N - 2),
+             (if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+              then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+              else 0)| := by simpa [hlogXabs]
     _ ≤ (1 / (Real.log (X:ℝ))^2) * (Real.log ((N:ℝ) + 1))^2 :=
           mul_le_mul_of_nonneg_left hsum hlogXNN
     _ = (Real.log ((N:ℝ) + 1))^2 / (Real.log (X:ℝ))^2 := by
           field_simp [one_div, mul_comm, mul_left_comm, mul_assoc, pow_two]
+  exact this
 
 end Goldbach.BG_Bank

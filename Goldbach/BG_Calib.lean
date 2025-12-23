@@ -31,6 +31,7 @@ import Goldbach.BG_Identity
 import Goldbach.MainTerm
 import Goldbach.Rep
 import Goldbach.AO_Major
+import Goldbach.AO_AssembleEnvelope
 
 namespace Goldbach.BG_Calib
 
@@ -298,6 +299,110 @@ lemma conv_ref_const_gap_abs_eq_errAO
     = |Goldbach.AO_Major.errAO X N| := by
   have h := conv_ref_const_gap_eq_errAO (X:=X) (N:=N) hX hN
   simpa [h]
+
+/-- Pointwise bound on the constant reference payload on the window. -/
+lemma pref_bound_on_window
+    [SigmaUpperOnWindow] {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H)
+    {k : ℤ} (hk : k ∈ BG_Identity.S_BG) :
+    |BG_Identity.Pref X N k| ≤ SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
+  classical
+  -- on `S_BG` the `if` branch fires and weight_mass = 1
+  have hmass_pos : 0 < BG_Identity.mass_BG := BG_Identity.mass_BG_pos
+  have hσ : |AO_Major.sigma N| ≤ SigmaUpperOnWindow.Cσ :=
+    SigmaUpperOnWindow.sigma_even_ub_on_window (X:=X) (N:=N) hX hN
+  have hmass_nonneg : 0 ≤ BG_Identity.mass_BG := le_of_lt hmass_pos
+  have hrewrite :
+      |BG_Identity.Pref X N k|
+        = |AO_Major.sigma N| / BG_Identity.mass_BG := by
+    simp [BG_Identity.Pref, hk, AO_Major.weight_mass, abs_div,
+      abs_of_pos hmass_pos, abs_mul]
+  -- divide the σ-bound by the positive mass
+  have hdiv : |AO_Major.sigma N| / BG_Identity.mass_BG
+      ≤ SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
+    have := div_le_div_of_nonneg_right hσ hmass_nonneg
+    simpa using this
+  simpa [hrewrite] using hdiv
+
+/-- Inner swap + AO envelope: bound the gap between `conv_ref` and `Mcanon`
+    using (i) payload cap, (ii) σ upper bound, (iii) the AO error envelope. -/
+lemma ref_to_M_bound
+    (C : AO_AssembleEnvelope.Channels) (K : AO_AssembleEnvelope.Caps)
+    [AO_AssembleEnvelope.Decomposition C] [AO_AssembleEnvelope.Bounds C K]
+    [SigmaUpperOnWindow]
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    |BG_Identity.conv_ref X N - AO_Major.Mcanon N|
+      ≤ AO_ErrorEnvelope.δAO K
+        + ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
+            (Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
+  classical
+  -- AO envelope on the constant reference
+  have hAO : |BG_Identity.conv_ref_const X N - AO_Major.Mcanon N| ≤ AO_ErrorEnvelope.δAO K := by
+    have herr := AO_ErrorEnvelope.errAO_bound (C:=C) (K:=K) (X:=X) (N:=N) hX hN
+    have hgap := conv_ref_const_gap_abs_eq_errAO (X:=X) (N:=N) hX hN
+    have hgap' : |BG_Identity.conv_ref_const X N - AO_Major.Mcanon N|
+        = |AO_Major.errAO X N| := by
+      -- symmetry of absolute value
+      simpa [abs_sub_comm] using hgap
+    linarith
+  -- swap bound on the inner band (conv_ref vs const)
+  have hM :
+      ∀ {k : ℤ}, k ∈ BG_Identity.S_BG →
+        |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
+          ≤ Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
+    intro k hk
+    have hP :=
+      Goldbach.BG_Bank.payload_bound (X:=X) (N:=N) hX hN (k:=k) hk
+    have hQ := pref_bound_on_window (X:=X) (N:=N) hX hN hk
+    -- |a-b| ≤ |a| + |b|
+    have htriangle : |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
+        ≤ |Goldbach.BG_Bank.P_BG X N k| + |BG_Identity.Pref X N k| := by
+      have := abs_add (Goldbach.BG_Bank.P_BG X N k) (- BG_Identity.Pref X N k)
+      simpa [sub_eq_add_neg, abs_neg, add_comm] using this
+    have := add_le_add hP hQ
+    exact htriangle.trans this
+  have hswap :
+      |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+        ≤ (Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+            * ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
+    -- expand conv_ref / conv_ref_const difference into a single sum
+    have hsum :
+        BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N
+          = ∑ k in BG_Identity.S_BG,
+              BG_Identity.K_full k *
+                (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k) := by
+      unfold BG_Identity.conv_ref BG_Identity.conv_ref_const
+      ring
+    -- apply the swap bound
+    have hswap' := BG_Identity.swap_bound_linf_l1
+      (P:=fun k => Goldbach.BG_Bank.P_BG X N k)
+      (Q:=fun k => BG_Identity.Pref X N k)
+      (M:=Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+      (hM:=by intro k hk; exact hM hk)
+    have hswap'' :
+        |∑ k in BG_Identity.S_BG, BG_Identity.K_full k *
+            (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k)|
+          ≤ (Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+              * ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
+      simpa using hswap'
+    simpa [hsum, mul_comm, mul_left_comm, mul_assoc] using hswap''
+  -- final triangle: |ref - M| ≤ |ref - ref_const| + |ref_const - M|
+  have htriangle :
+      |BG_Identity.conv_ref X N - AO_Major.Mcanon N|
+        ≤ |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+          + |BG_Identity.conv_ref_const X N - AO_Major.Mcanon N| := by
+    have := abs_add
+      (BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+      (BG_Identity.conv_ref_const X N - AO_Major.Mcanon N)
+    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this
+  -- combine the pieces
+  have : |BG_Identity.conv_ref X N - AO_Major.Mcanon N|
+      ≤ (Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+          * ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ))
+        + AO_ErrorEnvelope.δAO K := by
+    nlinarith [htriangle, hswap, hAO]
+  -- reorder the sum to match the statement
+  ring_nf at this
+  nlinarith
 
 /-- Numeric calibration: tail budget comfortably within 1% on the window. -/
 lemma tail_budget

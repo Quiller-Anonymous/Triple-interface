@@ -1,8 +1,4 @@
-import Mathlib.Data.Nat.Prime
-import Mathlib.Data.Nat.Parity
-import Mathlib.Data.Nat.Divisors
-import Mathlib.Algebra.BigOperators.Basic
-import Mathlib.Tactic
+import Mathlib
 import Goldbach.SingularSeries
 
 open scoped BigOperators

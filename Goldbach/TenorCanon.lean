@@ -3,6 +3,7 @@ import Mathlib
 import Goldbach.Windows
 import Goldbach.Rep
 import Goldbach.AnalyticAssemble  -- for TenorInputs
+import Goldbach.AO_Core
 import Goldbach.AO_Major
 import Goldbach.BG_Bank
 
@@ -12,15 +13,14 @@ open Goldbach
 open Goldbach.Windows
 open Goldbach.Rep
 open Goldbach.AnalyticAssemble
+open Goldbach.AO_Core
+open Goldbach.AO_Major
 
 noncomputable def major_canonical :
   MajorBound (10^6) (10^4) (1.0) (0.05) Mcanon :=
 by
   intro X N hX hN
   simpa using Goldbach.AO_Major.major_lb_window (X := X) (N := N) hX hN
-
-/-- Your bank–projected main term on even inputs (define when you wire AO). -/
-noncomputable def Mcanon : ℕ → ℝ := fun _ => 0  -- placeholder; replace with AO main term
 
 /-- Canonical Tenor inputs assembled from the two lemmas above. -/
 noncomputable def inputs :

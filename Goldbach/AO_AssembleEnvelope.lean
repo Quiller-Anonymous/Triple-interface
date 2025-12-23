@@ -72,7 +72,7 @@ noncomputable def δAO (K : Caps) : ℝ :=
 lemma δAO_nonneg (K : Caps) : 0 ≤ δAO K := by
   have := add_nonneg (add_nonneg K.δ_kernel_nonneg K.δ_mellin_nonneg)
                      (add_nonneg K.δ_smooth_nonneg K.δ_off_nonneg)
-  simpa [δAO] using this
+  simp only [δAO]; ring_nf; ring_nf at this; exact this
 
 /-- Strong envelope: triangle inequality + channel bounds. -/
 lemma errAO_bound
@@ -80,7 +80,7 @@ lemma errAO_bound
     {X N} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
     |errAO X N| ≤ δAO K := by
   classical
-  have hdecomp := (Decomposition.errAO_decomp_window (C:=C)) (X:=X) (N:=N) hX hN
+  have hdecomp := (Decomposition.errAO_decomp_window (C:=C)) hX hN
   have hk := (Bounds.err_kernel_bound (C:=C) (K:=K))  hX hN
   have hm := (Bounds.err_mellin_bound (C:=C) (K:=K))  hX hN
   have hs := (Bounds.err_smooth_bound (C:=C) (K:=K))  hX hN
@@ -93,21 +93,23 @@ lemma errAO_bound
     -- 4-term triangle via iterated two-term inequalities
     have t1 : |C.E_kernel X N + C.E_mellin X N|
               ≤ |C.E_kernel X N| + |C.E_mellin X N| := by
-      simpa using abs_add_le_abs_add_abs (C.E_kernel X N) (C.E_mellin X N)
+      exact abs_add_le (C.E_kernel X N) (C.E_mellin X N)
     have t2 : |(C.E_kernel X N + C.E_mellin X N) + C.E_smooth X N|
               ≤ |C.E_kernel X N + C.E_mellin X N| + |C.E_smooth X N| := by
-      simpa using abs_add_le_abs_add_abs (C.E_kernel X N + C.E_mellin X N) (C.E_smooth X N)
+      exact abs_add_le (C.E_kernel X N + C.E_mellin X N) (C.E_smooth X N)
     have t3 : |((C.E_kernel X N + C.E_mellin X N) + C.E_smooth X N) + C.E_off X N|
               ≤ |(C.E_kernel X N + C.E_mellin X N) + C.E_smooth X N| + |C.E_off X N| := by
-      simpa using abs_add_le_abs_add_abs ((C.E_kernel X N + C.E_mellin X N) + C.E_smooth X N) (C.E_off X N)
+      exact abs_add_le ((C.E_kernel X N + C.E_mellin X N) + C.E_smooth X N) (C.E_off X N)
     calc
       _ = |(C.E_kernel X N + C.E_mellin X N) + C.E_smooth X N + C.E_off X N| := by ring
       _ ≤ |(C.E_kernel X N + C.E_mellin X N) + C.E_smooth X N| + |C.E_off X N| := t3
       _ ≤ (|C.E_kernel X N + C.E_mellin X N| + |C.E_smooth X N|) + |C.E_off X N| := by gcongr
-      _ ≤ ((|C.E_kernel X N| + |C.E_mellin X N|) + |C.E_smooth X N|) + |C.E_off X N| := by gcongr; exact t1
+      _ ≤ ((|C.E_kernel X N| + |C.E_mellin X N|) + |C.E_smooth X N|) + |C.E_off X N| := by gcongr
       _ = |C.E_kernel X N| + |C.E_mellin X N| + |C.E_smooth X N| + |C.E_off X N| := by ring
   -- Now chain bounds
-  simpa [hdecomp, δAO, add_comm, add_left_comm, add_assoc] using
-    (le_trans tri (by gcongr; exacts [hk, hm, hs, ho]))
+  rw [hdecomp]
+  refine le_trans tri ?_
+  simp only [δAO]
+  gcongr <;> assumption
 
 end Goldbach.AO_AssembleEnvelope

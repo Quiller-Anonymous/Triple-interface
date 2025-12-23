@@ -1,0 +1,271 @@
+import Mathlib
+import Mathlib.Data.Finset.Interval
+import Goldbach.Windows
+import Goldbach.Rep
+import Goldbach.Deweighting
+
+open Real
+open scoped BigOperators
+open Finset Real
+open Goldbach.Windows
+
+namespace Goldbach
+namespace BG_Bank
+
+/-- Log is positive for `X ≥ 3`.  We’ll use `X0 ≥ 3` and `X0 ≤ X`. -/
+private lemma log_pos_of_ge_three {X : ℕ} (hX3 : (3 : ℕ) ≤ X) : 0 < Real.log (X : ℝ) := by
+  have hx3 : (3 : ℝ) ≤ (X : ℝ) := by exact_mod_cast hX3
+  have : (1 : ℝ) < (X : ℝ) := lt_of_lt_of_le (by norm_num : (1:ℝ) < 3) hx3
+  simpa using Real.log_pos_iff.mpr this
+
+/-- Uniqueness of a contributing index for a fixed offset:
+    if `(↑n - (↑N - ↑n) = k)` holds for two naturals `n₁,n₂`, then `n₁ = n₂`. -/
+private lemma offset_eq_unique {N : ℕ} {k : ℤ}
+  {n₁ n₂ : ℕ}
+  (h₁ : (n₁ : ℤ) - ((N : ℤ) - n₁) = k)
+  (h₂ : (n₂ : ℤ) - ((N : ℤ) - n₂) = k)
+  : n₁ = n₂ := by
+  -- rewrite `n - (N - n)` as `2n - N`
+  have h₁' : (2 : ℤ) * n₁ - (N : ℤ) = k := by
+    have : (n₁ : ℤ) - ((N : ℤ) - n₁) = (2 : ℤ) * n₁ - (N : ℤ) := by ring
+    rw [← this]
+    exact h₁
+  have h₂' : (2 : ℤ) * n₂ - (N : ℤ) = k := by
+    have : (n₂ : ℤ) - ((N : ℤ) - n₂) = (n₂ : ℤ) - (N : ℤ) + (n₂ : ℤ) := by ring
+    rw [this] at h₂
+    have : (n₂ : ℤ) - (N : ℤ) + (n₂ : ℤ) = (2 : ℤ) * n₂ - (N : ℤ) := by ring
+    rw [this] at h₂
+    exact h₂
+  have : (2 : ℤ) * (n₁ : ℤ) = (2 : ℤ) * (n₂ : ℤ) := by linarith
+  have two_ne : (2 : ℤ) ≠ 0 := by decide
+  have : (n₁ : ℤ) = (n₂ : ℤ) := (mul_left_cancel₀ two_ne).mp this
+  exact_mod_cast this
+
+/-- At most one element of `Finset.Icc 2 (N-2)` satisfies the offset condition. -/
+private lemma filter_card_le_one
+  (N : ℕ) (k : ℤ) :
+  ((Finset.Icc 2 (N - 2)).filter (fun n : ℕ =>
+      (n : ℤ) - ((N : ℤ) - n) = k)).card ≤ 1 := by
+  classical
+  -- card ≤ 1 is equivalent to “any two members are equal”.
+  refine (Finset.card_le_one_iff.mpr ?h).trans le_rfl
+  intro a ha b hb
+  -- Extract the predicate from membership in the filtered finset
+  have ha' : (a : ℤ) - ((N : ℤ) - a) = k := by
+    simpa using (Finset.mem_filter.mp ha).2
+  have hb' : (b : ℤ) - ((N : ℤ) - b) = k := by
+    simpa using (Finset.mem_filter.mp hb).2
+  exact offset_eq_unique (N:=N) (k:=k) ha' hb'
+
+/-- For `N ≥ 4`, we have `0 ≤ log (N+1)`. -/
+private lemma log_succ_nonneg {N : ℕ} (hN : 4 ≤ N) : 0 ≤ Real.log (N : ℝ + 1) := by
+  have : 1 < (N : ℝ) + 1 := by
+    have : (3 : ℕ) ≤ N := by exact (Nat.succ_le_of_lt (Nat.succ_lt_succ (Nat.succ_pos _))).trans hN
+    have : (3 : ℝ) ≤ (N : ℝ) := by exact_mod_cast this
+    have : (1 : ℝ) < (N : ℝ) := lt_of_lt_of_le (by norm_num : (1:ℝ) < 3) this
+    nlinarith
+  have : 0 < Real.log ((N : ℝ) + 1) := Real.log_pos_iff.mpr this
+  exact le_of_lt this
+
+/-
+Assumptions you already made in BG_Bank (adjust names if needed):-/
+
+noncomputable def Λ (n : ℕ) : ℝ :=
+  if Nat.Prime n then Real.log n else 0
+
+noncomputable def wX (X n : ℕ) : ℝ := 1
+
+noncomputable def P_BG (X N : ℕ) (k : ℤ) : ℝ :=
+  (1 / (Real.log (X : ℝ))^2) *
+    ∑ n in Finset.Icc 2 (N - 2),
+      (if ((n : ℤ) - ((N : ℤ) - n) = k)
+       then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+       else 0)
+
+noncomputable def payload_cap (X N : ℕ) : ℝ :=
+  ((Real.log ((N : ℝ) + 1)) / (Real.log (X : ℝ)))^2
+
+
+/-- **Payload cap on the canonical window.**
+For `X ≥ X0 ≥ 3` and `N ∈ EvenIn X H`, every inner-band offset satisfies
+`|P_BG X N k| ≤ payload_cap X N`.  (The proof uses that the inner sum has at most
+one nonzero term for fixed `k`.) -/
+lemma payload_bound_on_window
+  {X0 H : ℕ}
+  (hX0_ge3 : (3 : ℕ) ≤ X0)
+  {X N : ℕ} (hX : X0 ≤ X) (_hN : Windows.EvenIn X H N)
+  (k : ℤ)
+  : |P_BG X N k| ≤ payload_cap X N := by
+  classical
+  -- Positivity of log X
+  have hlogXpos : 0 < Real.log (X : ℝ) :=
+    log_pos_of_ge_three (X := X) (le_trans hX0_ge3 hX)
+  have hlogXsq_pos : 0 < (Real.log (X : ℝ))^2 := pow_pos hlogXpos 2
+  have hlogXsq_nonneg : 0 ≤ (Real.log (X : ℝ))^2 := le_of_lt hlogXsq_pos
+
+  -- Put the outer factor in front of the absolute value.
+  -- Since the factor is nonnegative, `|a * b| = a * |b|`.
+  have : |P_BG X N k|
+      = (1 / (Real.log (X : ℝ))^2) *
+          |∑ n in Finset.Icc 2 (N - 2),
+              (if ((n : ℤ) - ((N : ℤ) - n) = k)
+               then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+               else 0)| := by
+    simp [P_BG, abs_mul, abs_of_nonneg,
+          one_div, inv_nonneg.mpr hlogXsq_nonneg]
+
+  -- Bound the inner absolute sum by `(log (N+1))^2`,
+  -- using that there is **at most one** index with a nonzero term.
+  have B_nonneg : 0 ≤ (Real.log ((N : ℝ) + 1))^2 :=
+    sq_nonneg _
+  have per_term_le :
+    ∀ n ∈ Finset.Icc 2 (N - 2),
+      |if ((n : ℤ) - ((N : ℤ) - n) = k)
+        then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+        else 0|
+      ≤ (if ((n : ℤ) - ((N : ℤ) - n) = k)
+         then (Real.log ((N : ℝ) + 1))^2
+         else 0) := by
+    intro n hn
+    by_cases hcond : (n : ℤ) - ((N : ℤ) - n) = k
+    · -- the term is active; bound it by `log(N+1)^2`
+      have hΛn : |Λ n| ≤ Real.log ((N : ℝ) + 1) := by
+        -- if `Nat.Prime n` then `Λ n = log n ≤ log (N+1)`,
+        -- else `Λ n = 0 ≤ log (N+1)`.
+        by_cases hp : Nat.Prime n
+        · have : Λ n = Real.log (n : ℝ) := by simp [Λ, hp]
+          have hn2 : (2 : ℕ) ≤ n := (Finset.mem_Icc.mp hn).1
+          have hn_le : (n : ℝ) ≤ (N : ℝ) := by exact_mod_cast (Finset.mem_Icc.mp hn).2.1
+          have : Real.log (n : ℝ) ≤ Real.log ((N : ℝ) + 1) := by
+            have hpos : (1 : ℝ) < (n : ℝ) := by
+              have : (2 : ℕ) ≤ n := hn2
+              exact lt_of_le_of_lt (show (1:ℝ) < 2 by norm_num) (by exact_mod_cast this)
+            have : (n : ℝ) ≤ ((N : ℝ) + 1) := by nlinarith
+            exact Real.log_le_log (le_of_lt hpos) this
+          simpa [this] using (abs_le.mpr ⟨by linarith [this], by linarith [this]⟩ : |Real.log (n:ℝ)| ≤ _)
+        · have : Λ n = 0 := by simp [Λ, hp]
+          simpa [this] using (abs_nonneg (0 : ℝ)).trans (le_of_eq (by simp [Real.log, add_comm]))
+      have hΛm : |Λ (N - n)| ≤ Real.log ((N : ℝ) + 1) := by
+        -- analogous bound for `N - n ∈ [2, N-2]`.
+        by_cases hp : Nat.Prime (N - n)
+        · have : Λ (N - n) = Real.log ((N - n : ℕ) : ℝ) := by simp [Λ, hp]
+          -- `2 ≤ N - n ≤ N` as `n ∈ [2, N-2]`
+          have hmin : 2 ≤ N - n := (Finset.mem_Icc.mp hn).2.2
+          have : (N - n : ℝ) ≤ (N : ℝ) := by exact_mod_cast Nat.sub_le _ _
+          have : Real.log ((N - n : ℕ) : ℝ) ≤ Real.log ((N : ℝ) + 1) := by
+            have hpos : (1 : ℝ) < (N - n : ℝ) := by
+              have : (2 : ℕ) ≤ N - n := hmin
+              exact lt_of_le_of_lt (show (1:ℝ) < 2 by norm_num) (by exact_mod_cast this)
+            have : ((N - n : ℕ) : ℝ) ≤ ((N : ℝ) + 1) := by nlinarith
+            exact Real.log_le_log (le_of_lt hpos) this
+          simpa [this] using (abs_le.mpr ⟨by linarith [this], by linarith [this]⟩ : |Real.log ((N - n : ℕ) : ℝ)| ≤ _)
+        · have : Λ (N - n) = 0 := by simp [Λ, hp]
+          simpa [this] using (abs_nonneg (0 : ℝ)).trans (le_of_eq (by simp [Real.log, add_comm]))
+      -- `|wX| ≤ 1` because `wX ≡ 1` (adjust if you changed `wX`)
+      have hw₁ : |wX X n| ≤ 1 := by simp [wX]
+      have hw₂ : |wX X (N - n)| ≤ 1 := by simp [wX]
+      -- combine the bounds multiplicatively
+      have : |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|
+             ≤ (Real.log ((N : ℝ) + 1))^2 := by
+        have : |wX X n| * |Λ n| * (|wX X (N - n)| * |Λ (N - n)|)
+               ≤ 1 * Real.log ((N : ℝ) + 1) * (1 * Real.log ((N : ℝ) + 1)) := by
+          have nn1 : 0 ≤ |wX X n| := abs_nonneg _
+          have nn2 : 0 ≤ |Λ n| := abs_nonneg _
+          have nn3 : 0 ≤ |wX X (N - n)| := abs_nonneg _
+          have nn4 : 0 ≤ |Λ (N - n)| := abs_nonneg _
+          have : |wX X n| * |Λ n| ≤ 1 * Real.log ((N : ℝ) + 1) :=
+            mul_le_mul hw₁ hΛn nn1 (le_trans (by norm_num) (le_of_lt (Real.log_pos_iff.mpr (by norm_num))))
+          have : (|wX X n| * |Λ n|) * (|wX X (N - n)| * |Λ (N - n)|)
+               ≤ (1 * Real.log ((N : ℝ) + 1)) * (|wX X (N - n)| * |Λ (N - n)|) :=
+            mul_le_mul_of_nonneg_right this (mul_nonneg nn3 nn4)
+          have : (1 * Real.log ((N : ℝ) + 1)) * (|wX X (N - n)| * |Λ (N - n)|)
+               ≤ (1 * Real.log ((N : ℝ) + 1)) * (1 * Real.log ((N : ℝ) + 1)) := by
+            exact mul_le_mul_of_nonneg_left
+              (mul_le_mul hw₂ hΛm nn3 (le_trans (by norm_num) (le_of_lt (Real.log_pos_iff.mpr (by norm_num)))))
+              (by have : 0 ≤ 1 * Real.log ((N : ℝ) + 1) := by nlinarith [log_succ_nonneg (N:=N) (by decide : 4 ≤ N)]
+                  simpa)
+          exact this.trans ?_
+        simpa [mul_comm, mul_left_comm, mul_assoc, abs_mul, abs_of_nonneg (by have := log_succ_nonneg (N:=N) (by decide : 4 ≤ N); exact this)] using this
+      -- conclude the per-term inequality (remembering the `if`)
+      simpa [hcond] using this
+    · -- term is 0 when predicate is false
+      simp [hcond]
+
+  -- Sum over the whole interval and use a counting bound (≤ 1 active index):
+  have inner_sum_le :
+    ∑ n in Finset.Icc 2 (N - 2),
+      |if ((n : ℤ) - ((N : ℤ) - n) = k)
+        then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+        else 0|
+    ≤ (Real.log ((N : ℝ) + 1))^2 := by
+    -- First, compare pointwise to `ite _ B 0` and sum.
+    have := Finset.sum_le_sum per_term_le
+    -- Turn the RHS sum into `B * (# filtered)`, then use `card ≤ 1`.
+    have : ∑ n in Finset.Icc 2 (N - 2),
+             (if ((n : ℤ) - ((N : ℤ) - n) = k)
+              then (Real.log ((N : ℝ) + 1))^2
+              else 0)
+           = (Real.log ((N : ℝ) + 1))^2
+               * ((Finset.Icc 2 (N - 2)).filter (fun n : ℕ =>
+                   (n : ℤ) - ((N : ℤ) - n) = k)).card := by
+      classical
+      -- rewrite sum of `ite` as sum over the filtered set, then sum a constant
+      calc
+        _ = ∑ n in (Finset.Icc 2 (N - 2)).filter (fun n : ℕ =>
+              (n : ℤ) - ((N : ℤ) - n) = k), (Real.log ((N : ℝ) + 1))^2 := by
+              simpa using
+                (Finset.sum_filter (s := Finset.Icc 2 (N - 2))
+                  (p := fun n : ℕ => (n : ℤ) - ((N : ℤ) - n) = k)
+                  (f := fun _ => (Real.log ((N : ℝ) + 1))^2)).symm
+        _ = ((Finset.Icc 2 (N - 2)).filter (fun n : ℕ =>
+              (n : ℤ) - ((N : ℤ) - n) = k)).card •
+              (Real.log ((N : ℝ) + 1))^2 := by
+              simpa using
+                (Finset.sum_const ((Real.log ((N : ℝ) + 1))^2)
+                  (s := (Finset.Icc 2 (N - 2)).filter (fun n : ℕ =>
+                    (n : ℤ) - ((N : ℤ) - n) = k)))
+        _ = ((Finset.Icc 2 (N - 2)).filter (fun n : ℕ =>
+              (n : ℤ) - ((N : ℤ) - n) = k)).card
+              * (Real.log ((N : ℝ) + 1))^2 := by
+              simpa [nsmul_eq_mul]
+    -- Now bound the card by 1 and use nonnegativity to drop it.
+    have hcard : ((Finset.Icc 2 (N - 2)).filter (fun n : ℕ =>
+      (n : ℤ) - ((N : ℤ) - n) = k)).card ≤ 1 :=
+      filter_card_le_one N k
+    have hcard' : (((Finset.Icc 2 (N - 2)).filter (fun n : ℕ =>
+      (n : ℤ) - ((N : ℤ) - n) = k)).card : ℝ) ≤ 1 := by exact_mod_cast hcard
+    -- Combine everything:
+    have bound :=
+      calc
+        ∑ n in Finset.Icc 2 (N - 2),
+          |if ((n : ℤ) - ((N : ℤ) - n) = k) then _ else 0|
+            ≤ (Real.log ((N : ℝ) + 1))^2
+               * ((Finset.Icc 2 (N - 2)).filter (fun n : ℕ =>
+                   (n : ℤ) - ((N : ℤ) - n) = k)).card := by
+                 simpa [this] using this
+        _ ≤ (Real.log ((N : ℝ) + 1))^2 * 1 := by
+              refine mul_le_mul_of_nonneg_left hcard' ?_
+              exact B_nonneg
+        _ = (Real.log ((N : ℝ) + 1))^2 := by ring
+    exact bound
+
+  -- Put the factor back and identify `payload_cap`.
+  have : |P_BG X N k|
+      ≤ (1 / (Real.log (X : ℝ))^2) * (Real.log ((N : ℝ) + 1))^2 := by
+    simpa [P_BG, abs_mul, abs_of_nonneg (by
+             have : 0 ≤ (Real.log (X : ℝ))^2 := le_of_lt hlogXsq_pos
+             simpa [one_div] using inv_nonneg.mpr this)]
+      using
+        mul_le_mul_of_nonneg_left inner_sum_le
+          (by
+            have : 0 ≤ (1 / (Real.log (X : ℝ))^2) := by
+              have : 0 < (Real.log (X : ℝ))^2 := hlogXsq_pos
+              exact inv_nonneg.mpr (le_of_lt this)
+            simpa using this)
+
+  -- Finally, rewrite to `payload_cap X N`.
+  simpa [payload_cap, one_div, div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc]
+    using this
+
+end BG_Bank
+end Goldbach
