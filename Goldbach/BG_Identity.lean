@@ -997,7 +997,7 @@ lemma C_tail_eq_closed : C_tail = C_tail_closed := by
 /-- Concrete errTI bound using the closed-form tail mass. -/
 lemma errTI_bound_closed :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
-      |errTI X N| ≤ payload_cap N * C_tail_closed := by
+      |errTI X N| ≤ payload_cap X N * C_tail_closed := by
   intro X N hX hN
   have hTail : ∑ k in outerBand, K_full k ≤ C_tail_closed := by
     have := tail_mass_closed_form
@@ -1008,7 +1008,7 @@ lemma errTI_bound_closed :
 /-- Deviation of the full projector from the in-window projector (errBG=0): bounded by the tail. -/
 lemma bankOp_full_minus_ref_bound :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
-      |conv_full X N - conv_ref X N| ≤ payload_cap N * C_tail_closed := by
+      |conv_full X N - conv_ref X N| ≤ payload_cap X N * C_tail_closed := by
   intro X N hX hN
   -- from the decomposition, the difference is exactly errTI (errBG = 0)
   have hdecomp := bank_decomp (X:=X) (N:=N) hX hN
@@ -1021,7 +1021,7 @@ lemma bankOp_full_minus_ref_bound :
 
 /-- Canonical wrapper: tail gap on the Goldbach window. -/
 lemma tail_gap_canonical {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-    |conv_full X N - conv_ref X N| ≤ payload_cap N * C_tail_closed :=
+    |conv_full X N - conv_ref X N| ≤ payload_cap X N * C_tail_closed :=
   bankOp_full_minus_ref_bound (X:=X) (N:=N) hX hN
 
 /-- The inner band of the full tent coincides with `S_BG` (since `H ≤ Ucut`). -/

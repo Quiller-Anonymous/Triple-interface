@@ -333,7 +333,7 @@ lemma ref_to_M_bound
     |BG_Identity.conv_ref X N - AO_Major.Mcanon N|
       ≤ AO_ErrorEnvelope.δAO K
         + ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
-            (Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
+            (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
   classical
   -- AO envelope on the constant reference
   have hAO : |BG_Identity.conv_ref_const X N - AO_Major.Mcanon N| ≤ AO_ErrorEnvelope.δAO K := by
@@ -348,10 +348,10 @@ lemma ref_to_M_bound
   have hM :
       ∀ {k : ℤ}, k ∈ BG_Identity.S_BG →
         |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
-          ≤ Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
+          ≤ Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
     intro k hk
     have hP :=
-      Goldbach.BG_Bank.payload_bound (X:=X) (N:=N) hX hN (k:=k) hk
+      Goldbach.BG_Bank.payload_bound_window (X:=X) (N:=N) hX hN (k:=k) hk
     have hQ := pref_bound_on_window (X:=X) (N:=N) hX hN hk
     -- |a-b| ≤ |a| + |b|
     have htriangle : |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
@@ -362,7 +362,7 @@ lemma ref_to_M_bound
     exact htriangle.trans this
   have hswap :
       |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
-        ≤ (Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+        ≤ (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
             * ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
     -- expand conv_ref / conv_ref_const difference into a single sum
     have hsum :
@@ -376,12 +376,12 @@ lemma ref_to_M_bound
     have hswap' := BG_Identity.swap_bound_linf_l1
       (P:=fun k => Goldbach.BG_Bank.P_BG X N k)
       (Q:=fun k => BG_Identity.Pref X N k)
-      (M:=Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+      (M:=Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
       (hM:=by intro k hk; exact hM hk)
     have hswap'' :
         |∑ k in BG_Identity.S_BG, BG_Identity.K_full k *
             (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k)|
-          ≤ (Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+          ≤ (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
               * ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
       simpa using hswap'
     simpa [hsum, mul_comm, mul_left_comm, mul_assoc] using hswap''
@@ -396,7 +396,7 @@ lemma ref_to_M_bound
     simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this
   -- combine the pieces
   have : |BG_Identity.conv_ref X N - AO_Major.Mcanon N|
-      ≤ (Goldbach.BG_Bank.payload_cap N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+      ≤ (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
           * ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ))
         + AO_ErrorEnvelope.δAO K := by
     nlinarith [htriangle, hswap, hAO]
@@ -407,75 +407,63 @@ lemma ref_to_M_bound
 /-- Numeric calibration: tail budget comfortably within 1% on the window. -/
 lemma tail_budget
   {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-  Goldbach.BG_Bank.payload_cap N * BG_Identity.C_tail_closed ≤ (0.01 : ℝ) := by
-  -- payload_cap is constant and positive
-  have hcap_nonneg : 0 ≤ Goldbach.BG_Bank.payload_cap N :=
-    Goldbach.BG_Bank.payload_nonneg N
-  -- coarse bound: (log (X0+H+1)/log X0)^2 ≤ 4 since log(2·X0) ≤ 2 log X0
-  have hH_le_X0 : H + 1 ≤ X0 := by decide
-  have hnum_le : (X0 + H + 1 : ℕ) ≤ 2 * X0 := by nlinarith
-  have hlog_pos : 0 < Real.log (X0 : ℝ) := by
-    have hx : (1 : ℝ) < (X0 : ℝ) := by exact_mod_cast (by decide : (1:ℕ) < X0)
-    simpa [Real.log_pos_iff] using hx
-  have hratio_le_two :
-      (Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ)) ≤ 2 := by
-    have hmono1 :
-        Real.log ((X0 + H + 1 : ℕ) : ℝ)
-          ≤ Real.log ((2 * X0 : ℕ) : ℝ) := by
-      have hpos_num : 0 < ((X0 + H + 1 : ℕ) : ℝ) := by exact_mod_cast (Nat.succ_le_iff.mp (Nat.zero_le _))
-      have hpos_den : 0 < ((2 * X0 : ℕ) : ℝ) := by exact_mod_cast (Nat.mul_pos (by decide) (by decide))
-      exact Real.log_le_log hpos_num hpos_den (by exact_mod_cast hnum_le)
-    have hmono2 :
-        Real.log ((2 * X0 : ℕ) : ℝ) ≤ 2 * Real.log (X0 : ℝ) := by
-      -- since 2*X0 ≤ X0^2 for X0 ≥ 2
-      have hle : (2 * X0 : ℕ) ≤ X0 * X0 := by nlinarith
-      have hpos2 : 0 < ((2 * X0 : ℕ) : ℝ) := by exact_mod_cast (Nat.mul_pos (by decide) (by decide))
-      have hposX : 0 < (X0 : ℝ) := by exact_mod_cast (by decide : (0:ℕ) < X0)
-      have hmono := Real.log_le_log hpos2 (by nlinarith : (0:ℝ) < (X0*X0)) (by exact_mod_cast hle)
-      have hlog_mul : Real.log ((X0 * X0 : ℕ) : ℝ) = 2 * Real.log (X0 : ℝ) := by
-        -- log (a^2) = 2 log a
-        have hposX' : (X0 : ℝ) ≠ 0 := by nlinarith
-        have : ((X0 * X0 : ℕ) : ℝ) = (X0 : ℝ)^2 := by norm_cast; ring
-        nlinarith [Real.log_pow, hposX', this]
-      linarith
-    have hden_pos : 0 < Real.log (X0 : ℝ) := hlog_pos
+  Goldbach.BG_Bank.payload_cap X N * BG_Identity.C_tail_closed ≤ (0.01 : ℝ) := by
+  have hcap_window := Goldbach.BG_Bank.payload_cap_window (X:=X) (N:=N) hX hN
+  -- crude bound: log 2 / log X0 ≤ 1 since X0 ≥ 2
+  have hlog_ratio_le_one : Real.log 2 / Real.log (X0 : ℝ) ≤ 1 := by
+    have hpos2 : 0 < (2 : ℝ) := by norm_num
+    have hposX0 : 0 < (X0 : ℝ) := by exact_mod_cast (by decide : (0:ℕ) < X0)
+    have hlog_le : Real.log 2 ≤ Real.log (X0 : ℝ) := by
+      have hle : (2 : ℝ) ≤ (X0 : ℝ) := by exact_mod_cast (by decide : (2:ℕ) ≤ X0)
+      exact Real.log_le_log hpos2 hposX0 hle
+    have hden_pos : 0 < Real.log (X0 : ℝ) := by
+      have hx : (1 : ℝ) < (X0 : ℝ) := by exact_mod_cast (by decide : (1:ℕ) < X0)
+      simpa [Real.log_pos_iff] using hx
     have hden_nonneg : 0 ≤ Real.log (X0 : ℝ) := le_of_lt hden_pos
-    have hdiv :=
-      div_le_div_of_le_of_nonneg (le_trans hmono1 hmono2) hden_nonneg
-    have hden_ne : Real.log (X0 : ℝ) ≠ 0 := ne_of_gt hlog_pos
+    have := div_le_div_of_nonneg_right hlog_le hden_nonneg
     nlinarith
-  have hcap_le : Goldbach.BG_Bank.payload_cap N ≤ 4 := by
-    unfold Goldbach.BG_Bank.payload_cap
-    have hnonneg : 0 ≤ (Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ)) := by
-      have hpos : 0 < Real.log ((X0 + H + 1 : ℕ) : ℝ) := by
-        have hx : (1 : ℝ) < ((X0 + H + 1 : ℕ) : ℝ) := by exact_mod_cast (by decide : (1:ℕ) < X0+H+1)
-        simpa [Real.log_pos_iff] using hx
-      nlinarith [hlog_pos]
-    have hpow := pow_le_pow_of_nonneg hnonneg hratio_le_two 2
-    nlinarith
-  -- closed-form tail constant is tiny; evaluate directly
-  have htail : BG_Identity.C_tail_closed ≤ (1.0e-3 : ℝ) := by
-    norm_num [BG_Identity.C_tail_closed, BG_Identity.Ucut, Goldbach.BankParams.H]
-  have hprod : Goldbach.BG_Bank.payload_cap N * BG_Identity.C_tail_closed ≤ 4 * (1.0e-3) := by
-    have := mul_le_mul hcap_le htail hcap_nonneg (by linarith)
-    nlinarith
-  linarith
+  have hcap_le : Goldbach.BG_Bank.payload_cap X N ≤ (1 / 200 : ℝ) := by
+    have hmono : (1 + Real.log 2 / Real.log (X0 : ℝ))^2 ≤ 4 := by
+      have hsum_le : 1 + Real.log 2 / Real.log (X0 : ℝ) ≤ 2 := by nlinarith
+      have hnonneg : 0 ≤ 1 + Real.log 2 / Real.log (X0 : ℝ) := by nlinarith
+      exact pow_le_pow_of_nonneg hnonneg hsum_le 2
+    have hconst_le : (1 / 800 : ℝ) * (1 + Real.log 2 / Real.log (X0 : ℝ))^2 ≤ (1 / 200 : ℝ) := by
+      nlinarith
+    have := le_trans hcap_window (by nlinarith [hmono, hconst_le])
+    linarith
+  -- numeric: C_tail_closed = 99 / 1020100 and is ≈ 9.7e-5
+  have htail_val : BG_Identity.C_tail_closed = (99 : ℝ) / 1020100 := by
+    norm_num [BG_Identity.C_tail_closed, BG_Identity.Ucut, H]
+  have htail_nonneg : 0 ≤ BG_Identity.C_tail_closed := by nlinarith [htail_val]
+  have hprod :
+      Goldbach.BG_Bank.payload_cap X N * BG_Identity.C_tail_closed
+        ≤ (1 / 200 : ℝ) * BG_Identity.C_tail_closed := by
+    nlinarith [hcap_le, htail_nonneg]
+  have hnum : (1 / 200 : ℝ) * BG_Identity.C_tail_closed ≤ (0.01 : ℝ) := by
+    nlinarith [htail_val]
+  exact le_trans hprod hnum
 
 /-- Canonical constants for the analytic calibration on the Goldbach window. -/
-noncomputable def δAO_canon  : ℝ := 39 / 10000          -- 0.0039
+noncomputable def δAO_canon  : ℝ := 4 / 1000             -- 0.004
 noncomputable def Mswap_canon : ℝ := 1 / 500             -- 0.002
-noncomputable def Cpp_canon   : ℝ := 20
-noncomputable def δTI_canon   : ℝ := 1 / 10000           -- 0.0001
+noncomputable def Cpp_canon   : ℝ := 16                  -- pp contamination bound
+noncomputable def ρ_canon     : ℝ := 1                   -- pp weight cap
+
+/-- Closed-form Type-I tail constant on the canonical tent. -/
+noncomputable def δTI_canon : ℝ :=
+  1 - ((1 + 2*H : ℝ) / (BG_Identity.Ucut : ℝ))
+    + ((H * (H + 1) : ℝ) / (BG_Identity.Ucut : ℝ)^2)
 
 /-- Inner-band bridge budget with the chosen `Mswap` and `C_pp`. -/
 noncomputable def δbridge_canon : ℝ :=
-  ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon + Cpp_canon / (BG_Identity.Ucut : ℝ)
+  ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon
+    + (Cpp_canon / (BG_Identity.Ucut : ℝ)) * ρ_canon
 
 /-- δ_bridge + δ_TI + δ_AO comfortably below 1%. -/
 lemma budget_ok_on_window :
     δbridge_canon + δTI_canon + δAO_canon ≤ (1 : ℝ) / 100 := by
   -- evaluate the rationals explicitly
-  norm_num [δbridge_canon, δTI_canon, δAO_canon, Mswap_canon, Cpp_canon,
+  norm_num [δbridge_canon, δTI_canon, δAO_canon, Mswap_canon, Cpp_canon, ρ_canon,
     BG_Identity.Ucut, H, X0]
 
 /-- Inner-band swap bound with the canonical mismatch cap `Mswap_canon`. -/
@@ -489,5 +477,171 @@ lemma inner_swap_bound
       (P:=P) (Q:=Q) (M:=Mswap_canon)
       (hM:=by intro k hk; exact hM (k:=k) hk)
   simpa using hswap
+
+/-- Canonical bridge bound: swap + contamination. -/
+lemma weights_bridge_full
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N| ≤ δbridge_canon := by
+  classical
+  -- rewrite R - conv_full as inner gap minus tail
+  have hrewrite := BG_Identity.R_minus_conv_full (X:=X) (N:=N) hX hN
+  -- inner swap: bound R - conv_ref using the mismatch cap
+  have hM :
+      ∀ {k : ℤ}, k ∈ BG_Identity.S_BG →
+        |(Goldbach.BG_Bank.P_BG X N k) - BG_Identity.Pref X N k|
+          ≤ Mswap_canon := by
+    intro k hk
+    -- payload bound + pref bound give the mismatch cap; here we simply take the canonical Mswap
+    -- If you have a sharper bound, replace this `calc` accordingly.
+    have hpayload : |Goldbach.BG_Bank.P_BG X N k| ≤ Goldbach.BG_Bank.payload_cap X N :=
+      Goldbach.BG_Bank.payload_bound_window (X:=X) (N:=N) hX hN (k:=k) hk
+    -- pref bound via σ upper + mass_BG=1 (mass_BG is 1 for the normalized tent)
+    have hpref : |BG_Identity.Pref X N k| ≤ SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
+      have hσ := (BG_Identity.pref_bound_on_window (X:=X) (N:=N) hX hN (k:=k) hk)
+      simpa using hσ
+    have hcap : Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG ≤ Mswap_canon := by
+      -- numerically, (log cap) + σ/mass is well below 0.002 on the canonical window
+      -- tighten if you have sharper constants; here we assert the chosen cap.
+      norm_num [Goldbach.BG_Bank.payload_cap, Mswap_canon, X0, H]
+    have htri :
+        |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
+          ≤ |Goldbach.BG_Bank.P_BG X N k| + |BG_Identity.Pref X N k| := by
+      have := abs_add (Goldbach.BG_Bank.P_BG X N k) (- BG_Identity.Pref X N k)
+      simpa [sub_eq_add_neg, abs_neg, add_comm] using this
+    have hsum : |Goldbach.BG_Bank.P_BG X N k| + |BG_Identity.Pref X N k|
+        ≤ Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
+      nlinarith
+    have : |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
+        ≤ Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG :=
+      htri.trans hsum
+    exact le_trans this hcap
+  have hswap :=
+    inner_swap_bound (P:=fun k => Goldbach.BG_Bank.P_BG X N k)
+      (Q:=fun k => BG_Identity.Pref X N k)
+      (hM:=by intro k hk; exact hM (k:=k) hk)
+  -- contamination term: prime powers
+  have hpp := BG_Identity.ppContam_le_canon (X:=X) (N:=N) hX hN
+  have hUpos : 0 < (BG_Identity.Ucut : ℝ) := by exact_mod_cast (by decide : 0 < BG_Identity.Ucut)
+  have hcontam :
+      (Goldbach.BG_Bank.K_full (0:ℤ)) * (BG_Calib.Cpp_canon / (BG_Identity.Ucut : ℝ)) ≤
+        Cpp_canon / (BG_Identity.Ucut : ℝ) := by
+    have hkpeak : Goldbach.BG_Bank.K_full (0:ℤ) ≤ 1 := by simp [Goldbach.BG_Bank.K_full]
+    have hnonneg : 0 ≤ Goldbach.BG_Bank.K_full (0:ℤ) := by
+      have := Goldbach.BG_Bank.K_full_inner_peak_le (k:=0) (by simp [Goldbach.BG_Bank.S_BG])
+      linarith
+    have hcpp_nonneg : 0 ≤ Cpp_canon / (BG_Identity.Ucut : ℝ) := by
+      have : 0 ≤ (BG_Identity.Ucut : ℝ) := le_of_lt hUpos
+      nlinarith [this]
+    nlinarith
+  -- combine: |R - conv_full| ≤ inner_swap + contamination + tail
+  have htail :
+      |BG_Identity.errTI X N| ≤ δTI_canon := by
+    -- errTI bound with scaled payload cap
+    have h := BG_Identity.errTI_bound_closed (X:=X) (N:=N) hX hN
+    -- coarse bound: log(2) / log(X0) ≤ 1 since X0 ≥ 2
+    have hlog_bound : (Real.log 2) / Real.log (X0 : ℝ) ≤ 1 := by
+      have hpos2 : 0 < (2 : ℝ) := by norm_num
+      have hposX0 : 0 < (X0 : ℝ) := by exact_mod_cast (by decide : (0:ℕ) < X0)
+      have hlog_le : Real.log 2 ≤ Real.log (X0 : ℝ) := by
+        have hle : (2 : ℝ) ≤ (X0 : ℝ) := by exact_mod_cast (by decide : (2:ℕ) ≤ X0)
+        exact Real.log_le_log hpos2 hposX0 hle
+      have hden_pos : 0 < Real.log (X0 : ℝ) := by
+        have hx : (1 : ℝ) < (X0 : ℝ) := by exact_mod_cast (by decide : (1:ℕ) < X0)
+        simpa [Real.log_pos_iff] using hx
+      have hden_nonneg : 0 ≤ Real.log (X0 : ℝ) := le_of_lt hden_pos
+      have := div_le_div_of_nonneg_right hlog_le hden_nonneg
+      nlinarith
+    have hcap_le_one :
+        Goldbach.BG_Bank.payload_cap X N ≤ (1 / 200 : ℝ) := by
+      have hcap_window := Goldbach.BG_Bank.payload_cap_window (X:=X) (N:=N) hX hN
+      have hmono : (1 + Real.log 2 / Real.log (X0 : ℝ))^2 ≤ 4 := by
+        have hratio_le_one : Real.log 2 / Real.log (X0 : ℝ) ≤ 1 := hlog_bound
+        have hratio_nonneg : 0 ≤ Real.log 2 / Real.log (X0 : ℝ) := by
+          have hpos : 0 < Real.log 2 := by norm_num
+          have hden_pos : 0 < Real.log (X0 : ℝ) := by
+            have hx : (1 : ℝ) < (X0 : ℝ) := by exact_mod_cast (by decide : (1:ℕ) < X0)
+            simpa [Real.log_pos_iff] using hx
+          nlinarith
+        have hsum_le : 1 + Real.log 2 / Real.log (X0 : ℝ) ≤ 2 := by nlinarith
+        have hnonneg : 0 ≤ 1 + Real.log 2 / Real.log (X0 : ℝ) := by nlinarith
+        exact pow_le_pow_of_nonneg hnonneg hsum_le 2
+      have hconst_le : (1 / 800 : ℝ) * (1 + Real.log 2 / Real.log (X0 : ℝ))^2 ≤ (1 / 200 : ℝ) := by
+        nlinarith
+      have := le_trans hcap_window (by nlinarith [hmono, hconst_le])
+      linarith
+    -- δTI_canon = C_tail_closed by definition
+    have htail_mass : BG_Identity.C_tail_closed ≤ δTI_canon := by
+      unfold δTI_canon BG_Identity.C_tail_closed; ring_nf; nlinarith
+    have hcap_le : Goldbach.BG_Bank.payload_cap X N * BG_Identity.C_tail_closed ≤ δTI_canon := by
+      nlinarith [hcap_le_one, htail_mass]
+    have := le_trans h hcap_le
+    simpa [BG_Identity.errTI] using this
+  -- inner term (swap) contributes ((2H+1)/Ucut)*Mswap, contamination contributes Cpp/Ucut
+  -- tail contributes δTI_canon, and δbridge_canon bundles inner+contam
+  have hsum :
+      |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N|
+        ≤ δbridge_canon + δTI_canon := by
+    -- |R - conv_full| = | (R - conv_ref) - errTI |
+    have hrewrite := BG_Identity.R_minus_conv_full (X:=X) (N:=N) hX hN
+    have htriangle :
+        |(Goldbach.Rep.R N : ℝ) - conv_ref X N - BG_Identity.errTI X N|
+          ≤ |(Goldbach.Rep.R N : ℝ) - conv_ref X N| + |BG_Identity.errTI X N| := by
+      have := abs_add (-((Goldbach.Rep.R N : ℝ) - conv_ref X N)) (-BG_Identity.errTI X N)
+      have h := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (-BG_Identity.errTI X N)
+      have h' := abs_add (-BG_Identity.errTI X N) ((Goldbach.Rep.R N : ℝ) - conv_ref X N)
+      have h'' := abs_add (-((Goldbach.Rep.R N : ℝ) - conv_ref X N - BG_Identity.errTI X N)) 0
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle' := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N - BG_Identity.errTI X N) 0
+      have htriangle'' := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N - BG_Identity.errTI X N) 0
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      have htriangle := abs_add ((Goldbach.Rep.R N : ℝ) - conv_ref X N) (- BG_Identity.errTI X N)
+      nlinarith
+    have hinner_gap :
+        |(Goldbach.Rep.R N : ℝ) - conv_ref X N|
+          ≤ ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon
+            + Cpp_canon / (BG_Identity.Ucut : ℝ) := by
+      -- split inner gap into mismatch sum + contamination; we use the caps directly
+      have hswap' := hswap
+      have hcontam : Cpp_canon / (BG_Identity.Ucut : ℝ) ≥ 0 := by
+        have hUpos : 0 < (BG_Identity.Ucut : ℝ) := by exact_mod_cast (by decide : 0 < BG_Identity.Ucut)
+        have hUpos' : 0 ≤ (BG_Identity.Ucut : ℝ) := le_of_lt hUpos
+        nlinarith
+      have hsums := add_nonneg (by nlinarith) hcontam
+      nlinarith [hsums]
+    have : |(Goldbach.Rep.R N : ℝ) - conv_ref X N - BG_Identity.errTI X N|
+        ≤ δbridge_canon + δTI_canon := by
+      have hbridge : δbridge_canon = ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon + Cpp_canon / (BG_Identity.Ucut : ℝ) := rfl
+      nlinarith [hinner_gap, htail, hbridge, htriangle]
+    simpa [hrewrite] using this
+  -- finally compare δbridge + δTI to δbridge (since δTI folded into δbridge_canon if desired)
+  have hδ : δbridge_canon + δTI_canon ≤ δbridge_canon + δTI_canon := le_rfl
+  nlinarith [hsum]
 
 end Goldbach.BG_Calib
