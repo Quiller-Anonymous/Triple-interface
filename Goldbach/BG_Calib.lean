@@ -478,4 +478,16 @@ lemma budget_ok_on_window :
   norm_num [δbridge_canon, δTI_canon, δAO_canon, Mswap_canon, Cpp_canon,
     BG_Identity.Ucut, H, X0]
 
+/-- Inner-band swap bound with the canonical mismatch cap `Mswap_canon`. -/
+lemma inner_swap_bound
+    {P Q : ℤ → ℝ}
+    (hM : ∀ {k : ℤ}, k ∈ BG_Identity.S_BG → |P k - Q k| ≤ Mswap_canon) :
+    |∑ k in BG_Identity.S_BG, BG_Identity.K_full k * (P k - Q k)|
+      ≤ ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon := by
+  have hswap :=
+    BG_Identity.swap_bound_linf_l1
+      (P:=P) (Q:=Q) (M:=Mswap_canon)
+      (hM:=by intro k hk; exact hM (k:=k) hk)
+  simpa using hswap
+
 end Goldbach.BG_Calib
