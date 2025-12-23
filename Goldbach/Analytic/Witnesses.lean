@@ -12,6 +12,7 @@ import Goldbach.BankPieces.DecompFromBound
 import Goldbach.BankPieces.Bounds.Working
 import Goldbach.BankPieces.Bounds.FromCertificate
 import Goldbach.BankPieces.Cert.Working
+import Goldbach.AO_Instantiate
 
 /-
 Canonical analytic inputs: a main term, a major bound (axiomatized),
@@ -38,15 +39,21 @@ by
   refine major_of_sigma_lower_S1 (A:=SigmaLowerOn_working) (c0:=0.05) (two_le_of_mem:=?_) (hc0:=hc0)
   intro X N hX hN; exact two_le_of_window hX hN
 
-/-- Concrete bank decomposition witness from the certified 1% bound. -/
+/-- Concrete bank decomposition witness from the certified 1% bound, parameterised
+    by the AO gap and the numeric calibration inequality. -/
 noncomputable def decomp_canonical :
   Goldbach.BankPieces.DecompBounds X0 H (1 : ℝ) (0.01 : ℝ) 0 mainTermHL :=
   Goldbach.BankPieces.FromCertificate.decomp_canonical_from_cert
-    (bank_cert_bound := Goldbach.BankPieces.Cert.Working.bank_cert_bound)
-
--- Register the bank witness so the corresponding BankAbsDeviation instance is available.
-instance : Goldbach.BankPieces.DecompBounds (10^6) (10^4) (1.0) (0.01) 0 mainTermHL :=
-  decomp_canonical
+    (hAO:=by
+      intro X N hX hN
+      -- use the assembled AO envelope
+      have := Goldbach.AO_ErrorEnvelope.errAO_bound
+        (C:=Goldbach.AO_Instantiate.channels) (K:=Goldbach.AO_Instantiate.caps)
+        (X:=X) (N:=N) hX hN
+      simpa [Goldbach.AO_Instantiate.caps, Goldbach.AO_ErrorEnvelope.δAO, BG_Calib.δAO_canon] using this)
+    (hCal:=by
+      intro X N hX hN
+      exact BG_Calib.budget_ok_on_window (X:=X) (N:=N) hX hN)
 
 /-- Analytic hypothesis at the canonical scales, built from the (axiomatized) inputs. -/
 noncomputable def analyticHypCanonical :
@@ -56,12 +63,13 @@ noncomputable def analyticHypCanonical :
     (by norm_num) (by norm_num) (by norm_num)
     mainTermHL major_canonical
 
-/-- Global closure witness at the canonical scales. -/
+/-- Global closure witness at the canonical scales, parameterised by the bank bounds. -/
 noncomputable def globalClosureCanonical :
   Goldbach.Bridge.GlobalClosurePointwise (10^6) (10^4) (1.0) (0.05) (0.01) :=
   Goldbach.TenorBridge.canonical mainTermHL major_canonical decomp_canonical
 
-/-- Pointwise witness at the canonical scales, for use with `goldbach_final`. -/
+/-- Pointwise witness at the canonical scales, for use with `goldbach_final`,
+    parameterised by the bank bounds. -/
 noncomputable def witnessCanonical : Goldbach.Analytic.PointwiseWitness :=
   Goldbach.Analytic.PointwiseWitness.of_global
     (10^6) (10^4) (1.0) (0.05) (0.01)

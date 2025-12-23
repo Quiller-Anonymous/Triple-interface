@@ -380,3 +380,65 @@ lemma payload_cap_window
   simpa [payload_cap] using hcap
 
 end Goldbach.BG_Bank
+/-- Crude window cap: replace `N` by the right end of the window. -/
+lemma payload_cap_window_const
+  {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X H) :
+  payload_cap X N
+    ≤ (1 / 800 : ℝ) *
+        (Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ))^2 := by
+  -- bound log(N+1) by log(X+H+1) and log X below by log X0
+  have hN_le : N + 1 ≤ X + H + 1 := by
+    have hIn := (Goldbach.Windows.mem_filter.mp hN).1
+    rcases Finset.mem_image.mp hIn with ⟨k, hk, hkN⟩
+    rcases Finset.mem_range.mp hk with hk_lt
+    have hk_le : k ≤ H := Nat.le_of_lt_succ hk_lt
+    have hk0 : 0 ≤ k := Nat.zero_le _
+    have hcalc : N = X + k := hkN
+    nlinarith
+  have hlog_num :
+      Real.log ((N:ℝ) + 1) ≤ Real.log ((X + H + 1 : ℕ) : ℝ) := by
+    have hpos : 0 < ((N:ℝ) + 1) := by nlinarith
+    have hpos' : 0 < ((X + H + 1 : ℕ) : ℝ) := by exact_mod_cast (Nat.succ_pos _)
+    have hle : (N:ℝ) + 1 ≤ ((X + H + 1 : ℕ) : ℝ) := by exact_mod_cast hN_le
+    exact Real.log_le_log hpos hpos' hle
+  have hlog_den : Real.log (X0 : ℝ) ≤ Real.log (X : ℝ) := by
+    have hx0 : (0:ℝ) < (X0:ℝ) := by exact_mod_cast (by decide : (0:ℕ) < X0)
+    have hx : (0:ℝ) < (X:ℝ) := by exact_mod_cast (lt_of_lt_of_le (by decide : (0:ℕ) < X0) hX)
+    exact Real.log_le_log hx0 hx (by exact_mod_cast hX)
+  have hden_pos : 0 < Real.log (X : ℝ) := by
+    have hx : (1 : ℝ) < (X : ℝ) := by exact_mod_cast (lt_of_lt_of_le (by decide : (1:ℕ) < X0) hX)
+    simpa [Real.log_pos_iff] using hx
+  have hratio :
+      Real.log ((N:ℝ) + 1) / Real.log (X:ℝ)
+        ≤ Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ) := by
+    have hdiv1 := div_le_div_of_nonneg_right hlog_num (le_of_lt hden_pos)
+    have hdiv2 :
+        Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X : ℝ)
+          ≤ Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ) := by
+      have hnum_nonneg : 0 ≤ Real.log ((X + H + 1 : ℕ) : ℝ) := by
+        have hxpos : (1:ℝ) ≤ ((X + H + 1 : ℕ) : ℝ) := by nlinarith
+        exact Real.log_nonneg hxpos
+      exact div_le_div_of_nonneg_left hnum_nonneg hlog_den
+    have hchain : Real.log ((N:ℝ) + 1) / Real.log (X:ℝ)
+        ≤ Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X:ℝ) := hdiv1
+    have hnonneg : 0 ≤ Real.log ((N:ℝ) + 1) / Real.log (X:ℝ) := by
+      have hpos : 0 < Real.log ((N:ℝ) + 1) := by
+        have hx : (1 : ℝ) < (N:ℝ) + 1 := by nlinarith
+        simpa [Real.log_pos_iff] using hx
+      have hden_pos' : 0 < Real.log (X:ℝ) := hden_pos
+      nlinarith
+    have hpow := pow_le_pow_of_nonneg hnonneg (le_trans hchain hdiv2) 2
+    simpa [payload_cap, one_div, mul_comm, mul_left_comm, mul_assoc, pow_two] using hpow
+
+/-- Numeric corollary on the canonical window. -/
+lemma payload_cap_window_num
+  {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X H) :
+  payload_cap X N ≤ (1252 : ℝ) / 10^6 := by
+  have h := payload_cap_window_const (X:=X) (N:=N) hX hN
+  -- (log (X0+H+1))/log X0 ≤ 1.001456…; square and scale
+  have hnum : (Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ))^2 ≤ (1001456 : ℝ) / 10^6 := by
+    norm_num [X0, H]
+  have hconst_nonneg : 0 ≤ (1 / 800 : ℝ) := by norm_num
+  have hprod := mul_le_mul_of_nonneg_left hnum hconst_nonneg
+  have : (1 / 800 : ℝ) * ((1001456 : ℝ) / 10^6) = (1252 : ℝ) / 10^6 := by norm_num
+  nlinarith

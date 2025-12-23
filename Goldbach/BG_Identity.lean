@@ -637,6 +637,15 @@ lemma errTI_bound_simple :
 noncomputable def C_tail_closed : ℝ :=
   1 - ((1 + 2 * H : ℝ) / (Ucut : ℝ)) + ((H * (H + 1) : ℝ) / (Ucut : ℝ)^2)
 
+/-- Numeric corollary for the tail mass. -/
+lemma C_tail_closed_le : C_tail_closed ≤ (96 : ℝ) / 10^6 := by
+  norm_num [C_tail_closed, Ucut, H]
+
+/-- Numeric lower bound for the inner mass. -/
+lemma mass_BG_lb : (0.99990 : ℝ) ≤ (1 : ℝ) - C_tail_closed := by
+  have h := C_tail_closed_le
+  linarith
+
 lemma sum_bandU :
     ∑ k in bandU, K_full k = (1 : ℝ) := by
   classical

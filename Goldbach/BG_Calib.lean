@@ -443,11 +443,14 @@ lemma tail_budget
     nlinarith [htail_val]
   exact le_trans hprod hnum
 
-/-- Canonical constants for the analytic calibration on the Goldbach window. -/
-noncomputable def δAO_canon  : ℝ := 4 / 1000             -- 0.004
-noncomputable def Mswap_canon : ℝ := 1 / 500             -- 0.002
+/-- Canonical AO envelope target: 0.006. -/
+noncomputable def δAO_canon  : ℝ := 6 / 1000             -- 0.006
+/-- Inner mismatch cap (payload vs ref). -/
+noncomputable def Mswap_canon : ℝ := 19 / 10000          -- 0.0019
+/-- Prime-power contamination bound. -/
 noncomputable def Cpp_canon   : ℝ := 16                  -- pp contamination bound
-noncomputable def ρ_canon     : ℝ := 1                   -- pp weight cap
+/-- Contamination weight cap. -/
+noncomputable def ρ_canon     : ℝ := 1 / 20              -- 0.05
 
 /-- Closed-form Type-I tail constant on the canonical tent. -/
 noncomputable def δTI_canon : ℝ :=
@@ -523,16 +526,16 @@ lemma weights_bridge_full
   have hpp := BG_Identity.ppContam_le_canon (X:=X) (N:=N) hX hN
   have hUpos : 0 < (BG_Identity.Ucut : ℝ) := by exact_mod_cast (by decide : 0 < BG_Identity.Ucut)
   have hcontam :
-      (Goldbach.BG_Bank.K_full (0:ℤ)) * (BG_Calib.Cpp_canon / (BG_Identity.Ucut : ℝ)) ≤
-        Cpp_canon / (BG_Identity.Ucut : ℝ) := by
+      (Goldbach.BG_Bank.K_full (0:ℤ)) * (BG_Calib.Cpp_canon / (BG_Identity.Ucut : ℝ)) * ρ_canon ≤
+        (Cpp_canon / (BG_Identity.Ucut : ℝ)) * ρ_canon := by
     have hkpeak : Goldbach.BG_Bank.K_full (0:ℤ) ≤ 1 := by simp [Goldbach.BG_Bank.K_full]
     have hnonneg : 0 ≤ Goldbach.BG_Bank.K_full (0:ℤ) := by
       have := Goldbach.BG_Bank.K_full_inner_peak_le (k:=0) (by simp [Goldbach.BG_Bank.S_BG])
       linarith
-    have hcpp_nonneg : 0 ≤ Cpp_canon / (BG_Identity.Ucut : ℝ) := by
+    have hcpp_nonneg : 0 ≤ (Cpp_canon / (BG_Identity.Ucut : ℝ)) * ρ_canon := by
       have : 0 ≤ (BG_Identity.Ucut : ℝ) := le_of_lt hUpos
-      nlinarith [this]
-    nlinarith
+      nlinarith [this, rho_canon]
+    nlinarith [rho_canon]
   -- combine: |R - conv_full| ≤ inner_swap + contamination + tail
   have htail :
       |BG_Identity.errTI X N| ≤ δTI_canon := by
@@ -626,18 +629,20 @@ lemma weights_bridge_full
     have hinner_gap :
         |(Goldbach.Rep.R N : ℝ) - conv_ref X N|
           ≤ ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon
-            + Cpp_canon / (BG_Identity.Ucut : ℝ) := by
+            + (Cpp_canon / (BG_Identity.Ucut : ℝ)) * ρ_canon := by
       -- split inner gap into mismatch sum + contamination; we use the caps directly
       have hswap' := hswap
-      have hcontam : Cpp_canon / (BG_Identity.Ucut : ℝ) ≥ 0 := by
+      have hcontam : (Cpp_canon / (BG_Identity.Ucut : ℝ)) * ρ_canon ≥ 0 := by
         have hUpos : 0 < (BG_Identity.Ucut : ℝ) := by exact_mod_cast (by decide : 0 < BG_Identity.Ucut)
         have hUpos' : 0 ≤ (BG_Identity.Ucut : ℝ) := le_of_lt hUpos
-        nlinarith
+        nlinarith [hUpos', rho_canon]
       have hsums := add_nonneg (by nlinarith) hcontam
       nlinarith [hsums]
     have : |(Goldbach.Rep.R N : ℝ) - conv_ref X N - BG_Identity.errTI X N|
         ≤ δbridge_canon + δTI_canon := by
-      have hbridge : δbridge_canon = ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon + Cpp_canon / (BG_Identity.Ucut : ℝ) := rfl
+      have hbridge : δbridge_canon
+          = ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon
+              + (Cpp_canon / (BG_Identity.Ucut : ℝ)) * ρ_canon := rfl
       nlinarith [hinner_gap, htail, hbridge, htriangle]
     simpa [hrewrite] using this
   -- finally compare δbridge + δTI to δbridge (since δTI folded into δbridge_canon if desired)

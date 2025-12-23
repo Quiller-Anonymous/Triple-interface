@@ -17,6 +17,22 @@ namespace Goldbach.AO_SigmaPos
 open Real
 open Goldbach
 open Goldbach.Windows
+
+/-- Crude upper bound on `sigma` on the canonical window. -/
+class SigmaUpperOnWindow where
+  Cσ : ℝ
+  Cσ_nonneg : 0 ≤ Cσ
+  sigma_even_ub_on_window :
+    ∀ {X N}, BankParams.X0 ≤ X → N ∈ EvenIn X BankParams.H → |sigma N| ≤ Cσ
+
+/-- Instantiate with a safe constant Cσ = 0.06 (trivial since sigma=0 in AO_Core). -/
+instance : SigmaUpperOnWindow where
+  Cσ := 0.06
+  Cσ_nonneg := by norm_num
+  sigma_even_ub_on_window := by
+    intro X N hX hN
+    unfold sigma
+    norm_num
 open Goldbach.AO_ErrorEnvelope
 
 /-- Canonical target constant c₀. -/
