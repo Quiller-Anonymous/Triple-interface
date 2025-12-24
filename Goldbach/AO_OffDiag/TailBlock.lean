@@ -1,13 +1,15 @@
 import Mathlib
 import Goldbach.BankParams
 import Goldbach.Windows
-import Goldbach.AO_Core
 import Mathlib.NumberTheory.ArithmeticFunction
 import Mathlib.Data.Nat.Squarefree
 
 /-
   Tail block: Ramanujan truncation, block majorant, and the abstract model
   assumptions needed to derive the 3e-4 tail bound on the canonical window.
+
+  Honest version: we do NOT use `AO_Core.sigma` (which is currently a placeholder `0`).
+  Instead, `sigma` is provided as part of the `Model`.
 -/
 
 namespace Goldbach
@@ -21,9 +23,6 @@ noncomputable section
 
 /-- Truncation height for the off-diagonal singular series. -/
 @[simp] def Q0 : ℕ := 30000
-
-/-- Alias the singular series. -/
-abbrev sigma : ℕ → ℝ := AO_Core.sigma
 
 /-- Möbius arithmetic function. Use `(μ q : ℤ)` for its value at `q`. -/
 local notation "μ" => (ArithmeticFunction.moebius : ArithmeticFunction ℤ)
@@ -41,7 +40,10 @@ def ramanujanZ (q N : ℕ) : ℤ :=
 /-- Real-valued Ramanujan sum. -/
 noncomputable def ramanujanR (q N : ℕ) : ℝ := (ramanujanZ q N : ℤ)
 
-/-- Truncated singular series at height `Q0`: `σ_{≤Q0}(N) = ∑_{q≤Q0} μ(q)^2/φ(q)^2 * c_q(N)`. -/
+/-- Truncated singular series at height `Q0`:
+`σ_{≤Q0}(N) = ∑_{q≤Q0} μ(q)^2/φ(q)^2 * c_q(N)`.
+
+Note: this depends only on `N`, not on the true (infinite) `sigma`. -/
 noncomputable def sigma_trunc_Q0 (N : ℕ) : ℝ :=
   (Finset.Icc (1 : ℕ) Q0).sum (fun q =>
     (muSq q) * (1 / ((Nat.totient q : ℝ) ^ 2)) * (ramanujanR q N))
@@ -53,37 +55,27 @@ noncomputable def F_block (N : ℕ) : ℝ :=
 /-- Multiplicative form of `F_block`, recorded separately for clarity. -/
 noncomputable def F_block_prod (N : ℕ) : ℝ := F_block N
 
-/-- **Analytic input**: block tail bound on the canonical window.
-axium sigma_tail_block_axium
-  {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
-  |sigma N - sigma_trunc_Q0 N| ≤ (1.02 : ℝ) / (Q0 : ℝ) * F_block N
-  **Analytic input**: uniform bound for `F_block` on the canonical window.
-axium F_block_bound_on_window
-  {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
-  F_block N ≤ (7.9 : ℝ)
+/-
+  === Model packaging (no global axioms) ===
+-/
 
-Tail-block facts from the paper, packaged so the final 3e-4 lemma is derivable. -/
-
+/-- Tail-block facts from the paper, packaged so the final 3e-4 lemma is derivable. -/
 structure Model where
+  /-- The *true* singular series. -/
+  sigma : ℕ → ℝ
+
+  /-- A majorant used in the tail bound (typically `F_block`). -/
   F : ℕ → ℝ
+
+  /-- Uniform bound for `F` on the canonical window. -/
   F_bound_on_window :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
       F N ≤ (7.9 : ℝ)
+
+  /-- Analytic tail bound comparing the true `sigma` to the truncation. -/
   sigma_tail_block :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
       |sigma N - sigma_trunc_Q0 N| ≤ (1.02 : ℝ) / (Q0 : ℝ) * F N
-  tail_reindex_bound :
-    ∀ N : ℕ, |sigma N - sigma_trunc_Q0 N| ≤
-      ((Nat.divisors N).filter Squarefree).sum (fun d =>
-        (1 / (Nat.totient d : ℝ)) *
-          (((Finset.Icc (Nat.succ (Q0 / d)) (Nat.gcd N (N + Q0))).filter Squarefree).sum (fun r =>
-            if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)))
-
-  euler_tail_bound :
-    ∀ {R N : ℕ}, 1 ≤ R →
-      ((Finset.Icc (Nat.succ R) (Nat.gcd N (N + R))).filter Squarefree).sum (fun r =>
-        if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)
-      ≤ (45 : ℝ) / R
 
 /-- Pure numeric squeeze: `(1.02/30000) * 7.9 ≤ 3e-4`. -/
 lemma coef_times_ub_le_3e4 :
@@ -96,7 +88,7 @@ theorem tail_bound_on_window
   {X N : ℕ}
   (hX : BankParams.X0 ≤ X)
   (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
-  |sigma N - sigma_trunc_Q0 N| ≤ (3e-4 : ℝ) := by
+  |M.sigma N - sigma_trunc_Q0 N| ≤ (3e-4 : ℝ) := by
   have h1 := M.sigma_tail_block (X:=X) (N:=N) hX hN
   have hF := M.F_bound_on_window (X:=X) (N:=N) hX hN
   have hcoef_nonneg : 0 ≤ (1.02 : ℝ) / (Q0 : ℝ) := by
@@ -107,15 +99,11 @@ theorem tail_bound_on_window
     mul_le_mul_of_nonneg_left hF hcoef_nonneg
   exact h1.trans (h2.trans coef_times_ub_le_3e4)
 
-/-- Canonical model instance using the analytic inputs above.
-noncomputable def canonicalModel : Model where
-  F := F_block
-  F_bound_on_window := by intro X N hX hN; exact F_block_bound_on_window (X:=X) (N:=N) hX hN
-  sigma_tail_block := by intro X N hX hN; exact sigma_tail_block_axium (X:=X) (N:=N) hX hN
+/-
+  === Pure math lemmas (non-analytic) ===
+-/
 
- === Pure math lemmas (non-analytic) ===
-
---- Squarefree support of μ² (for our `muSq`). -/
+/-- Squarefree support of μ² (for our `muSq`). -/
 lemma muSq_eq_zero_iff_not_squarefree (q : ℕ) :
     muSq q = 0 ↔ ¬ Squarefree q := by
   by_cases h : Squarefree q <;> simp [muSq, h]
@@ -153,39 +141,26 @@ lemma coprime_gcd_div_of_squarefree (q N : ℕ) (hq : Squarefree q) :
 
   set d : ℕ := Nat.gcd q N with hd
   set r : ℕ := q / d with hr
-
-  -- Let g = gcd(d, r). We'll show g must be a unit using squarefreeness of q.
   set g : ℕ := Nat.gcd d r with hg
 
   have hg_ne_one : g ≠ 1 := by
-    -- from `hne : ¬ gcd (gcd q N) (q / gcd q N) = 1`
-    -- rewrite everything to g
     simpa [d, r, g, hd, hr, hg] using hne
 
-  -- We'll show g*g ∣ q; then squarefree forces IsUnit g; for Nat that implies g=1, contradiction.
   have hdq : d ∣ q := by
-    -- gcd divides left
     simpa [hd] using Nat.gcd_dvd_left q N
 
-  -- From definition of r: q = d * r
   have hqdr : q = d * r := by
-    -- d * (q/d) = q
     simpa [r, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using (Nat.mul_div_cancel' hdq).symm
 
-  -- `g ∣ d` and `g ∣ r`
   have hg_d : g ∣ d := by simpa [hg] using Nat.gcd_dvd_left d r
   have hg_r : g ∣ r := by simpa [hg] using Nat.gcd_dvd_right d r
 
-  -- hence g*g ∣ d*r = q
   have hg2_dvd_q : g * g ∣ q := by
-    -- g*g ∣ d*r because g∣d and g∣r
     have : g * g ∣ d * r := Nat.mul_dvd_mul hg_d hg_r
     simpa [hqdr] using this
 
-  -- squarefree says: if x*x ∣ q then x is a unit
   have hunit_g : IsUnit g := hq g hg2_dvd_q
 
-  -- For Nat, IsUnit g ↔ g = 1
   have hg_eq_one : g = 1 := by
     simpa [Nat.isUnit_iff] using hunit_g
 
@@ -229,7 +204,6 @@ lemma term_bound_after_split (q N : ℕ) (hq : Squarefree q) (hq0 : q ≠ 0) :
     have hqdr : q = d * r := by
       simpa [r, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using (Nat.mul_div_cancel' hd).symm
     have hcop : d.Coprime r := by
-      -- This is where squarefreeness is actually needed.
       simpa [d, r] using (coprime_gcd_div_of_squarefree q N hq)
     have ht : Nat.totient (d * r) = Nat.totient d * Nat.totient r := by
       simpa using (Nat.totient_mul (m := d) (n := r) hcop)
