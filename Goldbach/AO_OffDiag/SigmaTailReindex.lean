@@ -5,6 +5,8 @@ import Mathlib.Data.ENNReal.Basic
 import Mathlib.Topology.Instances.ENNReal.Lemmas
 import Mathlib.Topology.Algebra.InfiniteSum.Defs
 import Goldbach.AO_OffDiag.TailBlock
+import Goldbach.AO_OffDiag.SigmaTailReindex_Arith
+import Goldbach.AO_OffDiag.SigmaTailReindex_PairMajorant
 
 namespace Goldbach.AO_OffDiag
 
@@ -14,6 +16,7 @@ open Real
 namespace SigmaTailReindex
 
 open TailBlock
+open SigmaTailReindex_PairMajorant
 
 /-- The real-valued term of the singular series. -/
 noncomputable def sigmaTerm (q N : ℕ) : ℝ :=
@@ -58,7 +61,7 @@ lemma sigmaTerm_abs_eq_split (q N : ℕ) (hq : Squarefree q) (hq0 : q ≠ 0) :
   simpa [sigmaTerm] using (term_bound_after_split (q := q) (N := N) hq hq0)
 
 /-!
-### Reindexing scaffold (stub 2)
+### Split scaffolding
 -/
 
 /-- The gcd component used in the split. -/
@@ -67,26 +70,22 @@ lemma sigmaTerm_abs_eq_split (q N : ℕ) (hq : Squarefree q) (hq0 : q ≠ 0) :
 /-- The quotient component used in the split. -/
 @[simp] def rOf (q N : ℕ) : ℕ := q / dOf q N
 
-lemma q_eq_d_mul_r (q N : ℕ) : q = dOf q N * rOf q N := by
-  unfold dOf rOf
-  exact (Nat.mul_div_cancel' (Nat.gcd_dvd_left q N)).symm
-
 /-- Per-q ENNReal majorant after the gcd split (still in terms of `dOf`/`rOf`). -/
 noncomputable def splitMajorant (q N : ℕ) : ENNReal :=
-  -- Use the single-denominator form to match `sigmaTerm_abs_eq_split` exactly.
-  ENNReal.ofReal
-    (1 / ((Nat.totient (dOf q N) : ℝ) * (Nat.totient (rOf q N) : ℝ) ^ 2))
+  ENNReal.ofReal (1 / (Nat.totient (dOf q N) : ℝ)) *
+    ENNReal.ofReal (1 / ((Nat.totient (rOf q N) : ℝ) ^ 2))
 
 lemma sigmaTermENN_le_splitMajorant (q N : ℕ) (hq : Squarefree q) (hq0 : q ≠ 0) :
     sigmaTermENN q N ≤ splitMajorant q N := by
   unfold sigmaTermENN splitMajorant
-  -- Rewrite `|sigmaTerm|` using the TailBlock split identity, then it's equality.
   have habs :
       |sigmaTerm q N|
         = 1 / ((Nat.totient (dOf q N) : ℝ) * (Nat.totient (rOf q N) : ℝ) ^ 2) := by
     simpa [dOf, rOf] using (sigmaTerm_abs_eq_split (q := q) (N := N) hq hq0)
-  -- Now both sides are `ENNReal.ofReal` of the same real number.
-  simpa [habs]
+  simp only [habs, dOf, rOf, one_div]
+  ring_nf
+  have h2 : (0 : ℝ) ≤ (↑(q / q.gcd N).totient)⁻¹ ^ 2 := by positivity
+  rw [mul_comm, ENNReal.ofReal_mul h2, mul_comm]
 
 /-- If `q` is not squarefree then `sigmaTermENN q N = 0`. -/
 lemma sigmaTermENN_eq_zero_of_not_squarefree (q N : ℕ) (hq : ¬ Squarefree q) :
@@ -103,63 +102,78 @@ noncomputable def qMajorant (q N : ℕ) : ENNReal :=
 lemma sigmaTailENN_le_tsum_qMajorant (N : ℕ) :
     sigmaTailENN N ≤ ∑' q : ℕ, qMajorant q N := by
   classical
-  -- Use ENNReal.tsum_le_tsum pointwise.
   unfold sigmaTailENN
   refine ENNReal.tsum_le_tsum ?_
   intro q
   by_cases htail : Q0 < q
-  · -- tail region
-    by_cases hsq : Squarefree q
+  · by_cases hsq : Squarefree q
     · by_cases hq0 : q = 0
       · subst hq0
         exact (Nat.not_lt_zero _ htail).elim
       · have hq0' : q ≠ 0 := hq0
         have hbound : sigmaTermENN q N ≤ splitMajorant q N :=
           sigmaTermENN_le_splitMajorant (q := q) (N := N) hsq hq0'
-        -- After simp, goal becomes exactly `sigmaTermENN q N ≤ splitMajorant q N`.
-        simp only [if_pos htail, qMajorant, hsq, hq0', htail, true_and, and_self, if_true, ne_eq,
-          not_false_eq_true, and_true]
+        -- goal is under `if Q0 < q`, so rewrite the ifs and apply hbound
+        simp only [htail, ↓reduceIte]
+        unfold qMajorant
+        simp only [hsq, hq0', htail, and_self, ↓reduceIte, ne_eq, not_false_eq_true]
         exact hbound
-    · -- non-squarefree: LHS term is 0, RHS is ≥ 0
+    ·
       have hz : sigmaTermENN q N = 0 :=
         sigmaTermENN_eq_zero_of_not_squarefree (q := q) (N := N) hsq
-      -- Reduce LHS to 0 and finish by `zero_le`.
-      simpa [htail, qMajorant, hsq, hz] using (zero_le (qMajorant q N))
-  · -- not in tail: LHS term is 0
-    simp only [if_neg htail]
+      simp [htail, qMajorant, hsq, hz]
+  ·
+    -- not in tail => LHS term is 0
+    simp only [htail, ↓reduceIte]
     exact zero_le _
 
 /--
-First reindexing step: bound the `q`-tsum by a double `tsum` over pairs `(d,r)` using the
-surjective map `(d,r) ↦ d*r`.
+Pointwise bound: `qMajorant q N ≤ gcdMajorant q N`.
 -/
-lemma tsum_qMajorant_le_tsum_mul (N : ℕ) :
-    (∑' q : ℕ, qMajorant q N) ≤ ∑' p : ℕ × ℕ, qMajorant (p.1 * p.2) N := by
-  -- Use `ENNReal.tsum_le_tsum_comp_of_surjective` with `f : ℕ×ℕ → ℕ := fun p => p.1*p.2`.
-  -- It gives `∑' q, g q ≤ ∑' p, g (f p)`.
-  refine (ENNReal.tsum_le_tsum_comp_of_surjective (f := fun p : ℕ × ℕ => p.1 * p.2) ?_ (g := fun q => qMajorant q N))
-  intro q
-  refine ⟨(q, 1), ?_⟩
-  simp
+lemma qMajorant_le_gcd_majorant (q N : ℕ) :
+    qMajorant q N ≤ gcdMajorant q N := by
+  classical
+  unfold qMajorant gcdMajorant
+  by_cases hq : Squarefree q ∧ q ≠ 0 ∧ Q0 < q
+  · rcases hq with ⟨hqsf, hq0, hqQ⟩
+    set d : ℕ := Nat.gcd q N
+    set r : ℕ := q / d
 
-/-- Remaining step: reindex `∑' q, qMajorant q N` into `reindexMajorantENN N`. -/
-theorem tsum_qMajorant_le_reindexMajorantENN (N : ℕ) :
-    (∑' q : ℕ, qMajorant q N) ≤ reindexMajorantENN N := by
-  -- Step 1: reindex into a double sum over products.
-  refine (tsum_qMajorant_le_tsum_mul (N := N)).trans ?_
-  -- Step 2 (TODO): compare the pair-sum to the divisor/coprime majorant.
-  -- Here we will:
-  -- * rewrite `∑' p : ℕ×ℕ, ...` as `∑' d, ∑' r, ...` using `ENNReal.tsum_prod'`
-  -- * drop constraints (change an `if` to a larger `if`) via `ENNReal.tsum_le_tsum`
-  -- * replace the outer `tsum d` by a finite `sum` over `d ∣ N` squarefree using `ENNReal.sum_le_tsum`
-  -- * end up exactly with `reindexMajorantENN N`.
-  sorry
+    have hdN : d ∣ N := Nat.gcd_dvd_right q N
+    have hdsf : Squarefree d := by
+      have hdq : d ∣ q := Nat.gcd_dvd_left q N
+      exact hqsf.squarefree_of_dvd hdq
+    have hrsf : Squarefree r := by
+      have hdq : d ∣ q := Nat.gcd_dvd_left q N
+      simpa [r, d] using TailBlock.squarefree_div_of_dvd (q := q) (d := d) hqsf hdq
 
-theorem sigmaTailENN_le_reindexMajorantENN (N : ℕ) :
-    sigmaTailENN N ≤ reindexMajorantENN N := by
-  exact (sigmaTailENN_le_tsum_qMajorant (N := N)).trans (tsum_qMajorant_le_reindexMajorantENN (N := N))
+    have hr_copr : Nat.Coprime r N := by
+      by_cases hN0 : N = 0
+      · subst hN0
+        have hr1 : r = 1 := by
+          simp [r, d, Nat.gcd_zero_right, Nat.div_self (Nat.pos_of_ne_zero hq0)]
+        simpa [hr1] using (Nat.coprime_one_left 0)
+      ·
+        simpa [r, d] using Nat.coprime_div_gcd_of_squarefree (m := q) (n := N) hqsf hN0
 
-/-- Final real statement (still needs the bridge lemma from ℝ to ENNReal). -/
+    have hQr : (Q0 / d) < r := by
+      simpa [d, r] using
+        (Goldbach.AO_OffDiag.SigmaTailReindex_Arith.div_gcd_lt_quot
+          (Q0 := Q0) (q := q) (N := N) hq0 hqQ)
+
+    simp only [splitMajorant, dOf, rOf]
+    rw [if_pos ⟨hqsf, hq0, hqQ⟩, if_pos ⟨hdsf, hdN⟩, if_pos ⟨hQr, hrsf, hr_copr⟩]
+  ·
+    -- if qMajorant condition false, LHS = 0
+    simp only [hq, ↓reduceIte, zero_le]
+
+/-- Summed version: `∑' q qMajorant q N ≤ ∑' q gcdMajorant q N`. -/
+lemma tsum_qMajorant_le_tsum_gcdMajorant (N : ℕ) :
+    (∑' q : ℕ, qMajorant q N) ≤ ∑' q : ℕ, gcdMajorant q N := by
+  refine ENNReal.tsum_le_tsum (fun q => ?_)
+  simpa using qMajorant_le_gcd_majorant (q := q) (N := N)
+
+/-- Final real statement (still needs the bridge lemma from ℝ to ENNReal, and the reindexing). -/
 theorem tail_reindex_bound (N : ℕ) :
     |sigmaTail N| ≤ (reindexMajorantENN N).toReal := by
   sorry
