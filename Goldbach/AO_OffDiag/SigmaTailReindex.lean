@@ -7,6 +7,7 @@ import Mathlib.Topology.Algebra.InfiniteSum.Defs
 import Goldbach.AO_OffDiag.TailBlock
 import Goldbach.AO_OffDiag.SigmaTailReindex_Arith
 import Goldbach.AO_OffDiag.SigmaTailReindex_PairMajorant
+import Mathlib.NumberTheory.Divisors
 
 namespace Goldbach.AO_OffDiag
 

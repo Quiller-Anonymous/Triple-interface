@@ -43,22 +43,16 @@ by
     by the AO gap and the numeric calibration inequality. -/
 noncomputable def decomp_canonical :
   Goldbach.BankPieces.DecompBounds X0 H (1 : ℝ) (0.01 : ℝ) 0 mainTermHL :=
-  let hAO_on_window :
-    ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-      |(BG_Identity.conv_ref X N) - (AO_Major.Mcanon N)| ≤ BG_Calib.δAO_canon :=
-    by
-      intro X N hX hN
-      exact BG_Calib.ref_to_M_bound (X:=X) (N:=N) hX hN
-  let hCal_on_window :
-    ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-      BG_Calib.δbridge_canon
-        + (BG_Bank.payload_cap X N * BG_Identity.C_tail_closed)
-        + BG_Calib.δAO_canon ≤ (0.01 : ℝ) :=
-    by
-      intro X N hX hN
-      exact BG_Calib.budget_ok_on_window (X:=X) (N:=N) hX hN
-  Goldbach.BankPieces.FromCertificate.decomp_canonical_from_cert
-    (hAO:=hAO_on_window) (hCal:=hCal_on_window)
+    -- inside Witnesses.decomp_canonical
+      let hAO_on_window :
+        ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
+          |(BG_Identity.conv_ref X N) - (AO_Major.Mcanon N)| ≤ BG_Calib.δAO_canon :=
+      by
+        intro X N hX hN
+        exact Goldbach.BG_Calib.ref_to_M_bound
+          (C := Goldbach.AO_Instantiate.channels)
+          (K := Goldbach.AO_Instantiate.caps)
+          (X := X) (N := N) hX hN
 
 /-- Analytic hypothesis at the canonical scales, built from the (axiomatized) inputs. -/
 noncomputable def analyticHypCanonical :
