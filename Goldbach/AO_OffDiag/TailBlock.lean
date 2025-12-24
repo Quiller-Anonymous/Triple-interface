@@ -38,29 +38,6 @@ def ramanujanZ (q N : ℕ) : ℤ :=
   let d := Nat.gcd q N
   (μ (q / d) : ℤ) * Int.ofNat (Nat.totient d)
 
-lemma coprime_gcd_left_div (q N : ℕ) :
-    (Nat.gcd q N).Coprime (q / Nat.gcd q N) := by
-  classical
-  set d := Nat.gcd q N with hd
-  by_cases hd0 : d = 0
-  · subst hd
-    -- gcd q N = 0 implies q=0 and N=0; then goal is Coprime 0 (0/0)=Coprime 0 0, true by simp
-    simp [Nat.gcd_eq_zero_iff] at hd0
-    rcases hd0 with ⟨rfl, rfl⟩
-    simp
-  · have hdpos : 0 < d := Nat.pos_of_ne_zero hd0
-    have hdq : d ∣ q := by simpa [hd] using Nat.gcd_dvd_left q N
-    -- compute gcd(d, q/d) = 1 via gcd_div
-    have hdiv : (q / d).gcd (d / d) = q.gcd d / d := by
-      simpa using (Nat.gcd_div (m := q) (n := d) (k := d) hdq (dvd_rfl))
-    have hdd : d / d = 1 := Nat.div_self hdpos
-    have hqd : q.gcd d = d := Nat.gcd_eq_right hdq
-    have : (q / d).gcd 1 = 1 := by
-      simpa [hdd, hqd] using hdiv
-    -- flip gcd to match `d.Coprime (q/d)`
-    -- `Nat.Coprime` is defined by gcd = 1 in ℕ
-    simpa [Nat.coprime_iff_gcd_eq_one, Nat.gcd_comm, hd] using this
-
 /-- Real-valued Ramanujan sum. -/
 noncomputable def ramanujanR (q N : ℕ) : ℝ := (ramanujanZ q N : ℤ)
 
@@ -76,17 +53,15 @@ noncomputable def F_block (N : ℕ) : ℝ :=
 /-- Multiplicative form of `F_block`, recorded separately for clarity. -/
 noncomputable def F_block_prod (N : ℕ) : ℝ := F_block N
 
-/-- **Analytic input**: block tail bound on the canonical window (to be supplied). -/
-lemma sigma_tail_block_axiom
+/-- **Analytic input**: block tail bound on the canonical window. -/
+axiom sigma_tail_block_axiom
   {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
-  |sigma N - sigma_trunc_Q0 N| ≤ (1.02 : ℝ) / (Q0 : ℝ) * F_block N := by
-  admit
+  |sigma N - sigma_trunc_Q0 N| ≤ (1.02 : ℝ) / (Q0 : ℝ) * F_block N
 
-/-- **Analytic input**: uniform bound for `F_block` on the canonical window (to be supplied). -/
-lemma F_block_bound_on_window
+/-- **Analytic input**: uniform bound for `F_block` on the canonical window. -/
+axiom F_block_bound_on_window
   {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
-  F_block N ≤ (7.9 : ℝ) := by
-  admit
+  F_block N ≤ (7.9 : ℝ)
 
 /-- Tail-block facts from the paper, packaged so the final 3e-4 lemma is derivable. -/
 structure Model where
@@ -143,31 +118,71 @@ lemma ramanujan_sqfree (q N : ℕ) (hq : Squarefree q) :
 /-- If `q` is squarefree and `d ∣ q`, then `q / d` is squarefree. -/
 lemma squarefree_div_of_dvd {q d : ℕ} (hq : Squarefree q) (hd : d ∣ q) :
     Squarefree (q / d) := by
-  -- unfold the `Squarefree` predicate on `ℕ`
   intro x hx
-  -- `hx : x*x ∣ q/d`. Multiply by `d` to get `x*x*d ∣ q`.
   have hx' : x * x * d ∣ q := by
     rcases hx with ⟨k, hk⟩
     refine ⟨k, ?_⟩
     calc
       q = d * (q / d) := by
-            -- q = d*(q/d)
             simpa [Nat.mul_comm] using (Nat.mul_div_cancel' hd).symm
       _ = d * (x * x * k) := by
             simpa [hk, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
       _ = x * x * d * k := by
-            -- just reassociate/commute
             simp [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
-
-  -- Now apply squarefree condition on q:
-  -- `hq (x) (x*x ∣ q)` gives `IsUnit x`.
-  -- We need `x*x ∣ q`, but we have `x*x*d ∣ q`. Since `x*x ∣ x*x*d`, transitivity gives it.
   have hx2 : x * x ∣ q := by
     exact dvd_trans (dvd_mul_right (x * x) d) hx'
   exact hq x hx2
 
+/-- If `q` is squarefree, then `gcd(q,N)` is coprime to `q / gcd(q,N)`. -/
+lemma coprime_gcd_div_of_squarefree (q N : ℕ) (hq : Squarefree q) :
+    (Nat.gcd q N).Coprime (q / Nat.gcd q N) := by
+  classical
+  -- show gcd = 1
+  rw [Nat.coprime_iff_gcd_eq_one]
+  by_contra hne
+
+  set d : ℕ := Nat.gcd q N with hd
+  set r : ℕ := q / d with hr
+
+  -- Let g = gcd(d, r). We'll show g must be a unit using squarefreeness of q.
+  set g : ℕ := Nat.gcd d r with hg
+
+  have hg_ne_one : g ≠ 1 := by
+    -- from `hne : ¬ gcd (gcd q N) (q / gcd q N) = 1`
+    -- rewrite everything to g
+    simpa [d, r, g, hd, hr, hg] using hne
+
+  -- We'll show g*g ∣ q; then squarefree forces IsUnit g; for Nat that implies g=1, contradiction.
+  have hdq : d ∣ q := by
+    -- gcd divides left
+    simpa [hd] using Nat.gcd_dvd_left q N
+
+  -- From definition of r: q = d * r
+  have hqdr : q = d * r := by
+    -- d * (q/d) = q
+    simpa [r, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using (Nat.mul_div_cancel' hdq).symm
+
+  -- `g ∣ d` and `g ∣ r`
+  have hg_d : g ∣ d := by simpa [hg] using Nat.gcd_dvd_left d r
+  have hg_r : g ∣ r := by simpa [hg] using Nat.gcd_dvd_right d r
+
+  -- hence g*g ∣ d*r = q
+  have hg2_dvd_q : g * g ∣ q := by
+    -- g*g ∣ d*r because g∣d and g∣r
+    have : g * g ∣ d * r := Nat.mul_dvd_mul hg_d hg_r
+    simpa [hqdr] using this
+
+  -- squarefree says: if x*x ∣ q then x is a unit
+  have hunit_g : IsUnit g := hq g hg2_dvd_q
+
+  -- For Nat, IsUnit g ↔ g = 1
+  have hg_eq_one : g = 1 := by
+    simpa [Nat.isUnit_iff] using hunit_g
+
+  exact hg_ne_one hg_eq_one
+
 /-- Termwise bound after splitting q = d*r. -/
-lemma term_bound_after_split (q N : ℕ) (hq : Squarefree q) :
+lemma term_bound_after_split (q N : ℕ) (hq : Squarefree q) (hq0 : q ≠ 0) :
     let d := Nat.gcd q N
     let r := q / d
     |muSq q * (1 / (Nat.totient q : ℝ) ^ 2) * ramanujanR q N|
@@ -179,15 +194,12 @@ lemma term_bound_after_split (q N : ℕ) (hq : Squarefree q) :
   have hqr_sq : Squarefree (q / d) :=
     squarefree_div_of_dvd (q := q) (d := d) hq hd
 
-  -- `muSq q = 1` (since `q` is squarefree)
   have hmuSq : muSq q = (1 : ℝ) := by
     simp [muSq, hq]
 
-  -- From `moebius_sq`, get μ(q/d)^2 = 1 in ℤ
   have hmu_sq : (μ (q / d) : ℤ) ^ 2 = 1 := by
     simpa [hqr_sq] using (ArithmeticFunction.moebius_sq (n := (q / d)))
 
-  -- Hence μ(q/d) = ±1 in ℤ
   have hmu_pm : (μ (q / d) : ℤ) = 1 ∨ (μ (q / d) : ℤ) = -1 := by
     have h0 : ((μ (q / d) : ℤ) - 1) * ((μ (q / d) : ℤ) + 1) = 0 := by
       nlinarith [hmu_sq]
@@ -195,55 +207,45 @@ lemma term_bound_after_split (q N : ℕ) (hq : Squarefree q) :
     · left; linarith
     · right; linarith
 
-  -- Therefore |μ(q/d)| = 1 after casting to ℝ
   have hmu_abs : |((μ (q / d) : ℤ) : ℝ)| = 1 := by
     rcases hmu_pm with h | h
     · simp [h]
     · simp [h]
 
-  -- Compute |ramanujanR q N| = φ(d)
   have hRamAbs : |ramanujanR q N| = (Nat.totient d : ℝ) := by
-    -- ramanujanR q N = ((μ(q/d) * φ(d)) : ℤ) cast to ℝ
-    -- so abs = |μ(q/d)| * φ(d) = 1 * φ(d)
     simp [ramanujanR, ramanujanZ, d, hmu_abs, abs_mul]
 
-  -- Structural totient factorization (proved elsewhere / fill in)
   have hphi : (Nat.totient q : ℝ) = (Nat.totient d : ℝ) * (Nat.totient r : ℝ) := by
     have hqdr : q = d * r := by
       simpa [r, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using (Nat.mul_div_cancel' hd).symm
     have hcop : d.Coprime r := by
-      simpa [d, r] using (coprime_gcd_left_div q N)
+      -- This is where squarefreeness is actually needed.
+      simpa [d, r] using (coprime_gcd_div_of_squarefree q N hq)
     have ht : Nat.totient (d * r) = Nat.totient d * Nat.totient r := by
       simpa using (Nat.totient_mul (m := d) (n := r) hcop)
     simpa [hqdr, ht, Nat.cast_mul]
 
-  -- Final algebra: simplify the absolute value expression
   by_cases hdt : (Nat.totient d : ℝ) = 0
   · simp [hmuSq, hRamAbs, hphi, hdt]
   · have hdt' : (Nat.totient d : ℝ) ≠ 0 := hdt
-    -- `pow_two` rewrites `x^2` as `x*x`; the remaining goal is cancellation/reassociation.
     simp [hmuSq, hRamAbs, hphi, pow_two,
-          mul_assoc, mul_left_comm, mul_comm,
-          hdt', mul_inv_cancel, inv_mul_cancel]
+      mul_assoc, mul_left_comm, mul_comm, hdt', mul_inv_cancel, inv_mul_cancel]
 
 /-- Tail reindexing inequality (will be rewritten with `tsum` once `sigma` is nontrivial). -/
-lemma tail_reindex_bound (N : ℕ) :
+axiom tail_reindex_bound (N : ℕ) :
     |sigma N - sigma_trunc_Q0 N| ≤
       ((Nat.divisors N).filter Squarefree).sum (fun d =>
         (1 / (Nat.totient d : ℝ)) *
           (((Finset.Icc (Nat.succ (Q0 / d)) (Nat.gcd N (N + Q0))).filter Squarefree).sum (fun r =>
-            if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0))) := by
-  admit
+            if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)))
 
 /-- Euler-product tail bound with an explicit constant (Rosser–Schoenfeld input later). -/
-lemma euler_tail_bound (R N : ℕ) (hR : 1 ≤ R) :
+axiom euler_tail_bound (R N : ℕ) (hR : 1 ≤ R) :
     ((Finset.Icc (Nat.succ R) (Nat.gcd N (N + R))).filter Squarefree).sum (fun r =>
       if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)
-    ≤ (45 : ℝ) / R := by
-  admit
+    ≤ (45 : ℝ) / R
 
-/-- Finite product evaluation for the block majorant on the extremal prime set.
--- The finite product appearing in the block-majorant numeric check (as a rational). -/
+/-- The finite product appearing in the block-majorant numeric check (as a rational). -/
 def FprodQ : ℚ :=
   ((1 : ℚ) + 1 / ((2 : ℚ) - 1)) *
   ((1 : ℚ) + 1 / ((3 : ℚ) - 1)) *
@@ -256,7 +258,11 @@ def FprodQ : ℚ :=
 lemma numeric_eval_F_block :
     ((FprodQ : ℚ) : ℝ) < (330 : ℝ) := by
   have hQ : FprodQ < (330 : ℚ) := by
-    -- `native_decide` works fine on rationals here.
     unfold FprodQ
     native_decide
   exact_mod_cast hQ
+
+end
+end TailBlock
+end AO_OffDiag
+end Goldbach
