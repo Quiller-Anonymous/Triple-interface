@@ -6,10 +6,14 @@ import Mathlib.Data.Nat.Squarefree
 
 /-
   Tail block: Ramanujan truncation, block majorant, and the abstract model
-  assumptions needed to derive the 3e-4 tail bound on the canonical window.
+  assumptions needed to derive a numeric tail bound on a canonical window.
 
-  Honest version: we do NOT use `AO_Core.sigma` (which is currently a placeholder `0`).
-  Instead, `sigma` is provided as part of the `Model`.
+  HONEST DESIGN (Option B):
+  * We do NOT use `Goldbach.AO_Core.sigma` (currently a placeholder `0`).
+  * The "true" singular series `sigma` is supplied by a `Model`.
+  * The truncation `sigma_trunc_Q0` is defined concretely here.
+  * Downstream files (e.g. `SigmaTailReindex`, `SigmaTailEuler`) should build
+    an actual `Model` instance by proving the required fields.
 -/
 
 namespace Goldbach
@@ -40,39 +44,34 @@ def ramanujanZ (q N : ℕ) : ℤ :=
 /-- Real-valued Ramanujan sum. -/
 noncomputable def ramanujanR (q N : ℕ) : ℝ := (ramanujanZ q N : ℤ)
 
-/-- Truncated singular series at height `Q0`:
-`σ_{≤Q0}(N) = ∑_{q≤Q0} μ(q)^2/φ(q)^2 * c_q(N)`.
-
-Note: this depends only on `N`, not on the true (infinite) `sigma`. -/
+/-- Truncated singular series at height `Q0`. -/
 noncomputable def sigma_trunc_Q0 (N : ℕ) : ℝ :=
   (Finset.Icc (1 : ℕ) Q0).sum (fun q =>
     (muSq q) * (1 / ((Nat.totient q : ℝ) ^ 2)) * (ramanujanR q N))
 
-/-- Canonical block majorant. -/
+/-- Canonical block majorant used in the tail bound (purely arithmetic). -/
 noncomputable def F_block (N : ℕ) : ℝ :=
   ((Nat.factorization N).support).prod (fun p => (1 : ℝ) + (1 / ((p : ℝ) - 1)))
 
 /-- Multiplicative form of `F_block`, recorded separately for clarity. -/
 noncomputable def F_block_prod (N : ℕ) : ℝ := F_block N
 
-/-
-  === Model packaging (no global axioms) ===
+/--
+Tail-block facts packaged as a `Model`.
+
+This is the “no-axioms-in-the-file” interface: analytic inputs live as *fields*
+to be proved in downstream modules.
 -/
-
-/-- Tail-block facts from the paper, packaged so the final 3e-4 lemma is derivable. -/
 structure Model where
-  /-- The *true* singular series. -/
+  /-- The true singular series. -/
   sigma : ℕ → ℝ
-
-  /-- A majorant used in the tail bound (typically `F_block`). -/
+  /-- Majorant factor in the tail bound (often `F_block`). -/
   F : ℕ → ℝ
-
   /-- Uniform bound for `F` on the canonical window. -/
   F_bound_on_window :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
       F N ≤ (7.9 : ℝ)
-
-  /-- Analytic tail bound comparing the true `sigma` to the truncation. -/
+  /-- Tail comparison between `sigma` and the truncation. -/
   sigma_tail_block :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
       |sigma N - sigma_trunc_Q0 N| ≤ (1.02 : ℝ) / (Q0 : ℝ) * F N
@@ -110,7 +109,8 @@ lemma muSq_eq_zero_iff_not_squarefree (q : ℕ) :
 
 /-- Ramanujan identity (closed form): definitional, no squarefree needed. -/
 lemma ramanujan_sqfree (q N : ℕ) (hq : Squarefree q) :
-    ramanujanZ q N = (μ (q / Nat.gcd q N) : ℤ) * Int.ofNat (Nat.totient (Nat.gcd q N)) := by
+    ramanujanZ q N =
+      (μ (q / Nat.gcd q N) : ℤ) * Int.ofNat (Nat.totient (Nat.gcd q N)) := by
   simp [ramanujanZ]
 
 /-- If `q` is squarefree and `d ∣ q`, then `q / d` is squarefree. -/
@@ -135,7 +135,6 @@ lemma squarefree_div_of_dvd {q d : ℕ} (hq : Squarefree q) (hd : d ∣ q) :
 lemma coprime_gcd_div_of_squarefree (q N : ℕ) (hq : Squarefree q) :
     (Nat.gcd q N).Coprime (q / Nat.gcd q N) := by
   classical
-  -- show gcd = 1
   rw [Nat.coprime_iff_gcd_eq_one]
   by_contra hne
 
@@ -166,7 +165,7 @@ lemma coprime_gcd_div_of_squarefree (q N : ℕ) (hq : Squarefree q) :
 
   exact hg_ne_one hg_eq_one
 
-/-- Termwise bound after splitting q = d*r. -/
+/-- Termwise bound after splitting q = d*r (squarefree q, q ≠ 0). -/
 lemma term_bound_after_split (q N : ℕ) (hq : Squarefree q) (hq0 : q ≠ 0) :
     let d := Nat.gcd q N
     let r := q / d

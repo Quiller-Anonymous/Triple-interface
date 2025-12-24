@@ -1,14 +1,9 @@
-import Mathlib
-import Goldbach.BankParams
-import Goldbach.Windows
-import Goldbach.AO_Core
-import Mathlib.NumberTheory.ArithmeticFunction
-import Mathlib.Data.Nat.Squarefree
+import Mathlib.Data.Real.ENatENNReal
+import Mathlib.Data.ENNReal.Basic
+import Mathlib.Topology.Instances.ENNReal.Lemmas
 
-#check Nat.coprime_gcd_left
-#check Nat.coprime_gcd_right
-#check Nat.coprime_div_gcd_div_gcd
-#check Nat.coprime_gcd_div
-#check Nat.gcd_mul_right
-#check Nat.gcd_div
-#check Nat.totient_mul
+#check ENNReal.tsum_le_tsum_comp_of_surjective
+#check ENNReal.tsum_sigma'
+#check ENNReal.tsum_comm
+#check ENNReal.tsum_mul_left
+#check ENNReal.sum_le_tsum
