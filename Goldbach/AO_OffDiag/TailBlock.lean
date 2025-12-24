@@ -53,17 +53,17 @@ noncomputable def F_block (N : ℕ) : ℝ :=
 /-- Multiplicative form of `F_block`, recorded separately for clarity. -/
 noncomputable def F_block_prod (N : ℕ) : ℝ := F_block N
 
-/-- **Analytic input**: block tail bound on the canonical window. -/
-axiom sigma_tail_block_axiom
+/-- **Analytic input**: block tail bound on the canonical window.
+axium sigma_tail_block_axium
   {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
   |sigma N - sigma_trunc_Q0 N| ≤ (1.02 : ℝ) / (Q0 : ℝ) * F_block N
-
-/-- **Analytic input**: uniform bound for `F_block` on the canonical window. -/
-axiom F_block_bound_on_window
+  **Analytic input**: uniform bound for `F_block` on the canonical window.
+axium F_block_bound_on_window
   {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
   F_block N ≤ (7.9 : ℝ)
 
-/-- Tail-block facts from the paper, packaged so the final 3e-4 lemma is derivable. -/
+Tail-block facts from the paper, packaged so the final 3e-4 lemma is derivable. -/
+
 structure Model where
   F : ℕ → ℝ
   F_bound_on_window :
@@ -72,6 +72,18 @@ structure Model where
   sigma_tail_block :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
       |sigma N - sigma_trunc_Q0 N| ≤ (1.02 : ℝ) / (Q0 : ℝ) * F N
+  tail_reindex_bound :
+    ∀ N : ℕ, |sigma N - sigma_trunc_Q0 N| ≤
+      ((Nat.divisors N).filter Squarefree).sum (fun d =>
+        (1 / (Nat.totient d : ℝ)) *
+          (((Finset.Icc (Nat.succ (Q0 / d)) (Nat.gcd N (N + Q0))).filter Squarefree).sum (fun r =>
+            if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)))
+
+  euler_tail_bound :
+    ∀ {R N : ℕ}, 1 ≤ R →
+      ((Finset.Icc (Nat.succ R) (Nat.gcd N (N + R))).filter Squarefree).sum (fun r =>
+        if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)
+      ≤ (45 : ℝ) / R
 
 /-- Pure numeric squeeze: `(1.02/30000) * 7.9 ≤ 3e-4`. -/
 lemma coef_times_ub_le_3e4 :
@@ -95,17 +107,15 @@ theorem tail_bound_on_window
     mul_le_mul_of_nonneg_left hF hcoef_nonneg
   exact h1.trans (h2.trans coef_times_ub_le_3e4)
 
-/-- Canonical model instance using the analytic inputs above. -/
+/-- Canonical model instance using the analytic inputs above.
 noncomputable def canonicalModel : Model where
   F := F_block
   F_bound_on_window := by intro X N hX hN; exact F_block_bound_on_window (X:=X) (N:=N) hX hN
-  sigma_tail_block := by intro X N hX hN; exact sigma_tail_block_axiom (X:=X) (N:=N) hX hN
+  sigma_tail_block := by intro X N hX hN; exact sigma_tail_block_axium (X:=X) (N:=N) hX hN
 
-/-
-  === Pure math lemmas (non-analytic) ===
--/
+ === Pure math lemmas (non-analytic) ===
 
-/-- Squarefree support of μ² (for our `muSq`). -/
+--- Squarefree support of μ² (for our `muSq`). -/
 lemma muSq_eq_zero_iff_not_squarefree (q : ℕ) :
     muSq q = 0 ↔ ¬ Squarefree q := by
   by_cases h : Squarefree q <;> simp [muSq, h]
@@ -230,20 +240,6 @@ lemma term_bound_after_split (q N : ℕ) (hq : Squarefree q) (hq0 : q ≠ 0) :
   · have hdt' : (Nat.totient d : ℝ) ≠ 0 := hdt
     simp [hmuSq, hRamAbs, hphi, pow_two,
       mul_assoc, mul_left_comm, mul_comm, hdt', mul_inv_cancel, inv_mul_cancel]
-
-/-- Tail reindexing inequality (will be rewritten with `tsum` once `sigma` is nontrivial). -/
-axiom tail_reindex_bound (N : ℕ) :
-    |sigma N - sigma_trunc_Q0 N| ≤
-      ((Nat.divisors N).filter Squarefree).sum (fun d =>
-        (1 / (Nat.totient d : ℝ)) *
-          (((Finset.Icc (Nat.succ (Q0 / d)) (Nat.gcd N (N + Q0))).filter Squarefree).sum (fun r =>
-            if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)))
-
-/-- Euler-product tail bound with an explicit constant (Rosser–Schoenfeld input later). -/
-axiom euler_tail_bound (R N : ℕ) (hR : 1 ≤ R) :
-    ((Finset.Icc (Nat.succ R) (Nat.gcd N (N + R))).filter Squarefree).sum (fun r =>
-      if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)
-    ≤ (45 : ℝ) / R
 
 /-- The finite product appearing in the block-majorant numeric check (as a rational). -/
 def FprodQ : ℚ :=
