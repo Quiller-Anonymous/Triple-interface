@@ -74,14 +74,7 @@ theorem bank_cert_bound_canon
     |(Goldbach.Rep.R N : ℝ) - (Goldbach.AO_Major.Mcanon) N| ≤ (0.01 : ℝ) :=
   bank_cert_bound (δ_bridge:=BG_Calib.δbridge_canon) (δ_AO:=BG_Calib.δAO_canon)
     (hBridge:=by intro X N hX hN; simpa using BG_Calib.weights_bridge_full (X:=X) (N:=N) hX hN)
-    (hAO:=by
-      intro X N hX hN
-      -- AO envelope bound from instantiated channels/caps
-      have := AO_ErrorEnvelope.errAO_bound
-        (C:=Goldbach.AO_Instantiate.channels)
-        (K:=Goldbach.AO_Instantiate.caps)
-        (X:=X) (N:=N) hX hN
-      simpa [BG_Calib.δAO_canon] using this)
+    (hAO:=hAO)
     (hCal:=hCal)
 
 -- AO piece: |conv_ref − Mcanon| ≤ δAO_canon on the window
