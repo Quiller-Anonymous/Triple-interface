@@ -1,7 +1,6 @@
-import Mathlib.Data.Real.ENatENNReal
-import Mathlib.Data.ENNReal.Basic
-import Mathlib.Topology.Instances.ENNReal.Lemmas
 
-#check Nat.mem_divisors
-#check Nat.mem_divisors.1
-#check Nat.mem_divisors.2
+#check Finset.prod_subset
+#check Finset.prod_le_prod
+#check Finset.prod_le_prod'
+#check Finset.prod_le_prod_of_subset
+#check Finset.prod_union

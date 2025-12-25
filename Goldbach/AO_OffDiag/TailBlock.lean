@@ -14,6 +14,12 @@ import Mathlib.Data.Nat.Squarefree
   * The truncation `sigma_trunc_Q0` is defined concretely here.
   * Downstream files (e.g. `SigmaTailReindex`, `SigmaTailEuler`) should build
     an actual `Model` instance by proving the required fields.
+
+  REFACTOR NOTE (2025-12):
+  The `Model` is now purely structural:
+    • it carries a tail constant `K_tail`,
+    • it carries a window bound constant `F_ub`,
+    • the final numeric budget is proved separately.
 -/
 
 namespace Goldbach
@@ -59,44 +65,59 @@ noncomputable def F_block_prod (N : ℕ) : ℝ := F_block N
 /--
 Tail-block facts packaged as a `Model`.
 
-This is the “no-axioms-in-the-file” interface: analytic inputs live as *fields*
-to be proved in downstream modules.
+Analytic inputs live as *fields* to be proved in downstream modules.
 -/
 structure Model where
   /-- The true singular series. -/
   sigma : ℕ → ℝ
   /-- Majorant factor in the tail bound (often `F_block`). -/
   F : ℕ → ℝ
+  /-- Tail constant: analytic estimate produces `(K_tail/Q0) * F(N)`. -/
+  K_tail : ℝ
+  K_tail_nonneg : 0 ≤ K_tail
+  /-- A window bound constant for `F`, used only to derive a concrete numeric bound downstream. -/
+  F_ub : ℝ
+  F_ub_nonneg : 0 ≤ F_ub
   /-- Uniform bound for `F` on the canonical window. -/
   F_bound_on_window :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
-      F N ≤ (7.9 : ℝ)
+      F N ≤ F_ub
   /-- Tail comparison between `sigma` and the truncation. -/
   sigma_tail_block :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
-      |sigma N - sigma_trunc_Q0 N| ≤ (1.02 : ℝ) / (Q0 : ℝ) * F N
+      |sigma N - sigma_trunc_Q0 N| ≤ (K_tail : ℝ) / (Q0 : ℝ) * F N
 
-/-- Pure numeric squeeze: `(1.02/30000) * 7.9 ≤ 3e-4`. -/
-lemma coef_times_ub_le_3e4 :
-  (1.02 : ℝ) / (Q0 : ℝ) * (7.9 : ℝ) ≤ (3e-4 : ℝ) := by
-  norm_num [Q0]
-
-/-- Tail bound on the canonical window, derived from the `Model` inputs. -/
-theorem tail_bound_on_window
+/-- Derived (still-structural) tail bound using the model's `F_ub`. -/
+theorem tail_bound_on_window_structural
   (M : Model)
   {X N : ℕ}
   (hX : BankParams.X0 ≤ X)
   (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
-  |M.sigma N - sigma_trunc_Q0 N| ≤ (3e-4 : ℝ) := by
+  |M.sigma N - sigma_trunc_Q0 N| ≤ (M.K_tail : ℝ) / (Q0 : ℝ) * (M.F_ub : ℝ) := by
   have h1 := M.sigma_tail_block (X:=X) (N:=N) hX hN
   have hF := M.F_bound_on_window (X:=X) (N:=N) hX hN
-  have hcoef_nonneg : 0 ≤ (1.02 : ℝ) / (Q0 : ℝ) := by
-    have : (0 : ℝ) < (Q0 : ℝ) := by norm_num [Q0]
-    have hpos : 0 < (1.02 : ℝ) := by norm_num
-    exact div_nonneg (le_of_lt hpos) (le_of_lt this)
-  have h2 : (1.02 : ℝ) / (Q0 : ℝ) * M.F N ≤ (1.02 : ℝ) / (Q0 : ℝ) * (7.9 : ℝ) :=
-    mul_le_mul_of_nonneg_left hF hcoef_nonneg
-  exact h1.trans (h2.trans coef_times_ub_le_3e4)
+  have hQpos : (0 : ℝ) < (Q0 : ℝ) := by norm_num [Q0]
+  have hcoef_nonneg : 0 ≤ (M.K_tail : ℝ) / (Q0 : ℝ) :=
+    div_nonneg M.K_tail_nonneg (le_of_lt hQpos)
+  have h2 :
+      (M.K_tail : ℝ) / (Q0 : ℝ) * M.F N
+        ≤ (M.K_tail : ℝ) / (Q0 : ℝ) * (M.F_ub : ℝ) := by
+    exact mul_le_mul_of_nonneg_left hF hcoef_nonneg
+  exact h1.trans h2
+
+/--
+Numeric consumer lemma: if you have proved the arithmetic squeeze
+`(K_tail/Q0) * F_ub ≤ eps`, then you get the uniform tail bound `≤ eps`.
+-/
+theorem tail_bound_on_window
+  (M : Model)
+  (eps : ℝ)
+  (hbudget : (M.K_tail : ℝ) / (Q0 : ℝ) * (M.F_ub : ℝ) ≤ eps)
+  {X N : ℕ}
+  (hX : BankParams.X0 ≤ X)
+  (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
+  |M.sigma N - sigma_trunc_Q0 N| ≤ eps := by
+  exact (tail_bound_on_window_structural (M := M) hX hN).trans hbudget
 
 /-
   === Pure math lemmas (non-analytic) ===

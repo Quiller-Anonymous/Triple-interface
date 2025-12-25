@@ -1,0 +1,94 @@
+
+import Mathlib
+import Mathlib.Tactic
+
+namespace Goldbach.AO_OffDiag
+namespace UglyWrapper
+
+open scoped BigOperators
+
+def smallPrimes : Finset ℕ := {2, 3, 5, 7, 11, 13, 17}
+
+noncomputable def facR (p : ℕ) : ℝ := (1 : ℝ) + (1 / ((p : ℝ) - 1))
+
+noncomputable def facNN (p : ℕ) : NNReal :=
+  if hp : p ∈ smallPrimes then
+    ⟨facR p, by
+      unfold smallPrimes at hp
+      simp only [Finset.mem_insert, Finset.mem_singleton] at hp
+      rcases hp with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> norm_num [facR]⟩
+  else
+    1
+
+lemma facNN_coe_eq_facR {p : ℕ} (hp : p ∈ smallPrimes) :
+    ((facNN p : NNReal) : ℝ) = facR p := by
+  simp [facNN, hp]
+
+lemma one_le_facNN_of_mem {p : ℕ} (hp : p ∈ smallPrimes) : (1 : NNReal) ≤ facNN p := by
+  change (1 : ℝ) ≤ ((facNN p : NNReal) : ℝ)
+  simp [facNN, hp, facR]
+  unfold smallPrimes at hp
+  simp only [Finset.mem_insert, Finset.mem_singleton] at hp
+  rcases hp with rfl | rfl | rfl | rfl | rfl | rfl | rfl <;> norm_num [facR]
+
+theorem prod_fac_le_smallPrimes
+  (S : Finset ℕ) (hsub : S ⊆ smallPrimes) :
+  S.prod facR ≤ smallPrimes.prod facR := by
+  classical
+  let g : ℕ → NNReal := fun p => if p ∈ S then facNN p else 1
+
+  have hprod_eq :
+      (S.prod (β := NNReal) facNN) = (smallPrimes.prod (β := NNReal) g) := by
+    have hf1 : ∀ x ∈ smallPrimes, x ∉ S → g x = 1 := by
+      intro x _ hx; simp [g, hx]
+    have hS :
+        (S.prod (β := NNReal) facNN) = (S.prod (β := NNReal) g) := by
+      refine Finset.prod_congr rfl ?_
+      intro x hx
+      simp [g, hx]
+    calc
+      (S.prod (β := NNReal) facNN)
+          = (S.prod (β := NNReal) g) := hS
+      _   = (smallPrimes.prod (β := NNReal) g) := by
+            exact Finset.prod_subset (s₁ := S) (s₂ := smallPrimes) (f := g) hsub hf1
+
+  have hpoint : ∀ p ∈ smallPrimes, g p ≤ facNN p := by
+    intro p hp
+    by_cases hpS : p ∈ S
+    · simp [g, hpS]
+    · have : (1 : NNReal) ≤ facNN p := one_le_facNN_of_mem (p := p) hp
+      simpa [g, hpS] using this
+
+  have hleNN :
+      (smallPrimes.prod (β := NNReal) g) ≤ (smallPrimes.prod (β := NNReal) facNN) := by
+    refine Finset.prod_le_prod (s := smallPrimes) ?_ ?_
+    · intro p hp; exact zero_le (g p)
+    · intro p hp; exact hpoint p hp
+
+  have hS_leNN :
+      (S.prod (β := NNReal) facNN) ≤ (smallPrimes.prod (β := NNReal) facNN) := by
+    -- rewrite S.prod facNN as smallPrimes.prod g
+    simpa [hprod_eq] using hleNN
+
+  have hS_le_R :
+      ((S.prod (β := NNReal) facNN : NNReal) : ℝ)
+        ≤ ((smallPrimes.prod (β := NNReal) facNN : NNReal) : ℝ) := by
+    exact_mod_cast hS_leNN
+
+  have hS_rewrite :
+      ((S.prod (β := NNReal) facNN : NNReal) : ℝ) = S.prod facR := by
+    refine Finset.prod_congr rfl ?_
+    intro p hp
+    have hp' : p ∈ smallPrimes := hsub hp
+    simpa [facNN_coe_eq_facR (p := p) hp']
+
+  have hSP_rewrite :
+      ((smallPrimes.prod (β := NNReal) facNN : NNReal) : ℝ) = smallPrimes.prod facR := by
+    refine Finset.prod_congr rfl ?_
+    intro p hp
+    simpa [facNN_coe_eq_facR (p := p) hp]
+
+  simpa [hS_rewrite, hSP_rewrite] using hS_le_R
+
+end UglyWrapper
+end Goldbach.AO_OffDiag

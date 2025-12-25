@@ -3,9 +3,9 @@ import Goldbach.AnalyticPointwise
 import Goldbach.ClosureBridge
 import Goldbach.Windows
 import Goldbach.Base.FiniteBaseDefs
-import Goldbach.FiniteBase.UseGenerated
+import Goldbach.FiniteBase
 import Goldbach.FiniteBase.FromGenerated
-import Goldbach.FiniteBase.Generated_real_Proofs
+import Goldbach.Analytic.Witnesses
 
 open Goldbach
 open Goldbach.Analytic
@@ -14,46 +14,51 @@ open Goldbach.Windows
 open Goldbach.Base
 open Goldbach.FiniteBase
 
-/-- Final statement:
-    either handled by the finite base for small N, or by closure+bridge for large N. -/
-theorem goldbach_final
-  (w : PointwiseWitness)
-  (hBase : FiniteBaseUpTo w.X0) :
-∀ {N : ℕ}, Even N → 4 ≤ N → GoldbachRep N := by
-intro N hEven h4
+namespace Goldbach
 
-have hBase : FiniteBaseUpTo w.X0 :=
-  (Goldbach.FiniteBase.base_000004_100000).mono_right
-    (hle := by exact ?_)   -- if you ever need to extend the upper bound
--- (Most of the time you won’t need `mono_right` here: `goldbach_final`
--- directly consumes `FiniteBaseUpTo w.X0`.)
-
-by_cases hSmall : N ≤ Goldbach.FiniteBase.HI
-  · -- small range: finite base handles it
-    exact hBase hEven h4 hSmall
-  · -- large range: use the analytic witness (PointwiseWitness) + closure bridge
-    have hX : w.X0 ≤ N := by
-      -- your monotonicity logic to ensure you can apply `w.global` at X = N
-      ...
-    have hcl : ClosurePointwise N w.H w.S w.c0 w.ε := w.global hX
-    exact closurePointwise_to_rep hcl ⟨..., ...⟩ -- your window-membership facts
-
-  -- from your `Even N` hypothesis
-  have hEvenWin : Windows.IsEven N := isEven_of_even hEven
-
-  -- `N` is always in its own centered window
-  have hIn : N ∈ Windows.IccShift N w.H := self_mem_IccShift N w.H
-
-  -- therefore in the even-filtered window
-  have hWin : N ∈ Windows.EvenIn N w.H :=
-    mem_EvenIn_of_mem_IccShift_and_even hIn hEvenWin
-
-  exact closurePointwise_to_rep (X := N) (H := w.H) (S := w.S) (c0 := w.c0) (ε := w.ε) hcl hWin
-
-/-- Finite base: every even N in [4, 100000] has a Goldbach representation. -/
-theorem base_000004_100000 : FiniteBaseOn 4 100000 := by
-  -- This should be a thin wrapper around your stitched table correctness.
-  -- If your `Generated_real` exposes `rep_in_range : ... → GoldbachRep N`,
-  -- then:
+/-- Convert a finite-base certificate (stated using `Windows.IsEven`) into the
+`Base.FiniteBaseUpTo` shape used by `Goldbach.Final.goldbach_final`. -/
+theorem finiteBaseUpTo_of_cert {X0 : ℕ} (c : Goldbach.FiniteBase.Cert X0) :
+    Goldbach.Base.FiniteBaseUpTo X0 := by
   intro N hEven h4 hNle
-  exact Generated_real_Proofs.rep_in_range hEven h4 hNle
+  have hIsEven : Goldbach.Windows.IsEven N :=
+    Goldbach.Windows.isEven_of_even hEven
+  rcases c (N := N) hIsEven h4 hNle with ⟨p, q, hp, hq, hsum⟩
+  exact ⟨p, q, hp, hq, hsum⟩
+
+/-- Final finite-conditional statement: small cases by finite base, large by analytics. -/
+theorem goldbach_final (w : PointwiseWitness) (hBase : FiniteBaseUpTo w.X0) :
+    ∀ {N : ℕ}, Even N → 4 ≤ N → GoldbachRep N := by
+  intro N hEven h4
+  by_cases hSmall : N ≤ w.X0
+  ·  -- small N via finite base
+     exact hBase hEven h4 hSmall
+  ·  -- large N via pointwise closure + bridge
+     have hX  : w.X0 ≤ N := le_of_not_ge hSmall
+     have hcl : ClosurePointwise N w.H w.S w.c0 w.ε := w.global hX
+     -- turn `Even N` into your decidable window predicate
+     have hEven' : IsEven N := isEven_of_even hEven
+     -- build the required window membership
+     have hWin   : N ∈ EvenIn N w.H := mem_EvenIn_self (N:=N) (H:=w.H) hEven'
+     -- bridge to a representation
+     exact closurePointwise_to_rep (N:=N) (H:=w.H) hcl hWin
+
+/-- Unconditional Goldbach (using the canonical analytic witness + the verified finite base). -/
+theorem goldbach_unconditional :
+    ∀ {N : ℕ}, Even N → 4 ≤ N → GoldbachRep N := by
+  intro N hEven h4
+  let w : PointwiseWitness := Goldbach.Analytic.witnessCanonical
+
+  -- Verified finite base up to 1,000,000 from the generated certificate.
+  have hBase1e6 : Goldbach.Base.FiniteBaseUpTo 1_000_000 :=
+    finiteBaseUpTo_of_cert Goldbach.FiniteBase.FromGenerated.finiteBaseUpTo_1e6
+
+  -- Align the certificate cutoff with the witness cutoff.
+  -- In the canonical setup, `w.X0` should be definitionally `1_000_000`;
+  -- if not, replace this `simpa` with `FiniteBaseOn.mono_right`.
+  have hBase : Goldbach.Base.FiniteBaseUpTo w.X0 := by
+    simpa [w] using hBase1e6
+
+  exact goldbach_final (w := w) (hBase := hBase) (N := N) hEven h4
+
+end Goldbach

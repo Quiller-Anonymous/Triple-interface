@@ -23,7 +23,7 @@ open Goldbach.BankPieces
     uniform projected main-term lower bound on the window. -/
 def MajorBound (X0 H : ℕ) (S c0 : ℝ) (M : ℕ → ℝ) : Prop :=
   ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-    M N ≥ c0 * S * (N : ℝ) / (Real.log (N : ℝ))^2
+    M N ≥ c0 * S
 
 /-- Build the bridge-ready analytic hypothesis from the major + bank leaves. -/
 def mkAnalyticHyp

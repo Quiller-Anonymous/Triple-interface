@@ -2,11 +2,9 @@
   Lean 4.26.0-rc2
   Exact Hardy–Littlewood singular series σ for Goldbach (no admits/sorries/axioms).
 -/
-import Mathlib.Data.Nat.Prime
-import Mathlib.Data.Nat.Parity
-import Mathlib.Data.Nat.Divisors
-import Mathlib.Data.Real.Basic
-import Mathlib.Algebra.BigOperators.Basic
+import Mathlib.Data.Nat.Prime.Basic
+import Mathlib.Algebra.Ring.Parity
+import Mathlib.NumberTheory.Divisors
 import Mathlib
 
 open scoped BigOperators

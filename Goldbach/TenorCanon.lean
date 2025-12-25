@@ -1,4 +1,4 @@
--- Goldbach/TenorCanon.lean
+
 import Mathlib
 import Goldbach.Windows
 import Goldbach.Rep
@@ -6,6 +6,7 @@ import Goldbach.AnalyticAssemble  -- for TenorInputs
 import Goldbach.AO_Core
 import Goldbach.AO_Major
 import Goldbach.BG_Bank
+import Goldbach.TenorCanonDefs
 
 namespace Goldbach.TenorCanon
 
@@ -21,6 +22,7 @@ noncomputable def major_canonical :
 by
   intro X N hX hN
   simpa using Goldbach.AO_Major.major_lb_window (X := X) (N := N) hX hN
+
 
 /-- Canonical Tenor inputs assembled from the two lemmas above. -/
 noncomputable def inputs :
