@@ -111,22 +111,32 @@ theorem euler_tail_bound_tsum_ENNReal (R N : ℕ) (hR : 1 ≤ R) :
       else 0)
     ≤ ENNReal.ofReal ((45 : ℝ) / R) := by
   -- drop conditions and use unconditional tail bound + Cstar_le_45
-  have hdrop :
-      (∑' r : ℕ,
-          if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
-            ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
-          else 0)
-        ≤
-      (∑' r : ℕ,
-          if R < r then
-            ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
-          else 0) := by
-    refine ENNReal.tsum_le_tsum ?_
-    intro r
-    by_cases h : R < r ∧ Squarefree r ∧ Nat.Coprime r N
-    · have hRr : R < r := h.1
-      simp [h, hRr]
-    · simp [h]
+have hdrop :
+    (∑' r : ℕ,
+        if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
+          ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
+        else 0)
+      ≤
+    (∑' r : ℕ,
+        if R < r then
+          ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
+        else 0) := by
+  refine ENNReal.tsum_le_tsum ?_
+  intro r
+  by_cases hR : R < r
+  · -- RHS = a; LHS is either a or 0
+    by_cases h : Squarefree r ∧ Nat.Coprime r N
+    · -- LHS = a
+      have : (R < r ∧ Squarefree r ∧ Nat.Coprime r N) := ⟨hR, h.1, h.2⟩
+      simp [hR, this]
+    · -- LHS = 0
+      have : ¬ (R < r ∧ Squarefree r ∧ Nat.Coprime r N) := by
+        intro hh; exact h ⟨hh.2.1, hh.2.2⟩
+      simp [hR, this]
+  · -- RHS = 0; LHS also = 0 since it requires R < r
+    have : ¬ (R < r ∧ Squarefree r ∧ Nat.Coprime r N) := by
+      intro hh; exact hR hh.1
+    simp [hR, this]
 
   have huncond := tsum_tail_inv_totient_sq_le (R := R) hR
   have hC := Cstar_le_45
@@ -161,9 +171,3 @@ theorem euler_tail_bound_tsum (R N : ℕ) (hR : 1 ≤ R) :
 end
 end SigmaTailEuler_Analytic
 end Goldbach.AO_OffDiag
-
-#check ENNReal.tsum_Ioi
-#check ENNReal.tsum_Icc
-#check tsum_Ioi
-#check Real.tsum_inv_sq
-#check Real.tsum_one_div_sq
