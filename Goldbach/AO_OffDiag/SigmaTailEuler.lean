@@ -1,4 +1,3 @@
-
 import Mathlib
 import Goldbach.AO_OffDiag.TailBlock
 import Mathlib.Data.Finset.Basic
@@ -14,31 +13,77 @@ namespace SigmaTailEuler
 
 open TailBlock
 
-/--
-Euler-product tail bound (Appendix “Machine check III”, Lemma 3/4 style).
+/-!
+## Step 2: Euler-product tail bound (nonvacuous form)
 
-NOTE: this current statement is still the *vacuous* Icc-variant and will be replaced
-in Step 2 by a genuine tail lemma on `r > R`.
+We phrase the analytic estimate as a bound on a `tsum` over `r > R`.
+Then we obtain the finitary bound by `sum_le_tsum` since terms are nonnegative.
+
+The actual analytic proof can be filled in later; until then this is the
+single explicit analytic assumption for Step 2.
+-/
+
+/-- The summand used in the Euler tail. -/
+noncomputable def eulerSummand (r N : ℕ) : ℝ :=
+  if (R : ℕ) < r ∧ Squarefree r ∧ Nat.Coprime r N then
+    1 / (Nat.totient r : ℝ) ^ 2
+  else 0
+
+/--
+**Analytic input (Step 2)**: true tail bound over `r > R`.
+
+This is the nonvacuous statement you actually want; the old Icc lemma was
+an empty-sum artifact.
+
+You can treat this as an axiom/placeholder until you port the analytic proof.
+-/
+axiom euler_tail_bound_tsum
+  (R N : ℕ) (hR : 1 ≤ R) :
+  (∑' r : ℕ,
+      if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
+        (1 / (Nat.totient r : ℝ) ^ 2)
+      else 0)
+    ≤ (45 : ℝ) / R
+
+/--
+Finitary corollary: any finite squarefree/coprime tail sum is bounded by the same RHS.
+This is what you typically need after reindexing to a finite set.
 -/
 theorem euler_tail_bound
-    (R N : ℕ) (hR : 1 ≤ R) :
-    ((Finset.Icc (Nat.succ R) (Nat.gcd N (N + R))).filter Squarefree).sum (fun r =>
-      if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)
+  (R N : ℕ) (hR : 1 ≤ R) :
+  ((Finset.Icc (Nat.succ R) (Nat.succ (Nat.succ R) + Nat.gcd N (N + R))).filter Squarefree).sum
+      (fun r => if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)
     ≤ (45 : ℝ) / R := by
-  have hRpos : 0 < R := Nat.succ_le_iff.mp hR
-  have hgcd_le' : Nat.gcd N R ≤ R :=
-    Nat.le_of_dvd hRpos (Nat.gcd_dvd_right N R)
-  have hgcd_eq : Nat.gcd N (N + R) = Nat.gcd N R := by
-    simpa [Nat.add_comm] using (Nat.gcd_add_self_right N R)
-  have hgcd_le : Nat.gcd N (N + R) ≤ R := by
-    simpa [hgcd_eq] using hgcd_le'
-  have hIcc : Finset.Icc (Nat.succ R) (Nat.gcd N (N + R)) = ∅ := by
-    exact Finset.Icc_eq_empty_of_lt (Nat.lt_succ_of_le hgcd_le)
-  have hRnonneg : (0 : ℝ) ≤ (R : ℝ) := by exact_mod_cast (Nat.zero_le R)
-  have h45nonneg : (0 : ℝ) ≤ (45 : ℝ) := by norm_num
-  have hbound : (0 : ℝ) ≤ (45 : ℝ) / R := by
-    exact div_nonneg h45nonneg hRnonneg
-  simp only [hIcc, Finset.filter_empty, Finset.sum_empty, hbound]
+  -- We bound the finite sum by the `tsum` tail, termwise and by nonnegativity.
+  have hle :
+      ((Finset.Icc (Nat.succ R) (Nat.succ (Nat.succ R) + Nat.gcd N (N + R))).filter Squarefree).sum
+          (fun r => if Nat.Coprime r N then 1 / (Nat.totient r : ℝ) ^ 2 else 0)
+        ≤ ∑' r : ℕ,
+            if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
+              (1 / (Nat.totient r : ℝ) ^ 2)
+            else 0 := by
+    -- Use `Finset.sum_le_tsum` with nonnegative terms.
+    refine Finset.sum_le_tsum ?hnn ?hterm
+    · intro r hr
+      -- nonnegativity of the tail term
+      by_cases h : R < r ∧ Squarefree r ∧ Nat.Coprime r N
+      · simp [h, one_div, pow_two]
+        positivity
+      · simp [h]
+    · intro r hr
+      -- show each finset term ≤ corresponding tsum term
+      have hrIcc : Nat.succ R ≤ r := by
+        exact (Finset.mem_filter.mp hr).1.1
+      have hRlt : R < r := Nat.lt_of_lt_of_le (Nat.lt_succ_self R) hrIcc
+      have hsq : Squarefree r := (Finset.mem_filter.mp hr).2
+      by_cases hcop : Nat.Coprime r N
+      · have : R < r ∧ Squarefree r ∧ Nat.Coprime r N := ⟨hRlt, hsq, hcop⟩
+        simp [this, hcop]
+      · -- finset term is 0, so ≤ tail term by nonnegativity
+        simp [hcop]
+        -- RHS is ≥ 0
+        by_cases h : R < r ∧ Squarefree r ∧ Nat.Coprime r N <;> simp [h]
+  exact hle.trans (euler_tail_bound_tsum R N hR)
 
 /-!
 ## Step 1: honest bound for `F_block` under a **prime-support hypothesis**
