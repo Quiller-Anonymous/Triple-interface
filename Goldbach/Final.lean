@@ -3,7 +3,6 @@ import Goldbach.AnalyticPointwise
 import Goldbach.ClosureBridge
 import Goldbach.Windows
 import Goldbach.Base.FiniteBaseDefs
-import Goldbach.AO_OffDiag.SigmaTailEuler_Analytic
 
 open Goldbach
 open Goldbach.Analytic
