@@ -1,6 +1,7 @@
 import Mathlib
 
-#check Finset.sum_le_sum_of_subset_of_nonneg
-#check Finset.sum_mono_set
-#check Finset.sum_le_univ_sum_of_nonneg
-#check Finset.sum_le_sum
+#check ENNReal.tsum_ofReal
+#check ENNReal.ofReal_tsum_of_nonneg
+#check ENNReal.tsum_ofReal_eq
+#check ENNReal.summable_ofReal
+#check Real.summable_nat_pow_inv (p := 2)).2
