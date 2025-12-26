@@ -129,7 +129,7 @@ theorem real_tsum_tail_inv_sq_le (t : ℝ) (ht : 0 < t) :
                     · have hne : n ≠ k := by omega
                       rw [Nat.succ_sub_one]
                       rw [Finset.Ioc_succ_right hne]
-                      rw [Finset.sum_insert (Finset.not_mem_Ioc_of_gt (by omega : n > n - 1))]
+                      rw [Finset.sum_insert (by simp [Finset.mem_Ioc]; omega)]
                       have hn_pos : 0 < n := by omega
                       have hn1_pos : 0 < n - 1 := by omega
                       have ih' := ih (by omega) (by omega)
