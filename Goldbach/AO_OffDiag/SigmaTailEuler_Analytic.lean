@@ -400,9 +400,7 @@ Mathematically, one proves
 axiom Cstar_le_45 : Cstar ≤ ENNReal.ofReal 45
 
 
-
-## Main: unconditional totient-squared tail, then filtered corollary
--/
+--/ ## Main: unconditional totient-squared tail, then filtered corollary-/
 
 theorem tsum_tail_inv_totient_sq_le (R : ℕ) (hR : 1 ≤ R) :
   (∑' n : ℕ, if R < n then ENNReal.ofReal (1 / (Nat.totient n : ℝ) ^ 2) else 0)
