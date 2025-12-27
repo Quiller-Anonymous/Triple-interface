@@ -1,0 +1,23 @@
+CONSTANTS AND LEMMAS WE DO/NOT HAVE IN LIBRARY
+Toolchain 4.26v02/mathlib
+
+Confirmed PRESENT:
+ENNReal.ofReal_tsum_of_nonneg —  YES
+Real.summable_nat_pow_inv — YES
+tsum_mul_right - YES
+tsum_mul_left - YES
+lt_div_iff₀ - YES
+div_lt_iff₀ - YES
+
+
+Confirmed ABSENT (DO NOT USE!):
+ENNReal.tsum_ofReal — NO
+ENNReal.tsum_ofReal_eq — NO
+ENNReal.summable_ofReal — NO
+ENNReal.tsum_ofReal_eq (again) — NO
+tsum_eq_iSup_sum - NO
+Real.tsum_eq_iSup_sum - NO
+Real.tsum_eq_iSup_nat - NO
+tsum_comp_injective - NO
+div_lt_iff
+lt_div_iff
