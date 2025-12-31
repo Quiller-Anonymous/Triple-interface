@@ -1,5 +1,6 @@
 import Mathlib
 import Goldbach.AnalyticPointwise
+import Goldbach.BG_Identity
 import Goldbach.ClosureBridge
 import Goldbach.Windows
 import Goldbach.Base.FiniteBaseDefs

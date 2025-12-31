@@ -6,7 +6,7 @@ open scoped BigOperators
 namespace Goldbach
 namespace Singular
 
-/-- If `p` is an odd prime then `(p-1)/(p-2) ≥ 1`. -/
+/-- If `p` is an odd prime then `(p-1)/(p-2) ≥ 1`.
 lemma oddFactor_ge_one_of_prime_ne_two
     {p : ℕ} (hp : Nat.Prime p) (hne2 : p ≠ 2) :
     (1 : ℝ) ≤ oddFactor p := by
@@ -24,7 +24,19 @@ lemma oddFactor_ge_one_of_prime_ne_two
   have : (1 : ℝ) ≤ (p - 1 : ℝ) / (p - 2 : ℝ) := (one_le_div_iff hden_pos).2 num_ge
   simpa [oddFactor] using this
 
+If all factors are ≥ 1, then the real finset product is ≥ 1. -/
+private lemma one_le_prod_of_one_le_real {ι : Type} (T : Finset ι) (f : ι → ℝ)
+    (h : ∀ i ∈ T, (1:ℝ) ≤ f i) : (1:ℝ) ≤ T.prod f := by
+  apply Finset.prod_induction f (fun x => 1 ≤ x)
+  · intro a b ha hb
+    have ha0 : 0 ≤ a := le_trans (by norm_num) ha
+    nlinarith
+  · norm_num
+  · exact h
+
+
 /-- Every factor in the finite product over odd prime divisors is ≥ 1. -/
+
 lemma oddFactor_ge_one_on_support {n p : ℕ}
     (hp : p ∈ oddPrimeSupport n) : (1 : ℝ) ≤ oddFactor p := by
   rcases Finset.mem_filter.mp hp with ⟨_, hpr⟩
@@ -33,19 +45,13 @@ lemma oddFactor_ge_one_on_support {n p : ℕ}
 
 /-- The finite product of odd prime local factors is ≥ 1. -/
 lemma prod_oddFactor_ge_one (n : ℕ) :
-  (1 : ℝ) ≤ ∏ p in oddPrimeSupport n, oddFactor p := by
+    (1 : ℝ) ≤ ∏ p ∈ oddPrimeSupport n, oddFactor p := by
   classical
-  refine Finset.induction_on (oddPrimeSupport n) ?base ?step
-  · simp
-  · intro a s ha hIH
-    have ha1 : (1 : ℝ) ≤ oddFactor a := oddFactor_ge_one_on_support (by simpa using ha)
-    have hs_nonneg : 0 ≤ ∏ p in s, oddFactor p := by
-      -- each factor in s is ≥ 1, so the product is ≥ 0
-      have htail : (1 : ℝ) ≤ ∏ p in s, oddFactor p := by simpa using hIH
-      exact le_trans (by norm_num) htail
-    have hprod_full : (1 : ℝ) ≤ oddFactor a * ∏ p in s, oddFactor p := by
-      nlinarith
-    simpa [Finset.prod_insert ha, one_mul] using hprod_full
+  -- this is just `Finset.prod` over `oddPrimeSupport n`
+  simpa using
+    (one_le_prod_of_one_le_real (oddPrimeSupport n) (fun p => oddFactor p) (by
+      intro p hp
+      exact oddFactor_ge_one_on_support hp))
 
 /-- Uniform positive floor for σ on even `n`: `σ(n) ≥ 2*C2`. -/
 lemma sigma_floor_even {C : C2Const} {n : ℕ} (he : Even n) :

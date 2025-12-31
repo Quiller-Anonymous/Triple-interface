@@ -1,12 +1,23 @@
 import Mathlib.Data.Real.Basic
 import Mathlib.Tactic
+import Goldbach.AO_Core
 import Goldbach.AO_OffDiag.TailBlock
 import Goldbach.AO_OffDiag.WeightMass
+import Goldbach.BankParams
 import Goldbach.Windows
-import Goldbach.AO_Major
+import Goldbach.AO_OffDiag.EntryPoint
+
 
 namespace Goldbach
 namespace AO_OffDiag
+
+set_option maxRecDepth 10000
+
+/-!
+Inputs required here:
+• `tail_bound_on_window` (axiom, to be discharged by the off-diagonal analysis): the Ramanujan truncation gap on the canonical window.
+• An instance `[WeightMassOnWindow]` giving `|weight_mass| ≤ 1` for `X ≥ X0`.
+-/
 
 /-
 Assumed API already in this file or nearby:
@@ -18,35 +29,36 @@ Assumed API already in this file or nearby:
 If the last identity is not yet definitional, keep the lemma `E_off_def` below.
 -/
 
-def E_off (X N : ℕ) : ℝ := (AO_Major.sigma N - sigma_trunc_Q0 N) * weight_mass X
+noncomputable def E_off (X N : ℕ) : ℝ :=
+  (Goldbach.AO_OffDiag.sigmaHonest N - TailBlock.sigma_trunc_Q0 N) * AO_Core.weight_mass X
 
-theorem E_off_bound
-    {X0 H X N Q0 : ℕ}
-    (hX : X0 ≤ X) (hN : Goldbach.Windows.EvenIn X H N)
-    (I : Goldbach.AO_OffDiag.TailBlock.SigmaTailInputs Q0)
-    (hmass_nonneg : 0 ≤ weight_mass X)
-    (hmass_le_one : weight_mass X ≤ 1) :
-    |E_off X N| ≤ (3e-4 : ℝ) := by
-  -- tail
-  have htail : |AO_Major.sigma N - sigma_trunc_Q0 N| ≤ (3e-4 : ℝ) :=
-    Goldbach.AO_OffDiag.TailBlock.tail_bound_Q0 (I:=I)
-      (X0:=X0) (H:=H) (X:=X) (N:=N) hX hN
-  -- mass
-  have hmass : |weight_mass X| ≤ 1 :=
-    Goldbach.AO_OffDiag.weight_mass_abs_on_window
-      (weight_mass:=weight_mass) (X0:=X0) (H:=H) hX hN hmass_nonneg hmass_le_one
-  -- combine
+theorem E_off_bound {X N : ℕ}
+    (hX : BankParams.X0 ≤ X)
+    (hN : N ∈ Windows.EvenIn X BankParams.H) :
+  |E_off X N| ≤ (3e-4 : ℝ) := by
+
+  have htail :
+      |Goldbach.AO_OffDiag.sigmaHonest N - TailBlock.sigma_trunc_Q0 N| ≤ (3e-4 : ℝ) :=
+    -- this is the lemma proved (axiomatically for now) in EntryPoint.lean
+    Goldbach.AO_OffDiag.tail_bound_on_window (X := X) (N := N) hX hN
+  -- |weight_mass| ≤ 1 on the canonical window
+  have hmass : |Goldbach.AO_Core.weight_mass X| ≤ (1 : ℝ) :=
+    (inferInstance : WeightMassOnWindow).weight_mass_abs_le_one_on_window (X:=X) hX
+  -- combine the two bounds
   calc
     |E_off X N|
-        = |(AO_Major.sigma N - sigma_trunc_Q0 N) * weight_mass X| := by
+        = |(Goldbach.AO_OffDiag.sigmaHonest N - TailBlock.sigma_trunc_Q0 N)
+            * Goldbach.AO_Core.weight_mass X| := by
             simp [E_off]
-    _   = |AO_Major.sigma N - sigma_trunc_Q0 N| * |weight_mass X| := by
+    _   = |Goldbach.AO_OffDiag.sigmaHonest N - TailBlock.sigma_trunc_Q0 N|
+            * |Goldbach.AO_Core.weight_mass X| := by
             simp [abs_mul]
-    _   ≤ (3e-4 : ℝ) * |weight_mass X| := by
+    _   ≤ (3e-4 : ℝ) * |Goldbach.AO_Core.weight_mass X| := by
             exact mul_le_mul_of_nonneg_right htail (abs_nonneg _)
     _   ≤ (3e-4 : ℝ) * 1 := by
             exact mul_le_mul_of_nonneg_left hmass (by norm_num : 0 ≤ (3e-4 : ℝ))
     _   = (3e-4 : ℝ) := by ring
+
 
 end AO_OffDiag
 end Goldbach

@@ -15,3 +15,10 @@ import Mathlib
 #check div_lt_iff₀
 #check lt_div_iff
 #check lt_div_iff₀
+#check inv_le_inv_of_le
+#check div_le_iff
+#check div_le_div_right
+#check div_le_iff₀
+#check div_le_div₀
+#check div_le_div_right_of_nonneg
+#check div_le_iff_mul_le

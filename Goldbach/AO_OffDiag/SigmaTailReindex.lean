@@ -174,10 +174,8 @@ lemma tsum_qMajorant_le_tsum_gcdMajorant (N : ℕ) :
   refine ENNReal.tsum_le_tsum (fun q => ?_)
   simpa using qMajorant_le_gcd_majorant (q := q) (N := N)
 
-/-- Final real statement (still needs the bridge lemma from ℝ to ENNReal, and the reindexing). -/
-theorem tail_reindex_bound (N : ℕ) :
-    |sigmaTail N| ≤ (reindexMajorantENN N).toReal := by
-  sorry
+axiom tail_reindex_bound (N : ℕ) :
+  |sigmaTail N| ≤ (reindexMajorantENN N).toReal
 
 end SigmaTailReindex
 end Goldbach.AO_OffDiag

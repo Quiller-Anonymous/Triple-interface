@@ -14,9 +14,9 @@ namespace Singular
 
 /-- The Euler-product constant `C2 = ∏_{p≥3} (1 - 1/(p-1)^2)`.
     We treat it as an abstract positive real carried around as data. -/
-structure C2Const : Prop :=
-  (C2 : ℝ)
-  (pos : 0 < C2)
+structure C2Const where
+  C2 : ℝ
+  pos : 0 < C2
 
 variable {C : C2Const}
 
@@ -25,7 +25,7 @@ def oddPrimeSupport (n : ℕ) : Finset ℕ :=
   n.divisors.filter (fun p => Nat.Prime p ∧ p ≠ 2)
 
 /-- Local factor `(p-1)/(p-2)` for odd primes `p`. -/
-def oddFactor (p : ℕ) : ℝ := (p - 1 : ℝ) / (p - 2 : ℝ)
+noncomputable def oddFactor (p : ℕ) : ℝ := (p - 1 : ℝ) / (p - 2 : ℝ)
 
 /-- The Goldbach singular series σ(n).
 
@@ -38,15 +38,15 @@ def oddFactor (p : ℕ) : ℝ := (p - 1 : ℝ) / (p - 2 : ℝ)
 -/
 noncomputable def sigma (C : C2Const) (n : ℕ) : ℝ :=
   if h : Even n then
-    (2 : ℝ) * C.C2 * ∏ p in oddPrimeSupport n, oddFactor p
+    (2 : ℝ) * C.C2 * ∏ p ∈ oddPrimeSupport n, oddFactor p
   else
     0
 
 @[simp] lemma sigma_odd {n : ℕ} (hodd : Odd n) : sigma C n = 0 := by
-  simp [sigma, hodd.not_even]
+  simp [sigma, Nat.not_even_iff_odd.mpr hodd]
 
 lemma sigma_even_expand {n : ℕ} (he : Even n) :
-    sigma C n = (2 : ℝ) * C.C2 * ∏ p in oddPrimeSupport n, oddFactor p := by
+    sigma C n = (2 : ℝ) * C.C2 * ∏ p ∈ oddPrimeSupport n, oddFactor p := by
   simp [sigma, he]
 
 /-- If `p` is an odd prime then `(p-1)/(p-2) ≥ 1`. -/
@@ -66,7 +66,7 @@ lemma oddFactor_ge_one_of_prime_ne_two
     have h1le' : 1 ≤ p := le_trans (by decide : 1 ≤ 2) h2le
     simpa [Nat.cast_sub h2le, Nat.cast_sub h1le'] using this
   have : (1 : ℝ) ≤ (p - 1 : ℝ) / (p - 2 : ℝ) :=
-    (one_le_div_iff hpos).2 num_ge
+    (one_le_div hpos).mpr (by linarith : (p : ℝ) - 2 ≤ (p : ℝ) - 1)
   simpa [oddFactor] using this
 
 /-- No odd prime divides `2^k`. (Key for understanding σ at powers of two.) -/

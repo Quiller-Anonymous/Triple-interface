@@ -1,0 +1,18 @@
+/-
+  Goldbach/BG_Identity.lean  — axiom-free scaffold
+
+  Purpose:
+    Provide a *formal* decomposition of errAO into four channels on the window.
+    For now we keep E_off as our BG_Calib off-term (which is 0 with the current
+    K_BG and P_BG), and we choose the other three placeholders so that the identity
+    is definitional (no axioms needed).
+
+  Later:
+    Replace E_kernel/E_mellin/E_smooth by your actual channels and keep E_off.
+-/
+
+
+import Goldbach.BG_Identity.Core
+import Goldbach.BG_Identity.PrimePower
+import Goldbach.BG_Identity.Operators
+import Goldbach.BG_Identity.Decomp

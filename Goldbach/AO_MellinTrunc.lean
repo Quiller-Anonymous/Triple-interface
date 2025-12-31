@@ -35,7 +35,7 @@ lemma logX0_pos : 0 < Real.log (BankParams.X0 : ℝ) := by
   -- X0 is definitionaly 1_000_000 in BankParams, so 1 < X0 is decidable
   have hx : (1 : ℝ) < (BankParams.X0 : ℝ) := by
     exact_mod_cast (by decide : 1 < BankParams.X0)
-  exact Real.log_pos_iff.mpr hx
+  exact Real.log_pos hx
 
 lemma eps_pos : 0 < eps_canon := by
   simpa [eps_canon] using inv_pos.mpr logX0_pos
@@ -54,8 +54,8 @@ noncomputable def δ_mellin_canon : ℝ :=
 
 lemma δ_mellin_nonneg : 0 ≤ δ_mellin_canon := by
   have hε : 0 ≤ eps_canon ^ 2 := by exact sq_nonneg _
-  have hCK : 0 ≤ C_K_canon := by norm_num
-  have hT  : 0 < T_canon := by norm_num
+  have hCK : 0 ≤ C_K_canon := by simp [C_K_canon]
+  have hT  : 0 < T_canon := by norm_num [T_canon]
   have h1  : 0 ≤ (2 : ℝ) / (eps_canon ^ 2) := by exact div_nonneg (by norm_num) hε
   have h2  : 0 ≤ C_K_canon / T_canon := by exact div_nonneg hCK (le_of_lt hT)
   simpa [δ_mellin_canon] using mul_nonneg h1 h2

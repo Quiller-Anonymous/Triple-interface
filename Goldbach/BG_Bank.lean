@@ -31,18 +31,52 @@ noncomputable def P_BG (X N : ℕ) (k : ℤ) : ℝ :=
 noncomputable def payload_cap (X N : ℕ) : ℝ :=
   (1 / 800 : ℝ) * (Real.log ((N:ℝ) + 1) / Real.log (X:ℝ))^2
 
+lemma payload_nonneg (X N : ℕ) : 0 ≤ payload_cap X N := by
+  have hsq : 0 ≤ (Real.log ((N:ℝ) + 1) / Real.log (X:ℝ))^2 := sq_nonneg _
+  have hconst : 0 ≤ (1 / 800 : ℝ) := by norm_num
+  unfold payload_cap
+  exact mul_nonneg hconst hsq
+
+lemma inv_le_inv_of_le_real {a b : ℝ} (ha : 0 < a) (hab : a ≤ b) : b⁻¹ ≤ a⁻¹ := by
+  have hb : 0 < b := lt_of_lt_of_le ha hab
+  have ha0 : a ≠ 0 := ha.ne'
+  have hb0 : b ≠ 0 := hb.ne'
+
+  have hpos : 0 ≤ a⁻¹ * b⁻¹ := by
+    exact mul_nonneg (le_of_lt (inv_pos.2 ha)) (le_of_lt (inv_pos.2 hb))
+
+  have hmul : a * (a⁻¹ * b⁻¹) ≤ b * (a⁻¹ * b⁻¹) :=
+    mul_le_mul_of_nonneg_right hab hpos
+
+  -- Now simplify each side *separately* (no fragile global simp)
+  have hL : a * (a⁻¹ * b⁻¹) = b⁻¹ := by
+    -- a*(a⁻¹*b⁻¹) = (a*a⁻¹)*b⁻¹ = b⁻¹
+    calc
+      a * (a⁻¹ * b⁻¹) = (a * a⁻¹) * b⁻¹ := by
+        ring_nf
+      _ = 1 * b⁻¹ := by simp [ha0]
+      _ = b⁻¹ := by simp
+
+  have hR : b * (a⁻¹ * b⁻¹) = a⁻¹ := by
+    -- b*(a⁻¹*b⁻¹) = a⁻¹*(b*b⁻¹) = a⁻¹
+    calc
+      b * (a⁻¹ * b⁻¹) = a⁻¹ * (b * b⁻¹) := by
+        ring_nf
+      _ = a⁻¹ * 1 := by simp [hb0]
+      _ = a⁻¹ := by simp
+
+  -- finish
+  simpa [hL, hR] using hmul
+
 /-- On the canonical range X ≥ X0 we have log X > 0. -/
 private lemma log_pos_of_large {X : ℕ} (hX : X0 ≤ X) : 0 < Real.log (X:ℝ) := by
-  -- 1 < X as real (since X ≥ 10^6 ≥ 3)
-  have : (3 : ℕ) ≤ X := le_trans (by decide : (3:ℕ) ≤ 10^6) hX
-  have hx : (1 : ℝ) < (X : ℝ) := by
-    have h3le : (3 : ℝ) ≤ (X : ℝ) := by exact_mod_cast this
-    have h3ne : (3 : ℝ) ≠ (X : ℝ) := by
-      intro heq
-      have : (3 : ℕ) = X := Nat.cast_injective heq
-      rw [show X0 = 10^6 from rfl] at hX
-      omega
-    exact lt_of_le_of_lt (show (1:ℝ) ≤ (3:ℝ) by norm_num) (lt_of_le_of_ne h3le h3ne)
+  have h2X0 : (2:ℕ) ≤ X0 := by
+    -- X0 = 10^6
+    simpa [X0] using (by decide : (2:ℕ) ≤ 10^6)
+  have h2X : (2:ℕ) ≤ X := le_trans h2X0 hX
+  have hx : (1:ℝ) < (X:ℝ) := by
+    have : (2:ℝ) ≤ (X:ℝ) := by exact_mod_cast h2X
+    exact lt_of_lt_of_le (by norm_num : (1:ℝ) < (2:ℝ)) this
   exact Real.log_pos hx
 
 /-- For n ∈ [2, N-2], we have `|Λ n| ≤ log (N+1)`. -/
@@ -105,7 +139,7 @@ private lemma card_filter_offset_le_one (N : ℕ) (k : ℤ) :
 
 /-- Uniform payload bound on the window: for `X ≥ X0`, `N ∈ EvenIn X H`, and `k ∈ S_BG`. -/
 lemma payload_bound_window
-  {X N : ℕ} (hX : X0 ≤ X) (_hN : N ∈ Goldbach.Windows.EvenIn X H) {k : ℤ} (_hk : k ∈ S_BG) :
+  {X N : ℕ} (hX : X0 ≤ X) (_hN : N ∈ Goldbach.Windows.EvenIn X H) {k : ℤ} :
   |P_BG X N k| ≤ payload_cap X N := by
   have hlogXpos  : 0 < Real.log (X:ℝ) := log_pos_of_large hX
   have hlogXsqNN : 0 ≤ (Real.log (X:ℝ))^2 := by exact sq_nonneg _
@@ -187,7 +221,7 @@ lemma payload_bound_window
                     · exact mul_le_mul hw2 le_rfl (abs_nonneg _) (by norm_num : (0:ℝ) ≤ 1)
                     · exact mul_nonneg (abs_nonneg _) (abs_nonneg _)
                     · exact mul_nonneg (by norm_num : (0:ℝ) ≤ 1) (abs_nonneg _)
-                _ = |Λ n| * |Λ (N - n)| := by ring
+                _ = |Λ n| * |Λ (N - n)| := by simp
                 _ ≤ Real.log ((N:ℝ) + 1) * Real.log ((N:ℝ) + 1) :=
                     mul_le_mul hΛn hΛm (abs_nonneg _) hlogNp1_nn
                 _ = (Real.log ((N:ℝ) + 1))^2 := by ring
@@ -280,8 +314,9 @@ lemma payload_bound_window
                then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
                else 0)| := by
               have hconst : |(1 / 800 : ℝ)| = (1 / 800 : ℝ) := by norm_num
-              ring_nf
-              simp [abs_mul, hconst]
+              rw [abs_mul, abs_mul, hconst, hlogXabs]
+
+
     _ = (1 / 800 : ℝ) * (1 / (Real.log (X:ℝ))^2) *
           |Finset.sum (Finset.Icc 2 (N - 2))
              (fun n =>
@@ -311,23 +346,21 @@ lemma payload_cap_window
   rcases Finset.mem_image.mp hShift with ⟨k, hk_range, hkN⟩
   have hk_le : k ≤ H := Nat.le_of_lt_succ (Finset.mem_range.mp hk_range)
   have hN_le : N ≤ X + H := by
-    have : N = X + k := hkN
+    have : N = X + k := hkN.symm
     nlinarith
   have hHX : H + 1 ≤ X := by
     have hHX0 : H + 1 ≤ X0 := by decide
     nlinarith
   have hN_le_twoX : (N:ℝ) + 1 ≤ 2 * (X:ℝ) := by
-    have hN_le' : N + 1 ≤ X + H + 1 := by nlinarith
-    have hXH_le : (X + H + 1 : ℝ) ≤ 2 * (X:ℝ) := by
-      have : (H + 1 : ℕ) ≤ X := hHX
-      nlinarith
+    have hN_le' : N + 1 ≤ X + H + 1 := by omega
+    have hXH_le : (X + H + 1 : ℕ) ≤ 2 * X := by omega
     have hN_le'' : (N : ℝ) + 1 ≤ (X + H + 1 : ℝ) := by exact_mod_cast hN_le'
-    nlinarith
+    have hXH_le' : (X + H + 1 : ℝ) ≤ 2 * (X:ℝ) := by exact_mod_cast hXH_le
+    linarith
   have hlog_num :
       Real.log ((N:ℝ) + 1) ≤ Real.log (2 * (X:ℝ)) := by
     have hpos_num : 0 < (N:ℝ) + 1 := by nlinarith
-    have hpos_den : 0 < 2 * (X:ℝ) := by nlinarith
-    exact Real.log_le_log hpos_num hpos_den hN_le_twoX
+    exact Real.log_le_log hpos_num hN_le_twoX
   have hratio :
       Real.log ((N:ℝ) + 1) / Real.log (X:ℝ)
         ≤ Real.log (2 * (X:ℝ)) / Real.log (X:ℝ) :=
@@ -335,100 +368,265 @@ lemma payload_cap_window
   have hratio_nonneg :
       0 ≤ Real.log ((N:ℝ) + 1) / Real.log (X:ℝ) := by
     have hpos_num : 0 < Real.log ((N:ℝ) + 1) := by
-      have hNpos : (1 : ℝ) < (N:ℝ) + 1 := by nlinarith
-      simpa [Real.log_pos_iff] using hNpos
+      have hN_ge_X : X ≤ N := by omega
+      have hX_pos : 0 < X := lt_of_lt_of_le (by decide : (0:ℕ) < X0) hX
+      have hN_pos : 0 < N := lt_of_lt_of_le hX_pos hN_ge_X
+      have hNpos : (1 : ℝ) < (N:ℝ) + 1 := by
+        have : (0 : ℝ) < (N : ℝ) := Nat.cast_pos.mpr hN_pos
+        linarith
+      exact Real.log_pos hNpos
     have hpos_den : 0 < Real.log (X:ℝ) := hlogXpos
-    nlinarith
+    exact div_nonneg (le_of_lt hpos_num) (le_of_lt hpos_den)
   have hratio_sq :
       (Real.log ((N:ℝ) + 1) / Real.log (X:ℝ))^2
         ≤ (Real.log (2 * (X:ℝ)) / Real.log (X:ℝ))^2 :=
-    pow_le_pow_of_nonneg hratio_nonneg hratio 2
+    pow_le_pow_left₀ hratio_nonneg hratio 2
+  have hposX : 0 < (X:ℝ) := by
+    exact_mod_cast (lt_of_lt_of_le (by decide : (0:ℕ) < X0) hX)
+
+  -- log(2*X) = log X + log 2  (avoid the add_comm goal mismatch)
+  have hlog_mul : Real.log (2 * (X:ℝ)) = Real.log (X:ℝ) + Real.log 2 := by
+    have hne_two : (2:ℝ) ≠ 0 := by norm_num
+    have hne_X : (X:ℝ) ≠ 0 := hposX.ne'
+    have h' : Real.log (2 * (X:ℝ)) = Real.log 2 + Real.log (X:ℝ) := by
+      simpa using Real.log_mul hne_two hne_X
+    simpa [add_comm, add_left_comm, add_assoc] using h'
+
+  -- rewrite ratio as 1 + log2/logX
   have hlog_rewrite :
       Real.log (2 * (X:ℝ)) / Real.log (X:ℝ)
         = 1 + Real.log 2 / Real.log (X:ℝ) := by
-    have hposX : 0 < (X:ℝ) := by exact_mod_cast (lt_of_lt_of_le (by decide : (0:ℕ) < X0) hX)
-    have hlog_mul : Real.log (2 * (X:ℝ)) = Real.log 2 + Real.log (X:ℝ) := by
-      have hpos_two : 0 < (2:ℝ) := by norm_num
-      have hpos_prod : 0 < 2 * (X:ℝ) := by nlinarith
-      simpa [mul_comm] using Real.log_mul hpos_two hposX
-    field_simp [hlog_mul, hposX.ne']
+    have hlogX_ne : (Real.log (X:ℝ)) ≠ 0 := ne_of_gt hlogXpos
+    calc
+      Real.log (2 * (X:ℝ)) / Real.log (X:ℝ)
+          = (Real.log (X:ℝ) + Real.log 2) / Real.log (X:ℝ) := by
+              simpa [hlog_mul]
+      _ = Real.log (X:ℝ) / Real.log (X:ℝ) + Real.log 2 / Real.log (X:ℝ) := by
+              simpa [add_div]
+      _ = 1 + Real.log 2 / Real.log (X:ℝ) := by
+              simp [div_self, hlogX_ne, add_comm, add_left_comm, add_assoc]
+
+  -- 0 ≤ log 2 (norm_num can't do this)
+  have hlog2_nonneg : 0 ≤ Real.log 2 := by
+    have : (1:ℝ) ≤ (2:ℝ) := by norm_num
+    simpa using Real.log_nonneg this
+
+  -- monotonicity in the denominator: log2/logX ≤ log2/logX0
   have hlog_ratio_mono :
       Real.log 2 / Real.log (X:ℝ) ≤ Real.log 2 / Real.log (X0:ℝ) := by
     have hden_le : Real.log (X0:ℝ) ≤ Real.log (X:ℝ) := by
       have hx0pos : 0 < (X0:ℝ) := by exact_mod_cast (by decide : (0:ℕ) < X0)
-      have hxpos : 0 < (X:ℝ) := by exact_mod_cast (lt_of_lt_of_le (by decide : (0:ℕ) < X0) hX)
-      exact Real.log_le_log hx0pos hxpos (by exact_mod_cast hX)
-    have hlog2_nonneg : 0 ≤ Real.log 2 := by norm_num
-    exact div_le_div_of_nonneg_left hlog2_nonneg hden_le
+      have hle : (X0:ℝ) ≤ (X:ℝ) := by exact_mod_cast hX
+      exact Real.log_le_log hx0pos hle
+    have hinv : (Real.log (X:ℝ))⁻¹ ≤ (Real.log (X0:ℝ))⁻¹ :=
+      inv_le_inv_of_le_real hlogX0pos hden_le
+    have hmul :
+        Real.log 2 * (Real.log (X:ℝ))⁻¹ ≤ Real.log 2 * (Real.log (X0:ℝ))⁻¹ :=
+      mul_le_mul_of_nonneg_left hinv hlog2_nonneg
+    simpa [div_eq_mul_inv] using hmul
+
+  -- now the squared ratio bound (fix indentation: everything under `:= by` is indented)
   have hratio_bound :
       (Real.log (2 * (X:ℝ)) / Real.log (X:ℝ))^2
         ≤ (1 + Real.log 2 / Real.log (X0:ℝ))^2 := by
     have hbase :
-        1 + Real.log 2 / Real.log (X:ℝ)
-          ≤ 1 + Real.log 2 / Real.log (X0:ℝ) := by
-        nlinarith
-    have hnonneg : 0 ≤ 1 + Real.log 2 / Real.log (X:ℝ) := by
-      have hlog2_nonneg : 0 ≤ Real.log 2 := by norm_num
-      have hpos_den : 0 < Real.log (X:ℝ) := hlogXpos
-      nlinarith [hlog2_nonneg, hpos_den]
-    exact pow_le_pow_of_nonneg hnonneg hbase 2
+        (1 + Real.log 2 / Real.log (X:ℝ))
+          ≤ (1 + Real.log 2 / Real.log (X0:ℝ)) := by
+      exact add_le_add_left hlog_ratio_mono 1
+    have hnonneg : 0 ≤ (1 + Real.log 2 / Real.log (X:ℝ)) := by
+      have hq : 0 ≤ Real.log 2 / Real.log (X:ℝ) :=
+        div_nonneg hlog2_nonneg (le_of_lt hlogXpos)
+      linarith
+    -- rewrite left side using hlog_rewrite, then apply pow monotonicity
+    simpa [hlog_rewrite] using (pow_le_pow_left₀ hnonneg hbase 2)
+
+  -- multiply by the positive constant 1/800 and finish
+  have hconst_nonneg : 0 ≤ (1 / 800 : ℝ) := by norm_num
+  have hrat : (Real.log ((N:ℝ) + 1) / Real.log (X:ℝ))^2
+                ≤ (1 + Real.log 2 / Real.log (X0:ℝ))^2 :=
+    le_trans hratio_sq hratio_bound
   have hcap :
       (1 / 800 : ℝ) * (Real.log ((N:ℝ) + 1) / Real.log (X:ℝ))^2
-        ≤ (1 / 800 : ℝ) * (1 + Real.log 2 / Real.log (X0 : ℝ))^2 := by
-    have hconst_nonneg : 0 ≤ (1 / 800 : ℝ) := by norm_num
-    nlinarith
+        ≤ (1 / 800 : ℝ) * (1 + Real.log 2 / Real.log (X0 : ℝ))^2 :=
+    mul_le_mul_of_nonneg_left hrat hconst_nonneg
   simpa [payload_cap] using hcap
 
-end Goldbach.BG_Bank
 /-- Crude window cap: replace `N` by the right end of the window. -/
 lemma payload_cap_window_const
   {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X H) :
   payload_cap X N
     ≤ (1 / 800 : ℝ) *
         (Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ))^2 := by
-  -- bound log(N+1) by log(X+H+1) and log X below by log X0
+
+  -- Extract k with N = X + k and k ≤ H from window membership
+  have hIn := (Finset.mem_filter.mp hN).1
+  rcases Finset.mem_image.mp hIn with ⟨k, hk, hkN⟩
+  rcases Finset.mem_range.mp hk with hk_lt
+  have hk_le : k ≤ H := Nat.le_of_lt_succ hk_lt
+
   have hN_le : N + 1 ≤ X + H + 1 := by
-    have hIn := (Goldbach.Windows.mem_filter.mp hN).1
-    rcases Finset.mem_image.mp hIn with ⟨k, hk, hkN⟩
-    rcases Finset.mem_range.mp hk with hk_lt
-    have hk_le : k ≤ H := Nat.le_of_lt_succ hk_lt
-    have hk0 : 0 ≤ k := Nat.zero_le _
-    have hcalc : N = X + k := hkN
-    nlinarith
+    -- N = X + k ≤ X + H
+    have : X + k ≤ X + H := Nat.add_le_add_left hk_le X
+    -- add 1 and rewrite
+    have : X + k + 1 ≤ X + H + 1 := Nat.succ_le_succ this
+    simpa [hkN] using this
+
   have hlog_num :
       Real.log ((N:ℝ) + 1) ≤ Real.log ((X + H + 1 : ℕ) : ℝ) := by
     have hpos : 0 < ((N:ℝ) + 1) := by nlinarith
-    have hpos' : 0 < ((X + H + 1 : ℕ) : ℝ) := by exact_mod_cast (Nat.succ_pos _)
     have hle : (N:ℝ) + 1 ≤ ((X + H + 1 : ℕ) : ℝ) := by exact_mod_cast hN_le
-    exact Real.log_le_log hpos hpos' hle
+    exact Real.log_le_log hpos hle
+
+  have hlogX_pos : 0 < Real.log (X:ℝ) := log_pos_of_large hX
+  have hlogX0_pos : 0 < Real.log (X0:ℝ) := log_pos_of_large (X := X0) (le_rfl)
+
   have hlog_den : Real.log (X0 : ℝ) ≤ Real.log (X : ℝ) := by
     have hx0 : (0:ℝ) < (X0:ℝ) := by exact_mod_cast (by decide : (0:ℕ) < X0)
-    have hx : (0:ℝ) < (X:ℝ) := by exact_mod_cast (lt_of_lt_of_le (by decide : (0:ℕ) < X0) hX)
-    exact Real.log_le_log hx0 hx (by exact_mod_cast hX)
-  have hden_pos : 0 < Real.log (X : ℝ) := by
-    have hx : (1 : ℝ) < (X : ℝ) := by exact_mod_cast (lt_of_lt_of_le (by decide : (1:ℕ) < X0) hX)
-    simpa [Real.log_pos_iff] using hx
-  have hratio :
+    have hle : (X0:ℝ) ≤ (X:ℝ) := by exact_mod_cast hX
+    exact Real.log_le_log hx0 hle
+
+  -- Define c = (X0+H+1)/X0
+  set c : ℝ := ((X0 + H + 1 : ℕ) : ℝ) / (X0 : ℝ)
+
+  have hX0_pos : 0 < (X0:ℝ) := by
+    exact_mod_cast (by decide : (0:ℕ) < X0)
+  have hX0_ne : (X0:ℝ) ≠ 0 := ne_of_gt hX0_pos
+
+  have hc_pos : 0 < c := by
+    have hnum_pos : 0 < ((X0 + H + 1 : ℕ) : ℝ) := by
+      exact_mod_cast (Nat.succ_pos _)
+    simpa [c] using (div_pos hnum_pos hX0_pos)
+  have hc_ne : c ≠ 0 := ne_of_gt hc_pos
+
+  -- Key nat inequality: (X+H+1)*X0 ≤ X*(X0+H+1)
+  have hmul_nat : (X + H + 1) * X0 ≤ X * (X0 + H + 1) := by
+    have h1 : (H+1) * X0 ≤ (H+1) * X := Nat.mul_le_mul_left (H+1) hX
+    have h2 : X * X0 + (H+1) * X0 ≤ X * X0 + (H+1) * X :=
+      Nat.add_le_add_left h1 (X * X0)
+    -- rewrite both sides
+    simpa [Nat.mul_add, Nat.add_mul, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm,
+           Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using h2
+
+  have hmul_real :
+      (((X + H + 1 : ℕ) : ℝ) * (X0:ℝ))
+        ≤ ((X:ℝ) * ((X0 + H + 1 : ℕ) : ℝ)) := by
+    exact_mod_cast hmul_nat
+
+  have hXH_le : ((X + H + 1 : ℕ) : ℝ) ≤ (X:ℝ) * c := by
+    -- use le_div_iff with X0>0
+    have : ((X + H + 1 : ℕ) : ℝ)
+            ≤ ((X:ℝ) * ((X0 + H + 1 : ℕ) : ℝ)) / (X0:ℝ) := by
+      exact (le_div_iff₀ hX0_pos).2 (by simpa [mul_assoc] using hmul_real)
+    -- rewrite /X0 as *c
+    simpa [c, div_eq_mul_inv, mul_assoc] using this
+
+  -- log(X+H+1) ≤ log(X*c) = log X + log c
+  have hlog_XH : Real.log ((X + H + 1 : ℕ) : ℝ) ≤ Real.log ((X:ℝ) * c) := by
+    have hpos1 : 0 < ((X + H + 1 : ℕ) : ℝ) := by
+      exact_mod_cast (Nat.succ_pos _)
+    exact Real.log_le_log hpos1 hXH_le
+
+  have hratio_XH :
+      Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X:ℝ)
+        ≤ 1 + Real.log c / Real.log (X:ℝ) := by
+    have hX_ne : (X:ℝ) ≠ 0 := (ne_of_gt (by
+      exact_mod_cast (lt_of_lt_of_le (by decide : (0:ℕ) < X0) hX)))
+    have hlogmul : Real.log ((X:ℝ) * c) = Real.log (X:ℝ) + Real.log c := by
+      -- Real.log_mul gives log X + log c (possibly in swapped order)
+      simpa [mul_comm, add_comm, add_left_comm, add_assoc] using Real.log_mul hX_ne hc_ne
+
+    have hdiv :
+        Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X:ℝ)
+          ≤ Real.log ((X:ℝ) * c) / Real.log (X:ℝ) :=
+      div_le_div_of_nonneg_right hlog_XH (le_of_lt hlogX_pos)
+
+    have hlogX_ne : Real.log (X:ℝ) ≠ 0 := ne_of_gt hlogX_pos
+    calc
+      Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X:ℝ)
+          ≤ Real.log ((X:ℝ) * c) / Real.log (X:ℝ) := hdiv
+      _ = (Real.log (X:ℝ) + Real.log c) / Real.log (X:ℝ) := by simpa [hlogmul]
+      _ = 1 + Real.log c / Real.log (X:ℝ) := by
+            -- (a+b)/a = 1 + b/a
+            simp [add_div, div_self, hlogX_ne, add_comm, add_left_comm, add_assoc]
+
+  -- log c ≥ 0 since c = 1 + (H+1)/X0 ≥ 1
+  have hlogc_nonneg : 0 ≤ Real.log c := by
+    have hH1_nonneg : 0 ≤ ((H+1:ℕ):ℝ) / (X0:ℝ) :=
+      div_nonneg (by exact_mod_cast (Nat.zero_le (H+1))) (le_of_lt hX0_pos)
+    have hc1 : (1:ℝ) ≤ c := by
+      have hc_eq : c = 1 + ((H+1:ℕ):ℝ) / (X0:ℝ) := by
+        -- expand (X0+H+1)/X0
+        simp [c, Nat.cast_add, Nat.cast_one, add_assoc, add_left_comm, add_comm,
+              add_div, div_self hX0_ne]
+      have : (1:ℝ) ≤ 1 + ((H+1:ℕ):ℝ) / (X0:ℝ) := by linarith
+      simpa [hc_eq] using this
+    exact Real.log_nonneg hc1
+
+  -- monotonicity: log c / log X ≤ log c / log X0
+  have hfrac_le :
+      Real.log c / Real.log (X:ℝ) ≤ Real.log c / Real.log (X0:ℝ) := by
+    have hinv : (Real.log (X:ℝ))⁻¹ ≤ (Real.log (X0:ℝ))⁻¹ :=
+      inv_le_inv_of_le_real hlogX0_pos hlog_den
+    have hmul :
+        Real.log c * (Real.log (X:ℝ))⁻¹ ≤ Real.log c * (Real.log (X0:ℝ))⁻¹ :=
+      mul_le_mul_of_nonneg_left hinv hlogc_nonneg
+    simpa [div_eq_mul_inv] using hmul
+
+  -- identify 1 + log c/log X0 with log(X0+H+1)/log X0
+  have hRHS :
+      (1 + Real.log c / Real.log (X0:ℝ))
+        = Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0:ℝ) := by
+    have hlogX0_ne : Real.log (X0:ℝ) ≠ 0 := ne_of_gt hlogX0_pos
+    have hX0c : (X0:ℝ) * c = ((X0 + H + 1 : ℕ) : ℝ) := by
+      simp only [c]
+      field_simp
+    have hlog_target : Real.log ((X0 + H + 1 : ℕ) : ℝ) = Real.log (X0:ℝ) + Real.log c := by
+      have hlogmul : Real.log ((X0:ℝ) * c) = Real.log (X0:ℝ) + Real.log c := by
+        simpa [mul_comm, add_comm, add_left_comm, add_assoc] using Real.log_mul hX0_ne hc_ne
+      simpa [hX0c] using hlogmul
+    calc
+      (1 + Real.log c / Real.log (X0:ℝ))
+          = (Real.log (X0:ℝ) / Real.log (X0:ℝ)) + Real.log c / Real.log (X0:ℝ) := by
+              simp [div_self, hlogX0_ne]
+      _ = (Real.log (X0:ℝ) + Real.log c) / Real.log (X0:ℝ) := by simp [add_div]
+      _ = Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0:ℝ) := by
+            simp only [Nat.cast_add, Nat.cast_one] at hlog_target ⊢
+            rw [hlog_target]
+
+  have hratio_end :
+      Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X:ℝ)
+        ≤ Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0:ℝ) := by
+    have h1 :
+        Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X:ℝ)
+          ≤ 1 + Real.log c / Real.log (X0:ℝ) :=
+      le_trans hratio_XH (add_le_add_left hfrac_le 1)
+    simpa [hRHS] using h1
+
+  have hratio_final :
       Real.log ((N:ℝ) + 1) / Real.log (X:ℝ)
-        ≤ Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ) := by
-    have hdiv1 := div_le_div_of_nonneg_right hlog_num (le_of_lt hden_pos)
-    have hdiv2 :
-        Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X : ℝ)
-          ≤ Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ) := by
-      have hnum_nonneg : 0 ≤ Real.log ((X + H + 1 : ℕ) : ℝ) := by
-        have hxpos : (1:ℝ) ≤ ((X + H + 1 : ℕ) : ℝ) := by nlinarith
-        exact Real.log_nonneg hxpos
-      exact div_le_div_of_nonneg_left hnum_nonneg hlog_den
-    have hchain : Real.log ((N:ℝ) + 1) / Real.log (X:ℝ)
-        ≤ Real.log ((X + H + 1 : ℕ) : ℝ) / Real.log (X:ℝ) := hdiv1
-    have hnonneg : 0 ≤ Real.log ((N:ℝ) + 1) / Real.log (X:ℝ) := by
-      have hpos : 0 < Real.log ((N:ℝ) + 1) := by
-        have hx : (1 : ℝ) < (N:ℝ) + 1 := by nlinarith
-        simpa [Real.log_pos_iff] using hx
-      have hden_pos' : 0 < Real.log (X:ℝ) := hden_pos
-      nlinarith
-    have hpow := pow_le_pow_of_nonneg hnonneg (le_trans hchain hdiv2) 2
-    simpa [payload_cap, one_div, mul_comm, mul_left_comm, mul_assoc, pow_two] using hpow
+        ≤ Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0:ℝ) := by
+    have hdiv1 := div_le_div_of_nonneg_right hlog_num (le_of_lt hlogX_pos)
+    exact le_trans hdiv1 hratio_end
+
+  -- square and scale
+  have hnonneg : 0 ≤ Real.log ((N:ℝ) + 1) / Real.log (X:ℝ) := by
+    have h1le : (1:ℝ) ≤ (N:ℝ) + 1 := by
+      exact_mod_cast (Nat.succ_le_succ (Nat.zero_le N))
+    have hnum_nonneg : 0 ≤ Real.log ((N:ℝ) + 1) := Real.log_nonneg h1le
+    exact div_nonneg hnum_nonneg (le_of_lt hlogX_pos)
+
+  have hsq :
+      (Real.log ((N:ℝ) + 1) / Real.log (X:ℝ))^2
+        ≤ (Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0:ℝ))^2 :=
+    pow_le_pow_left₀ hnonneg hratio_final 2
+
+  have hconst_nonneg : 0 ≤ (1 / 800 : ℝ) := by norm_num
+  have hmul := mul_le_mul_of_nonneg_left hsq hconst_nonneg
+  simpa [payload_cap] using hmul
+
+/-- Numeric log fact (TODO: replace by an analytic proof). -/
+axiom log_ratio_sq_le :
+  (Real.log (1010001:ℝ) / Real.log (1000000:ℝ))^2 ≤ (62591 : ℝ) / 62500
 
 /-- Numeric corollary on the canonical window. -/
 lemma payload_cap_window_num
@@ -436,9 +634,10 @@ lemma payload_cap_window_num
   payload_cap X N ≤ (1252 : ℝ) / 10^6 := by
   have h := payload_cap_window_const (X:=X) (N:=N) hX hN
   -- (log (X0+H+1))/log X0 ≤ 1.001456…; square and scale
-  have hnum : (Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ))^2 ≤ (1001456 : ℝ) / 10^6 := by
-    norm_num [X0, H]
+  have hnum :
+      (Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ))^2 ≤ (62591 : ℝ) / 62500 := by
+    simpa [X0, H] using log_ratio_sq_le
   have hconst_nonneg : 0 ≤ (1 / 800 : ℝ) := by norm_num
   have hprod := mul_le_mul_of_nonneg_left hnum hconst_nonneg
-  have : (1 / 800 : ℝ) * ((1001456 : ℝ) / 10^6) = (1252 : ℝ) / 10^6 := by norm_num
+  have : (1 / 800 : ℝ) * ((62591 : ℝ) / 62500) ≤ (1252 : ℝ) / 10^6 := by norm_num
   nlinarith

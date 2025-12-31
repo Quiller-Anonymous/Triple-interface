@@ -1,82 +1,100 @@
-/-
-  Goldbach/BG_Operator.lean  — axiom-free scaffold
-
-  What this file provides now:
-    • K_BG           : ℤ → ℝ      (BG kernel)
-    • kernel_l1_cap  : ℝ
-    • kernel_l1_nonneg
-    • kernel_l1_bound  : ∑_{k∈S_BG} |K_BG k| ≤ kernel_l1_cap
-
-  Temporary choice:
-    K_BG ≡ 0, so the L¹ bound holds with cap 0. Replace with your Tenor kernel later.
--/
 import Mathlib
-import Goldbach.BankParams
 import Goldbach.BG_Bank
 
 namespace Goldbach.BG_Operator
 
-open Goldbach
-open Goldbach.BankParams
-open Goldbach.BG_Bank
-open Real
-open BigOperators
-open Classical
+open scoped BigOperators
 
-/-- Unnormalized triangular tent on `|k| ≤ H`: `w k = max 0 (1 - |k|/H)`. -/
+/-- Unnormalized tent weight: max(0, 1 - |k|/H). -/
 noncomputable def tentWeight (k : ℤ) : ℝ :=
-  let h : ℝ := (H : ℝ)
-  let x : ℝ := |(k : ℝ)|
-  max 0 (1 - x / h)
+  max 0 (1 - (|k| : ℝ) / (Goldbach.BG_Bank.H : ℝ))
 
-/-- Total mass of the unnormalized tent on the support `S_BG`. -/
+lemma tentWeight_nonneg (k : ℤ) : 0 ≤ tentWeight k := by
+  simp [tentWeight]
+
+/-- Total mass of the unnormalized tent weight on the band S_BG. -/
 noncomputable def tentMass : ℝ :=
-  ∑ k in S_BG, tentWeight k
+  (Goldbach.BG_Bank.S_BG.sum fun k => tentWeight k)
 
-/-- Normalized triangular tent kernel on `S_BG` (mass 1). -/
+/-- Normalized BG kernel. -/
 noncomputable def K_BG (k : ℤ) : ℝ :=
-  if hk : k ∈ S_BG then
-    tentWeight k / tentMass
-  else 0
+  tentWeight k / tentMass
 
-lemma tentMass_pos : 0 < tentMass := by
-  -- the term at k=0 is 1, so the total mass is ≥ 1
-  have h0 : (0 : ℤ) ∈ S_BG := by
-    have hH : (0 : ℤ) ≤ H := by exact_mod_cast (Nat.zero_le _)
-    have hH' : (-(H:ℤ)) ≤ 0 := by exact neg_nonpos.mpr hH
-    have : (0 : ℤ) ∈ Finset.Icc (-(H:ℤ)) (H:ℤ) := Finset.mem_Icc.mpr ⟨hH', hH⟩
-    simpa [S_BG] using this
-  have hnonneg : ∀ k ∈ S_BG, 0 ≤ tentWeight k := by
-    intro k hk; unfold tentWeight; nlinarith
-  have hterm : tentWeight 0 ≤ tentMass := by
-    unfold tentMass
-    have := Finset.single_le_sum (fun k hk => hnonneg k hk) h0
-    simpa using this
-  have hweight0 : tentWeight 0 = 1 := by
-    unfold tentWeight; simp [abs_zero, max_eq_left, (by have : (H:ℝ) > 0 := by exact_mod_cast (by decide : 0 < H); nlinarith)]
-  have : 1 ≤ tentMass := by linarith [hterm, hweight0]
-  linarith
-
-/-- L¹ cap for the normalized tent is exactly 1. -/
+/-- L¹ cap for the normalized kernel. -/
 noncomputable def kernel_l1_cap : ℝ := 1
 
-/-- Sum of |K_BG| on S_BG is bounded by the cap (equals 1 by construction). -/
+lemma kernel_l1_nonneg : 0 ≤ kernel_l1_cap := by
+  simp [kernel_l1_cap]
+
+lemma tentWeight_zero : tentWeight 0 = 1 := by
+  have h01 : (0 : ℝ) ≤ (1 : ℝ) := by norm_num
+  simpa [tentWeight, h01]
+
+lemma zero_mem_S_BG : (0 : ℤ) ∈ Goldbach.BG_Bank.S_BG := by
+  have hH0 : (0 : ℤ) ≤ (Goldbach.BG_Bank.H : ℤ) := by
+    exact_mod_cast (Nat.zero_le Goldbach.BG_Bank.H)
+  have hneg : (-(Goldbach.BG_Bank.H : ℤ)) ≤ (0 : ℤ) := by
+    exact neg_nonpos.mpr hH0
+  simp [Goldbach.BG_Bank.S_BG, hneg, hH0]
+
+lemma tentMass_pos : 0 < tentMass := by
+  have h0mem : (0 : ℤ) ∈ Goldbach.BG_Bank.S_BG := zero_mem_S_BG
+  have hsum_nonneg :
+      0 ≤ (Goldbach.BG_Bank.S_BG.erase 0).sum (fun k => tentWeight k) := by
+    refine Finset.sum_nonneg ?_
+    intro k hk
+    exact tentWeight_nonneg k
+  have hdecomp :
+      tentMass =
+        (Goldbach.BG_Bank.S_BG.erase 0).sum (fun k => tentWeight k) + tentWeight 0 := by
+    have := (Finset.sum_erase_add (s := Goldbach.BG_Bank.S_BG) (a := (0:ℤ))
+              (f := fun k => tentWeight k) h0mem)
+    simpa [tentMass, add_comm, add_left_comm, add_assoc] using this.symm
+  have htw0 : tentWeight 0 = 1 := tentWeight_zero
+  have : 0 < (Goldbach.BG_Bank.S_BG.erase 0).sum (fun k => tentWeight k) + 1 := by
+    nlinarith
+  simpa [hdecomp, htw0] using this
+
+/-- The normalized kernel has L¹ mass at most 1 on S_BG. -/
 lemma kernel_l1_bound :
-  (∑ k in S_BG, |K_BG k|) ≤ kernel_l1_cap := by
-  classical
-  have hpos := tentMass_pos
-  have hnonnegK : ∀ k ∈ S_BG, 0 ≤ K_BG k := by
-    intro k hk; unfold K_BG; simp [hk, hpos.le, tentWeight, tentMass, div_nonneg, abs_nonneg]
-  calc
-    (∑ k in S_BG, |K_BG k|) = ∑ k in S_BG, K_BG k := by
-      refine Finset.sum_congr rfl ?_
-      intro k hk; have := hnonnegK k hk; simp [abs_of_nonneg this]
-    _ = 1 := by
-      unfold K_BG tentMass kernel_l1_cap
-      have hne : (∑ k in S_BG, tentWeight k) ≠ 0 := ne_of_gt hpos
-      have : ∑ k in S_BG, tentWeight k / ∑ k in S_BG, tentWeight k
-             = (∑ k in S_BG, tentWeight k) / (∑ k in S_BG, tentWeight k) := by
-        simp [Finset.sum_div, hne]
-      simp [hne, this]
+  (Goldbach.BG_Bank.S_BG.sum fun k => |K_BG k|) ≤ kernel_l1_cap := by
+  have hpos : 0 < tentMass := tentMass_pos
+  have hne : tentMass ≠ 0 := ne_of_gt hpos
+  have hnonnegK : ∀ k ∈ Goldbach.BG_Bank.S_BG, 0 ≤ K_BG k := by
+    intro k hk
+    unfold K_BG
+    exact div_nonneg (tentWeight_nonneg k) (le_of_lt hpos)
+
+  have habs :
+      (Goldbach.BG_Bank.S_BG.sum fun k => |K_BG k|)
+        = Goldbach.BG_Bank.S_BG.sum fun k => K_BG k := by
+    refine Finset.sum_congr rfl ?_
+    intro k hk
+    simp [abs_of_nonneg (hnonnegK k hk)]
+
+  have hsum1 : (Goldbach.BG_Bank.S_BG.sum fun k => K_BG k) = 1 := by
+    unfold K_BG tentMass
+    have hfactor :
+        (Goldbach.BG_Bank.S_BG.sum fun k =>
+            tentWeight k * (Goldbach.BG_Bank.S_BG.sum fun k => tentWeight k)⁻¹)
+          = (Goldbach.BG_Bank.S_BG.sum fun k => tentWeight k)
+              * (Goldbach.BG_Bank.S_BG.sum fun k => tentWeight k)⁻¹ := by
+      simpa using
+        (Finset.sum_mul (s := Goldbach.BG_Bank.S_BG) (f := fun k => tentWeight k)
+          (a := (Goldbach.BG_Bank.S_BG.sum fun k => tentWeight k)⁻¹)).symm
+    calc
+      (Goldbach.BG_Bank.S_BG.sum fun k =>
+          tentWeight k / (Goldbach.BG_Bank.S_BG.sum fun k => tentWeight k))
+          = Goldbach.BG_Bank.S_BG.sum fun k =>
+              tentWeight k * (Goldbach.BG_Bank.S_BG.sum fun k => tentWeight k)⁻¹ := by
+            simp [div_eq_mul_inv]
+      _ = (Goldbach.BG_Bank.S_BG.sum fun k => tentWeight k)
+            * (Goldbach.BG_Bank.S_BG.sum fun k => tentWeight k)⁻¹ := hfactor
+      _ = 1 := by
+            exact mul_inv_cancel₀ hne
+
+  have : (Goldbach.BG_Bank.S_BG.sum fun k => |K_BG k|) = 1 := by
+    simpa [habs] using hsum1
+  simpa [kernel_l1_cap, this]
 
 end Goldbach.BG_Operator

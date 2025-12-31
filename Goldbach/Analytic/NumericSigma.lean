@@ -10,11 +10,14 @@ namespace Analytic
 open Singular
 
 /-- A conservative numeric lower bound for the Euler-product constant. -/
-def C2_numeric : C2Const := ⟨(1 : ℝ) / 10, by norm_num⟩
+noncomputable def C2_numeric : C2Const := ⟨(1 : ℝ) / 10, by norm_num⟩
 
 /-- Working window parameters. -/
 def X0 : ℕ := 1_000_000
 def H  : ℕ := 10_000
+
+/-- A concrete lower bound used for σ on the working window. -/
+noncomputable def σmin_working : ℝ := (2 : ℝ) * C2_numeric.C2
 
 /-- Members of the even window are even. Adjust the lemma if your `Windows` API differs. -/
 lemma even_of_window {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ Windows.EvenIn X H) : Even N := by
@@ -40,15 +43,44 @@ lemma two_le_of_window {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ Windows.EvenIn X 
   simpa [hk_eq] using h2
 
 /-- Concrete σ-lower bound on the working window: σ(N) ≥ 2 * C2. -/
-def SigmaLowerOn_working : SigmaLowerOn X0 H C2_numeric :=
-{ σmin     := (2 : ℝ) * C2_numeric.C2,
-  σmin_pos := by
-    have : 0 < C2_numeric.C2 := C2_numeric.pos
-    nlinarith,
-  bound    := by
+def SigmaLowerOn_working : SigmaLowerOn X0 H C2_numeric σmin_working :=
+by
+  refine ⟨?σpos, ?bound⟩
+  · -- σmin_pos
+    dsimp [σmin_working]
+    have h2 : (0 : ℝ) < (2 : ℝ) := by norm_num
+    exact mul_pos h2 C2_numeric.pos
+  · -- bound
     intro X N hX hN
-    have he : Even N := even_of_window hX hN
-    simpa using Singular.sigma_floor_even (C:=C2_numeric) he }
+    -- extract evenness from `N ∈ Windows.EvenIn X H`
+    have hIsEven : Windows.IsEven N := (Finset.mem_filter.mp (by simpa [Windows.EvenIn] using hN)).2
+    have he : Even N := Windows.even_of_isEven hIsEven
+
+    -- expand sigma for even N
+    have hs :
+        Singular.sigma C2_numeric N
+          = (2 : ℝ) * C2_numeric.C2 * Finset.prod (oddPrimeSupport N) (fun p => oddFactor p) :=
+      Singular.sigma_even_expand (C := C2_numeric) he
+
+    -- use the “product ≥ 1” lemma from SingularSeriesExtras
+    have hprod : (1 : ℝ) ≤ Finset.prod (oddPrimeSupport N) (fun p => oddFactor p) :=
+      Singular.prod_oddFactor_ge_one (n := N)
+
+    have hCnonneg : 0 ≤ (2 : ℝ) * C2_numeric.C2 := by
+      nlinarith [le_of_lt C2_numeric.pos]
+
+    -- multiply 1 ≤ prod by (2*C2) ≥ 0
+    have hmul :
+        (2 : ℝ) * C2_numeric.C2
+          ≤ (2 : ℝ) * C2_numeric.C2 * Finset.prod (oddPrimeSupport N) (fun p => oddFactor p) := by
+      have := mul_le_mul_of_nonneg_left hprod hCnonneg
+      simpa [one_mul, mul_assoc] using this
+
+    -- rewrite and finish
+    -- goal: sigma ≥ σmin_working = 2*C2
+    have : σmin_working ≤ Singular.sigma C2_numeric N := by
+      simpa [σmin_working, hs] using hmul
+    exact this
 
 end Analytic
 end Goldbach

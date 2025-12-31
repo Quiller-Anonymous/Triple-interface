@@ -351,7 +351,7 @@ lemma ref_to_M_bound
           ≤ Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
     intro k hk
     have hP :=
-      Goldbach.BG_Bank.payload_bound_window (X:=X) (N:=N) hX hN (k:=k) hk
+      Goldbach.BG_Bank.payload_bound_window (X:=X) (N:=N) hX hN (k:=k)
     have hQ := pref_bound_on_window (X:=X) (N:=N) hX hN hk
     -- |a-b| ≤ |a| + |b|
     have htriangle : |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
@@ -497,7 +497,7 @@ lemma weights_bridge_full
     -- payload bound + pref bound give the mismatch cap; here we simply take the canonical Mswap
     -- If you have a sharper bound, replace this `calc` accordingly.
     have hpayload : |Goldbach.BG_Bank.P_BG X N k| ≤ Goldbach.BG_Bank.payload_cap X N :=
-      Goldbach.BG_Bank.payload_bound_window (X:=X) (N:=N) hX hN (k:=k) hk
+      Goldbach.BG_Bank.payload_bound_window (X:=X) (N:=N) hX hN (k:=k)
     -- pref bound via σ upper + mass_BG=1 (mass_BG is 1 for the normalized tent)
     have hpref : |BG_Identity.Pref X N k| ≤ SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
       have hσ := (BG_Identity.pref_bound_on_window (X:=X) (N:=N) hX hN (k:=k) hk)

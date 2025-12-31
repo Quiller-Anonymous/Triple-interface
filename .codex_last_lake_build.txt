@@ -1,0 +1,687 @@
+⚠ [7587/7613] Replayed Goldbach.Compat
+warning: Goldbach/Compat.lean:18:2: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/Compat.lean:24:40: unused variable `hb`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/Compat.lean:50:4: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+⚠ [7590/7613] Replayed Goldbach.Windows
+warning: Goldbach/Windows.lean:63:4: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/Windows.lean:68:2: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/Windows.lean:68:38: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+warning: Goldbach/Windows.lean:68:38: 'simpa using hmap' tactic does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+⚠ [7595/7613] Replayed Goldbach.AO_AssembleEnvelope
+warning: Goldbach/AO_AssembleEnvelope.lean:67:20: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+⚠ [7597/7613] Replayed Goldbach.AO_Major
+warning: Goldbach/AO_Major.lean:21:13: unused variable `hX`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/AO_Major.lean:21:35: unused variable `hN`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/AO_Major.lean:25:24: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [Goldbach.AO_Major.errAO, Goldbach.AO_Major.weight_mass, Goldbach.AO_Core.errAO,
+       ̵ ̵ ̵ ̵sub_eq_add_neg, add_a̵s̵s̵o̵c̵,̵ ̵a̵d̵d̵_̵left_comm, add_comm, mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/AO_Major.lean:25:60: This simp argument is unused:
+  mul_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [Goldbach.AO_Major.errAO, Goldbach.AO_Major.weight_mass, Goldbach.AO_Core.errAO,
+       ̵ ̵ ̵ ̵sub_eq_add_neg, add_assoc, add_left_comm, add_comm,̵ ̵m̵u̵l̵_̵a̵s̵s̵o̵c̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/AO_Major.lean:46:5: unused variable `h`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/AO_Major.lean:58:24: This simp argument is unused:
+  dif_pos
+
+Hint: Omit it from the simp argument list.
+  simp only [MPDF, win, d̵i̵f̵_̵p̵o̵s̵,̵ ̵mul_div_assoc']
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/AO_Major.lean:58:33: This simp argument is unused:
+  mul_div_assoc'
+
+Hint: Omit it from the simp argument list.
+  simp only [MPDF, win, dif_pos,̵ ̵m̵u̵l̵_̵d̵i̵v̵_̵a̵s̵s̵o̵c̵'̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/AO_Major.lean:81:69: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/AO_Major.lean:82:68: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/AO_Major.lean:83:68: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/AO_Major.lean:85:90: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [sub_eq_add_neg,̵ ̵a̵d̵d̵_̵a̵s̵s̵o̵c̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/AO_Major.lean:101:24: This simp argument is unused:
+  dif_pos
+
+Hint: Omit it from the simp argument list.
+  simp only [MPDF, win,̵ ̵d̵i̵f̵_̵p̵o̵s̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [7599/7613] Replayed Goldbach.BG_Bank
+warning: Goldbach/BG_Bank.lean:13:25: unused variable `n`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Bank.lean:75:4: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Bank.lean:75:25: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+warning: Goldbach/BG_Bank.lean:75:25: 'decide' tactic does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+warning: Goldbach/BG_Bank.lean:288:14: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Bank.lean:188:42: This simp argument is unused:
+  Nat.cast_sub hn_le
+
+Hint: Omit it from the simp argument list.
+  simp only [Nat.cast_succ,̵ ̵N̵a̵t̵.̵c̵a̵s̵t̵_̵s̵u̵b̵ ̵h̵n̵_̵l̵e̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:194:24: This simp argument is unused:
+  abs_of_nonneg hlog_Nm_nn
+
+Hint: Omit it from the simp argument list.
+  simp [hp,̵ ̵a̵b̵s̵_̵o̵f̵_̵n̵o̵n̵n̵e̵g̵ ̵h̵l̵o̵g̵_̵N̵m̵_̵n̵n̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:202:24: This simp argument is unused:
+  abs_of_nonneg hlog_Np1_nn
+
+Hint: Omit it from the simp argument list.
+  simp [hp,̵ ̵a̵b̵s̵_̵o̵f̵_̵n̵o̵n̵n̵e̵g̵ ̵h̵l̵o̵g̵_̵N̵p̵1̵_̵n̵n̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:218:46: This simp argument is unused:
+  mul_comm
+
+Hint: Omit it from the simp argument list.
+  simp [abs_mul, mul_assoc, m̵u̵l̵_̵c̵o̵m̵m̵,̵ ̵mul_left_comm]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:326:20: This simp argument is unused:
+  hlogXabs
+
+Hint: Omit it from the simp argument list.
+  simp [h̵l̵o̵g̵X̵a̵b̵s̵,̵ ̵mul_comm, mul_left_comm, mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:326:30: This simp argument is unused:
+  mul_comm
+
+Hint: Omit it from the simp argument list.
+  simp [hlogXabs, m̵u̵l̵_̵c̵o̵m̵m̵,̵ ̵mul_left_comm, mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:403:14: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Bank.lean:405:14: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Bank.lean:407:40: This simp argument is unused:
+  add_comm
+
+Hint: Omit it from the simp argument list.
+  simp [div_self, hlogX_ne, add_c̵o̵m̵m̵,̵ ̵a̵d̵d̵_̵left_comm, add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:407:50: This simp argument is unused:
+  add_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [div_self, hlogX_ne, add_comm, a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:407:65: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [div_self, hlogX_ne, add_comm, add_left_comm,̵ ̵a̵d̵d̵_̵a̵s̵s̵o̵c̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:547:63: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Bank.lean:550:47: This simp argument is unused:
+  add_comm
+
+Hint: Omit it from the simp argument list.
+  simp [add_div, div_self, hlogX_ne, add_c̵o̵m̵m̵,̵ ̵a̵d̵d̵_̵left_comm, add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:550:57: This simp argument is unused:
+  add_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [add_div, div_self, hlogX_ne, add_comm, a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:550:72: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [add_div, div_self, hlogX_ne, add_comm, add_left_comm,̵ ̵a̵d̵d̵_̵a̵s̵s̵o̵c̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Bank.lean:559:56: This simp argument is unused:
+  add_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [c, Nat.cast_add, Nat.cast_one, add_assoc, a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵add_comm, add_div, div_self hX0_ne]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [7600/7613] Replayed Goldbach.BG_Operator
+warning: Goldbach/BG_Operator.lean:31:2: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Operator.lean:98:2: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+⚠ [7602/7613] Replayed Goldbach.SingularSeries
+warning: Goldbach/SingularSeries.lean:40:5: unused variable `h`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/SingularSeries.lean:88:8: `Finset.eq_empty_iff_forall_not_mem` has been deprecated: Use `Finset.eq_empty_iff_forall_notMem` instead
+warning: Goldbach/SingularSeries.lean:98:4: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/SingularSeries.lean:99:28: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+warning: Goldbach/SingularSeries.lean:99:57: this tactic is never executed
+
+Note: This linter can be disabled with `set_option linter.unreachableTactic false`
+warning: Goldbach/SingularSeries.lean:99:28: 'decide' tactic does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+warning: Goldbach/SingularSeries.lean:99:57: 'decide' tactic does nothing
+
+Note: This linter can be disabled with `set_option linter.unusedTactic false`
+⚠ [7604/7613] Replayed Goldbach.PPNumerics
+warning: Goldbach/PPNumerics.lean:24:42: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/PPNumerics.lean:27:6: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+⚠ [7605/7613] Replayed Goldbach.PPBoundSquares
+warning: Goldbach/PPBoundSquares.lean:41:8: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/PPBoundSquares.lean:228:10: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+⚠ [7607/7613] Replayed Goldbach.AnalyticGlobal
+warning: Goldbach/AnalyticGlobal.lean:65:28: This simp argument is unused:
+  one_div
+
+Hint: Omit it from the simp argument list.
+  simp [div_eq_mul_inv, o̵n̵e̵_̵d̵i̵v̵,̵ ̵mul_comm]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/AnalyticGlobal.lean:68:30: This simp argument is unused:
+  one_div
+
+Hint: Omit it from the simp argument list.
+  simp [div_eq_mul_inv, o̵n̵e̵_̵d̵i̵v̵,̵ ̵mul_comm]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/AnalyticGlobal.lean:70:39: This simp argument is unused:
+  mul_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [one_div, S_ne, mul_comm, mul_l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵m̵u̵l̵_̵assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/AnalyticGlobal.lean:70:54: This simp argument is unused:
+  mul_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [one_div, S_ne, mul_comm, mul_left_comm,̵ ̵m̵u̵l̵_̵a̵s̵s̵o̵c̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+⚠ [7608/7613] Replayed Goldbach.BankPieces
+warning: Goldbach/BankPieces.lean:15:63: `class ... :=` has been deprecated in favor of `class ... where`.
+
+Note: This linter can be disabled with `set_option linter.deprecated false`
+⚠ [7610/7613] Replayed Goldbach.Analytic.MajorBoundFromSigma
+warning: Goldbach/Analytic/MajorBoundFromSigma.lean:21:75: `structure ... :=` has been deprecated in favor of `structure ... where`.
+
+Note: This linter can be disabled with `set_option linter.deprecated false`
+⚠ [7611/7613] Replayed Goldbach.Analytic.NumericSigma
+warning: Goldbach/Analytic/NumericSigma.lean:23:32: unused variable `hX`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+✖ [7613/7613] Building Goldbach.BG_Identity (56s)
+trace: .> LEAN_PATH=/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/Cli/.lake/build/lib/lean:/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/batteries/.lake/build/lib/lean:/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/Qq/.lake/build/lib/lean:/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/aesop/.lake/build/lib/lean:/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/proofwidgets/.lake/build/lib/lean:/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/importGraph/.lake/build/lib/lean:/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/LeanSearchClient/.lake/build/lib/lean:/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/plausible/.lake/build/lib/lean:/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/packages/mathlib/.lake/build/lib/lean:/Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/build/lib/lean /Users/benjaminnelson/.elan/toolchains/leanprover--lean4---v4.26.0-rc2/bin/lean /Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/Goldbach/BG_Identity.lean -o /Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/build/lib/lean/Goldbach/BG_Identity.olean -i /Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/build/lib/lean/Goldbach/BG_Identity.ilean -c /Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/build/ir/Goldbach/BG_Identity.c --setup /Users/benjaminnelson/Desktop/nerd shit/goldbach/builds/Goldbach/.lake/build/ir/Goldbach/BG_Identity.setup.json --json
+warning: Goldbach/BG_Identity.lean:149:48: This simp argument is unused:
+  add_comm
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, hk, ih, mul_add, a̵d̵d̵_̵c̵o̵m̵m̵,̵ ̵add_left_comm, add_assoc, mul_comm, mul_left_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲ ̲ ̲mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:149:58: This simp argument is unused:
+  add_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, hk, ih, mul_add, add_comm, a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵add_assoc, mul_comm, mul_left_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲ ̲ ̲mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:150:12: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, hk, ih, mul_add, add_comm, add_left_comm, a̵d̵d̵_̵a̵s̵s̵o̵c̵,̵ ̵mul_comm, mul_left_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲ ̲ ̲mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:150:23: This simp argument is unused:
+  mul_comm
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, hk, ih, mul_add, add_comm, add_left_comm, add_assoc, m̵u̵l̵_̵c̵o̵m̵m̵,̵ ̵mul_left_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲ ̲ ̲mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:150:33: This simp argument is unused:
+  mul_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, hk, ih, mul_add, add_comm, add_left_comm, add_assoc, mul_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲ ̲ ̲m̵u̵l̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:150:48: This simp argument is unused:
+  mul_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, hk, ih, mul_add, add_comm, add_left_comm, add_assoc, mul_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲ ̲ ̲m̵u̵l̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵m̵u̵l̵_̵a̵s̵s̵o̵c̵]̵m̲u̲l̲_̲l̲e̲f̲t̲_̲c̲o̲m̲m̲]̲
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+error: Goldbach/BG_Identity.lean:197:76: unsolved goals
+m : ℕ
+hm : m ≤ Ucut
+hnonneg : 0 ≤ 1 - ↑m / ↑Ucut
+hmax : max (1 - ↑m / ↑Ucut) 0 = 1 - ↑m / ↑Ucut
+⊢ max (1 - ↑m / (↑H + ↑((H + 99) / 100))) 0 / (↑H + ↑((H + 99) / 100)) =
+    (1 - ↑m / (↑H + ↑((H + 99) / 100))) / (↑H + ↑((H + 99) / 100))
+warning: Goldbach/BG_Identity.lean:204:12: This simp argument is unused:
+  hU
+
+Hint: Omit it from the simp argument list.
+  simp [hU̵,̵ ̵h̵m0]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:215:8: This simp argument is unused:
+  hmax
+
+Hint: Omit it from the simp argument list.
+  simp ̵[̵h̵m̵a̵x̵]̵
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:241:10: This simp argument is unused:
+  Finset.sum_insert
+
+Hint: Omit it from the simp argument list.
+  simp [̵F̵i̵n̵s̵e̵t̵.̵s̵u̵m̵_̵i̵n̵s̵e̵r̵t̵,̵ ̵h̵a̵,̵[̲h̲a̲,̲ ih, mul_add, add_comm, add_left_comm, add_assoc, mul_comm, mul_left_comm, mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:241:33: This simp argument is unused:
+  ih
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, ha, i̵h̵,̵ ̵mul_add, add_comm, add_left_comm,
+  ̵  ̵ ̵ ̵ ̵ ̵ ̵ ̵ ̵ ̵add_assoc, mul_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲mul_left_comm, mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:241:56: This simp argument is unused:
+  add_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, ha, ih, mul_add, add_comm, a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵add_assoc, mul_comm, mul_left_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:242:10: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, ha, ih, mul_add, add_comm, add_left_comm, a̵d̵d̵_̵a̵s̵s̵o̵c̵,̵ ̵mul_comm, mul_left_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:242:31: This simp argument is unused:
+  mul_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, ha, ih, mul_add, add_comm, add_left_comm, add_assoc, mul_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲m̵u̵l̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵mul_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:242:46: This simp argument is unused:
+  mul_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, ha, ih, mul_add, add_comm, add_left_comm, add_assoc, mul_comm,
+  ̲  ̲ ̲ ̲ ̲ ̲m̵u̵l̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵m̵u̵l̵_̵a̵s̵s̵o̵c̵]̵m̲u̲l̲_̲l̲e̲f̲t̲_̲c̲o̲m̲m̲]̲
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+error: Goldbach/BG_Identity.lean:255:68: Application type mismatch: The argument
+  hz_ne_pos
+has type
+  z ≠ ↑n.succ
+but is expected to have type
+  ↑n.succ ≠ z
+in the application
+  Ne.symm hz_ne_pos
+warning: Goldbach/BG_Identity.lean:273:10: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Identity.lean:280:10: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+error: Goldbach/BG_Identity.lean:263:2: unsolved goals
+case h.mpr
+n : ℕ
+z : ℤ
+hz : z ∈ Finset.Icc (-↑n) ↑n
+hI : -↑n ≤ z ∧ z ≤ ↑n
+hz_ne_pos : z ≠ ↑n.succ
+hz_ne_neg : z ≠ -↑n.succ
+hzI' : z ∈ Finset.Icc (-↑n.succ) ↑n.succ
+⊢ -1 < z + ↑n ∧ z < ↑n + 1
+warning: Goldbach/BG_Identity.lean:287:10: This simp argument is unused:
+  Finset.mem_erase
+
+Hint: Omit it from the simp argument list.
+  simp [F̵i̵n̵s̵e̵t̵.̵m̵e̵m̵_̵e̵r̵a̵s̵e̵,̵ ̵hz_ne_pos, hz_ne_neg, hzI']
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:287:28: This simp argument is unused:
+  hz_ne_pos
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.mem_erase, h̵z̵_̵n̵e̵_̵p̵o̵s̵,̵ ̵hz_ne_neg, hzI']
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:287:39: This simp argument is unused:
+  hz_ne_neg
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.mem_erase, hz_ne_pos, hz_̵n̵e̵_̵n̵e̵g̵,̵ ̵h̵z̵I']
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:287:50: This simp argument is unused:
+  hzI'
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.mem_erase, hz_ne_pos, hz_ne_neg,̵ ̵h̵z̵I̵'̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+error: Goldbach/BG_Identity.lean:335:8: Type mismatch: After simplification, term
+  hstep2
+ has type
+  f (-↑n + -1) + ∑ x ∈ (s.erase (↑n + 1)).erase (-↑n + -1), f x = ∑ x ∈ s.erase (↑n + 1), f x
+but is expected to have type
+  ∑ x ∈ s.erase (↑n + 1), f x = f (-↑n + -1) + ∑ x ∈ (s.erase (↑n + 1)).erase (-↑n + -1), f x
+warning: Goldbach/BG_Identity.lean:349:13: `Finset.range_succ` has been deprecated: Use `Finset.range_add_one` instead
+warning: Goldbach/BG_Identity.lean:349:6: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Identity.lean:361:23: `Int.ofNat_eq_coe` has been deprecated: Use `Int.ofNat_eq_natCast` instead
+error: Goldbach/BG_Identity.lean:364:12: Tactic `assumption` failed
+
+f : ℤ → ℝ
+hEven : ∀ (z : ℤ), f (-z) = f z
+n : ℕ
+ih : (Finset.Icc (-↑n) ↑n).sum f = f 0 + 2 * ∑ k ∈ Finset.range n, f (Int.ofNat k.succ)
+s : Finset ℤ := Finset.Icc (-↑n.succ) ↑n.succ
+s0 : Finset ℤ := s.erase ↑n.succ
+s1 : Finset ℤ := s0.erase (-↑n.succ)
+hmem_pos : ↑n.succ ∈ s
+hmem_neg : -↑n.succ ∈ s
+hmem_neg_s0 : -↑n.succ ∈ s0
+hstep1 : ∑ x ∈ s.erase ↑n.succ, f x + f ↑n.succ = ∑ x ∈ s, f x
+hstep2 : ∑ x ∈ s0.erase (-↑n.succ), f x + f (-↑n.succ) = ∑ x ∈ s0, f x
+hs1 : s1 = Finset.Icc (-↑n) ↑n
+this✝ : s.sum f = s1.sum f + f (-↑n.succ) + f ↑n.succ
+hIH : (Finset.Icc (-↑n) ↑n).sum f = f 0 + 2 * ∑ k ∈ Finset.range n, f (Int.ofNat k.succ)
+hrange :
+  ∑ k ∈ Finset.range n.succ, f (Int.ofNat k.succ) = ∑ k ∈ Finset.range n, f (Int.ofNat k.succ) + f (Int.ofNat n.succ)
+this : s.sum f = (Finset.Icc (-↑n) ↑n).sum f + f (↑n + 1) + f (-1 + -↑n)
+⊢ ∑ x ∈ Finset.range n, f (↑x + 1) + f (↑n + 1) = ∑ x ∈ Finset.range (n + 1), f (↑x + 1)
+error: Goldbach/BG_Identity.lean:388:6: Type mismatch: After simplification, term
+  this
+ has type
+  True
+but is expected to have type
+  ↑n + 2 = ↑n + 1 + 1 ∨ ↑n + 1 = 0
+error: Goldbach/BG_Identity.lean:389:4: Tactic `assumption` failed
+
+case succ
+n : ℕ
+ih : ∑ k ∈ Finset.range n, ↑k.succ = ↑n * (↑n + 1) / 2
+h : ∑ x ∈ Finset.range (n + 1), ↑x.succ = ∑ x ∈ Finset.range n, ↑x.succ + ↑n.succ
+h' : ∑ k ∈ Finset.range n.succ, ↑k.succ = ∑ k ∈ Finset.range n, ↑k.succ + ↑n.succ
+h'' : ↑n * (↑n + 1) / 2 + ↑n.succ = ↑n.succ * (↑n.succ + 1) / 2
+⊢ ∑ x ∈ Finset.range (n + 1), (↑x + 1) = (↑n + 1) * (↑n + 1 + 1) / 2
+warning: Goldbach/BG_Identity.lean:404:44: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Identity.lean:407:50: This simp argument is unused:
+  add_comm
+
+Hint: Omit it from the simp argument list.
+  simp [h₁, h₂, Finset.sum_insert, ha, mul_add, add_c̵o̵m̵m̵,̵ ̵a̵d̵d̵_̵left_comm, add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:407:60: This simp argument is unused:
+  add_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [h₁, h₂, Finset.sum_insert, ha, mul_add, add_comm, a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:407:75: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [h₁, h₂, Finset.sum_insert, ha, mul_add, add_comm, add_left_comm,̵ ̵a̵d̵d̵_̵a̵s̵s̵o̵c̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:416:46: This simp argument is unused:
+  add_comm
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, hb, ih, mul_add, add_c̵o̵m̵m̵,̵ ̵a̵d̵d̵_̵left_comm, add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:416:56: This simp argument is unused:
+  add_left_comm
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, hb, ih, mul_add, add_comm, a̵d̵d̵_̵l̵e̵f̵t̵_̵c̵o̵m̵m̵,̵ ̵add_assoc]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:416:71: This simp argument is unused:
+  add_assoc
+
+Hint: Omit it from the simp argument list.
+  simp [Finset.sum_insert, hb, ih, mul_add, add_comm, add_left_comm,̵ ̵a̵d̵d̵_̵a̵s̵s̵o̵c̵]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:512:6: declaration uses 'sorry'
+warning: Goldbach/BG_Identity.lean:534:4: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Identity.lean:557:25: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Identity.lean:600:6: declaration uses 'sorry'
+warning: Goldbach/BG_Identity.lean:637:15: unused variable `hX`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:638:5: unused variable `hN`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:670:5: unused variable `hk`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:695:28: This simp argument is unused:
+  hUpos.ne'
+
+Hint: Omit it from the simp argument list.
+  s̵i̵m̵p̵ ̵[̵K̵_̵f̵u̵l̵l̵,̵ ̵K̵_̵f̵u̵l̵l̵_̵r̵a̵w̵,̵ ̵h̵U̵p̵o̵s̵.̵n̵e̵'̵]̵ ̵a̵t̵ ̵*̵s̲i̲m̲p̲ ̲[̲K̲_̲f̲u̲l̲l̲,̲
+  ̲ ̲ ̲ ̲ ̲K̲_̲f̲u̲l̲l̲_̲r̲a̲w̲]̲ ̲a̲t̲ ̲*̲
+  ̲ ̲ ̲ ̲ ̲ ̲ ̲-̲-̲ ̲a̲f̲t̲e̲r̲ ̲s̲i̲m̲p̲,̲ ̲g̲o̲a̲l̲ ̲b̲e̲c̲o̲m̲e̲s̲ ̲`̲0̲ ̲<̲ ̲1̲ ̲/̲ ̲(̲U̲c̲u̲t̲:̲ℝ̲)̲`̲
+  ̲ ̲ ̲ ̲ ̲ ̲ ̲
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:720:5: unused variable `h`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:727:5: unused variable `h`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:743:25: unused variable `X`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:743:27: unused variable `N`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:767:5: unused variable `h`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+error: Goldbach/BG_Identity.lean:780:13: Unknown identifier `Kernel.conv_ref_const_eq_sigma_mass_of`
+error: Goldbach/BG_Identity.lean:777:80: unsolved goals
+X N : ℕ
+⊢ conv_ref_const X N = Singular.sigma Analytic.C2_numeric N * AO_Major.weight_mass X
+error: Goldbach/BG_Identity.lean:793:6: Type mismatch: After simplification, term
+  hk
+ has type
+  k ∈ BG_Bank.S_BG
+but is expected to have type
+  -↑H ≤ k ∧ k ≤ ↑H
+warning: Goldbach/BG_Identity.lean:798:8: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Identity.lean:826:34: unused variable `hk`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:830:35: unused variable `hk`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:931:6: declaration uses 'sorry'
+error: Goldbach/BG_Identity.lean:992:14: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Goldbach/BG_Identity.lean:999:14: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Goldbach/BG_Identity.lean:1036:16: `simp` made no progress
+error: Goldbach/BG_Identity.lean:1050:12: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Goldbach/BG_Identity.lean:1060:10: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+warning: Goldbach/BG_Identity.lean:1130:5: unused variable `h`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:1164:54: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Identity.lean:1152:10: This simp argument is unused:
+  Pref_of
+
+Hint: Omit it from the simp argument list.
+  simp [P̵r̵e̵f̵_̵o̵f̵,̵ ̵hk]
+
+Note: This linter can be disabled with `set_option linter.unusedSimpArgs false`
+warning: Goldbach/BG_Identity.lean:1194:8: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+warning: Goldbach/BG_Identity.lean:1195:6: try 'simp' instead of 'simpa'
+
+Note: This linter can be disabled with `set_option linter.unnecessarySimpa false`
+error: Goldbach/BG_Identity.lean:1263:16: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Goldbach/BG_Identity.lean:1278:18: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Goldbach/BG_Identity.lean:1290:16: No goals to be solved
+error: Goldbach/BG_Identity.lean:1302:4: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Goldbach/BG_Identity.lean:1320:12: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Goldbach/BG_Identity.lean:1326:12: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Goldbach/BG_Identity.lean:1327:2: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+warning: Goldbach/BG_Identity.lean:1329:6: declaration uses 'sorry'
+error: Goldbach/BG_Identity.lean:1375:21: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+warning: Goldbach/BG_Identity.lean:1403:28: unused variable `X`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:1403:30: unused variable `N`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:1404:28: unused variable `X`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+warning: Goldbach/BG_Identity.lean:1404:30: unused variable `N`
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+error: Goldbach/BG_Identity.lean:1430:21: maximum recursion depth has been reached
+use `set_option maxRecDepth <num>` to increase limit
+use `set_option diagnostics true` to get diagnostic information
+error: Lean exited with code 1
+Some required targets logged failures:
+- Goldbach.BG_Identity
+error: build failed

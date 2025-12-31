@@ -1,5 +1,7 @@
 CONSTANTS AND LEMMAS WE DO/NOT HAVE IN LIBRARY
 Toolchain 4.26v02/mathlib
+https://leanprover-community.github.io/mathlib4_docs/
+https://leanprover-community.github.io/contribute/porting.html
 
 Confirmed PRESENT:
 ENNReal.ofReal_tsum_of_nonneg —  YES
@@ -8,7 +10,8 @@ tsum_mul_right - YES
 tsum_mul_left - YES
 lt_div_iff₀ - YES
 div_lt_iff₀ - YES
-
+norm_add_le - YES
+abs_add_le - YES
 
 Confirmed ABSENT (DO NOT USE!):
 ENNReal.tsum_ofReal — NO
@@ -19,5 +22,15 @@ tsum_eq_iSup_sum - NO
 Real.tsum_eq_iSup_sum - NO
 Real.tsum_eq_iSup_nat - NO
 tsum_comp_injective - NO
-div_lt_iff
-lt_div_iff
+div_lt_iff - NO
+lt_div_iff - NO
+inv_le_inv_of_le - NO
+abs_add -- NO
+div_le_div_right - NO
+div_le_div_right_of_nonneg_right - NO
+div_le_iff_mul_le - NO
+
+MISCELLANEOUS HINTS AND TRICKS
+1) Avoid Finset.card_sdiff misuse: use disjoint union instead. 
+Disjoint S_BG outerBand via Finset.disjoint_sdiff_right, S_BG ∪ outerBand = bandU via Finset.union_sdiff_of_subset hsubset then gets bandU.card = S_BG.card + outerBand.card using Finset.card_union_of_disjoint
+2) Don’t apply Finset.mem_filter.mp to a membership-in-sdiff. So hk : k ∈ outerBand must be unpacked with: Finset.mem_sdiff.mp hk (or .1/.2 after that)
