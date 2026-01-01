@@ -4,6 +4,7 @@ import Goldbach.BG_Identity
 import Goldbach.ClosureBridge
 import Goldbach.Windows
 import Goldbach.Base.FiniteBaseDefs
+import Goldbach.BuildWitness
 
 open Goldbach
 open Goldbach.Analytic

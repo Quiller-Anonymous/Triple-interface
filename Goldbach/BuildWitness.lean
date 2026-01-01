@@ -9,6 +9,7 @@ import Mathlib
 import Goldbach.AnalyticPointwise
 import Goldbach.ClosureBridge
 import Goldbach.AnalyticGlobal
+import Goldbach.AO_Instantiate
 
 namespace Goldbach.BuildWitness
 

@@ -1,0 +1,192 @@
+# Goldbach files not downstream of `All.lean` (import graph), excluding `Goldbach/FiniteBase/*`.
+# Regenerate by scanning imports starting at `All.lean`.
+
+UPDATED FILE DESCRIPTIONS
+
+Goldbach/AO.lean
+Core “Arithmetic Orthogonality” development: defines the AO objects 
+(weights / transforms / major-arc structures) and the main AO inequalities used later. 
+This is not just a wrapper; many later AO_* files import it.
+
+Goldbach/AO_Bank.lean
+A small bridge lemma: turns a pointwise absolute deviation hypothesis of the 
+form |R - Mproj| ≤ … (in the BankPieces format) into the corresponding inequality 
+needed by the bank-facing AO layer.
+
+Goldbach/AO_ErrorEnvelope.lean
+Encapsulates an “error envelope” / bounding interface for the AO error terms 
+(so later assembly can treat tails and truncation errors uniformly).
+
+Goldbach/AO_Instantiate.lean
+Builds the canonical AO instance (plugs in the chosen kernel/truncation/parameters
+ and the numeric constants), producing the specific AO hypotheses/constants that 
+ BankPieces/Cert/Working and Analytic/Witnesses then consume.
+
+Goldbach/AO_KernelTail.lean
+Tail control for the AO kernel: isolates and bounds the contribution from the 
+kernel tail after truncation.
+
+Goldbach/AO_MellinTrunc.lean
+Mellin / truncation machinery used to justify the truncated kernel model (and 
+quantify the truncation error).
+
+Goldbach/AO_Models.lean
+Defines the AO “models” (the abstract template objects and the concrete 
+instantiations used downstream).
+
+Goldbach/AO_SmoothLoss.lean
+“Smoothing loss” bookkeeping: lemmas that compare the smoothed/truncated objects 
+to the ideal ones, producing explicit constants.
+
+Goldbach/AO_OffDiag/ (directory; since you asked where it fits)
+This is part of the AO tail/error pipeline: it packages off-diagonal / tail budget 
+style bounds and exports them in a way that AO_Instantiate can use (you can see 
+AO_Instantiate importing Goldbach.AO_OffDiag.EntryPoint).
+
+Goldbach/BG.lean
+A convenience top-level import: it pulls together BG calibration + identity + common 
+definitions so other modules can import Goldbach.BG instead of three files.
+
+Goldbach/BG_Common.lean
+Shared BG definitions and helper lemmas: “bands” / index sets / kernel wrappers, 
+and the small lemmas that both BG_Calib and BG_Identity need.
+
+Goldbach/BG_Calib.lean
+“Calibration” lemmas: concrete arithmetic about the band sets (splitting into 
+positive/negative, cardinalities, Icc counts, filter decompositions). This is
+ exactly where some of the “missing constants” pain tends to be avoided by proving 
+ your own local lemmas.
+
+Goldbach/BG_Identity.lean
+The BG identity / decomposition itself: defines the BG payload objects (P_BG, 
+errTI, etc.), relates them to the representation function, and proves the pointwise 
+decomposition with explicit constants.
+
+Goldbach/CalculusBound.lean
+Real-analytic inequalities needed in BG/AO estimates (a toolbox file; it proves 
+“calculus facts” once so BG/AO can just import).
+
+Goldbach/Geometry.lean
+Bilinear-geometry definitions (norms, “Schur-test style” set-ups, geometry used to 
+estimate bilinear forms).
+
+Goldbach/Kernel.lean
+Concrete “short-shift kernel” definition and its basic algebraic properties; BG/AO 
+both lean on this.
+
+Goldbach/TFA.lean
+Time-frequency analysis primitives that AO uses (windows, localized transforms, etc.).
+
+Goldbach/NumberTheory.lean
+Elementary number-theory lemmas that feed into singular series bounds (odd primes 
+support, local factors, finite products).
+
+Goldbach/Analytic/Witnesses.lean
+“Canonical analytic inputs” assembly: combines (i) a main term, (ii) a major-arc bound, 
+(iii) sigma lower bounds / numeric constants, etc., into the witness objects expected by 
+the final closure theorem.
+
+Bank layer wiring
+
+Goldbach/BankBridge.lean
+Main bridge from “bank-style decomposition bounds” into the analytic witness format 
+used by TenorBridge / TenorCanon. It’s the glue between BankPieces and the global witness.
+
+Goldbach/BankPieces/Cert/Working.lean
+The working/canonical certificate instance used by the pipeline. This is where
+ AO_Instantiate is consumed to build the bank certificate story used later.
+
+Goldbach/BankPieces/Bounds/Working.lean
+Working layer for “caps on windows” etc. (This is where your earlier note applies: 
+payload_nonneg isn’t standalone anymore; it’s now the PayloadCapOnWindow.cap_nonneg field.)
+
+Goldbach/BankPieces/Bounds/FromCertificate.lean
+Takes an actual BankCertificate and produces DecompBounds (a pointwise |R - M| ≤ … style bound).
+ This is the natural “wire-in” if the certificate is your source of truth.
+
+Goldbach/BankPieces/Bounds/FromComponents.lean
+Alternate path: produces DecompBounds from separately proved component bounds (major/minor/etc.), 
+rather than from a single monolithic certificate.
+
+Goldbach/BankPieces/DecompFromBound.lean
+A general constructor: once you have a pointwise absolute-error bound, it packages it as 
+DecompBounds in exactly the format TenorBridge wants.
+
+Goldbach/TenorBridge.lean
+Bridges AO + BG/Bank bounds into a GlobalClosurePointwise witness. Think: “assemble the hypotheses 
+in the exact shape the global closure lemma needs.”
+
+Goldbach/TenorCanon.lean
+The canonical assembly point: takes the canonical major bound + canonical decomposition 
+bounds and exports the single “canonical tenor input” used by Complete.
+
+Goldbach/TypeI_Leak.lean
+Uses the BG identity error term (errTI) to build the Type-I leakage control needed in the 
+tenor closure package. This is not a debug file: it’s a real ingredient in the current assembly.
+
+Goldbach/Complete.lean
+The conditional final theorem specialized to the canonical cutoff (X0 = 1_000_000), by 
+importing FiniteBase.CombineAll and TenorCanon and then invoking the final closure theorem.
+
+Goldbach/CoreTypes.lean
+Re-export/centralize the core representation types (Rep, R, windows, etc.) so downstream 
+imports are stable.
+
+Goldbach/Base/Analytics/Hyp.lean
+A compatibility shim: defines PointwiseHyp as GlobalClosurePointwise to preserve older 
+import paths.
+
+Goldbach/Base/Analytics/Witness.lean
+Packages a GlobalClosurePointwise hypothesis into a PointwiseWitness in the exact format 
+goldbach_final expects.
+
+Goldbach/Census/Data.lean
+Provides the even-number census data and helper facts used for the finite-base verification.
+
+Goldbach/Base/FiniteBase.lean
+In the current tree, this is effectively legacy / incomplete as a pipeline artifact (it 
+looks like an older wrapper attempt). The actual finite-base proof is elsewhere (see below).
+
+Goldbach/ChunksOnly.lean
+A build/debug harness: imports chunk modules and runs compilation without threading
+ through the full final theorem.
+
+# FILE STATUSES
+
+## STATUS GREEN 
+NA
+
+## STATUS UNKNOWN
+Goldbach/AO.lean – 
+Goldbach/AO_Bank.lean – 
+Goldbach/Analytic/Witnesses.lean –
+Goldbach/BG.lean – 
+Goldbach/BG_Common.lean – 
+Goldbach/BankBridge.lean – 
+Goldbach/Base/FiniteBase.lean 
+Goldbach/CalculusBound.lean – 
+Goldbach/Census/Data.lean –
+Goldbach/Deweighting.lean – ??
+Goldbach/Geometry.lean – 
+Goldbach/Kernel.lean – 
+Goldbach/LargeSieve.lean – 
+Goldbach/LinearAlgebra.lean – 
+Goldbach/NumberTheory.lean – 
+Goldbach/PPBound.lean – ??
+Goldbach/PPBoundCore.lean – ??
+Goldbach/Params.lean – 
+Goldbach/TFA.lean – 
+Goldbach/TenorBridge.lean – ??
+Goldbach/TenorCanon.lean – 
+Goldbach/TypeI_Leak.lean – ??
+
+## SCAFFOLD (IGNORE)
+Goldbach/BankPieces/Bounds/FromCertificate.lean – Consumes certificate and outputs the decompbounds package.
+Goldbach/BankPieces/Cert/Working.lean – Certificate for the working window.
+Goldbach/BankPieces/DecompFromBound.lean – Turn a proved pointwise absolute-error bound into `DecompBounds`.
+Goldbach/BankPieces/Bounds/Working.lean – Bank absolute-deviation hook for the working window.
+Goldbach/BankPieces/Bounds/FromComponents.lean – Triangle inequality for two components (if necessary).
+Goldbach/AO_OffDiag/RamanujanScratch.lean – Goldbach/AO_OffDiag/RamanujanScratch.lean (deprecated)
+Goldbach/FiniteBase.lean – Certificate that every even `N` in `[4, X₀]` has a Goldbach decomposition.
+Goldbach/ChunksOnly.lean – ??
+Goldbach/TwinInstance.lean – ??

@@ -12,19 +12,22 @@
 -/
 import Mathlib.Data.Nat.Totient
 import Mathlib.Data.Int.Basic
-import Mathlib.Algebra.BigOperators.Ring
+import Mathlib.Algebra.BigOperators.Ring.Finset
 import Mathlib.Tactic
-import Mathlib.NumberTheory
+import Mathlib.NumberTheory.Basic
+import Goldbach.Windows
+import Goldbach.BankParams
 
 open scoped BigOperators
 open Real
+open Windows
+open BankParams
 
 namespace Goldbach
 namespace AO_OffDiag
 
 /-- Project-wide parameters (X₀, H). We reuse your central source. -/
-open Goldbach.Windows
-open Goldbach.BankParams
+
 
 /-- Möbius as an `ℤ`-valued function on `ℕ` from mathlib. -/
 local notation "μ" => Nat.ArithmeticFunction.moebius

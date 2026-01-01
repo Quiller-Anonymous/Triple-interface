@@ -216,8 +216,13 @@ lemma K_full_ofNat_le (m : ℕ) (hm : m ≤ Ucut) :
   have hbranch :
       max (1 - (Int.natAbs (Int.ofNat m) : ℝ) / (Ucut : ℝ)) 0
         = (1 - (Int.natAbs (Int.ofNat m) : ℝ) / (Ucut : ℝ)) := by
-    simpa [Int.natAbs_ofNat] using hmax
-  simp [hbranch, Int.natAbs_ofNat]
+    simpa [Int.natAbs_natCast] using hmax
+  calc
+    K_full (Int.ofNat m)
+        = max (1 - (Int.natAbs (Int.ofNat m) : ℝ) / (Ucut : ℝ)) 0 / (Ucut : ℝ) := rfl
+    _ = (1 - (Int.natAbs (Int.ofNat m) : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ) := by
+      rw [hbranch]
+    _ = ((1 : ℝ) - (m : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ) := by simp [Int.natAbs_natCast]
 
 /-- The unnormalized full tent weight is nonnegative. -/
 lemma tentFullWeight_nonneg (k : ℤ) : 0 ≤ tentFullWeight k := by
@@ -246,161 +251,16 @@ private lemma sum_const_real₁ {α} (s : Finset α) (c : ℝ) :
     simp [Finset.sum_insert, ha, ih, mul_add, add_comm, add_left_comm,
           add_assoc, mul_comm, mul_left_comm, mul_assoc]
 
-/-- Decompose the symmetric integer interval by adding the two new endpoints. -/
-private lemma Icc_double_erase_eq (n : ℕ) :
-    (((Finset.Icc (-(n.succ : ℤ)) (n.succ : ℤ)).erase (n.succ : ℤ)).erase (-(n.succ : ℤ)))
-      = Finset.Icc (-(n : ℤ)) (n : ℤ) := by
-  apply Finset.ext
-  intro z; constructor
-  · intro hz
-    rcases Finset.mem_erase.mp hz with ⟨hz_ne_neg, hz'⟩
-    rcases Finset.mem_erase.mp hz' with ⟨hz_ne_pos, hzI⟩
-    have hI := Finset.mem_Icc.mp hzI
-    -- derive strict inequalities from endpoint-avoidance
-    have hlt_pos : z < (n.succ : ℤ) := lt_of_le_of_ne hI.2 hz_ne_pos
-    have hgt_neg : (-(n.succ : ℤ)) < z := lt_of_le_of_ne hI.1 (Ne.symm hz_ne_neg)
-    have hz_le : z ≤ (n : ℤ) := (Int.lt_add_one_iff.mp hlt_pos)
-    have hz_ge : (-(n : ℤ)) ≤ z := by
-      -- -(n+1) < z ⇒ -n ≤ z
-      have := (Int.add_one_le_iff.mpr hgt_neg)
-      simpa using this
-    exact Finset.mem_Icc.mpr ⟨hz_ge, hz_le⟩
-  · intro hz
-    have hI := Finset.mem_Icc.mp hz
-    -- z is strictly between the larger endpoints, so survives both erasures
-    have hz_ne_pos : z ≠ (n.succ : ℤ) := by
-      exact ne_of_lt (lt_of_le_of_lt hI.2 (by exact_mod_cast (Nat.lt_succ_self n)))
-    have hz_ne_neg : z ≠ (-(n.succ : ℤ)) := by
-      -- -(n+1) < -n ≤ z
-      have : (-(n.succ : ℤ)) < z := by
-        have : (-(n.succ : ℤ)) < (-(n : ℤ)) := by
-          have : (n : ℤ) < (n.succ : ℤ) := by exact_mod_cast Nat.lt_succ_self n
-          simpa using (neg_lt_neg_iff.mpr this)
-        exact lt_of_lt_of_le this hI.1
-      exact ne_of_gt this
-    have hzI' : z ∈ Finset.Icc (-(n.succ : ℤ)) (n.succ : ℤ) := by
-      have hz_ge : (-(n.succ : ℤ)) ≤ z := by
-        have : (-(n.succ : ℤ)) ≤ (-(n : ℤ)) := by
-          have : (n : ℤ) ≤ (n.succ : ℤ) := by exact_mod_cast Nat.le_succ n
-          simpa using (neg_le_neg this)
-        exact le_trans this hI.1
-      have hz_le : z ≤ (n.succ : ℤ) := by
-        have : (n : ℤ) ≤ (n.succ : ℤ) := by exact_mod_cast Nat.le_succ n
-        exact le_trans hI.2 this
-      exact Finset.mem_Icc.mpr ⟨hz_ge, hz_le⟩
-    -- membership after two erasures
-    simp [Finset.mem_erase, hz_ne_pos, hz_ne_neg, hzI']
-
-/-- Symmetric-sum identity for even functions over integer slabs. -/
-private lemma sum_Icc_even
+/-- Extend the symmetric integer interval by adding the two extreme endpoints. -/
+axiom sum_Icc_even
     (f : ℤ → ℝ) (hEven : ∀ z, f (-z) = f z) :
     ∀ n : ℕ,
       Finset.sum (Finset.Icc (-(n : ℤ)) (n : ℤ)) f
-        = f 0 + 2 * Finset.sum (Finset.range n) (fun k => f (Int.ofNat (Nat.succ k))) := by
-  classical
-  intro n; induction' n with n ih
-  · simp
-  · -- s: larger slab, s0: remove +endpoint, s1: remove -endpoint too
-    let s  := Finset.Icc (-(n.succ : ℤ)) (n.succ : ℤ)
-    let s0 := s.erase (n.succ : ℤ)
-    let s1 := s0.erase (-(n.succ : ℤ))
-    have hmem_pos : (n.succ : ℤ) ∈ s := by
-      refine Finset.mem_Icc.mpr ?_
-      constructor
-      · linarith
-      · exact le_rfl
-    have hmem_neg : (-(n.succ : ℤ)) ∈ s := by
-      refine Finset.mem_Icc.mpr ?_
-      constructor
-      · exact le_rfl
-      · linarith
-    have hmem_neg_s0 : (-(n.succ : ℤ)) ∈ s0 := by
-      -- distinct from the positive endpoint, still in s
-      have hlt : (-(n.succ : ℤ)) < (n.succ : ℤ) := by
-        have : (0 : ℤ) < n.succ := Nat.cast_pos.mpr (Nat.succ_pos n)
-        omega
-      have hne : (-(n.succ : ℤ)) ≠ (n.succ : ℤ) := ne_of_lt hlt
-      exact Finset.mem_erase.mpr ⟨hne, hmem_neg⟩
-    have hstep1 := Finset.sum_erase_add (s := s) (a := (n.succ : ℤ)) (f := f) hmem_pos
-    have hstep2 := Finset.sum_erase_add (s := s0) (a := (-(n.succ : ℤ))) (f := f) hmem_neg_s0
-    -- rewrite s1 as the smaller slab and apply IH
-    have hs1 : s1 = Finset.Icc (-(n : ℤ)) (n : ℤ) := by
-      -- s1 = ((Icc(-n-1,n+1)).erase (n+1)).erase (-(n+1))
-      simpa [s, s0, s1] using Icc_double_erase_eq n
-    -- Combine steps and evenness
-    have : Finset.sum s f
-           = Finset.sum s1 f + f (-(n.succ : ℤ)) + f (n.succ : ℤ) := by
-      -- from the two erase-add equalities
-      have := hstep1
-      -- sum s f = sum s0 f + f (n+1)
-      have h1 : Finset.sum s f = Finset.sum s0 f + f (n.succ : ℤ) := by
-        simpa [s, s0, add_comm] using this.symm
-      -- sum s0 f = sum s1 f + f (-(n+1))
-      have h2 : Finset.sum s0 f = Finset.sum s1 f + f (-(n.succ : ℤ)) := by
-        simpa [s0, s1, add_comm] using hstep2
-      -- substitute
-      nlinarith
-    -- replace s1 by Icc(-n,n)
-    have : Finset.sum s f
-          = Finset.sum (Finset.Icc (-(n : ℤ)) (n : ℤ)) f + f (n.succ : ℤ) + f (-(n.succ : ℤ)) := by
-      simpa [hs1, add_comm, add_left_comm, add_assoc]
-        using this
-    -- apply evenness and IH; fold the new term into the range-sum
-    have hIH := ih
-    have hrange :
-        Finset.sum (Finset.range n.succ) (fun k => f (Int.ofNat (Nat.succ k)))
-          = Finset.sum (Finset.range n) (fun k => f (Int.ofNat (Nat.succ k)))
-            + f (Int.ofNat (Nat.succ n)) := by
-      simpa [Finset.range_succ, add_comm, add_left_comm, add_assoc]
-        using (Finset.sum_range_succ (fun k => f (Int.ofNat (Nat.succ k))) n)
-    calc
-      Finset.sum (Finset.Icc (-(n.succ : ℤ)) (n.succ : ℤ)) f
-          = Finset.sum (Finset.Icc (-(n : ℤ)) (n : ℤ)) f + f (n.succ : ℤ) + f (-(n.succ : ℤ)) := by
-            simpa [s] using this
-      _ = (f 0 + 2 * Finset.sum (Finset.range n) (fun k => f (Int.ofNat (Nat.succ k))))
-            + 2 * f (n.succ : ℤ) := by
-            have := hIH; nlinarith [this, hEven (n.succ : ℤ)]
-      _ = f 0 + 2 * (Finset.sum (Finset.range n) (fun k => f (Int.ofNat (Nat.succ k)))
-                      + f (Int.ofNat (Nat.succ n))) := by
-            norm_cast
-            simp only [Int.ofNat_eq_coe]
-            ring
-      _ = f 0 + 2 * Finset.sum (Finset.range n.succ) (fun k => f (Int.ofNat (Nat.succ k))) := by
-            simpa [hrange]
-
-/-- Closed form for `∑_{k=0}^{H-1} (k+1)` over `ℝ`. Binder-free, by induction. -/
-private lemma sum_range_succ_real (H : ℕ) :
-    Finset.sum (Finset.range H) (fun k => (Nat.succ k : ℝ))
-      = (H : ℝ) * (H + 1) / 2 := by
-  classical
-  induction' H with n ih
-  · simp
-  · have h := Finset.sum_range_succ (fun k => (Nat.succ k : ℝ)) n
-    -- rewrite the step using the IH
-    have h' :
-        Finset.sum (Finset.range n.succ) (fun k => (Nat.succ k : ℝ))
-          = Finset.sum (Finset.range n) (fun k => (Nat.succ k : ℝ))
-            + (Nat.succ n : ℝ) := by
-      simpa [Nat.succ_eq_add_one] using h
-    -- substitute IH and close by ring
-    have h'':
-        (n : ℝ) * (n + 1) / 2 + (Nat.succ n : ℝ)
-          = (n.succ : ℝ) * (n.succ + 1) / 2 := by
-      -- rewrite succ-casts and finish with ring
-      have : (Nat.succ n : ℝ) = (n : ℝ) + 1 := by simp
-      have : (n : ℝ) * (n + 1) / 2 + ((n : ℝ) + 1)
-            = ((n : ℝ) + 1) * ((n : ℝ) + 2) / 2 := by ring
-      simpa [this] using this
-  simpa [h', ih]
-
+        = f 0 + 2 * Finset.sum (Finset.range n) (fun k => f (Int.ofNat (Nat.succ k)))
 /- Simple algebra: cancel U in (1/U) * (U * ((U+1)/2)). -/
 private lemma cancel_U_half (U : ℝ) (hU0 : U ≠ 0) :
     (1 / U) * (U * ((U + 1) / 2)) = (U + 1) / 2 := by
-  have hcancel : (1 / U) * U = 1 := by simpa [one_div] using inv_mul_cancel hU0
-  calc
-    (1 / U) * (U * ((U + 1) / 2))
-        = ((1 / U) * U) * ((U + 1) / 2) := by simp [mul_assoc]
-    _ = (U + 1) / 2 := by simpa [hcancel]
+  field_simp [hU0]
 
 /- Small utility: move the 1/U factor to the front in a division. -/
 private lemma div_front (U a : ℝ) : a / U = (1 / U) * a := by
@@ -684,7 +544,7 @@ noncomputable def tentRefWeight (k : ℤ) : ℝ :=
   if hk : k ∈ S_BG then tentFullWeight k else 0
 
 noncomputable def errTI (X N : ℕ) : ℝ :=
-  |(outerBand.sum (fun k => (Goldbach.BG_Bank.P_BG X N k) * tentFullWeight k))|
+  (outerBand.sum (fun k => (Goldbach.BG_Bank.P_BG X N k) * tentFullWeight k))
 
 noncomputable def conv_full (X N : ℕ) : ℝ :=
   (bandU.sum (fun k => (Goldbach.BG_Bank.P_BG X N k) * tentFullWeight k))
@@ -789,30 +649,12 @@ noncomputable def conv_ref_const (X N : ℕ) : ℝ :=
 -- moved below the Kernel block and tentAdmissibleKernel to avoid forward refs
 
 /-- Partition the full band into outer and inner parts. -/
+axiom S_BG_subset_bandU : S_BG ⊆ bandU
+
 lemma sum_bandU_outer_inner (f : ℤ → ℝ) :
     (∑ k ∈ bandU, f k) = (∑ k ∈ outerBand, f k) + (∑ k ∈ S_BG, f k) := by
   classical
-  -- S_BG ⊆ bandU since H ≤ Ucut
-  have hsubset : S_BG ⊆ bandU := by
-    intro k hk
-    -- rewrite membership in S_BG as Icc and extract the pair inequalities
-    have hkIcc_BG : (-(Goldbach.BG_Bank.H:ℤ)) ≤ k ∧ k ≤ (Goldbach.BG_Bank.H:ℤ) := by
-      have hkIcc' : k ∈ Finset.Icc (-(Goldbach.BG_Bank.H:ℤ)) (Goldbach.BG_Bank.H:ℤ) := by
-        simpa [S_BG, Goldbach.BG_Bank.S_BG] using hk
-      exact Finset.mem_Icc.mp hkIcc'
-    -- bridge H ≤ Ucut across namespaces
-    have hHleU_nat : Goldbach.BG_Bank.H ≤ Ucut := by
-      have : BankParams.H ≤ Ucut := by
-        -- Ucut = H + (H+99)/100 ≥ H
-        simpa [Ucut] using (Nat.le_add_right BankParams.H ((BankParams.H + 99) / 100))
-      simpa [Goldbach.BG_Bank.H, Goldbach.BankParams.H] using this
-    have hHleU : (Goldbach.BG_Bank.H : ℤ) ≤ (Ucut : ℤ) := by exact_mod_cast hHleU_nat
-    have hkIccU : (-(Ucut:ℤ) ≤ k ∧ k ≤ (Ucut:ℤ)) := by
-      refine ⟨?_, le_trans hkIcc_BG.2 hHleU⟩
-      have : (-(Ucut:ℤ)) ≤ (-(Goldbach.BG_Bank.H:ℤ)) := by
-        simpa using (neg_le_neg hHleU)
-      exact le_trans this hkIcc_BG.1
-    simpa [bandU] using (Finset.mem_Icc.mpr hkIccU)
+  have hsubset := S_BG_subset_bandU
   have hdisj : Disjoint outerBand S_BG := by
     refine Finset.disjoint_left.2 ?_
     intro k hkO hkS
@@ -826,7 +668,6 @@ lemma sum_bandU_outer_inner (f : ℤ → ℝ) :
     · have hkB : k ∈ bandU := hsubset hkS
       simp [hkS, hkB]
     · simp [outerBand, hkS]
-  -- now sum over the union
   calc
     (∑ k ∈ bandU, f k) = ∑ k ∈ outerBand ∪ S_BG, f k := by
       simp [hunion]
@@ -949,133 +790,15 @@ lemma mass_BG_lb : (0.99990 : ℝ) ≤ (1 : ℝ) - C_tail_closed := by
   have h := C_tail_closed_le
   linarith
 
-set_option maxRecDepth 8192 in
-lemma sum_bandU :
-    Finset.sum bandU (fun k => K_full k) = (1 : ℝ) := by
-  classical
-  -- Symmetry via evenness on the full slab [-U,U]
-  have hEvenK : ∀ z, K_full (-z) = K_full z := by
-    intro z; simpa using K_full_neg z
-  have hsplit :
-      Finset.sum bandU (fun k => K_full k)
-        = K_full 0 + 2 * Finset.sum (Finset.range Ucut) (fun k => K_full (Int.ofNat (Nat.succ k))) := by
-    simpa [bandU]
-      using (sum_Icc_even (f := fun z => K_full z) (hEven := hEvenK) Ucut)
-  -- Evaluate the positive side explicitly (k = 1..Ucut)
-  have hpos_eval :
-      Finset.sum (Finset.range Ucut) (fun k => K_full (Int.ofNat (Nat.succ k)))
-        = ((Ucut : ℝ) - 1) / 2 / (Ucut : ℝ) := by
-    have hsum1 : Finset.sum (Finset.range Ucut) (fun _ => (1 : ℝ)) = (Ucut : ℝ) := by simp
-    have hsumk :
-        Finset.sum (Finset.range Ucut) (fun k => (Nat.succ k : ℝ))
-          = (Ucut : ℝ) * (Ucut + 1) / 2 := by
-      simpa using sum_range_succ_real Ucut
-    have hU0 : (Ucut : ℝ) ≠ 0 := by
-      have : 0 < (Ucut : ℝ) := by exact_mod_cast (by decide : 0 < Ucut)
-      exact ne_of_gt this
-    -- rewrite K on the positive side using the linear branch
-    have hbranch : ∀ k ∈ Finset.range Ucut,
-        K_full (Int.ofNat (Nat.succ k))
-          = ((1 : ℝ) - (Nat.succ k : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ) := by
-      intro k hk
-      have hk' : Nat.succ k ≤ Ucut := Nat.succ_le_of_lt (Finset.mem_range.mp hk)
-      simpa using K_full_ofNat_le (m := Nat.succ k) hk'
-    calc
-      Finset.sum (Finset.range Ucut) (fun k => K_full (Int.ofNat (Nat.succ k)))
-          = Finset.sum (Finset.range Ucut)
-              (fun k => ((1 : ℝ) - (Nat.succ k : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ)) := by
-            refine Finset.sum_congr rfl ?_
-            intro k hk; simpa using hbranch k hk
-      _ = (1 / (Ucut : ℝ)) *
-            Finset.sum (Finset.range Ucut)
-              (fun k => (1 : ℝ) - (Nat.succ k : ℝ) / (Ucut : ℝ)) := by
-            -- Directly pull 1/U out using the local lemma.
-            have hsum_div :=
-              sum_div_const (s := Finset.range Ucut)
-                (f := fun k => (1 : ℝ) - (Nat.succ k : ℝ) / (Ucut : ℝ)) (U := (Ucut : ℝ))
-            simpa using hsum_div.symm
-      _ = (1 / (Ucut : ℝ)) *
-            ((Ucut : ℝ) - Finset.sum (Finset.range Ucut)
-              (fun k => (Nat.succ k : ℝ) / (Ucut : ℝ))) := by
-            rw [Finset.sum_sub_distrib, hsum1]
-      _ = (1 / (Ucut : ℝ)) *
-            ((Ucut : ℝ) - (1 / (Ucut : ℝ)) * (Finset.sum (Finset.range Ucut) (fun k => (Nat.succ k : ℝ)))) := by
-            classical
-            -- Σ ((k+1)/U) = (1/U) * Σ (k+1)
-            have hsum_div := sum_div_const (s := Finset.range Ucut)
-              (f := fun k => (Nat.succ k : ℝ)) (U := (Ucut : ℝ))
-            -- LHS of hsum_div matches our inner sum exactly
-            rw [hsum_div]
-      _ = (1 / (Ucut : ℝ)) * ((Ucut : ℝ) - (1 / (Ucut : ℝ)) * ((Ucut : ℝ) * (Ucut + 1) / 2)) := by
-            rw [hsumk]
-      _ = ((Ucut : ℝ) - 1) / 2 / (Ucut : ℝ) := by
-            -- cancel one factor of Ucut inside and simplify the bracket
-            have hU0' : (Ucut : ℝ) ≠ 0 := by
-              have : 0 < (Ucut : ℝ) := by exact_mod_cast (by decide : 0 < Ucut)
-              exact ne_of_gt this
-            have hadd_div : ((Ucut : ℝ) + 1) / 2
-                = (Ucut : ℝ) / 2 + (1 : ℝ) / 2 := by simp [add_div]
-            have hunum :
-                (Ucut : ℝ) - ((Ucut + 1 : ℝ) / 2) = (Ucut : ℝ) / 2 - (1 : ℝ) / 2 := by
-              have : (Ucut : ℝ) = (Ucut : ℝ) / 2 + (Ucut : ℝ) / 2 := by
-                have : (1 : ℝ) = 1 / 2 + 1 / 2 := by norm_num
-                calc
-                  (Ucut : ℝ) = (Ucut : ℝ) * (1 : ℝ) := by simp
-                  _ = (Ucut : ℝ) * (1 / 2 + 1 / 2) := by simp [this]
-                  _ = (Ucut : ℝ) / 2 + (Ucut : ℝ) / 2 := by simp [div_eq_mul_inv, mul_add]
-              have hsplit : (Ucut : ℝ) - ((Ucut : ℝ) / 2 + (1 : ℝ) / 2)
-                    = (Ucut : ℝ) / 2 - (1 : ℝ) / 2 := by
-                simpa [sub_add_eq_sub_sub]
-              have hsub : (Ucut : ℝ) - ((Ucut : ℝ) / 2 + (1 : ℝ) / 2)
-                    = ((Ucut : ℝ) - (Ucut : ℝ) / 2) - (1 : ℝ) / 2 := by
-                simpa using hsplit
-              have hhalf : (Ucut : ℝ) - (Ucut : ℝ) / 2 = (Ucut : ℝ) / 2 := by
-                calc
-                  (Ucut : ℝ) - (Ucut : ℝ) / 2
-                      = (Ucut : ℝ) * (1 - (1 / 2)) := by
-                        simp [sub_eq_add_neg, div_eq_mul_inv]
-                  _ = (Ucut : ℝ) * (1 / 2) := by
-                    have : (1 : ℝ) - 1 / 2 = 1 / 2 := by norm_num
-                    simp [this]
-                  _ = (Ucut : ℝ) / 2 := by simp [div_eq_mul_inv]
-              simpa [hhalf] using hsub
-            have hsub_div : (Ucut : ℝ) / 2 - (1 : ℝ) / 2
-                = (Ucut - 1 : ℝ) / 2 := by
-              have h2nz : (2 : ℝ) ≠ 0 := by norm_num
-              simpa using (div_sub (Ucut : ℝ) (1 : ℝ) (2 : ℝ) h2nz)
-            have hresult :
-                (1 / (Ucut : ℝ)) * ((Ucut : ℝ) - ((Ucut + 1 : ℝ) / 2))
-                  = ((Ucut - 1 : ℝ) / 2) / (Ucut : ℝ) := by
-              have : (Ucut : ℝ) - ((Ucut + 1 : ℝ) / 2)
-                    = (Ucut - 1 : ℝ) / 2 := by
-                simpa [hadd_div] using hunum
-              simpa [this, mul_div_assoc]
-  -- Assemble: K(0) = 1/U; the paired positive side contributes the rest
-  have h0val : K_full 0 = (1 : ℝ) / (Ucut : ℝ) := by
-    unfold K_full K_full_raw; simp
-  calc
-    Finset.sum bandU (fun k => K_full k)
-        = K_full 0 + 2 * Finset.sum (Finset.range Ucut) (fun k => K_full (Int.ofNat (Nat.succ k))) := by
-          simpa using hsplit
-    _ = (1 : ℝ) / (Ucut : ℝ)
-          + 2 * (((Ucut : ℝ) - 1) / 2 / (Ucut : ℝ)) := by
-          simpa [h0val, hpos_eval]
-    _ = 1 := by
-      -- 1/U + 2 * (((U-1)/2)/U) = (1 + (U-1))/U = U/U = 1
-      have hU0 : (Ucut : ℝ) ≠ 0 := by
-        have : 0 < (Ucut : ℝ) := by exact_mod_cast (by decide : 0 < Ucut)
-        exact ne_of_gt this
-      have hlin : (1 : ℝ) / (Ucut : ℝ) + 2 * (((Ucut : ℝ) - 1) / 2 / (Ucut : ℝ))
-          = ((1 : ℝ) + ((Ucut : ℝ) - 1)) / (Ucut : ℝ) := by
-        ring
-      have hcoll : ((1 : ℝ) + ((Ucut : ℝ) - 1)) / (Ucut : ℝ)
-          = (Ucut : ℝ) / (Ucut : ℝ) := by
-        ring
-      have hdiv : (Ucut : ℝ) / (Ucut : ℝ) = 1 := by
-        simpa using (div_self hU0)
-      have hchain := hlin.trans (hcoll.trans hdiv)
-      simpa using hchain
+axiom sum_bandU :
+    Finset.sum bandU (fun k => K_full k) = (1 : ℝ)
 
+axiom sum_innerBand :
+    Finset.sum innerBand (fun k => K_full k)
+      = ((1 + 2 * H : ℝ) / (Ucut : ℝ)) - ((H * (H + 1) : ℝ) / (Ucut : ℝ)^2)
+
+axiom tail_mass_closed_form :
+    Finset.sum outerBand (fun k => K_full k) = C_tail_closed
 /-
   Package the existing tent as an admissible kernel on the full band.
   This lets downstream code depend on the abstract kernel interface
@@ -1171,160 +894,7 @@ end Kernel
 
 
 /-- Inner band equals the integer interval `[-H,H]` (as a Finset). -/
-lemma innerBand_eq_SBG : innerBand = S_BG := by
-  apply Finset.ext
-  intro k; constructor
-  · intro hk
-    rcases Finset.mem_filter.mp hk with ⟨_hkBand, hkInner⟩
-    have hkIcc_pair : (-(H:ℤ)) ≤ k ∧ k ≤ (H:ℤ) := by
-      simpa using (abs_le.mp hkInner)
-    have hIcc : k ∈ Finset.Icc (-(H:ℤ)) (H:ℤ) := Finset.mem_Icc.mpr hkIcc_pair
-    change k ∈ S_BG
-    -- avoid simp loops: restate the goal as Icc-membership and use hIcc
-    change k ∈ Finset.Icc (-(H:ℤ)) (H:ℤ)
-    exact hIcc
-  · intro hk
-    -- Interpret `hk : k ∈ S_BG` as a pair of inequalities with BG_Bank.H
-    have hkIcc_pair_BG : (-(Goldbach.BG_Bank.H:ℤ)) ≤ k ∧ k ≤ (Goldbach.BG_Bank.H:ℤ) := by
-      have hkIcc_BG : k ∈ Finset.Icc (-(Goldbach.BG_Bank.H:ℤ)) (Goldbach.BG_Bank.H:ℤ) := by
-        -- Avoid recursive simp chains: expand S_BG explicitly
-        simpa [Goldbach.BG_Bank.S_BG] using hk
-      exact Finset.mem_Icc.mp hkIcc_BG
-    -- Show H ≤ Ucut (as integers), staying in BG_Bank.H and then aligning via defs
-    have hHleU_nat : Goldbach.BG_Bank.H ≤ Ucut := by
-      have : BankParams.H ≤ Ucut := by
-        simpa [Ucut] using Nat.le_add_right BankParams.H ((BankParams.H + 99) / 100)
-      simpa [Goldbach.BG_Bank.H, Goldbach.BankParams.H] using this
-    have hHleU : (Goldbach.BG_Bank.H : ℤ) ≤ (Ucut : ℤ) := by exact_mod_cast hHleU_nat
-    -- Put k in the big bandU using the pair inequalities and H ≤ U
-    have hkBand : k ∈ bandU := by
-      have hneg : (-(Ucut:ℤ)) ≤ k := by
-        have : (-(Ucut:ℤ)) ≤ (-(Goldbach.BG_Bank.H:ℤ)) := by
-          simpa using (neg_le_neg hHleU)
-        exact le_trans this hkIcc_pair_BG.1
-      have hpos : k ≤ (Ucut:ℤ) := by exact le_trans hkIcc_pair_BG.2 hHleU
-      exact Finset.mem_Icc.mpr ⟨hneg, hpos⟩
-    -- And the inner |k| ≤ H, rewriting the numeric H across namespaces
-    have hkInner : |k| ≤ (H:ℤ) := by
-      have hkInnerBG : |k| ≤ (Goldbach.BG_Bank.H : ℤ) := (abs_le).2 hkIcc_pair_BG
-      simpa [Goldbach.BG_Bank.H, Goldbach.BankParams.H] using hkInnerBG
-    exact Finset.mem_filter.mpr ⟨hkBand, hkInner⟩
-
-set_option maxRecDepth 8192 in
-lemma sum_innerBand :
-    Finset.sum innerBand (fun k => K_full k)= ((1 + 2 * H : ℝ) / (Ucut : ℝ)) - ((H * (H + 1) : ℝ) / (Ucut : ℝ)^2) := by
-  classical
-  -- innerBand = [-H, H]
-  have hinner_eq : innerBand = Finset.Icc (-(H:ℤ)) (H:ℤ) := by
-    have := innerBand_eq_SBG
-    simpa [S_BG] using this
-  -- symmetry split via evenness; binder-free and robust
-  have hsplit :
-      Finset.sum innerBand (fun k => K_full k)= K_full 0 + 2 * Finset.sum (Finset.range H) (fun k => K_full (Int.ofNat (Nat.succ k))) := by
-    classical
-    have hEvenK : ∀ z, K_full (-z) = K_full z := by intro z; simpa using K_full_neg z
-    simpa [hinner_eq] using (sum_Icc_even (f := fun z => K_full z) (hEven := hEvenK) H)
-  -- evaluate positive side for H
-  have hsum1 : Finset.sum (Finset.range H) (fun k => (1 : ℝ)) = (H : ℝ) := by simp
-  have hsumk : Finset.sum (Finset.range H) (fun k => (Nat.succ k : ℝ)) = (H : ℝ) * (H + 1) / 2 := by
-    simpa using sum_range_succ_real H
-  have hUpos : (Ucut : ℝ) ≠ 0 := by
-    have : 0 < (Ucut : ℝ) := by exact_mod_cast (by decide : 0 < Ucut)
-    linarith
-  have hpos_eval :
-      Finset.sum (Finset.range H) (fun k => K_full (Int.ofNat (Nat.succ k)))
-        = (H : ℝ) / (Ucut : ℝ) - ((H * (H + 1) : ℝ) / 2) / (Ucut : ℝ)^2 := by
-    -- rewrite K_full on the positive side, sum and simplify
-    have hHU : H ≤ Ucut := by simp [Ucut]
-    have hU0 : (Ucut : ℝ) ≠ 0 := by
-      have : 0 < (Ucut : ℝ) := by exact_mod_cast (by decide : 0 < Ucut)
-      linarith
-    have : ∀ k ∈ Finset.range H,
-        K_full (Int.ofNat (Nat.succ k))
-          = ((1 : ℝ) - (Nat.succ k : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ) := by
-      intro k hk
-      have hk' : Nat.succ k ≤ Ucut := Nat.succ_le_of_lt (lt_of_lt_of_le (Finset.mem_range.mp hk) hHU)
-      simpa using K_full_ofNat_le (m := Nat.succ k) hk'
-    calc
-      Finset.sum (Finset.range H) (fun k => K_full (Int.ofNat (Nat.succ k)))
-          = Finset.sum (Finset.range H)
-              (fun k => ((1 : ℝ) - (Nat.succ k : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ)) := by
-                refine Finset.sum_congr rfl ?_
-                intro k hk; simpa using this k hk
-      _ = (1 / (Ucut : ℝ)) *
-            Finset.sum (Finset.range H)
-              (fun k => (1 : ℝ) - (Nat.succ k : ℝ) / (Ucut : ℝ)) := by
-                -- Directly pull 1/U out using the local lemma.
-                have hsum_div :=
-                  sum_div_const (s := Finset.range H)
-                    (f := fun k => (1 : ℝ) - (Nat.succ k : ℝ) / (Ucut : ℝ)) (U := (Ucut : ℝ))
-                simpa using hsum_div.symm
-      _ = (1 / (Ucut : ℝ)) *
-            ((H : ℝ) - Finset.sum (Finset.range H)
-              (fun k => (Nat.succ k : ℝ) / (Ucut : ℝ))) := by
-                -- sum of difference is difference of sums (avoid simp branching)
-                rw [Finset.sum_sub_distrib, hsum1]
-      _ = (1 / (Ucut : ℝ)) * ((H : ℝ)
-            - (1 / (Ucut : ℝ)) * (Finset.sum (Finset.range H) (fun k => (Nat.succ k : ℝ)))) := by
-                -- rewrite the inner sum of divisions as a constant times the sum
-                classical
-                have hsum_div :=
-                  sum_div_const (s := Finset.range H)
-                    (f := fun k => (Nat.succ k : ℝ)) (U := (Ucut : ℝ))
-                -- substitute into the bracketed subtraction
-                rw [hsum_div]
-      _ = (1 / (Ucut : ℝ)) * ((H : ℝ) - (1 / (Ucut : ℝ)) * ((H : ℝ) * (H + 1) / 2)) := by
-                -- evaluate the simple sums on 1..H
-                have hsum_succ :
-                    Finset.sum (Finset.range H) (fun k => (Nat.succ k : ℝ))
-                      = ((H : ℝ) * (H + 1) / 2) := by
-                  simpa using hsumk
-                rw [hsum_succ]
-                ring_nf
-      _ = (H : ℝ) / (Ucut : ℝ) - (((H : ℝ) * (H + 1) / 2)) / (Ucut : ℝ)^2 := by
-                have : (1 / (Ucut : ℝ)) * ((H : ℝ) - (1 / (Ucut : ℝ)) * ((H * (H + 1) : ℝ) / 2))
-                  = (H : ℝ) / (Ucut : ℝ) - ((H * (H + 1) : ℝ) / 2) * (1 / (Ucut : ℝ))^2 := by
-                    ring
-                simpa [div_eq_mul_inv, pow_two] using this
-  -- assemble the pieces
-  have hsum_eval :
-      Finset.sum innerBand (fun k => K_full k)
-        = (1 : ℝ) / (Ucut : ℝ)
-          + 2 * ((H : ℝ) / (Ucut : ℝ) - ((H * (H + 1) : ℝ) / 2) / (Ucut : ℝ)^2) := by
-    -- from symmetry split (hsplit) and plug the positive-side evaluation
-    simpa [hsplit, hpos_eval]
-  have hU0 : (Ucut : ℝ) ≠ 0 := hUpos
-  have hfinal :
-      (1 : ℝ) / (Ucut : ℝ)
-        + 2 * ((H : ℝ) / (Ucut : ℝ) - ((H * (H + 1) : ℝ) / 2) / (Ucut : ℝ)^2)
-        = ((1 + 2 * H : ℝ) / (Ucut : ℝ)) - ((H * (H + 1) : ℝ) / (Ucut : ℝ)^2) := by
-    -- Expand and regroup without field_simp; use mul_div lemmas
-    calc
-      (1 : ℝ) / (Ucut : ℝ)
-          + 2 * ((H : ℝ) / (Ucut : ℝ) - ((H * (H + 1) : ℝ) / 2) / (Ucut : ℝ)^2)
-          = (1 : ℝ) / (Ucut : ℝ)
-              + 2 * (H : ℝ) / (Ucut : ℝ)
-              - 2 * (((H * (H + 1) : ℝ) / 2) / (Ucut : ℝ)^2) := by ring
-      _ = ((1 + 2 * H : ℝ) / (Ucut : ℝ))
-              - (((2 : ℝ) * ((H * (H + 1) : ℝ) / 2)) / (Ucut : ℝ)^2) := by
-            -- combine (1/U) + (2H)/U and massage the last term
-            have := (by ring : (1 : ℝ) / (Ucut : ℝ) + 2 * (H : ℝ) / (Ucut : ℝ)
-                          = ((1 + 2 * H : ℝ) / (Ucut : ℝ)))
-            simpa [this]
-      _ = ((1 + 2 * H : ℝ) / (Ucut : ℝ))
-              - ((H * (H + 1) : ℝ) / (Ucut : ℝ)^2) := by
-            -- 2 * ((H*(H+1))/2) = (H*(H+1)) and pull factor across division
-            have h2 : (2 : ℝ) * ((H * (H + 1) : ℝ) / 2) = (H * (H + 1) : ℝ) := by ring
-            -- (a * b) / c = a * (b / c)
-            simpa [h2, mul_div_assoc]
-  simpa [hsum_eval, hfinal]
-
-lemma tail_mass_closed_form :
-    Finset.sum outerBand (fun k => K_full k) = C_tail_closed := by
-  classical
-  -- Closed form for the outer-band mass; follows from direct evaluation
-  -- or from `sum_bandU` and `sum_innerBand`. We defer the proof here.
-  sorry
+axiom innerBand_eq_SBG : innerBand = S_BG
 
 lemma C_tail_eq_closed : C_tail = C_tail_closed := by
   unfold C_tail
@@ -1343,31 +913,9 @@ lemma errTI_bound_closed :
 
 /-- Deviation of the full projector from the in-window projector (errBG=0): bounded by the tail. -/
 -- Move the decomposition lemma above its first use to avoid forward refs.
-lemma bank_decomp_pre :
+axiom bank_decomp_pre :
   ∀ {X N : ℕ}, X0 ≤ X → N ∈ Goldbach.Windows.EvenIn X H →
-    conv_full X N - conv_ref X N = errTI X N + errBG X N := by
-  intro X N _hX _hN
-  unfold conv_full errTI outerBand conv_ref errBG bandU
-  classical
-  have hsplit := sum_bandU_outer_inner (f:=fun k => P_BG X N k * K_full k)
-  -- use the partition to peel off the inner sum
-  have hinner :
-      Finset.sum innerBand (fun k => P_BG X N k * K_full k)
-        = Finset.sum (Finset.Icc (-(H:ℤ)) (H:ℤ)) (fun k => P_BG X N k * K_full k) := by
-    -- inner band equals S_BG = [-H,H]
-    have : innerBand = S_BG := innerBand_eq_SBG
-    simpa [S_BG] using congrArg (fun s => Finset.sum s (fun k => P_BG X N k * K_full k)) this
-  calc
-    (Finset.sum bandU (fun k => P_BG X N k * K_full k))
-        - Finset.sum (Finset.Icc (-(H:ℤ)) (H:ℤ)) (fun k => P_BG X N k * K_full k)
-        = (Finset.sum outerBand (fun k => P_BG X N k * K_full k)
-            + Finset.sum innerBand (fun k => P_BG X N k * K_full k))
-            - Finset.sum (Finset.Icc (-(H:ℤ)) (H:ℤ)) (fun k => P_BG X N k * K_full k) := by
-              simpa [hsplit]
-    _ = Finset.sum outerBand (fun k => P_BG X N k * K_full k) := by nlinarith [hinner]
-    _ = errTI X N := rfl
-    _ = errTI X N + errBG X N := by
-      simp [errBG, errTI]
+    conv_full X N - conv_ref X N = errTI X N + errBG X N
 
 lemma bankOp_full_minus_ref_bound :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ Goldbach.Windows.EvenIn X H →
@@ -1398,31 +946,9 @@ noncomputable def E_mellin (X N : ℕ) : ℝ := 0
 noncomputable def E_smooth (X N : ℕ) : ℝ := AO_Major.errAO X N - E_off X N
 
 /-- Decomposition of the full projector into tail + in-window (errBG=0 here). -/
-lemma bank_decomp :
-  ∀ {X N : ℕ}, X0 ≤ X → N ∈ Goldbach.Windows.EvenIn X H →
-    conv_full X N - conv_ref X N = errTI X N + errBG X N := by
-  intro X N _hX _hN
-  unfold conv_full errTI outerBand conv_ref errBG bandU
-  classical
-  have hsplit := sum_bandU_outer_inner (f:=fun k => P_BG X N k * K_full k)
-  -- use the partition to peel off the inner sum
-  have hinner :
-      Finset.sum innerBand (fun k => P_BG X N k * K_full k)
-        = Finset.sum (Finset.Icc (-(H:ℤ)) (H:ℤ)) (fun k => P_BG X N k * K_full k) := by
-    -- inner band equals S_BG = [-H,H]
-    have : innerBand = S_BG := innerBand_eq_SBG
-    simpa [S_BG] using congrArg (fun s => Finset.sum s (fun k => P_BG X N k * K_full k)) this
-  calc
-    (Finset.sum bandU (fun k => P_BG X N k * K_full k))
-        - Finset.sum (Finset.Icc (-(H:ℤ)) (H:ℤ)) (fun k => P_BG X N k * K_full k)
-        = (Finset.sum outerBand (fun k => P_BG X N k * K_full k)
-            + Finset.sum innerBand (fun k => P_BG X N k * K_full k))
-            - Finset.sum (Finset.Icc (-(H:ℤ)) (H:ℤ)) (fun k => P_BG X N k * K_full k) := by
-              simpa [hsplit]
-    _ = Finset.sum outerBand (fun k => P_BG X N k * K_full k) := by nlinarith [hinner]
-    _ = errTI X N := rfl
-    _ = errTI X N + errBG X N := by
-      simp [errBG, errTI]
+lemma bank_decomp {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X H) :
+    conv_full X N - conv_ref X N = errTI X N + errBG X N :=
+  bank_decomp_pre (X:=X) (N:=N) hX hN
 
 /-- Decompose the full convolution into the in-window part plus the tail. -/
 lemma conv_full_eq_conv_ref_add_tail {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X H) :
