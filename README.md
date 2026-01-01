@@ -82,11 +82,22 @@ goldbach_final (w : PointwiseWitness) (hBase : FiniteBaseUpTo w.X0) : …
 
 i.e. analytic witness on the window + checked finite base implies Goldbach for all even integers in the target range.
 
-## Mental model
+-----------
 
-FiniteBase handles the small range.
+# TWIN PRIMES
 
-Witness packages everything needed for the large range:
-numeric constants (C2_numeric) + sigma lower bound + bank bounds + BG identity + contamination/tail bounds.
+TBC
 
-Final combines the two to cover all evens.
+# ALT-ZETA
+
+TBC
+
+------------
+
+# History
+- September 2025: Used ChatGPT, then MathGPT, to explore ideas related to the Goldbach conjecture. Mostly false starts and deferred proofs that go nowhere.
+- By the end of the month, I asked it to imagine a sci-fi future where the problem was solved. It gave me three areas of future mathematics where a revolutionary discovery would be sufficient to solve the problem. I asked it to imagine a solution that instead involved incremental changes in all three instead of a revolutionary change in any. That was the "triple interface". It gave me a roadmap that it seemed to be confident in.
+- By mid-October I had a complete draft of the proof, so I began exploring other applications of the same triple-interface method to similar ideas. We began drafts of the Twin Primes conjecture and the Riemann hypothesis.
+- A reasonable draft of Twin Primes was completed in October. No real progress was made on Riemann. It produced blather, in part because I had no insight into what was required to complete it.
+- In late November I began work on machine coding the proof of Goldbach (VS Code Studio, Lean 4), in an attempt to see if the underlying fundamentals were AI slop or genuine. I also started a new approach to Riemann (inspired by conversations with Copilot), which is the Alt-Zeta project, when I realized that the completion of the extended triple interface might help in creating an enhanced primes detector function that would be informative to efforts at solving Riemann.
+- December was all coding and revisions.

@@ -498,8 +498,59 @@ noncomputable def innerOddPrimePowers (N : ℕ) : Finset ℕ := by
   classical
   exact (Finset.Icc (A N) (B N)).filter isOddPrimePower
 
+set_option maxRecDepth 4000 in
 /-- Band width certificate: the inner interval `[A N, B N]` has length at most `H` (as naturals). -/
-axiom band_width_le_H_nat (N : ℕ) : B N - A N ≤ BankParams.H
+lemma band_width_le_H_nat (N : ℕ) : B N - A N ≤ BankParams.H := by
+  -- work with the `H` used in `A`/`B` (from `PPNumerics`), then transport to `BankParams.H`
+  have hmatch : Goldbach.PPNumerics.H = BankParams.H := by
+    norm_num [Goldbach.PPNumerics.H, BankParams.H]
+
+  -- internal calculation with `PPNumerics.H`
+  have hcalc : B N - A N ≤ Goldbach.PPNumerics.H := by
+    -- abbreviate the midpoint `a` and half-width `h`
+    set a : ℕ := N / 2
+    set h : ℕ := Goldbach.PPNumerics.H / 2
+    have hH : h + h = Goldbach.PPNumerics.H := by norm_num [Goldbach.PPNumerics.H, h]
+    by_cases hh : h ≤ a
+    · -- centered case: width collapses to `h+h`
+      have ha : a - h + h = a := Nat.sub_add_cancel hh
+      have hrewrite : a + h = (a - h) + (h + h) := by
+        calc
+          a + h = (a - h + h) + h := by simpa [ha]
+          _ = (a - h) + (h + h) := by
+            simp [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+      have hwidth : B N - A N = h + h := by
+        calc
+          B N - A N = (a + h) - (a - h) := by
+            unfold A B
+            simp [a, h]
+          _ = ((a - h) + (h + h)) - (a - h) := by simpa [hrewrite]
+          _ = h + h := Nat.add_sub_cancel (a - h) (h + h)
+      have : B N - A N ≤ Goldbach.PPNumerics.H := by
+        calc
+          B N - A N = h + h := hwidth
+          _ = Goldbach.PPNumerics.H := hH
+          _ ≤ Goldbach.PPNumerics.H := le_rfl
+      exact this
+    · -- near the left edge: `a ≤ h`, so width ≤ `h+h`
+      have ha_le : a ≤ h := Nat.le_of_not_ge hh
+      have hz : a - h = 0 := Nat.sub_eq_zero_of_le ha_le
+      have habd : B N - A N ≤ h + h := by
+        calc
+          B N - A N = (a + h) - (a - h) := by
+            unfold A B; simp [a, h]
+          _ = (a + h) - 0 := by simp [hz]
+          _ = a + h := by simp
+          _ ≤ h + h := Nat.add_le_add_right ha_le h
+      have : B N - A N ≤ Goldbach.PPNumerics.H := by
+        calc
+          B N - A N ≤ h + h := habd
+          _ = Goldbach.PPNumerics.H := hH
+          _ ≤ Goldbach.PPNumerics.H := le_rfl
+      exact this
+
+  -- transfer the numeric bound to `BankParams.H`
+  simpa [hmatch] using hcalc
 
 -- Count offsets k with |k| ≤ H such that n=(N+|k|)/2 or N-n is a “prime power”.
 noncomputable def ppInnerCount (H N : ℕ) : ℕ := by
@@ -599,9 +650,11 @@ prime power in any inner band `[A(N), B(N)]` for `N ≥ X0`. -/
 lemma innerOddPrimePowers_card_le_one {N : ℕ} (hN : BankParams.X0 ≤ N) :
     (innerOddPrimePowers N).card ≤ 1 := by
   classical
-  refine Finset.card_le_one.mpr ?h
-  intro a ha b hb hne
-  -- unpack membership
+  refine Finset.card_le_one.mpr ?_
+  intro a ha b hb
+  by_cases hne : a = b
+  · simpa [hne]
+  -- unpack membership of `a` and `b`
   rcases Finset.mem_filter.mp ha with ⟨haIcc, haPow⟩
   rcases Finset.mem_filter.mp hb with ⟨hbIcc, hbPow⟩
   rcases Finset.mem_Icc.mp haIcc with ⟨ha_left, ha_right⟩
@@ -623,16 +676,24 @@ lemma innerOddPrimePowers_card_le_one {N : ℕ} (hN : BankParams.X0 ≤ N) :
   cases lt_or_gt_of_ne hne with
   | inl hlt =>
       have hgap := Goldbach.Cert.OddPrimePowers.gap_gt_H_of_mem ha_cert hb_cert hlt
-      have hband_nat : pb ^ eb - pa ^ ea ≤ B N - A N := Nat.sub_le_sub hb_right ha_left
+      have hband1 : pb ^ eb - pa ^ ea ≤ pb ^ eb - A N :=
+        Nat.sub_le_sub_left ha_left (pb ^ eb)
+      have hband2 : pb ^ eb - A N ≤ B N - A N :=
+        Nat.sub_le_sub_right hb_right (A N)
       have hband : pb ^ eb - pa ^ ea ≤ BankParams.H :=
-        le_trans hband_nat (band_width_le_H_nat (N := N))
-      exact (Nat.lt_asymm hgap hband).elim
+        le_trans (le_trans hband1 hband2) (band_width_le_H_nat (N := N))
+      have hcontr : False := (Nat.not_le_of_gt hgap) hband
+      exact hcontr.elim
   | inr hgt =>
       have hgap := Goldbach.Cert.OddPrimePowers.gap_gt_H_of_mem hb_cert ha_cert hgt
-      have hband_nat : pa ^ ea - pb ^ eb ≤ B N - A N := Nat.sub_le_sub ha_right hb_left
+      have hband1 : pa ^ ea - pb ^ eb ≤ pa ^ ea - A N :=
+        Nat.sub_le_sub_left hb_left (pa ^ ea)
+      have hband2 : pa ^ ea - A N ≤ B N - A N :=
+        Nat.sub_le_sub_right ha_right (A N)
       have hband : pa ^ ea - pb ^ eb ≤ BankParams.H :=
-        le_trans hband_nat (band_width_le_H_nat (N := N))
-      exact (Nat.lt_asymm hgap hband).elim
+        le_trans (le_trans hband1 hband2) (band_width_le_H_nat (N := N))
+      have hcontr : False := (Nat.not_le_of_gt hgap) hband
+      exact hcontr.elim
 
 /-- **Certificate hook**: decomposition of `ppInnerCount` into square vs odd prime-power
 contributors for the canonical window. -/
