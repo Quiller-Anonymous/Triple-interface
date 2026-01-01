@@ -1,5 +1,6 @@
 import Mathlib
 import Mathlib.Data.Finset.Interval
+import Goldbach.BankParams
 import Goldbach.Windows
 import Goldbach.Rep
 
@@ -12,9 +13,9 @@ open scoped BigOperators
 noncomputable def Λ (n : ℕ) : ℝ := if Nat.Prime n then Real.log n else 0
 noncomputable def wX (_X n : ℕ) : ℝ := 1
 
--- Your canonical window params; adjust if you pull from BankParams instead.
-def X0 : ℕ := 10^6
-def H  : ℕ := 10^4
+-- Canonical window params (shared with the rest of the pipeline).
+abbrev X0 : ℕ := Goldbach.BankParams.X0
+abbrev H  : ℕ := Goldbach.BankParams.H
 
 /-- Working-band offsets S_BG = { k ∈ ℤ | |k| ≤ H }. -/
 def S_BG : Finset ℤ := (Finset.Icc (-(H:ℤ)) (H:ℤ))
@@ -72,7 +73,7 @@ lemma inv_le_inv_of_le_real {a b : ℝ} (ha : 0 < a) (hab : a ≤ b) : b⁻¹ �
 private lemma log_pos_of_large {X : ℕ} (hX : X0 ≤ X) : 0 < Real.log (X:ℝ) := by
   have h2X0 : (2:ℕ) ≤ X0 := by
     -- X0 = 10^6
-    simpa [X0] using (by decide : (2:ℕ) ≤ 10^6)
+    simpa [X0, Goldbach.BankParams.X0] using (by decide : (2:ℕ) ≤ 10^6)
   have h2X : (2:ℕ) ≤ X := le_trans h2X0 hX
   have hx : (1:ℝ) < (X:ℝ) := by
     have : (2:ℝ) ≤ (X:ℝ) := by exact_mod_cast h2X
@@ -636,7 +637,7 @@ lemma payload_cap_window_num
   -- (log (X0+H+1))/log X0 ≤ 1.001456…; square and scale
   have hnum :
       (Real.log ((X0 + H + 1 : ℕ) : ℝ) / Real.log (X0 : ℝ))^2 ≤ (62591 : ℝ) / 62500 := by
-    simpa [X0, H] using log_ratio_sq_le
+    simpa [X0, H, Goldbach.BankParams.X0, Goldbach.BankParams.H] using log_ratio_sq_le
   have hconst_nonneg : 0 ≤ (1 / 800 : ℝ) := by norm_num
   have hprod := mul_le_mul_of_nonneg_left hnum hconst_nonneg
   have : (1 / 800 : ℝ) * ((62591 : ℝ) / 62500) ≤ (1252 : ℝ) / 10^6 := by norm_num

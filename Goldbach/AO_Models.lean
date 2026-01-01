@@ -5,12 +5,10 @@ import Goldbach.AO_Major
 namespace Goldbach.AO_Models
 
 open Goldbach
-open Goldbach.AO_SigmaPos
-open Goldbach.AO_Major
 
 /-- Reference model: infinite kernel, full Mellin, no smoothing. -/
 noncomputable def M_infInf_raw (X N : ℕ) : ℝ :=
-  sigma N * weight_mass X
+  Goldbach.AO_Major.sigma N * Goldbach.AO_Major.weight_mass X
 
 /-- Infinite kernel, full Mellin, smoothed (placeholder for now). -/
 noncomputable def M_infInf_sm (_X _N : ℕ) : ℝ := 0

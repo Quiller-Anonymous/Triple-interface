@@ -190,3 +190,4 @@ Goldbach/AO_OffDiag/RamanujanScratch.lean – Goldbach/AO_OffDiag/RamanujanScrat
 Goldbach/FiniteBase.lean – Certificate that every even `N` in `[4, X₀]` has a Goldbach decomposition.
 Goldbach/ChunksOnly.lean – ??
 Goldbach/TwinInstance.lean – ??
+BuildWitness (obsolete)

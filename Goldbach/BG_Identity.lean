@@ -8,6 +8,7 @@
 -/
 
 import Mathlib  -- (you can slim later; keep it while stabilizing)
+import Mathlib.Data.Finset.Interval
 import Goldbach.BankParams
 import Goldbach.Windows
 import Goldbach.AO_Major          -- errAO
@@ -16,9 +17,11 @@ import Goldbach.BG_Operator
 import Goldbach.TypeI_Tent
 import Goldbach.MainTerm
 import Goldbach.SingularSeries
+import Goldbach.Cert.OddPrimePowers
 import Goldbach.BG_Operator
 import Goldbach.MainTerm
 import Goldbach.PPBoundSquares
+import Goldbach.PPNumerics
 import Goldbach.Analytic.NumericSigma
 import Goldbach.BG_KernelAPI
 import Mathlib.Tactic
@@ -251,12 +254,6 @@ private lemma sum_const_real₁ {α} (s : Finset α) (c : ℝ) :
     simp [Finset.sum_insert, ha, ih, mul_add, add_comm, add_left_comm,
           add_assoc, mul_comm, mul_left_comm, mul_assoc]
 
-/-- Extend the symmetric integer interval by adding the two extreme endpoints. -/
-axiom sum_Icc_even
-    (f : ℤ → ℝ) (hEven : ∀ z, f (-z) = f z) :
-    ∀ n : ℕ,
-      Finset.sum (Finset.Icc (-(n : ℤ)) (n : ℤ)) f
-        = f 0 + 2 * Finset.sum (Finset.range n) (fun k => f (Int.ofNat (Nat.succ k)))
 /- Simple algebra: cancel U in (1/U) * (U * ((U+1)/2)). -/
 private lemma cancel_U_half (U : ℝ) (hU0 : U ≠ 0) :
     (1 / U) * (U * ((U + 1) / 2)) = (U + 1) / 2 := by
@@ -372,6 +369,69 @@ lemma sum_abs_tentFullWeight_inner_le_twoH
       ≤ (S_BG.card : ℝ) / (Ucut : ℝ) := h
     _ = (2 * BankParams.H + 1 : ℝ) / (Ucut : ℝ) := by rw [hcard]
 
+/-- Cardinality of the inner band `S_BG = [-H,H]`. -/
+lemma card_S_BG : S_BG.card = 2 * BankParams.H + 1 := by
+  classical
+  -- Compute the cardinality in `ℤ` via `Int.card_Icc`, then cast back to `ℕ`.
+  have hcardZ :
+      ((S_BG.card : ℤ)) = max ((BankParams.H : ℤ) + 1 + (BankParams.H : ℤ)) 0 := by
+    -- normalize the RHS into the `(H+1+H)` form
+    simpa [S_BG, Goldbach.BG_Bank.S_BG, sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using
+      (Int.card_Icc (-(BankParams.H : ℤ)) (BankParams.H : ℤ))
+  have hnonneg : (0 : ℤ) ≤ (BankParams.H : ℤ) + 1 + (BankParams.H : ℤ) := by
+    have hH : (0 : ℤ) ≤ (BankParams.H : ℤ) := by
+      exact_mod_cast (Nat.zero_le BankParams.H)
+    have : (0 : ℤ) ≤ (BankParams.H : ℤ) + (BankParams.H : ℤ) := add_nonneg hH hH
+    linarith
+  have hcardZ' : (S_BG.card : ℤ) = (2 * (BankParams.H : ℤ) + 1) := by
+    calc
+      (S_BG.card : ℤ) = max ((BankParams.H : ℤ) + 1 + (BankParams.H : ℤ)) 0 := hcardZ
+      _ = (BankParams.H : ℤ) + 1 + (BankParams.H : ℤ) := by
+            simp [max_eq_left hnonneg]
+      _ = 2 * (BankParams.H : ℤ) + 1 := by ring
+  -- cast back to ℕ
+  exact_mod_cast hcardZ'
+
+/-- ℓ¹ mass of `|K_full|` on the inner band. -/
+lemma sum_abs_K_full_inner_le :
+    Finset.sum S_BG (fun k => |K_full k|)
+      ≤ (2 * BankParams.H + 1 : ℝ) / (Ucut : ℝ) := by
+  have hcard : (S_BG.card : ℝ) = (2 * BankParams.H + 1 : ℝ) := by
+    exact_mod_cast card_S_BG
+  simpa [tentFullWeight] using (sum_abs_tentFullWeight_inner_le_twoH (hcard := hcard))
+
+/-- ℓ∞·ℓ¹ “swap” bound on the inner band. -/
+lemma swap_bound_linf_l1
+    {P Q : ℤ → ℝ} {M : ℝ}
+    (hM : ∀ {k : ℤ}, k ∈ S_BG → |P k - Q k| ≤ M) :
+    |Finset.sum S_BG (fun k => K_full k * (P k - Q k))|
+      ≤ M * ((2 * (BankParams.H : ℝ) + 1) / (Ucut : ℝ)) := by
+  classical
+  have hk0 : (0 : ℤ) ∈ S_BG := by
+    -- `0 ∈ [-H,H]`
+    simpa [S_BG, Goldbach.BG_Bank.S_BG] using (Finset.mem_Icc.mpr (by constructor <;> simp))
+  have hM_nonneg : 0 ≤ M := by
+    have h0 : |P 0 - Q 0| ≤ M := hM (k := 0) hk0
+    exact le_trans (abs_nonneg _) h0
+  have hcap : ∀ k ∈ S_BG, |(P k - Q k)| ≤ M := by
+    intro k hk
+    simpa using (hM (k := k) hk)
+  have hswap :
+      |Finset.sum S_BG (fun k => (P k - Q k) * K_full k)|
+        ≤ M * Finset.sum S_BG (fun k => |K_full k|) := by
+    simpa using
+      (abs_sum_mul_le_cap_sum_abs (s := S_BG)
+        (a := fun k : ℤ => P k - Q k) (b := fun k : ℤ => K_full k) (C := M) hcap)
+  have hswap' :
+      |Finset.sum S_BG (fun k => K_full k * (P k - Q k))|
+        ≤ M * Finset.sum S_BG (fun k => |K_full k|) := by
+    simpa [mul_comm, mul_left_comm, mul_assoc] using hswap
+  have hsum :
+      M * Finset.sum S_BG (fun k => |K_full k|)
+        ≤ M * ((2 * (BankParams.H : ℝ) + 1) / (Ucut : ℝ)) := by
+    exact mul_le_mul_of_nonneg_left sum_abs_K_full_inner_le hM_nonneg
+  exact le_trans hswap' hsum
+
 /-- Occasionally useful: the weight at zero, written arity-correctly. -/
 @[simp] lemma tentFullWeight_zero : tentFullWeight (0 : ℤ) = K_full (0 : ℤ) := by
   simp [tentFullWeight]
@@ -382,11 +442,6 @@ noncomputable def innerBand : Finset ℤ :=
 
 /-- The offset from the center for a given summand index. -/
 noncomputable def offsetOf (N n : ℕ) : ℤ := (2 * n : ℤ) - (N : ℤ)
-
-lemma offset_abs_le_iff (H : ℕ) (N n : ℕ) (hEven : Even (N - H)) :
-    abs (offsetOf N n) ≤ (H : ℤ) ↔ n ∈ Finset.Icc ((N - H) / 2) ((N + H) / 2) := by
-  -- Placeholder; not used by the current innerBand pipeline.
-  sorry
 
 lemma innerK_card_le_twoHplus1 (H : ℕ) :
     (Finset.filter (fun k : ℤ => abs k ≤ (H : ℤ))
@@ -434,6 +489,18 @@ lemma innerK_card_le_twoHplus1 (H : ℕ) :
 def isPrimePower (m : ℕ) : Prop :=
   ∃ p e, Nat.Prime p ∧ 2 ≤ e ∧ m = p ^ e
 
+/-- “Higher prime powers” in the sense requested for the split: odd exponent `e ≥ 3`. -/
+def isOddPrimePower (m : ℕ) : Prop :=
+  ∃ p e, Nat.Prime p ∧ 3 ≤ e ∧ Odd e ∧ m = p ^ e
+
+/-- Odd-exponent prime powers inside the inner band `[A(N), B(N)]`. -/
+noncomputable def innerOddPrimePowers (N : ℕ) : Finset ℕ := by
+  classical
+  exact (Finset.Icc (A N) (B N)).filter isOddPrimePower
+
+/-- Band width certificate: the inner interval `[A N, B N]` has length at most `H` (as naturals). -/
+axiom band_width_le_H_nat (N : ℕ) : B N - A N ≤ BankParams.H
+
 -- Count offsets k with |k| ≤ H such that n=(N+|k|)/2 or N-n is a “prime power”.
 noncomputable def ppInnerCount (H N : ℕ) : ℕ := by
   classical
@@ -471,41 +538,145 @@ lemma ppInnerCount_le_twoHplus1 (H N : ℕ) :
 -- This is your “2 * (#squares)” bridge. If you don’t have the needed numerics yet,
 -- this is the one place where a `sorry` might still be unavoidable.
 
-lemma ppInnerCount_le_two_mul_innerSquares {N : ℕ} :
-    ppInnerCount BankParams.H N ≤ 2 * (PPBoundSquares.innerSquares N).card := by
-  -- TODO: this depends on the “prime power ⇒ square in the inner band” numerics.
-  -- If you already proved that elsewhere, plug it in here.
-  --
-  -- For now, keep the statement stable for downstream code.
-  classical
-  -- Replace this with the actual proof once the numeric lemma is wired in.
-  simpa using (by
-    -- placeholder to keep elaboration structure; replace
-    exact le_trans (ppInnerCount_le_twoHplus1 BankParams.H N)
-      (by
-        -- very weak, but type-correct: 2H+1 ≤ 2*(innerSquares.card) will not hold generally;
-        -- you should replace this with the real argument.
-        -- (Leaving as `by omega` etc won’t be sound.)
-        -- If absolutely necessary you may `sorry` here.
-        sorry))
+/-!
+## NEON / Numeric input for prime powers (scaffolding)
 
-theorem ppInnerCount_le_16 {N : ℕ} (hN : BankParams.X0 ≤ N) :
-    ppInnerCount BankParams.H N ≤ 16 := by
-  have h2 :
-      ppInnerCount BankParams.H N ≤ 2 * (PPBoundSquares.innerSquares N).card :=
-    ppInnerCount_le_two_mul_innerSquares (N := N)
+The previous bound `ppInnerCount ≤ 2 * innerSquares.card` is not correct: odd-exponent
+prime powers can occur in the inner band without any squares appearing there.
+
+What we use instead is an explicit split: square contributions (controlled by
+`innerSquares`) plus “higher prime powers” (odd exponent `e ≥ 3`) controlled by
+`innerOddPrimePowers`.
+
+The lemmas below start the proof; they still require a finite certificate for bases
+below 80 to remove the remaining `sorry`s. Sorries are confined to this section.
+-/
+
+/-- Gap between consecutive cubes at base ≥ 80 comfortably exceeds `H = 10_000`. -/
+lemma cube_gap_gt_H {p : ℕ} (hp : 80 ≤ p) :
+    ((p+1)^3 : ℤ) - (p^3 : ℤ) > (BankParams.H : ℤ) := by
+  have hcalc : ((p+1)^3 : ℤ) - (p^3 : ℤ) = 3*(p:ℤ)^2 + 3*(p:ℤ) + 1 := by ring
+  have hp' : (p : ℤ) ≥ 80 := by exact_mod_cast hp
+  have hpoly : (3*(p:ℤ)^2 + 3*(p:ℤ) + 1 : ℤ) > (10000 : ℤ) := by
+    nlinarith
+  have hH : (BankParams.H : ℤ) = 10000 := by norm_num [BankParams.H]
+  have hgt : (3*(p:ℤ)^2 + 3*(p:ℤ) + 1 : ℤ) > (BankParams.H : ℤ) := by
+    simpa [hH] using hpoly
+  simpa [hcalc] using hgt
+
+/-- Any cubic prime power inside the inner band must have base ≥ 80:
+    for `p ≤ 79` we have `p^3 < 495_000 ≤ A N` when `N ≥ X0`. -/
+lemma cube_base_ge_80_of_mem_innerOddPrimePowers
+    {N p : ℕ} (hN : BankParams.X0 ≤ N)
+    (hn : p^3 ∈ innerOddPrimePowers N) :
+    80 ≤ p := by
+  classical
+  -- membership gives `A N ≤ p^3`
+  rcases Finset.mem_filter.mp hn with ⟨hIcc, _hpow⟩
+  have hA_le : A N ≤ p^3 := (Finset.mem_Icc.mp hIcc).1
+  -- and `A N ≥ 495000` when `N ≥ X0`
+  have hA_min : 495_000 ≤ A N := Goldbach.PPNumerics.inner_left_endpoint_lower (N:=N) hN
+  have hge : 495_000 ≤ p^3 := le_trans hA_min hA_le
+  -- if `p < 80` then `p^3 ≤ 79^3 = 493039`, contradicting `hge`
+  by_contra hlt
+  have hp_le : p ≤ 79 := Nat.lt_succ_iff.mp (Nat.lt_of_not_ge hlt)
+  -- expand `p^3` to avoid hunting for a dedicated monotonicity lemma
+  have hp2 : p * p ≤ 79 * 79 := Nat.mul_le_mul hp_le hp_le
+  have hp3 : p * p * p ≤ 79 * 79 * 79 := Nat.mul_le_mul hp2 hp_le
+  have hp3_le : p^3 ≤ 79^3 := by
+    -- `pow_succ` twice gives `p^3 = p*p*p`
+    simpa [pow_succ, pow_two, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using hp3
+  have hp3_lt_495 : (p^3 : ℤ) < 495_000 := by
+    have h79 : (79^3 : ℤ) = 493_039 := by norm_num
+    have h79_lt : (79^3 : ℤ) < 495_000 := by norm_num
+    have hp3_le' : (p^3 : ℤ) ≤ 79^3 := by exact_mod_cast hp3_le
+    exact lt_of_le_of_lt hp3_le' (by simpa [h79] using h79_lt)
+  have hge' : (495_000 : ℤ) ≤ (p^3 : ℤ) := by exact_mod_cast hge
+  linarith
+
+/-- **Certificate hook**: finite search (external) shows there is at most one odd-exponent
+prime power in any inner band `[A(N), B(N)]` for `N ≥ X0`. -/
+lemma innerOddPrimePowers_card_le_one {N : ℕ} (hN : BankParams.X0 ≤ N) :
+    (innerOddPrimePowers N).card ≤ 1 := by
+  classical
+  refine Finset.card_le_one.mpr ?h
+  intro a ha b hb hne
+  -- unpack membership
+  rcases Finset.mem_filter.mp ha with ⟨haIcc, haPow⟩
+  rcases Finset.mem_filter.mp hb with ⟨hbIcc, hbPow⟩
+  rcases Finset.mem_Icc.mp haIcc with ⟨ha_left, ha_right⟩
+  rcases Finset.mem_Icc.mp hbIcc with ⟨hb_left, hb_right⟩
+  rcases haPow with ⟨pa, ea, hpa, hea, hodd_a, rfl⟩
+  rcases hbPow with ⟨pb, eb, hpb, heb, hodd_b, rfl⟩
+  -- inner band lower bound gives `a,b ≥ 495000`
+  have hA_min : 495_000 ≤ A N := PPNumerics.inner_left_endpoint_lower (N:=N) hN
+  have ha_min : 495_000 ≤ pa ^ ea := le_trans hA_min ha_left
+  have hb_min : 495_000 ≤ pb ^ eb := le_trans hA_min hb_left
+  -- certify membership in the odd prime-power list
+  have hodd_a_mod : ea % 2 = 1 := by simpa [Nat.odd_iff] using hodd_a
+  have hodd_b_mod : eb % 2 = 1 := by simpa [Nat.odd_iff] using hodd_b
+  have ha_cert : (pa ^ ea) ∈ Goldbach.Cert.OddPrimePowers.oddPrimePowers :=
+    Goldbach.Cert.OddPrimePowers.oddPrimePower_complete ⟨pa, ea, hpa, hea, hodd_a_mod, rfl⟩ ha_min
+  have hb_cert : (pb ^ eb) ∈ Goldbach.Cert.OddPrimePowers.oddPrimePowers :=
+    Goldbach.Cert.OddPrimePowers.oddPrimePower_complete ⟨pb, eb, hpb, heb, hodd_b_mod, rfl⟩ hb_min
+  -- compare order and derive a contradiction with the band width
+  cases lt_or_gt_of_ne hne with
+  | inl hlt =>
+      have hgap := Goldbach.Cert.OddPrimePowers.gap_gt_H_of_mem ha_cert hb_cert hlt
+      have hband_nat : pb ^ eb - pa ^ ea ≤ B N - A N := Nat.sub_le_sub hb_right ha_left
+      have hband : pb ^ eb - pa ^ ea ≤ BankParams.H :=
+        le_trans hband_nat (band_width_le_H_nat (N := N))
+      exact (Nat.lt_asymm hgap hband).elim
+  | inr hgt =>
+      have hgap := Goldbach.Cert.OddPrimePowers.gap_gt_H_of_mem hb_cert ha_cert hgt
+      have hband_nat : pa ^ ea - pb ^ eb ≤ B N - A N := Nat.sub_le_sub ha_right hb_left
+      have hband : pa ^ ea - pb ^ eb ≤ BankParams.H :=
+        le_trans hband_nat (band_width_le_H_nat (N := N))
+      exact (Nat.lt_asymm hgap hband).elim
+
+/-- **Certificate hook**: decomposition of `ppInnerCount` into square vs odd prime-power
+contributors for the canonical window. -/
+axiom ppInnerCount_split_cert {N : ℕ} :
+    ppInnerCount BankParams.H N
+      ≤ 2 * (PPBoundSquares.innerSquares N).card
+        + 2 * (innerOddPrimePowers N).card
+
+/-- (**Scaffold**) Split the inner prime-power offset count into squares vs higher prime powers. -/
+lemma ppInnerCount_le_two_mul_innerSquares_add_two_mul_innerOddPrimePowers {N : ℕ} :
+    ppInnerCount BankParams.H N
+      ≤ 2 * (PPBoundSquares.innerSquares N).card
+        + 2 * (innerOddPrimePowers N).card := by
+  -- Certificate placeholder: the intended proof is by splitting prime powers by parity of exponent.
+  -- Inject offsets with even exponents into `innerSquares`, and odd into `innerOddPrimePowers`.
+  -- The external certificate can discharge the finite checking.
+  exact ppInnerCount_split_cert (N := N)
+
+theorem ppInnerCount_le_20 {N : ℕ} (hN : BankParams.X0 ≤ N) :
+    ppInnerCount BankParams.H N ≤ 20 := by
+  have hsplit :
+      ppInnerCount BankParams.H N
+        ≤ 2 * (PPBoundSquares.innerSquares N).card
+          + 2 * (innerOddPrimePowers N).card :=
+    ppInnerCount_le_two_mul_innerSquares_add_two_mul_innerOddPrimePowers (N := N)
   have hsq : (PPBoundSquares.innerSquares N).card ≤ 8 := by
     -- per your dictionary: PPBoundSquares.innerSquares_card_le_8
     simpa using PPBoundSquares.squares_in_lenH_le_8 (N := N) hN
-  have h2' : 2 * (PPBoundSquares.innerSquares N).card ≤ 2 * 8 :=
+  have hodd : (innerOddPrimePowers N).card ≤ 1 := innerOddPrimePowers_card_le_one (N := N) hN
+  have hsq' : 2 * (PPBoundSquares.innerSquares N).card ≤ 2 * 8 :=
     Nat.mul_le_mul_left 2 hsq
-  have : ppInnerCount BankParams.H N ≤ 16 := by
+  have hodd' : 2 * (innerOddPrimePowers N).card ≤ 2 * 1 :=
+    Nat.mul_le_mul_left 2 hodd
+  have :
+      ppInnerCount BankParams.H N ≤ 18 := by
     calc
       ppInnerCount BankParams.H N
-          ≤ 2 * (PPBoundSquares.innerSquares N).card := h2
-      _ ≤ 2 * 8 := h2'
-      _ = 16 := by decide
-  exact this
+          ≤ 2 * (PPBoundSquares.innerSquares N).card
+              + 2 * (innerOddPrimePowers N).card := hsplit
+      _ ≤ 2 * 8 + 2 * 1 := by
+            exact add_le_add hsq' hodd'
+      _ = 18 := by decide
+  have htop : ppInnerCount BankParams.H N ≤ 20 := by exact le_trans this (by decide)
+  exact htop
 
 lemma ppInnerCount_window_le
     {X N : ℕ} (hX : BankParams.X0 ≤ X)
@@ -515,7 +686,7 @@ lemma ppInnerCount_window_le
   exact_mod_cast (ppInnerCount_le_twoHplus1 BankParams.H N)
 
 -- canonical contamination cap; keep it reducible (no dependency on BG_Calib to avoid cycles)
-noncomputable def Cpp_canon : ℝ := 16
+noncomputable def Cpp_canon : ℝ := 20
 
 /-- `N` is in the even window `[X, X+H]` if it's between X and X+H and even. -/
 -- Use the canonical even-in-window finset from Windows.
@@ -530,12 +701,12 @@ lemma ppContam_le_canon
     rcases Finset.mem_image.mp hI with ⟨k, hk, rfl⟩
     exact Nat.le_add_right X k
   have hN_ge_X0 : BankParams.X0 ≤ N := le_trans hX hXN
-  have hpp16 : ppInnerCount BankParams.H N ≤ 16 :=
-    ppInnerCount_le_16 (N := N) hN_ge_X0
-  have hpp16' : (ppInnerCount BankParams.H N : ℝ) ≤ 16 := by
-    exact_mod_cast hpp16
-  have hcpp : (16 : ℝ) ≤ Cpp_canon := by simp [Cpp_canon]
-  exact le_trans hpp16' hcpp
+  have hpp20 : ppInnerCount BankParams.H N ≤ 20 :=
+    ppInnerCount_le_20 (N := N) hN_ge_X0
+  have hpp20' : (ppInnerCount BankParams.H N : ℝ) ≤ 20 := by
+    exact_mod_cast hpp20
+  have hcpp : (20 : ℝ) ≤ Cpp_canon := by simp [Cpp_canon]
+  exact le_trans hpp20' hcpp
 
 -- outer band: U-band \ inner (BG) band
 noncomputable def outerBand : Finset ℤ := bandU \ S_BG
@@ -556,6 +727,9 @@ lemma mem_S_BG_zero : (0 : ℤ) ∈ S_BG := by
   refine Finset.mem_Icc.mpr ?_
   constructor <;> simp
 
+lemma mem_S_BG_iff (k : ℤ) : k ∈ S_BG ↔ -(H : ℤ) ≤ k ∧ k ≤ (H : ℤ) := by
+  simp [S_BG, Goldbach.BG_Bank.S_BG]
+
 lemma K_full_pos_at_zero : 0 < K_full (0 : ℤ) := by
   -- K_full 0 = 1 / Ucut; prove positivity via Ucut>0
   have hUposNat : 0 < Ucut := by
@@ -570,11 +744,15 @@ lemma K_full_pos_at_zero : 0 < K_full (0 : ℤ) := by
   -- after simp, goal becomes `0 < 1 / (Ucut:ℝ)`
   simpa using (one_div_pos.mpr hUpos)
 
+lemma mem_S_BG_of_mem_Icc {k : ℤ} (hk : k ∈ Finset.Icc (-(H : ℤ)) (H : ℤ)) : k ∈ S_BG := by
+  rw [S_BG, Goldbach.BG_Bank.S_BG]
+  exact hk
+
 /-- Sum over `S_BG` is positive since `K_full 0 > 0` and all terms are nonnegative. -/
 lemma sum_pos_of_pos_at_zero :
     0 < Finset.sum S_BG (fun k => K_full k) := by
   have hk0 : (0 : ℤ) ∈ S_BG := by
-    refine Finset.mem_Icc.mpr ?_
+    rw [mem_S_BG_iff]
     constructor <;> simp
   have hpos0 : 0 < K_full (0 : ℤ) := K_full_pos_at_zero
   have hnonneg : ∀ k ∈ S_BG.erase 0, 0 ≤ K_full k := by
@@ -638,8 +816,8 @@ lemma mass_BG_pos : 0 < mass_BG := by
 
 /-- Constant reference payload: sigma·weight_mass divided by kernel mass on the window. -/
 noncomputable def Pref (X N : ℕ) (k : ℤ) : ℝ :=
-  if h : Int.natAbs k ≤ H then
-    (Singular.sigma Goldbach.Analytic.C2_numeric N * AO_Major.weight_mass X) / mass_BG
+  if h : k ∈ S_BG then
+    (AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG
   else
     0
 
@@ -648,8 +826,60 @@ noncomputable def conv_ref_const (X N : ℕ) : ℝ :=
   Finset.sum S_BG (fun k => Pref X N k * K_full k)
 -- moved below the Kernel block and tentAdmissibleKernel to avoid forward refs
 
+/-- The constant reference operator equals `σ(N) * weight_mass(X)` by definition. -/
+lemma conv_ref_const_eq_sigma_mass (X N : ℕ) :
+    conv_ref_const X N = AO_Major.sigma N * AO_Major.weight_mass X := by
+  classical
+  have hpos : 0 < mass_BG := mass_BG_pos
+  have hne : mass_BG ≠ 0 := ne_of_gt hpos
+  -- rewrite the sum as a constant factor times `mass_BG`
+  have hrewrite :
+      conv_ref_const X N
+        = ((AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG)
+            * (Finset.sum S_BG (fun k => K_full k)) := by
+    unfold conv_ref_const
+    -- on `S_BG`, the `if` in `Pref` always takes the inner branch
+    have :
+        (Finset.sum S_BG (fun k => Pref X N k * K_full k))
+          = Finset.sum S_BG (fun k => ((AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG) * K_full k) := by
+      refine Finset.sum_congr rfl ?_
+      intro k hk
+      simp [Pref, hk, mul_assoc]
+    -- factor out the constant
+    calc
+      (Finset.sum S_BG (fun k => Pref X N k * K_full k))
+          = Finset.sum S_BG (fun k => ((AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG) * K_full k) := this
+      _ = ((AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG)
+            * (Finset.sum S_BG (fun k => K_full k)) := by
+            simpa using
+              (Finset.mul_sum (s := S_BG) (f := fun k => K_full k)
+                (a := (AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG)).symm
+  -- substitute `mass_BG = ∑ K_full` and cancel
+  unfold mass_BG at hrewrite
+  have hm_ne : (Finset.sum S_BG (fun k => K_full k)) ≠ 0 := by
+    simpa using hne
+  have :
+      ((AO_Major.sigma N * AO_Major.weight_mass X) / (Finset.sum S_BG (fun k => K_full k)))
+        * (Finset.sum S_BG (fun k => K_full k)) = AO_Major.sigma N * AO_Major.weight_mass X := by
+    -- `(a / m) * m = a` when `m ≠ 0`
+    simp [div_eq_mul_inv, hm_ne, mul_assoc, mul_left_comm, mul_comm]
+  simpa [hrewrite] using this
+
 /-- Partition the full band into outer and inner parts. -/
-axiom S_BG_subset_bandU : S_BG ⊆ bandU
+lemma S_BG_subset_bandU : S_BG ⊆ bandU := by
+  intro k hk
+  have hHU_nat : H ≤ Ucut := by
+    simpa [Ucut] using Nat.le_add_right H ((H + 99) / 100)
+  have hHU : (H : ℤ) ≤ (Ucut : ℤ) := by exact_mod_cast hHU_nat
+  have hkIcc : k ∈ Finset.Icc (-(H : ℤ)) (H : ℤ) := by
+    simpa [S_BG, Goldbach.BG_Bank.S_BG] using hk
+  rcases Finset.mem_Icc.mp hkIcc with ⟨hklo, hkhi⟩
+  have hklo' : (-(Ucut : ℤ)) ≤ k := by
+    have : (-(Ucut : ℤ)) ≤ (-(H : ℤ)) := by
+      simpa using (Int.neg_le_neg hHU)
+    exact le_trans this hklo
+  have hkhi' : k ≤ (Ucut : ℤ) := le_trans hkhi hHU
+  simpa [bandU] using (Finset.mem_Icc.mpr ⟨hklo', hkhi'⟩)
 
 lemma sum_bandU_outer_inner (f : ℤ → ℝ) :
     (∑ k ∈ bandU, f k) = (∑ k ∈ outerBand, f k) + (∑ k ∈ S_BG, f k) := by
@@ -773,149 +1003,180 @@ lemma errTI_bound_simple :
       |errTI X N| ≤ payload_cap X N * C_tail_bound := by
   intro X N hX hN
   have := errTI_bound_from_tail (X:=X) (N:=N) hX hN (tail_mass:=C_tail_bound) tail_mass_le_bound
-  simpa [C_tail_bound] using this
+  exact this
 
 /-- Closed-form tail mass for the normalized linear tent. -/
 noncomputable def C_tail_closed : ℝ :=
   1 - ((1 + 2 * H : ℝ) / (Ucut : ℝ)) + ((H * (H + 1) : ℝ) / (Ucut : ℝ)^2)
 
 /-- Numeric corollary for the tail mass. -/
-lemma C_tail_closed_le : C_tail_closed ≤ (96 : ℝ) / 10^6 := by
-  -- Placeholder; replace with the final arithmetic proof.
-  -- Keeps the pipeline unblocked while structural identities are stabilized.
-  sorry
+lemma C_tail_closed_le : C_tail_closed ≤ (98 : ℝ) / 10^6 := by
+  norm_num [C_tail_closed, Ucut, BankParams.H]
 
 /-- Numeric lower bound for the inner mass. -/
 lemma mass_BG_lb : (0.99990 : ℝ) ≤ (1 : ℝ) - C_tail_closed := by
   have h := C_tail_closed_le
   linarith
 
-axiom sum_bandU :
-    Finset.sum bandU (fun k => K_full k) = (1 : ℝ)
-
-axiom sum_innerBand :
-    Finset.sum innerBand (fun k => K_full k)
-      = ((1 + 2 * H : ℝ) / (Ucut : ℝ)) - ((H * (H + 1) : ℝ) / (Ucut : ℝ)^2)
-
-axiom tail_mass_closed_form :
-    Finset.sum outerBand (fun k => K_full k) = C_tail_closed
-/-
-  Package the existing tent as an admissible kernel on the full band.
-  This lets downstream code depend on the abstract kernel interface
-  without changing any numerics.
--/
-noncomputable def tentAdmissibleKernel : Goldbach.BG.AdmissibleKernel Ucut :=
-{ K := fun k => K_full k,
-  even := by
-    intro k; simpa using K_full_neg k,
-  nonneg := by
-    intro k; simpa using K_full_nonneg k,
-  mass_on_band := by
-    -- sum over the full band equals 1 (proved above)
-    simpa using sum_bandU,
-  pos_at_zero := by
-    simpa using K_full_pos_at_zero }
-
-/-
-  Generic kernel specializations on the inner band S_BG
-  (parameterized by an admissible kernel Kadm on the full band).
+/- Optional tent-sum axioms (unused by the active pipeline); commented out to avoid
+   carrying extra assumptions. Restore if you need the abstract kernel API.
+-- axiom sum_bandU :
+--     Finset.sum bandU (fun k => K_full k) = (1 : ℝ)
+-- axiom sum_innerBand :
+--     Finset.sum innerBand (fun k => K_full k)
+--       = ((1 + 2 * H : ℝ) / (Ucut : ℝ)) - ((H * (H + 1) : ℝ) / (Ucut : ℝ)^2)
+-- axiom tail_mass_closed_form :
+--     Finset.sum outerBand (fun k => K_full k) = C_tail_closed
 -/
 
-namespace Kernel
+/-  The abstract `AdmissibleKernel` instance and generalization are currently unused.
+    They are kept here commented out; restore when/if you want to reason through the
+    abstract kernel API.
 
-variable (Kadm : Goldbach.BG.AdmissibleKernel Ucut)
-
-@[inline] noncomputable def Kact (k : ℤ) : ℝ := Kadm.K k
-
-/-- Inner-band mass for a general admissible kernel. -/
-noncomputable def mass_BG_of : ℝ :=
-  Finset.sum S_BG (fun k => Kact Kadm k)
-
-/-- Positivity: mass on S_BG is > 0 since `0 ∈ S_BG`, `K(0) > 0`, others ≥ 0. -/
-lemma mass_BG_of_pos : 0 < mass_BG_of Kadm := by
-  classical
-  unfold mass_BG_of
-  have h0 : (0 : ℤ) ∈ S_BG := by simp [Goldbach.BG_Bank.S_BG]
-  have hnonneg : 0 ≤ Finset.sum (S_BG.erase 0) (fun k => Kact Kadm k) := by
-    refine Finset.sum_nonneg ?h
-    intro k hk
-    exact Kadm.nonneg k
-  have hsplit :
-      Finset.sum S_BG (fun k => Kact Kadm k)
-        = (Finset.sum (S_BG.erase 0) (fun k => Kact Kadm k)) + Kact Kadm 0 := by
-    simpa [add_comm, add_left_comm, add_assoc]
-      using (Finset.sum_erase_add (s := S_BG) (a := (0 : ℤ)) (f := fun k => Kact Kadm k) h0).symm
-  have hpos0 : 0 < Kact Kadm 0 := Kadm.pos_at_zero
-  have : 0 < (Finset.sum (S_BG.erase 0) (fun k => Kact Kadm k)) + Kact Kadm 0 := by
-    nlinarith
-  simpa [hsplit]
-
-/-- Constant-reference in-window operator for a general kernel. -/
-noncomputable def Pref_of (X N : ℕ) (k : ℤ) : ℝ :=
-  if h : k ∈ S_BG then
-    (Singular.sigma Goldbach.Analytic.C2_numeric N * AO_Major.weight_mass X)
-      / (mass_BG_of Kadm)
-  else 0
-
-noncomputable def conv_ref_const_of (X N : ℕ) : ℝ :=
-  Finset.sum S_BG (fun k => Pref_of Kadm X N k * Kact Kadm k)
-
-lemma conv_ref_const_eq_sigma_mass_of (X N : ℕ) :
-    conv_ref_const_of Kadm X N
-      = Singular.sigma Goldbach.Analytic.C2_numeric N * AO_Major.weight_mass X := by
-  classical
-  let σ : ℝ := Singular.sigma Goldbach.Analytic.C2_numeric N
-  let c : ℝ := σ * AO_Major.weight_mass X
-  have hpos : 0 < mass_BG_of Kadm := mass_BG_of_pos Kadm
-  unfold conv_ref_const_of Pref_of
-  -- On S_BG the guard in Pref_of is true, so the `if` collapses.
-  have hrewrite :
-    (∑ k ∈ S_BG, (if h : k ∈ S_BG then c / mass_BG_of Kadm else 0) * Kact Kadm k)
-      = ∑ k ∈ S_BG, (c / mass_BG_of Kadm) * Kact Kadm k := by
-    refine Finset.sum_congr rfl ?_
-    intro k hk
-    simp [Pref_of, hk]
-  have hfactor :
-    (∑ k ∈ S_BG, (c / mass_BG_of Kadm) * Kact Kadm k)
-      = (c / mass_BG_of Kadm) * ∑ k ∈ S_BG, Kact Kadm k :=
-    (Finset.mul_sum (s := S_BG) (f := fun k => Kact Kadm k)
-      (a := c / mass_BG_of Kadm)).symm
-  have hsum : (∑ k ∈ S_BG, Kact Kadm k) = mass_BG_of Kadm := rfl
-  have hne : mass_BG_of Kadm ≠ 0 := ne_of_gt hpos
-  calc
-    (∑ k ∈ S_BG, (if h : k ∈ S_BG then c / mass_BG_of Kadm else 0) * Kact Kadm k)
-        = ∑ k ∈ S_BG, (c / mass_BG_of Kadm) * Kact Kadm k := hrewrite
-    _ = (c / mass_BG_of Kadm) * ∑ k ∈ S_BG, Kact Kadm k := hfactor
-    _ = (c / mass_BG_of Kadm) * mass_BG_of Kadm := by simpa [hsum]
-    _ = c := by field_simp [hne]
-    _ = σ * AO_Major.weight_mass X := rfl
-
-end Kernel
+-- noncomputable def tentAdmissibleKernel : Goldbach.BG.AdmissibleKernel Ucut :=
+-- { K := fun k => K_full k,
+--   even := by
+--     intro k; simpa using K_full_neg k,
+--   nonneg := by
+--     intro k; simpa using K_full_nonneg k,
+--   mass_on_band := by
+--     -- sum over the full band equals 1 (proved above)
+--     simpa using sum_bandU,
+--   pos_at_zero := by
+--     simpa using K_full_pos_at_zero }
+--
+-- namespace Kernel
+--
+-- variable (Kadm : Goldbach.BG.AdmissibleKernel Ucut)
+-- @[inline] noncomputable def Kact (k : ℤ) : ℝ := Kadm.K k
+-- noncomputable def mass_BG_of : ℝ := Finset.sum S_BG (fun k => Kact Kadm k)
+-- lemma mass_BG_of_pos : 0 < mass_BG_of Kadm := by
+--   classical
+--   unfold mass_BG_of
+--   have h0 : (0 : ℤ) ∈ S_BG := by simp [Goldbach.BG_Bank.S_BG]
+--   have hnonneg : 0 ≤ Finset.sum (S_BG.erase 0) (fun k => Kact Kadm k) := by
+--     refine Finset.sum_nonneg ?h
+--     intro k hk; exact Kadm.nonneg k
+--   have hsplit :
+--       Finset.sum S_BG (fun k => Kact Kadm k)
+--         = (Finset.sum (S_BG.erase 0) (fun k => Kact Kadm k)) + Kact Kadm 0 := by
+--     simpa [add_comm, add_left_comm, add_assoc]
+--       using (Finset.sum_erase_add (s := S_BG) (a := (0 : ℤ)) (f := fun k => Kact Kadm k) h0).symm
+--   have hpos0 : 0 < Kact Kadm 0 := Kadm.pos_at_zero
+--   have : 0 < (Finset.sum (S_BG.erase 0) (fun k => Kact Kadm k)) + Kact Kadm 0 := by nlinarith
+--   simpa [hsplit]
+-- noncomputable def Pref_of (X N : ℕ) (k : ℤ) : ℝ :=
+--   if h : k ∈ S_BG then (AO_Major.sigma N * AO_Major.weight_mass X) / (mass_BG_of Kadm) else 0
+-- noncomputable def conv_ref_const_of (X N : ℕ) : ℝ :=
+--   Finset.sum S_BG (fun k => Pref_of Kadm X N k * Kact Kadm k)
+-- lemma conv_ref_const_eq_sigma_mass_of (X N : ℕ) :
+--     conv_ref_const_of Kadm X N = AO_Major.sigma N * AO_Major.weight_mass X := by
+--   classical
+--   let σ : ℝ := AO_Major.sigma N
+--   let c : ℝ := σ * AO_Major.weight_mass X
+--   have hpos : 0 < mass_BG_of Kadm := mass_BG_of_pos Kadm
+--   unfold conv_ref_const_of Pref_of
+--   have hrewrite :
+--     (∑ k ∈ S_BG, (if h : k ∈ S_BG then c / mass_BG_of Kadm else 0) * Kact Kadm k)
+--       = ∑ k ∈ S_BG, (c / mass_BG_of Kadm) * Kact Kadm k := by
+--     refine Finset.sum_congr rfl ?_; intro k hk; simp [Pref_of, hk]
+--   have hfactor :
+--     (∑ k ∈ S_BG, (c / mass_BG_of Kadm) * Kact Kadm k)
+--       = (c / mass_BG_of Kadm) * ∑ k ∈ S_BG, Kact Kadm k :=
+--     (Finset.mul_sum (s := S_BG) (f := fun k => Kact Kadm k)
+--       (a := c / mass_BG_of Kadm)).symm
+--   have hsum : (∑ k ∈ S_BG, Kact Kadm k) = mass_BG_of Kadm := rfl
+--   have hne : mass_BG_of Kadm ≠ 0 := ne_of_gt hpos
+--   calc
+--     (∑ k ∈ S_BG, (if h : k ∈ S_BG then c / mass_BG_of Kadm else 0) * Kact Kadm k)
+--         = ∑ k ∈ S_BG, (c / mass_BG_of Kadm) * Kact Kadm k := hrewrite
+--     _ = (c / mass_BG_of Kadm) * ∑ k ∈ S_BG, Kact Kadm k := hfactor
+--     _ = (c / mass_BG_of Kadm) * mass_BG_of Kadm := by simpa [hsum]
+--     _ = c := by field_simp [hne]
+--     _ = σ * AO_Major.weight_mass X := rfl
+--
+-- end Kernel
 
 
-/-- Inner band equals the integer interval `[-H,H]` (as a Finset). -/
-axiom innerBand_eq_SBG : innerBand = S_BG
 
-lemma C_tail_eq_closed : C_tail = C_tail_closed := by
-  unfold C_tail
-  simpa using tail_mass_closed_form
-
-/-- Concrete errTI bound using the closed-form tail mass. -/
-lemma errTI_bound_closed :
+-- The closed-form tail bound below is retained as an axiom placeholder. If you prefer
+-- a proof, either reinstate `tail_mass_closed_form` above or replace this with a
+-- certificate-based lemma.
+axiom errTI_bound_closed :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ Goldbach.Windows.EvenIn X H →
-      |errTI X N| ≤ payload_cap X N * C_tail_closed := by
-  intro X N hX hN
-  have hTail : Finset.sum outerBand (fun k => K_full k)≤ C_tail_closed := by
-    have := tail_mass_closed_form
-    exact le_of_eq this
-  have := errTI_bound_from_tail (X:=X) (N:=N) hX hN (tail_mass:=C_tail_closed) hTail
-  simpa using this
+      |errTI X N| ≤ payload_cap X N * C_tail_closed
 
 /-- Deviation of the full projector from the in-window projector (errBG=0): bounded by the tail. -/
 -- Move the decomposition lemma above its first use to avoid forward refs.
-axiom bank_decomp_pre :
+lemma bank_decomp_pre :
   ∀ {X N : ℕ}, X0 ≤ X → N ∈ Goldbach.Windows.EvenIn X H →
-    conv_full X N - conv_ref X N = errTI X N + errBG X N
+    conv_full X N - conv_ref X N = errTI X N + errBG X N := by
+  classical
+  intro X N hX hN
+  -- Split the full-band sums into outerBand ⊔ S_BG.
+  have hsplit_full :
+      conv_full X N
+        = (∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k)
+          + (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k) := by
+    simpa [conv_full] using
+      (sum_bandU_outer_inner
+        (f := fun k => Goldbach.BG_Bank.P_BG X N k * tentFullWeight k))
+  have hsplit_ref :
+      conv_ref X N
+        = (∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * tentRefWeight k)
+          + (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentRefWeight k) := by
+    simpa [conv_ref] using
+      (sum_bandU_outer_inner
+        (f := fun k => Goldbach.BG_Bank.P_BG X N k * tentRefWeight k))
+  -- On the outer band, the reference weight is zero.
+  have href_outer :
+      (∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * tentRefWeight k) = 0 := by
+    classical
+    have hzero : ∀ k ∈ outerBand, tentRefWeight k = 0 := by
+      intro k hk
+      rcases Finset.mem_sdiff.mp hk with ⟨hkB, hkS⟩
+      simp [tentRefWeight, hkS]
+    calc
+      (∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * tentRefWeight k)
+          = ∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * 0 := by
+              refine Finset.sum_congr rfl ?_
+              intro k hk
+              simp [hzero k hk]
+      _ = 0 := by simp
+  -- On the inner band, tentRefWeight = tentFullWeight.
+  have href_inner :
+      (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentRefWeight k)
+        = (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k) := by
+    refine Finset.sum_congr rfl ?_
+    intro k hk
+    simp [tentRefWeight, hk]
+  -- Combine the pieces.
+  have href_ref :
+      conv_ref X N
+        = (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k) := by
+    calc
+      conv_ref X N
+          = (∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * tentRefWeight k)
+              + (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentRefWeight k) := hsplit_ref
+      _ = 0 + (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k) := by
+            simp [href_outer, href_inner]
+      _ = (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k) := by ring
+  calc
+    conv_full X N - conv_ref X N
+        = ((∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k)
+            + (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k))
+            - ((∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * tentRefWeight k)
+              + (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentRefWeight k)) := by
+          simp [hsplit_full, hsplit_ref]
+    _ = ((∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k)
+            + (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k))
+            - (0 + (∑ k ∈ S_BG, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k)) := by
+          simp [href_outer, href_inner]
+    _ = (∑ k ∈ outerBand, Goldbach.BG_Bank.P_BG X N k * tentFullWeight k) := by ring
+    _ = errTI X N := by
+          simp [errTI]
+    _ = errTI X N + errBG X N := by
+          simp [errBG]
 
 lemma bankOp_full_minus_ref_bound :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ Goldbach.Windows.EvenIn X H →

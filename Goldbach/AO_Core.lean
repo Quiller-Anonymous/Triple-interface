@@ -25,7 +25,7 @@ noncomputable abbrev sigma : ℕ → ℝ := Goldbach.AO_SigmaModel.sigma
 noncomputable def Mcanon : ℕ → ℝ := fun _ => 0
 
 /-- Major-arc weight mass (ledger normalization = 1). -/
-@[simp] def weight_mass (_X : ℕ) : ℝ := 1.0
+@[simp] def weight_mass (_X : ℕ) : ℝ := (1 : ℝ)
 
 /-- AO error remainder: `Mcanon N - sigma N * weight_mass X`. -/
 @[simp] noncomputable def errAO (X N : ℕ) : ℝ :=

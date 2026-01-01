@@ -24,6 +24,7 @@
     • err_off_bound :
         X0 ≤ X → N ∈ EvenIn X H → |E_off X N| ≤ δ_off
 -/
+
 import Mathlib
 import Goldbach.BankParams
 import Goldbach.Windows
@@ -32,92 +33,109 @@ import Goldbach.MainTerm
 import Goldbach.Rep
 import Goldbach.AO_Major
 import Goldbach.AO_AssembleEnvelope
+import Goldbach.AO_SigmaPos
 
 namespace Goldbach.BG_Calib
 
 open Classical
 open Real
-open BigOperators
+-- Avoid big-operator notation (`∑ … in …`) in this file; use `Finset.sum` directly.
 open Goldbach
 open Goldbach.BankParams
 open Goldbach.Windows
+open Goldbach.AO_SigmaPos
 
-
-/-- Finite index set for the bank projector (e.g. offsets `k`). -/
 variable (S : Finset ℤ)
-
-/-- BG kernel on the support `S`. -/
 variable (K_BG : ℤ → ℝ)
-
-/-- BG payload depending on `(X, N, k)`. -/
 variable (P_BG : ℕ → ℕ → ℤ → ℝ)
 
 /-- Off-channel as a finite weighted sum on the bank support. -/
 noncomputable def E_off (X N : ℕ) : ℝ :=
-  ∑ k in S, K_BG k * P_BG X N k
+  Finset.sum S (fun k => K_BG k * P_BG X N k)
+
+/-- Triangle inequality for finite sums in `ℝ`:
+`|s.sum f| ≤ s.sum (|f·|)`.  Kept local to avoid API drift. -/
+private lemma abs_sum_le_sum_abs {α} (s : Finset α) (f : α → ℝ) :
+    |s.sum f| ≤ s.sum (fun x => |f x|) := by
+  classical
+  refine Finset.induction_on s ?base ?step
+  · simp
+  · intro a s ha ih
+    have h₁ : |f a + s.sum f| ≤ |f a| + |s.sum f| := by
+      simpa using (norm_add_le (f a) (s.sum f))
+    have h₂ : |f a| + |s.sum f| ≤ |f a| + s.sum (fun x => |f x|) :=
+      add_le_add_left ih _
+    have h := h₁.trans h₂
+    simpa [Finset.sum_insert, ha] using h
 
 /-- Triangle + L¹–L^∞ estimate (pure algebra, no axioms). -/
-lemma off_l1_linf_bound
+lemma off_l1_linf_bound'
     {X N : ℕ} :
     |E_off S K_BG P_BG X N|
-      ≤ (∑ k in S, |K_BG k|) * (Finset.sup (S.image fun k => |P_BG X N k|) id) := by
+      ≤ (Finset.sum S (fun k => |K_BG k|)) *
+          (if h : (S.image fun k => |P_BG X N k|).Nonempty then
+              Finset.max' (S.image fun k => |P_BG X N k|) h else 0) := by
   classical
   -- abs of finite sum ≤ sum of abs:
   have h1 :
-      |∑ k in S, K_BG k * P_BG X N k|
-        ≤ ∑ k in S, |K_BG k * P_BG X N k| := by
+      |Finset.sum S (fun k => K_BG k * P_BG X N k)|
+        ≤ Finset.sum S (fun k => |K_BG k * P_BG X N k|) := by
     exact (abs_sum_le_sum_abs _ _)
-  -- each term |K k · P k| ≤ |K k| · sup_{t∈S} |P t|
-  have hsup_def :
-      (Finset.sup (S.image fun k => |P_BG X N k|) id)
-        = (Finset.sup (S.image fun k => |P_BG X N k|)) (fun x => x) := rfl
+  -- define L∞ cap via max' on the image; 0 for the empty set
+  set Linf : ℝ :=
+    if h : (S.image fun k => |P_BG X N k|).Nonempty then
+      Finset.max' (S.image fun k => |P_BG X N k|) h else 0
   have h2 :
       ∀ k ∈ S, |K_BG k * P_BG X N k|
-        ≤ |K_BG k|
-          * (Finset.sup (S.image fun k => |P_BG X N k|) id) := by
+        ≤ |K_BG k| * Linf := by
     intro k hk
-    have hk_nonneg :
-        0 ≤ (Finset.sup (S.image fun t => |P_BG X N t|) id) := by
+    have hP_le_Linf : |P_BG X N k| ≤ Linf := by
       classical
       by_cases hne : (S.image fun t => |P_BG X N t|).Nonempty
-      · simpa using Finset.le_sup (by
-          have : |P_BG X N k| ∈ S.image (fun t => |P_BG X N t|) :=
-            Finset.mem_image.mpr ⟨k, hk, rfl⟩
-          exact this)
-      · -- empty support ⇒ sup = 0, hence nonneg
-        simp [Finset.sup, hne]
-    have hP_le_sup :
-        |P_BG X N k| ≤ (Finset.sup (S.image fun t => |P_BG X N t|) id) := by
-      classical
-      by_cases hne : (S.image fun t => |P_BG X N t|).Nonempty
-      · exact Finset.le_sup (by
-          have : |P_BG X N k| ∈ S.image (fun t => |P_BG X N t|) :=
-            Finset.mem_image.mpr ⟨k, hk, rfl⟩
-          exact this)
-      · simp [Finset.sup, hne]
+      · have hmem : |P_BG X N k| ∈ S.image (fun t => |P_BG X N t|) :=
+          Finset.mem_image.mpr ⟨k, hk, rfl⟩
+        have hne' : (S.image fun t => |P_BG X N t|).Nonempty := ⟨|P_BG X N k|, hmem⟩
+        have hEq : hne' = hne := Subsingleton.elim _ _
+        have : |P_BG X N k| ≤ Finset.max' (S.image fun t => |P_BG X N t|) hne' := by
+          simpa using (Finset.le_max' (s := S.image fun t => |P_BG X N t|) (x := |P_BG X N k|) hmem)
+        have : |P_BG X N k| ≤ Finset.max' (S.image fun t => |P_BG X N t|) hne := by
+          simpa [hEq] using this
+        simpa [Linf, dif_pos hne] using this
+      · -- impossible since hk witnesses non-emptiness; close the branch
+        have : (S.image fun t => |P_BG X N t|).Nonempty :=
+          ⟨|P_BG X N k|, Finset.mem_image.mpr ⟨k, hk, rfl⟩⟩
+        exact (hne this).elim
     calc
       |K_BG k * P_BG X N k|
           = |K_BG k| * |P_BG X N k| := by simpa [abs_mul]
-      _ ≤ |K_BG k| *
-            (Finset.sup (S.image fun t => |P_BG X N t|) id) := by
-            gcongr
+      _ ≤ |K_BG k| * Linf := by
+        simpa using (mul_le_mul_of_nonneg_left hP_le_Linf (abs_nonneg (K_BG k)))
   -- sum and factor out the common sup using nonnegativity:
   have h3 :
-      ∑ k in S, |K_BG k * P_BG X N k|
-        ≤ (∑ k in S, |K_BG k|)
-            * (Finset.sup (S.image fun t => |P_BG X N t|) id) := by
+      Finset.sum S (fun k => |K_BG k * P_BG X N k|)
+        ≤ (Finset.sum S (fun k => |K_BG k|)) * Linf := by
     classical
     calc
-      ∑ k in S, |K_BG k * P_BG X N k|
-          ≤ ∑ k in S,
-                |K_BG k| * (Finset.sup (S.image fun t => |P_BG X N t|) id) := by
-                refine Finset.sum_le_sum ?termwise
-                intro k hk; exact h2 k hk
-      _ = (∑ k in S, |K_BG k|)
-              * (Finset.sup (S.image fun t => |P_BG X N t|) id) := by
-              -- factor the constant sup out of the sum
-              simpa [Finset.sum_mul, mul_sum]
-  exact h1.trans h3
+      Finset.sum S (fun k => |K_BG k * P_BG X N k|)
+          ≤ Finset.sum S (fun k => |K_BG k| * Linf) := by
+            refine Finset.sum_le_sum ?termwise
+            intro k hk; simpa [mul_comm, mul_left_comm, mul_assoc] using h2 k hk
+      _ = (Finset.sum S (fun k => |K_BG k|)) * Linf := by
+            -- ∑ (|K k| * Linf) = (∑ |K k|) * Linf
+            simpa [mul_comm, mul_left_comm, mul_assoc]
+              using (Finset.sum_mul (s:=S) (f:=fun k => |K_BG k|) (a:=Linf)).symm
+  -- combine
+  simpa [E_off] using h1.trans h3
+
+  /-- Export the lemma with the original name for compatibility. -/
+  lemma off_l1_linf_bound
+      {X N : ℕ} :
+      |E_off S K_BG P_BG X N|
+        ≤ (Finset.sum S (fun k => |K_BG k|)) *
+            (if h : (S.image fun k => |P_BG X N k|).Nonempty then
+                Finset.max' (S.image fun k => |P_BG X N k|) h else 0) := by
+    simpa using
+      (off_l1_linf_bound' (S := S) (K_BG := K_BG) (P_BG := P_BG) (X := X) (N := N))
 
 /-- Numeric caps (to be proved from the tenor):
     L¹ cap for the kernel and L^∞ cap for the payload, uniform on the window. -/
@@ -131,13 +149,13 @@ structure Caps where
 class Inputs : Prop where
   /-- L¹ cap:  ∑_{k∈S} |K_BG k| ≤ kernel_l1_cap. -/
   kernel_l1_bound :
-    ∀ ⦃S : Finset ℤ⦄ ⦃K_BG : ℤ → ℝ⦄ ⦃C : Caps⦄,
-      (∑ k in S, |K_BG k|) ≤ C.kernel_l1_cap
+    ∀ (S : Finset ℤ) (K_BG : ℤ → ℝ) (C : Caps),
+      (Finset.sum S (fun k => |K_BG k|)) ≤ C.kernel_l1_cap
   /-- Payload cap on the window (depends on N):
         for all X≥X0, N∈EvenIn X H and k∈S,
         |P_BG X N k| ≤ payload_cap N. -/
   payload_linf_bound :
-    ∀ ⦃S : Finset ℤ⦄ ⦃P_BG : ℕ → ℕ → ℤ → ℝ⦄ ⦃C : Caps⦄,
+    ∀ (S : Finset ℤ) (P_BG : ℕ → ℕ → ℤ → ℝ) (C : Caps),
       (∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
         ∀ {k : ℤ}, k ∈ S → |P_BG X N k| ≤ C.payload_cap N)
 
@@ -157,44 +175,73 @@ lemma err_off_bound
     |E_off S K_BG P_BG X N| ≤ δ_off C N := by
   classical
   -- L¹–L^∞ product (proved above):
-  have base :=
-    off_l1_linf_bound (S:=S) (K_BG:=K_BG) (P_BG:=P_BG) (X:=X) (N:=N)
-  -- bound sup_{k∈S} |P| by the payload cap using Finset.sup_le_iff:
+  have base :
+      |E_off S K_BG P_BG X N| ≤
+        (Finset.sum S (fun k => |K_BG k|)) *
+          (if h : (S.image fun k => |P_BG X N k|).Nonempty then
+              Finset.max' (S.image fun k => |P_BG X N k|) h else 0) := by
+    simpa using (off_l1_linf_bound (S := S) (K_BG := K_BG) (P_BG := P_BG) (X := X) (N := N))
+  -- bound the Linf factor by the payload cap using `max'` monotonicity
   have h_sup :
-      (Finset.sup (S.image fun k => |P_BG X N k|) id)
+      (if h : (S.image fun k => |P_BG X N k|).Nonempty then
+          Finset.max' (S.image fun k => |P_BG X N k|) h else 0)
         ≤ C.payload_cap N := by
-    refine Finset.sup_le_iff.mpr ?_
-    intro y hy
-    rcases Finset.mem_image.mp hy with ⟨k, hkS, rfl⟩
-    have := (Inputs.payload_linf_bound (S:=S) (P_BG:=P_BG) (C:=C)) (X:=X) (N:=N) hX hN (k:=k) hkS
-    simpa using this
+    classical
+    by_cases hne : (S.image fun k => |P_BG X N k|).Nonempty
+    · have hbound : ∀ {k : ℤ}, k ∈ S → |P_BG X N k| ≤ C.payload_cap N := by
+        intro k hk
+        have hPayload :
+            ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H → ∀ {k : ℤ}, k ∈ S →
+              |P_BG X N k| ≤ C.payload_cap N :=
+          Inputs.payload_linf_bound (S := S) (P_BG := P_BG) (C := C)
+        simpa using (hPayload (X := X) (N := N) hX hN (k := k) hk)
+      have hmem : Finset.max' (S.image fun k => |P_BG X N k|) hne ∈
+          (S.image fun k => |P_BG X N k|) :=
+        Finset.max'_mem _ hne
+      rcases Finset.mem_image.mp hmem with ⟨k, hkS, hkEq⟩
+      have : |P_BG X N k| ≤ C.payload_cap N := hbound (k := k) hkS
+      have hkEq' :
+          Finset.max' (S.image fun k => |P_BG X N k|) hne = |P_BG X N k| := hkEq.symm
+      simpa [hne, hkEq'] using this
+    · exact (by simpa [hne] using (C.payload_nonneg N))
   -- chain the two numeric caps:
-  have h_l1 : (∑ k in S, |K_BG k|) ≤ C.kernel_l1_cap :=
+  have h_l1 : (Finset.sum S (fun k => |K_BG k|)) ≤ C.kernel_l1_cap :=
     Inputs.kernel_l1_bound (S:=S) (K_BG:=K_BG) (C:=C)
-  -- finish by monotonicity of multiplication by nonnegatives
-  have := mul_le_mul_of_nonneg
-              h_l1
-              h_sup
-              C.kernel_l1_nonneg
-              (C.payload_nonneg N)
-  -- assemble
-  have : (∑ k in S, |K_BG k|) * (Finset.sup (S.image fun k => |P_BG X N k|) id)
-          ≤ C.kernel_l1_cap * C.payload_cap N := this
-  exact base.trans this
+  have h_sup_nonneg :
+      0 ≤
+        (if h : (S.image fun k => |P_BG X N k|).Nonempty then
+            Finset.max' (S.image fun k => |P_BG X N k|) h else 0) := by
+    by_cases hne : (S.image fun k => |P_BG X N k|).Nonempty
+    · have hmem : Finset.max' (S.image fun k => |P_BG X N k|) hne ∈
+        (S.image fun k => |P_BG X N k|) :=
+        Finset.max'_mem _ hne
+      rcases Finset.mem_image.mp hmem with ⟨k, hkS, hkEq⟩
+      have : 0 ≤ |P_BG X N k| := abs_nonneg _
+      have : 0 ≤ Finset.max' (S.image fun k => |P_BG X N k|) hne := by
+        simpa [hkEq] using this
+      simpa [hne] using this
+    · simp [hne]
+  have hprod :
+      (Finset.sum S (fun k => |K_BG k|)) *
+          (if h : (S.image fun k => |P_BG X N k|).Nonempty then
+              Finset.max' (S.image fun k => |P_BG X N k|) h else 0)
+        ≤ C.kernel_l1_cap * C.payload_cap N :=
+    mul_le_mul h_l1 h_sup h_sup_nonneg C.kernel_l1_nonneg
+  exact base.trans (by simpa [δ_off] using hprod)
 
 /-- Calibration: on the window, the reference bank operator coincides with the main term. -/
 lemma bankOp_ref_eq_mainterm_on_window
   {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-  BG_Identity.bankOp_ref X N = (Goldbach.MainTerm.M Goldbach.MainTerm.C2_numeric) N := by
+  BG_Identity.bankOp_ref X N = (Goldbach.MainTerm.M Goldbach.Analytic.C2_numeric) N := by
   unfold BG_Identity.bankOp_ref
-  simp [hN]
+  simp [hX, hN]
 
 /-- Bridge: on the window, the full bank projector coincides with `R N`. -/
 lemma bankOp_full_eq_R_on_window
   {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
   BG_Identity.bankOp_full X N = (Goldbach.Rep.R N : ℝ) := by
   unfold BG_Identity.bankOp_full
-  simp [hN]
+  simp [hX, hN]
 
 /-!
 Midband helpers: integers with `H < |k| ≤ U`.  We specialise to the canonical
@@ -207,80 +254,18 @@ def midband (H U : ℕ) : Finset ℤ :=
   (Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun k => (H : ℤ) < |k|)
 
 /-- Midband count for the canonical window. -/
-def ppMidbandCount (_N : ℕ) (_U : ℕ := BG_Identity.Ucut) : ℕ :=
+noncomputable def ppMidbandCount (_N : ℕ) (_U : ℕ := BG_Identity.Ucut) : ℕ :=
   (midband BankParams.H BG_Identity.Ucut).card
 
 /-- A very safe global constant: size of the canonical midband. -/
-def C_pp : ℕ := ppMidbandCount 0 BG_Identity.Ucut
+noncomputable def C_pp : ℕ := ppMidbandCount 0 BG_Identity.Ucut
 
 /-- Midband count is uniformly bounded by `C_pp` (trivial with our definition). -/
 lemma ppMidband_bound
-  {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : Windows.EvenIn X BankParams.H N) :
+  {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Windows.EvenIn X BankParams.H) :
   ppMidbandCount N BG_Identity.Ucut ≤ C_pp := by
   unfold ppMidbandCount C_pp
   exact le_rfl
-
-/-- Cardinality of the midband: all offsets with `H < |k| ≤ U` inside `[-U,U]`. -/
-lemma card_midband {H U : ℕ} (hHU : H ≤ U) :
-    (midband H U).card = 2 * (U - H) := by
-  classical
-  let band : Finset ℤ := Finset.Icc (-(U : ℤ)) (U : ℤ)
-  have hpart := Finset.filter_card_add_filter_neg_card_eq_card
-    (s := band) (p := fun k => (H : ℤ) < |k|)
-  -- card of full band
-  have hcard_full : band.card = 2 * U + 1 := by
-    simpa [band] using (Finset.card_Icc (a := (-(U : ℤ))) (b := (U : ℤ)))
-  -- inner band `|k| ≤ H` has size 2H+1
-  have hcard_inner :
-      (band.filter (fun k => |k| ≤ (H : ℤ))).card = 2 * H + 1 := by
-    -- `|k| ≤ H` inside `[-U,U]` is the interval `[-H,H]` when `H ≤ U`
-    have hEq :
-        band.filter (fun k => |k| ≤ (H : ℤ))
-          = Finset.Icc (-(H : ℤ)) (H : ℤ) := by
-      ext k; constructor
-      · intro hk
-        rcases Finset.mem_filter.mp hk with ⟨hkU, hkH⟩
-        rcases Finset.mem_Icc.mp hkU with ⟨hknegU, hkposU⟩
-        have hkneg : (-(H : ℤ)) ≤ k := by linarith
-        have hkpos : k ≤ (H : ℤ) := by linarith
-        exact Finset.mem_Icc.mpr ⟨hkneg, hkpos⟩
-      · intro hk
-        have hkH : |k| ≤ (H : ℤ) := by
-          rcases Finset.mem_Icc.mp hk with ⟨hkneg, hkpos⟩
-          have hkpos' : k ≤ (H : ℤ) := hkpos
-          have hkneg' : -k ≤ (H : ℤ) := by linarith
-          have : |k| = max k (-k) := by rfl
-          have hmax : max k (-k) ≤ (H : ℤ) := max_le_iff.mpr ⟨hkpos', hkneg'⟩
-          linarith
-        have hkIcc : k ∈ band := by
-          rcases Finset.mem_Icc.mp hk with ⟨hkneg, hkpos⟩
-          have hkneg' : (-(U : ℤ)) ≤ k := by linarith [hHU]
-          have hkpos' : k ≤ (U : ℤ) := by linarith [hHU]
-          exact Finset.mem_Icc.mpr ⟨hkneg', hkpos'⟩
-        exact Finset.mem_filter.mpr ⟨hkIcc, hkH⟩
-    simpa [hEq] using (Finset.card_Icc (a := (-(H : ℤ))) (b := (H : ℤ)))
-  -- combine the partition identity on cardinals
-  have hmid :
-      (midband H U).card
-        + (band.filter (fun k => |k| ≤ (H : ℤ))).card
-        = band.card := by
-    -- filter p + filter ¬p = full
-    simpa [midband, band] using hpart
-  -- rearrange to isolate the midband count
-  have : (midband H U).card = (2 * U + 1) - (2 * H + 1) := by
-    nlinarith
-      [hmid, hcard_full, hcard_inner]
-  -- simple algebra: (2U+1) - (2H+1) = 2*(U-H)
-  nlinarith
-
-/-- A uniform upper bound for the singular series on the working window.  -/
-class SigmaUpperOnWindow where
-  Cσ : ℝ
-  Cσ_nonneg : 0 ≤ Cσ
-  sigma_even_ub_on_window :
-    ∀ {X N : ℕ},
-      BankParams.X0 ≤ X → N ∈ Windows.EvenIn X BankParams.H →
-      |AO_Major.sigma N| ≤ Cσ
 
 /-- AO bridge: on the window the gap between `Mcanon` and the constant
     reference operator is exactly `errAO`. -/
@@ -308,16 +293,16 @@ lemma pref_bound_on_window
   classical
   -- on `S_BG` the `if` branch fires and weight_mass = 1
   have hmass_pos : 0 < BG_Identity.mass_BG := BG_Identity.mass_BG_pos
-  have hσ : |AO_Major.sigma N| ≤ SigmaUpperOnWindow.Cσ :=
+  have hσ : |Goldbach.AO_Major.sigma N| ≤ SigmaUpperOnWindow.Cσ :=
     SigmaUpperOnWindow.sigma_even_ub_on_window (X:=X) (N:=N) hX hN
   have hmass_nonneg : 0 ≤ BG_Identity.mass_BG := le_of_lt hmass_pos
   have hrewrite :
       |BG_Identity.Pref X N k|
-        = |AO_Major.sigma N| / BG_Identity.mass_BG := by
-    simp [BG_Identity.Pref, hk, AO_Major.weight_mass, abs_div,
+        = |Goldbach.AO_Major.sigma N| / BG_Identity.mass_BG := by
+    simp [BG_Identity.Pref, hk, Goldbach.AO_Major.weight_mass, abs_div,
       abs_of_pos hmass_pos, abs_mul]
   -- divide the σ-bound by the positive mass
-  have hdiv : |AO_Major.sigma N| / BG_Identity.mass_BG
+  have hdiv : |Goldbach.AO_Major.sigma N| / BG_Identity.mass_BG
       ≤ SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
     have := div_le_div_of_nonneg_right hσ hmass_nonneg
     simpa using this
@@ -330,125 +315,200 @@ lemma ref_to_M_bound
     [AO_AssembleEnvelope.Decomposition C] [AO_AssembleEnvelope.Bounds C K]
     [SigmaUpperOnWindow]
     {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-    |BG_Identity.conv_ref X N - AO_Major.Mcanon N|
-      ≤ AO_ErrorEnvelope.δAO K
+    |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+      ≤ AO_AssembleEnvelope.δAO K
         + ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
             (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
   classical
   -- AO envelope on the constant reference
-  have hAO : |BG_Identity.conv_ref_const X N - AO_Major.Mcanon N| ≤ AO_ErrorEnvelope.δAO K := by
-    have herr := AO_ErrorEnvelope.errAO_bound (C:=C) (K:=K) (X:=X) (N:=N) hX hN
-    have hgap := conv_ref_const_gap_abs_eq_errAO (X:=X) (N:=N) hX hN
-    have hgap' : |BG_Identity.conv_ref_const X N - AO_Major.Mcanon N|
-        = |AO_Major.errAO X N| := by
-      -- symmetry of absolute value
-      simpa [abs_sub_comm] using hgap
-    linarith
-  -- swap bound on the inner band (conv_ref vs const)
+  have hAO :
+      |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N|
+        ≤ AO_AssembleEnvelope.δAO K := by
+    have herr : |Goldbach.AO_Major.errAO X N| ≤ AO_AssembleEnvelope.δAO K := by
+      simpa using (AO_AssembleEnvelope.errAO_bound (C := C) (K := K) (X := X) (N := N) hX hN)
+    have hgap := conv_ref_const_gap_abs_eq_errAO (X := X) (N := N) hX hN
+    calc
+      |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N|
+          = |Goldbach.AO_Major.Mcanon N - BG_Identity.conv_ref_const X N| := by
+              simpa [abs_sub_comm]
+      _ = |Goldbach.AO_Major.errAO X N| := by simpa using hgap
+      _ ≤ AO_AssembleEnvelope.δAO K := herr
+
+  -- pointwise mismatch cap on the inner band
   have hM :
       ∀ {k : ℤ}, k ∈ BG_Identity.S_BG →
         |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
           ≤ Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
     intro k hk
     have hP :=
-      Goldbach.BG_Bank.payload_bound_window (X:=X) (N:=N) hX hN (k:=k)
-    have hQ := pref_bound_on_window (X:=X) (N:=N) hX hN hk
-    -- |a-b| ≤ |a| + |b|
-    have htriangle : |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
-        ≤ |Goldbach.BG_Bank.P_BG X N k| + |BG_Identity.Pref X N k| := by
-      have := abs_add (Goldbach.BG_Bank.P_BG X N k) (- BG_Identity.Pref X N k)
-      simpa [sub_eq_add_neg, abs_neg, add_comm] using this
-    have := add_le_add hP hQ
-    exact htriangle.trans this
+      Goldbach.BG_Bank.payload_bound_window (X := X) (N := N) hX hN (k := k)
+    have hQ := pref_bound_on_window (X := X) (N := N) hX hN hk
+    have htri :
+        |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
+          ≤ |Goldbach.BG_Bank.P_BG X N k| + |BG_Identity.Pref X N k| := by
+      -- `|a-b| = |a + (-b)|` and `|a + b| ≤ |a| + |b|`
+      simpa [sub_eq_add_neg, abs_neg] using
+        (abs_add_le (Goldbach.BG_Bank.P_BG X N k) (-BG_Identity.Pref X N k))
+    exact htri.trans (add_le_add hP hQ)
+
+  -- rewrite `conv_ref - conv_ref_const` as an inner-band sum, then apply ℓ∞·ℓ¹
   have hswap :
       |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
         ≤ (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
             * ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
-    -- expand conv_ref / conv_ref_const difference into a single sum
     have hsum :
         BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N
-          = ∑ k in BG_Identity.S_BG,
+          = Finset.sum BG_Identity.S_BG (fun k =>
               BG_Identity.K_full k *
-                (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k) := by
-      unfold BG_Identity.conv_ref BG_Identity.conv_ref_const
-      ring
-    -- apply the swap bound
-    have hswap' := BG_Identity.swap_bound_linf_l1
-      (P:=fun k => Goldbach.BG_Bank.P_BG X N k)
-      (Q:=fun k => BG_Identity.Pref X N k)
-      (M:=Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
-      (hM:=by intro k hk; exact hM hk)
-    have hswap'' :
-        |∑ k in BG_Identity.S_BG, BG_Identity.K_full k *
-            (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k)|
-          ≤ (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
-              * ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
-      simpa using hswap'
-    simpa [hsum, mul_comm, mul_left_comm, mul_assoc] using hswap''
-  -- final triangle: |ref - M| ≤ |ref - ref_const| + |ref_const - M|
-  have htriangle :
-      |BG_Identity.conv_ref X N - AO_Major.Mcanon N|
+                (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k)) := by
+      classical
+      -- `conv_ref` is a `bandU`-sum with an `if`, but that `if` restricts it to `S_BG`.
+      have hconvref :
+          BG_Identity.conv_ref X N
+            = Finset.sum BG_Identity.S_BG (fun k =>
+                (Goldbach.BG_Bank.P_BG X N k) * BG_Identity.K_full k) := by
+        classical
+        unfold BG_Identity.conv_ref BG_Identity.tentRefWeight BG_Identity.tentFullWeight
+        -- convert `P_BG * (if … then K_full else 0)` to `if … then P_BG*K_full else 0`
+        have hite :
+            (Finset.sum BG_Identity.bandU (fun k =>
+                Goldbach.BG_Bank.P_BG X N k * (if hk : k ∈ BG_Identity.S_BG then BG_Identity.K_full k else 0)))
+              =
+            (Finset.sum BG_Identity.bandU (fun k =>
+                if hk : k ∈ BG_Identity.S_BG then Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k else 0)) := by
+          refine Finset.sum_congr rfl ?_
+          intro k _hkU
+          by_cases hkS : k ∈ BG_Identity.S_BG <;> simp [hkS, mul_assoc]
+        -- now rewrite the RHS as a filtered sum
+        have hfilter :
+            (Finset.sum BG_Identity.bandU (fun k =>
+                if hk : k ∈ BG_Identity.S_BG then Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k else 0))
+              =
+            (Finset.sum (BG_Identity.bandU.filter fun k => k ∈ BG_Identity.S_BG) (fun k =>
+                Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k)) := by
+          simpa using (Finset.sum_filter (s := BG_Identity.bandU)
+            (p := fun k => k ∈ BG_Identity.S_BG)
+            (f := fun k => Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k)).symm
+        -- and `bandU.filter (·∈S_BG) = S_BG` since `S_BG ⊆ bandU`
+        have hfilter_eq : BG_Identity.bandU.filter (fun k => k ∈ BG_Identity.S_BG) = BG_Identity.S_BG := by
+          ext k; constructor
+          · intro hk
+            exact (Finset.mem_filter.mp hk).2
+          · intro hk
+            refine Finset.mem_filter.mpr ?_
+            refine ⟨?_, hk⟩
+            exact BG_Identity.S_BG_subset_bandU hk
+        -- conclude without `simp` (avoids recursion-depth blowups)
+        calc
+          (Finset.sum BG_Identity.bandU (fun k =>
+              Goldbach.BG_Bank.P_BG X N k *
+                (if hk : k ∈ BG_Identity.S_BG then BG_Identity.K_full k else 0)))
+              =
+            (Finset.sum BG_Identity.bandU (fun k =>
+                if hk : k ∈ BG_Identity.S_BG then Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k else 0)) := hite
+          _ =
+            (Finset.sum (BG_Identity.bandU.filter fun k => k ∈ BG_Identity.S_BG) (fun k =>
+                Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k)) := hfilter
+          _ =
+            (Finset.sum BG_Identity.S_BG (fun k =>
+                Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k)) := by
+              simpa [hfilter_eq]
+      -- `conv_ref_const` is already an `S_BG` sum
+      have hconvref_const :
+          BG_Identity.conv_ref_const X N
+            = Finset.sum BG_Identity.S_BG (fun k =>
+                (BG_Identity.Pref X N k) * BG_Identity.K_full k) := by
+        simp [BG_Identity.conv_ref_const]
+      -- combine and factor `K_full` on the left
+      calc
+        BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N
+            = Finset.sum BG_Identity.S_BG (fun k =>
+                (Goldbach.BG_Bank.P_BG X N k) * BG_Identity.K_full k
+                  - (BG_Identity.Pref X N k) * BG_Identity.K_full k) := by
+                -- `∑ f - ∑ g = ∑ (f-g)`
+                simpa [hconvref, hconvref_const] using
+                  (Finset.sum_sub_distrib (s := BG_Identity.S_BG)
+                    (f := fun k => (Goldbach.BG_Bank.P_BG X N k) * BG_Identity.K_full k)
+                    (g := fun k => (BG_Identity.Pref X N k) * BG_Identity.K_full k)).symm
+        _ = Finset.sum BG_Identity.S_BG (fun k =>
+              BG_Identity.K_full k * (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k)) := by
+              refine Finset.sum_congr rfl ?_
+              intro k _hk
+              ring
+    have hswap' :=
+      BG_Identity.swap_bound_linf_l1
+        (P := fun k => Goldbach.BG_Bank.P_BG X N k)
+        (Q := fun k => BG_Identity.Pref X N k)
+        (M := Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+        (hM := by intro k hk; exact hM (k := k) hk)
+    simpa [hsum] using hswap'
+
+  -- final triangle inequality
+  have hdecomp :
+      BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N
+        = (BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+          + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N) := by ring
+  have htri :
+      |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
         ≤ |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
-          + |BG_Identity.conv_ref_const X N - AO_Major.Mcanon N| := by
-    have := abs_add
-      (BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
-      (BG_Identity.conv_ref_const X N - AO_Major.Mcanon N)
-    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this
-  -- combine the pieces
-  have : |BG_Identity.conv_ref X N - AO_Major.Mcanon N|
-      ≤ (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
-          * ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ))
-        + AO_ErrorEnvelope.δAO K := by
-    nlinarith [htriangle, hswap, hAO]
-  -- reorder the sum to match the statement
-  ring_nf at this
-  nlinarith
+          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N| := by
+    have habs :
+        |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+          =
+        |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+            + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N)| :=
+      congrArg (fun t : ℝ => |t|) hdecomp
+    have htri' :
+        |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+            + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N)|
+          ≤
+        |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N| :=
+      abs_add_le _ _
+    calc
+      |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+          =
+        |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+            + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N)| := habs
+      _ ≤
+        |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N| := htri'
+  calc
+    |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+        ≤ |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N| := htri
+    _ ≤ (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+          * ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ))
+        + AO_AssembleEnvelope.δAO K := by
+          exact add_le_add hswap hAO
+    _ = AO_AssembleEnvelope.δAO K
+        + ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
+            (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
+          ring
 
 /-- Numeric calibration: tail budget comfortably within 1% on the window. -/
 lemma tail_budget
   {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
   Goldbach.BG_Bank.payload_cap X N * BG_Identity.C_tail_closed ≤ (0.01 : ℝ) := by
-  have hcap_window := Goldbach.BG_Bank.payload_cap_window (X:=X) (N:=N) hX hN
-  -- crude bound: log 2 / log X0 ≤ 1 since X0 ≥ 2
-  have hlog_ratio_le_one : Real.log 2 / Real.log (X0 : ℝ) ≤ 1 := by
-    have hpos2 : 0 < (2 : ℝ) := by norm_num
-    have hposX0 : 0 < (X0 : ℝ) := by exact_mod_cast (by decide : (0:ℕ) < X0)
-    have hlog_le : Real.log 2 ≤ Real.log (X0 : ℝ) := by
-      have hle : (2 : ℝ) ≤ (X0 : ℝ) := by exact_mod_cast (by decide : (2:ℕ) ≤ X0)
-      exact Real.log_le_log hpos2 hposX0 hle
-    have hden_pos : 0 < Real.log (X0 : ℝ) := by
-      have hx : (1 : ℝ) < (X0 : ℝ) := by exact_mod_cast (by decide : (1:ℕ) < X0)
-      simpa [Real.log_pos_iff] using hx
-    have hden_nonneg : 0 ≤ Real.log (X0 : ℝ) := le_of_lt hden_pos
-    have := div_le_div_of_nonneg_right hlog_le hden_nonneg
-    nlinarith
-  have hcap_le : Goldbach.BG_Bank.payload_cap X N ≤ (1 / 200 : ℝ) := by
-    have hmono : (1 + Real.log 2 / Real.log (X0 : ℝ))^2 ≤ 4 := by
-      have hsum_le : 1 + Real.log 2 / Real.log (X0 : ℝ) ≤ 2 := by nlinarith
-      have hnonneg : 0 ≤ 1 + Real.log 2 / Real.log (X0 : ℝ) := by nlinarith
-      exact pow_le_pow_of_nonneg hnonneg hsum_le 2
-    have hconst_le : (1 / 800 : ℝ) * (1 + Real.log 2 / Real.log (X0 : ℝ))^2 ≤ (1 / 200 : ℝ) := by
-      nlinarith
-    have := le_trans hcap_window (by nlinarith [hmono, hconst_le])
-    linarith
-  -- numeric: C_tail_closed = 99 / 1020100 and is ≈ 9.7e-5
+  have hcap : Goldbach.BG_Bank.payload_cap X N ≤ (1252 : ℝ) / 10^6 :=
+    Goldbach.BG_Bank.payload_cap_window_num (X := X) (N := N) hX hN
   have htail_val : BG_Identity.C_tail_closed = (99 : ℝ) / 1020100 := by
     norm_num [BG_Identity.C_tail_closed, BG_Identity.Ucut, H]
   have htail_nonneg : 0 ≤ BG_Identity.C_tail_closed := by nlinarith [htail_val]
   have hprod :
       Goldbach.BG_Bank.payload_cap X N * BG_Identity.C_tail_closed
-        ≤ (1 / 200 : ℝ) * BG_Identity.C_tail_closed := by
-    nlinarith [hcap_le, htail_nonneg]
-  have hnum : (1 / 200 : ℝ) * BG_Identity.C_tail_closed ≤ (0.01 : ℝ) := by
+        ≤ ((1252 : ℝ) / 10^6) * BG_Identity.C_tail_closed :=
+    mul_le_mul_of_nonneg_right hcap htail_nonneg
+  have hnum : ((1252 : ℝ) / 10^6) * BG_Identity.C_tail_closed ≤ (0.01 : ℝ) := by
     nlinarith [htail_val]
   exact le_trans hprod hnum
 
 /-- Canonical AO envelope target: 0.006. -/
-noncomputable def δAO_canon  : ℝ := 6 / 1000             -- 0.006
+noncomputable def δAO_canon : ℝ := 6 / 1000             -- 0.006
 /-- Inner mismatch cap (payload vs ref). -/
 noncomputable def Mswap_canon : ℝ := 19 / 10000          -- 0.0019
 /-- Prime-power contamination bound. -/
-noncomputable def Cpp_canon   : ℝ := 16                  -- pp contamination bound
+noncomputable def Cpp_canon   : ℝ := 20                  -- pp contamination bound
 /-- Contamination weight cap. -/
 noncomputable def ρ_canon     : ℝ := 1 / 20              -- 0.05
 
@@ -473,19 +533,37 @@ lemma budget_ok_on_window :
 lemma inner_swap_bound
     {P Q : ℤ → ℝ}
     (hM : ∀ {k : ℤ}, k ∈ BG_Identity.S_BG → |P k - Q k| ≤ Mswap_canon) :
-    |∑ k in BG_Identity.S_BG, BG_Identity.K_full k * (P k - Q k)|
+    |Finset.sum BG_Identity.S_BG (fun k => BG_Identity.K_full k * (P k - Q k))|
       ≤ ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) * Mswap_canon := by
   have hswap :=
     BG_Identity.swap_bound_linf_l1
       (P:=P) (Q:=Q) (M:=Mswap_canon)
       (hM:=by intro k hk; exact hM (k:=k) hk)
-  simpa using hswap
+  simpa [mul_comm, mul_left_comm, mul_assoc] using hswap
 
 /-- Canonical bridge bound: swap + contamination. -/
+class WeightsBridgeHyp : Prop where
+  /-- The “weights bridge” hypothesis: the raw representation count is close to the
+  full BG convolution on the window.
+
+  This is the remaining deep arithmetic input (deweighting + contamination control)
+  that is not yet proved in this repository.  It is separated out as a single
+  hypothesis so downstream assembly can treat it as an explicit input. -/
+  bound :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+      |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N| ≤ δbridge_canon
+
+/-- Exported bridge bound, packaged as a hypothesis rather than an axiom. -/
 lemma weights_bridge_full
-    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-    |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N| ≤ δbridge_canon := by
-  classical
+    {X N : ℕ} [WeightsBridgeHyp] (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N| ≤ δbridge_canon :=
+  WeightsBridgeHyp.bound (X := X) (N := N) hX hN
+
+end Goldbach.BG_Calib
+
+/-
+-- Commented-out proof sketch for weights_bridge_full
+-- classical
   -- rewrite R - conv_full as inner gap minus tail
   have hrewrite := BG_Identity.R_minus_conv_full (X:=X) (N:=N) hX hN
   -- inner swap: bound R - conv_ref using the mismatch cap
@@ -500,7 +578,7 @@ lemma weights_bridge_full
       Goldbach.BG_Bank.payload_bound_window (X:=X) (N:=N) hX hN (k:=k)
     -- pref bound via σ upper + mass_BG=1 (mass_BG is 1 for the normalized tent)
     have hpref : |BG_Identity.Pref X N k| ≤ SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
-      have hσ := (BG_Identity.pref_bound_on_window (X:=X) (N:=N) hX hN (k:=k) hk)
+      have hσ := (pref_bound_on_window (X:=X) (N:=N) hX hN (k:=k) hk)
       simpa using hσ
     have hcap : Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG ≤ Mswap_canon := by
       -- numerically, (log cap) + σ/mass is well below 0.002 on the canonical window
@@ -534,8 +612,8 @@ lemma weights_bridge_full
       linarith
     have hcpp_nonneg : 0 ≤ (Cpp_canon / (BG_Identity.Ucut : ℝ)) * ρ_canon := by
       have : 0 ≤ (BG_Identity.Ucut : ℝ) := le_of_lt hUpos
-      nlinarith [this, rho_canon]
-    nlinarith [rho_canon]
+      nlinarith [this, ρ_canon]
+    nlinarith [ρ_canon]
   -- combine: |R - conv_full| ≤ inner_swap + contamination + tail
   have htail :
       |BG_Identity.errTI X N| ≤ δTI_canon := by
@@ -635,7 +713,7 @@ lemma weights_bridge_full
       have hcontam : (Cpp_canon / (BG_Identity.Ucut : ℝ)) * ρ_canon ≥ 0 := by
         have hUpos : 0 < (BG_Identity.Ucut : ℝ) := by exact_mod_cast (by decide : 0 < BG_Identity.Ucut)
         have hUpos' : 0 ≤ (BG_Identity.Ucut : ℝ) := le_of_lt hUpos
-        nlinarith [hUpos', rho_canon]
+        nlinarith [hUpos', ρ_canon]
       have hsums := add_nonneg (by nlinarith) hcontam
       nlinarith [hsums]
     have : |(Goldbach.Rep.R N : ℝ) - conv_ref X N - BG_Identity.errTI X N|
@@ -647,6 +725,5 @@ lemma weights_bridge_full
     simpa [hrewrite] using this
   -- finally compare δbridge + δTI to δbridge (since δTI folded into δbridge_canon if desired)
   have hδ : δbridge_canon + δTI_canon ≤ δbridge_canon + δTI_canon := le_rfl
-  nlinarith [hsum]
-
-end Goldbach.BG_Calib
+    nlinarith [hsum]
+  -/

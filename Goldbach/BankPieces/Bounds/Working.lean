@@ -232,7 +232,11 @@ lemma swap_bound_inner
     exact this.trans <| add_le_add hP hQ
   -- apply ℓ∞·ℓ¹ with your tent L¹ mass
   simpa using
-    BG_Identity.swap_bound_linf_l1 (X:=X) (N:=N) (M := PayloadCapOnWindow.payload_cap N + SigmaUpperOnWindow.Cσ) hM
+    BG_Identity.swap_bound_linf_l1
+      (P := fun k => BG_Bank.P_BG X N k)
+      (Q := fun k => P_ref X N k)
+      (M := PayloadCapOnWindow.payload_cap N + SigmaUpperOnWindow.Cσ)
+      hM
 
 /-- AO bridge on the inner reference: equals the AO error. -/
 lemma ao_bridge (X N : ℕ) :

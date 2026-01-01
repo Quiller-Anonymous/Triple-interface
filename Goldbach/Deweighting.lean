@@ -14,8 +14,6 @@
 import Mathlib
 import Goldbach.Windows
 import Goldbach.Rep
-import Goldbach.BG_Identity  -- for K_full, S_BG, Ucut, conv_full, etc. (names as in your tree)
--- If the symbols live elsewhere, tweak the imports/names below consistently.
 
 namespace Goldbach.Deweighting
 
@@ -23,14 +21,14 @@ open Real
 open Goldbach
 open Goldbach.Windows
 open Goldbach.Rep
-open Goldbach.BG_Identity
 
-attribute [simp] BG_Identity.K_full_inner_peak_le
-attribute [simp] BG_Identity.sum_abs_K_full_inner_le
+-- Remove attribute declarations for non-existent constants
+-- attribute [simp] BG_Identity.K_full_inner_peak_le
+-- attribute [simp] BG_Identity.sum_abs_K_full_inner_le
 
 -- convenient aliases if this file prefers shorter names
-lemma K_full_inner_peak_le' := BG_Identity.K_full_inner_peak_le
-lemma sum_abs_K_full_inner_le' := BG_Identity.sum_abs_K_full_inner_le
+-- lemma K_full_inner_peak_le' := BG_Identity.K_full_inner_peak_le
+-- lemma sum_abs_K_full_inner_le' := BG_Identity.sum_abs_K_full_inner_le
 lemma swap_inner_bound' := BG_Identity.swap_bound_linf_l1
 lemma errTI_bound_closed' := BG_Identity.errTI_bound_closed
 

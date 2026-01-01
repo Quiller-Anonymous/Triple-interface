@@ -73,14 +73,13 @@ lemma ledger_lower_from_sigma_and_error
   (hσ : Goldbach.AO_Core.sigma N ≥ sigma0) (herr : |errAO X N| ≤ δAO K) :
   Goldbach.AO_Core.Mcanon N ≥ sigma0 - δAO K := by
   have hexp := ao_expansion (X:=X) (N:=N) hX hN
-  have hW : weight_mass X = (1.0 : ℝ) := by simp [Goldbach.AO_Major.weight_mass]
+  have hW : weight_mass X = (1 : ℝ) := by simp [Goldbach.AO_Major.weight_mass]
   have herr_lo : -(δAO K) ≤ errAO X N := errAO_lower_of_bound herr
-  have hone : (1.0 : ℝ) = 1 := by norm_num
   calc
     Goldbach.AO_Core.Mcanon N
         = Goldbach.AO_Core.sigma N * weight_mass X + errAO X N := by simpa using hexp
-    _   = Goldbach.AO_Core.sigma N * 1.0 + errAO X N          := by simpa [hW]
-    _   = Goldbach.AO_Core.sigma N + errAO X N                := by simpa [hone]
+    _   = Goldbach.AO_Core.sigma N * (1 : ℝ) + errAO X N      := by simpa [hW]
+    _   = Goldbach.AO_Core.sigma N + errAO X N                := by simp
     _   ≥ Goldbach.AO_Core.sigma N + (-(δAO K))                := add_le_add_left herr_lo _
     _   = Goldbach.AO_Core.sigma N - δAO K                    := by simp [sub_eq_add_neg, add_assoc]
     _   ≥ sigma0 - δAO K                                      := sub_le_sub_right hσ _

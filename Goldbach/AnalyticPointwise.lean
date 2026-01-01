@@ -38,6 +38,24 @@ structure PointwiseWitness where
 
 namespace PointwiseWitness
 
+/-- Build a `PointwiseWitness` from a `Bridge.GlobalClosurePointwise` proof. -/
+def of_global
+  (X0 H : ℕ) (S c0 eps : ℝ)
+  (S_pos : 0 < S) (c0_pos : 0 < c0) (eps_lt_c0 : eps < c0)
+  (g : Goldbach.Bridge.GlobalClosurePointwise X0 H S c0 eps) :
+  PointwiseWitness :=
+{ X0 := X0
+  H := H
+  S := S
+  c0 := c0
+  eps := eps
+  S_pos := S_pos
+  c0_pos := c0_pos
+  eps_lt_c0 := eps_lt_c0
+  global := by
+    intro X hX
+    exact g hX }
+
 /--
 For every even `N ≥ w.X0`, we obtain a Goldbach representation.
 This is a pure wrapper: it takes the pointwise closure at `X := N`,
