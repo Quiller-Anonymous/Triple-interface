@@ -1,6 +1,9 @@
+hi bumbler
+
 # Extended triple interface project
 
-hi bumbler! -- Anonymous Quiller
+The code in this file has the Apache 2.0 license, Anonymous Quiller
+Based on public domain paper at Zenodo, "Goldbach and the Triple Interface Method" (ed. Quiller)
 
 ## Status legend:
 - Platinum standard: unconditional proof with independent third party verification
@@ -14,7 +17,7 @@ hi bumbler! -- Anonymous Quiller
 - Mud standard: informal sketch
 
 ## Projects stats:
-1. Goldbach conjecture -- Current status: silver
+1. Goldbach conjecture -- Current status: fool's gold
 
 2. Twin primes conjecture -- Current status: iron (analytic engine builds, but depends on unconditional Goldbach + one major arc axiom + axioms for proofs existing in literature)
 
