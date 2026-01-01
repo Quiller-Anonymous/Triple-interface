@@ -498,59 +498,49 @@ noncomputable def innerOddPrimePowers (N : ℕ) : Finset ℕ := by
   classical
   exact (Finset.Icc (A N) (B N)).filter isOddPrimePower
 
-set_option maxRecDepth 4000 in
+set_option maxRecDepth 1500 in
 /-- Band width certificate: the inner interval `[A N, B N]` has length at most `H` (as naturals). -/
 lemma band_width_le_H_nat (N : ℕ) : B N - A N ≤ BankParams.H := by
-  -- work with the `H` used in `A`/`B` (from `PPNumerics`), then transport to `BankParams.H`
   have hmatch : Goldbach.PPNumerics.H = BankParams.H := by
     norm_num [Goldbach.PPNumerics.H, BankParams.H]
-
-  -- internal calculation with `PPNumerics.H`
-  have hcalc : B N - A N ≤ Goldbach.PPNumerics.H := by
-    -- abbreviate the midpoint `a` and half-width `h`
-    set a : ℕ := N / 2
-    set h : ℕ := Goldbach.PPNumerics.H / 2
-    have hH : h + h = Goldbach.PPNumerics.H := by norm_num [Goldbach.PPNumerics.H, h]
+  -- abbreviate the midpoint and half-width used in `A`,`B`
+  set a : ℕ := N / 2
+  set h : ℕ := Goldbach.PPNumerics.H / 2
+  have hH : h + h = Goldbach.PPNumerics.H := by norm_num [Goldbach.PPNumerics.H, h]
+  -- show `B-A ≤ h+h` by splitting on whether `a` sits at least `h` away from 0
+  have hcalc : B N - A N ≤ h + h := by
     by_cases hh : h ≤ a
-    · -- centered case: width collapses to `h+h`
+    · -- centered: `(a+h) - (a-h) = h+h`
       have ha : a - h + h = a := Nat.sub_add_cancel hh
       have hrewrite : a + h = (a - h) + (h + h) := by
         calc
           a + h = (a - h + h) + h := by simpa [ha]
           _ = (a - h) + (h + h) := by
-            simp [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
-      have hwidth : B N - A N = h + h := by
+            ac_rfl
+      have hwidth : (a + h) - (a - h) = h + h := by
         calc
-          B N - A N = (a + h) - (a - h) := by
-            unfold A B
-            simp [a, h]
-          _ = ((a - h) + (h + h)) - (a - h) := by simpa [hrewrite]
+          (a + h) - (a - h)
+              = ((a - h) + (h + h)) - (a - h) := by simpa [hrewrite]
           _ = h + h := Nat.add_sub_cancel (a - h) (h + h)
-      have : B N - A N ≤ Goldbach.PPNumerics.H := by
-        calc
-          B N - A N = h + h := hwidth
-          _ = Goldbach.PPNumerics.H := hH
-          _ ≤ Goldbach.PPNumerics.H := le_rfl
-      exact this
-    · -- near the left edge: `a ≤ h`, so width ≤ `h+h`
+      -- rewrite `B-A` and close
+      calc
+        B N - A N = (a + h) - (a - h) := by simp [A, B, a, h]
+        _ = h + h := hwidth
+        _ ≤ h + h := le_rfl
+    · -- left edge: `a ≤ h`, so `(a+h) ≤ h+h`
       have ha_le : a ≤ h := Nat.le_of_not_ge hh
       have hz : a - h = 0 := Nat.sub_eq_zero_of_le ha_le
-      have habd : B N - A N ≤ h + h := by
-        calc
-          B N - A N = (a + h) - (a - h) := by
-            unfold A B; simp [a, h]
-          _ = (a + h) - 0 := by simp [hz]
-          _ = a + h := by simp
-          _ ≤ h + h := Nat.add_le_add_right ha_le h
-      have : B N - A N ≤ Goldbach.PPNumerics.H := by
-        calc
-          B N - A N ≤ h + h := habd
-          _ = Goldbach.PPNumerics.H := hH
-          _ ≤ Goldbach.PPNumerics.H := le_rfl
-      exact this
+      calc
+        B N - A N = (a + h) - (a - h) := by simp [A, B, a, h]
+        _ = a + h := by simp [hz]
+        _ ≤ h + h := Nat.add_le_add_right ha_le h
 
-  -- transfer the numeric bound to `BankParams.H`
-  simpa [hmatch] using hcalc
+  -- transport the numeric bound to `BankParams.H`
+  have hcalc' : B N - A N ≤ Goldbach.PPNumerics.H := by
+    calc
+      B N - A N ≤ h + h := hcalc
+      _ = Goldbach.PPNumerics.H := hH
+  simpa [hmatch] using hcalc'
 
 -- Count offsets k with |k| ≤ H such that n=(N+|k|)/2 or N-n is a “prime power”.
 noncomputable def ppInnerCount (H N : ℕ) : ℕ := by
