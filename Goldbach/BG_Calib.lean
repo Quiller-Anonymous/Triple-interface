@@ -107,7 +107,7 @@ lemma off_l1_linf_bound'
         exact (hne this).elim
     calc
       |K_BG k * P_BG X N k|
-          = |K_BG k| * |P_BG X N k| := by simpa [abs_mul]
+          = |K_BG k| * |P_BG X N k| := by simp [abs_mul]
       _ ≤ |K_BG k| * Linf := by
         simpa using (mul_le_mul_of_nonneg_left hP_le_Linf (abs_nonneg (K_BG k)))
   -- sum and factor out the common sup using nonnegativity:
@@ -262,7 +262,7 @@ noncomputable def C_pp : ℕ := ppMidbandCount 0 BG_Identity.Ucut
 
 /-- Midband count is uniformly bounded by `C_pp` (trivial with our definition). -/
 lemma ppMidband_bound
-  {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Windows.EvenIn X BankParams.H) :
+  {X N : ℕ} (_hX : BankParams.X0 ≤ X) (_hN : N ∈ Windows.EvenIn X BankParams.H) :
   ppMidbandCount N BG_Identity.Ucut ≤ C_pp := by
   unfold ppMidbandCount C_pp
   exact le_rfl
@@ -283,7 +283,7 @@ lemma conv_ref_const_gap_abs_eq_errAO
   |Goldbach.AO_Major.Mcanon N - BG_Identity.conv_ref_const X N|
     = |Goldbach.AO_Major.errAO X N| := by
   have h := conv_ref_const_gap_eq_errAO (X:=X) (N:=N) hX hN
-  simpa [h]
+  simp [h]
 
 /-- Pointwise bound on the constant reference payload on the window. -/
 lemma pref_bound_on_window
@@ -300,7 +300,7 @@ lemma pref_bound_on_window
       |BG_Identity.Pref X N k|
         = |Goldbach.AO_Major.sigma N| / BG_Identity.mass_BG := by
     simp [BG_Identity.Pref, hk, Goldbach.AO_Major.weight_mass, abs_div,
-      abs_of_pos hmass_pos, abs_mul]
+      abs_of_pos hmass_pos]
   -- divide the σ-bound by the positive mass
   have hdiv : |Goldbach.AO_Major.sigma N| / BG_Identity.mass_BG
       ≤ SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
@@ -330,7 +330,7 @@ lemma ref_to_M_bound
     calc
       |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N|
           = |Goldbach.AO_Major.Mcanon N - BG_Identity.conv_ref_const X N| := by
-              simpa [abs_sub_comm]
+              simp [abs_sub_comm]
       _ = |Goldbach.AO_Major.errAO X N| := by simpa using hgap
       _ ≤ AO_AssembleEnvelope.δAO K := herr
 
@@ -378,7 +378,7 @@ lemma ref_to_M_bound
                 if hk : k ∈ BG_Identity.S_BG then Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k else 0)) := by
           refine Finset.sum_congr rfl ?_
           intro k _hkU
-          by_cases hkS : k ∈ BG_Identity.S_BG <;> simp [hkS, mul_assoc]
+          by_cases hkS : k ∈ BG_Identity.S_BG <;> simp [hkS]
         -- now rewrite the RHS as a filtered sum
         have hfilter :
             (Finset.sum BG_Identity.bandU (fun k =>
@@ -412,7 +412,7 @@ lemma ref_to_M_bound
           _ =
             (Finset.sum BG_Identity.S_BG (fun k =>
                 Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k)) := by
-              simpa [hfilter_eq]
+              simp [hfilter_eq]
       -- `conv_ref_const` is already an `S_BG` sum
       have hconvref_const :
           BG_Identity.conv_ref_const X N
@@ -426,10 +426,11 @@ lemma ref_to_M_bound
                 (Goldbach.BG_Bank.P_BG X N k) * BG_Identity.K_full k
                   - (BG_Identity.Pref X N k) * BG_Identity.K_full k) := by
                 -- `∑ f - ∑ g = ∑ (f-g)`
-                simpa [hconvref, hconvref_const] using
+                rw [hconvref, hconvref_const]
+                exact
                   (Finset.sum_sub_distrib (s := BG_Identity.S_BG)
-                    (f := fun k => (Goldbach.BG_Bank.P_BG X N k) * BG_Identity.K_full k)
-                    (g := fun k => (BG_Identity.Pref X N k) * BG_Identity.K_full k)).symm
+                      (f := fun k => (Goldbach.BG_Bank.P_BG X N k) * BG_Identity.K_full k)
+                      (g := fun k => (BG_Identity.Pref X N k) * BG_Identity.K_full k)).symm
         _ = Finset.sum BG_Identity.S_BG (fun k =>
               BG_Identity.K_full k * (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k)) := by
               refine Finset.sum_congr rfl ?_
@@ -506,11 +507,11 @@ lemma tail_budget
 /-- Canonical AO envelope target: 0.006. -/
 noncomputable def δAO_canon : ℝ := 6 / 1000             -- 0.006
 /-- Inner mismatch cap (payload vs ref). -/
-noncomputable def Mswap_canon : ℝ := 19 / 10000          -- 0.0019
+noncomputable def Mswap_canon : ℝ := 18 / 10000          -- 0.0018
 /-- Prime-power contamination bound. -/
-noncomputable def Cpp_canon   : ℝ := 20                  -- pp contamination bound
+noncomputable def Cpp_canon   : ℝ := 80                  -- pp contamination bound
 /-- Contamination weight cap. -/
-noncomputable def ρ_canon     : ℝ := 1 / 20              -- 0.05
+noncomputable def ρ_canon     : ℝ := 1 / 25              -- 0.04
 
 /-- Closed-form Type-I tail constant on the canonical tent. -/
 noncomputable def δTI_canon : ℝ :=
