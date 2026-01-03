@@ -1,3 +1,15 @@
+#
+# NOTE (2026-01-03):
+# This `.yml.chunks` file is *not* a GitHub Actions workflow (only `.yml` / `.yaml` are picked up).
+# The working CI implementation that follows this idea now lives in:
+#   `.github/workflows/lean_action_ci.yml`
+#
+# Common copy/paste pitfalls in this draft (fixed in the real workflow):
+# - Use `.github/...` (no stray spaces).
+# - Run `lake` commands from the repo root (don’t `cd` into `Goldbach/FiniteBase/Chunks`).
+# - Chunk module names are `Goldbach.FiniteBase.Chunks.<Module>` (no spaces in the module path).
+# - Build artifacts live under `.lake/build/lib/lean/...` and are `.olean` + `.ilean` (no stray spaces).
+#
 name: Build All Chunks (Parallel)
 
 on:

@@ -273,9 +273,15 @@ lemma conv_ref_const_gap_eq_errAO
   {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
   Goldbach.AO_Major.Mcanon N - BG_Identity.conv_ref_const X N
     = Goldbach.AO_Major.errAO X N := by
-  have hexp := Goldbach.AO_Major.ao_expansion (X:=X) (N:=N) hX hN
-  have hconst := BG_Identity.conv_ref_const_eq_sigma_mass (X:=X) (N:=N)
-  linarith [hexp, hconst]
+  have hconst :
+      BG_Identity.conv_ref_const X N =
+        Goldbach.AO_Major.sigma N * Goldbach.AO_Major.weight_mass X := by
+    -- all weight-mass normalizations are definitional `= 1`
+    simpa [Goldbach.AO_Major.sigma, Goldbach.AO_Major.weight_mass,
+      Goldbach.AO_WeightMass.weight_mass] using
+        (BG_Identity.conv_ref_const_eq_sigma_mass (X := X) (N := N))
+  -- unfold `errAO` and rewrite `conv_ref_const` into the σ·mass term
+  simp [Goldbach.AO_Major.errAO, hconst]
 
 /-- Absolute-value version of `conv_ref_const_gap_eq_errAO`. -/
 lemma conv_ref_const_gap_abs_eq_errAO
@@ -307,6 +313,163 @@ lemma pref_bound_on_window
     have := div_le_div_of_nonneg_right hσ hmass_nonneg
     simpa using this
   simpa [hrewrite] using hdiv
+
+/-- Inner-band swap bound between the variable reference convolution and the constant reference. -/
+lemma conv_ref_sub_conv_ref_const_bound
+    [SigmaUpperOnWindow]
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+      ≤ (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+          * ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
+  classical
+  -- pointwise mismatch cap on the inner band
+  have hM :
+      ∀ {k : ℤ}, k ∈ BG_Identity.S_BG →
+        |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
+          ≤ Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
+    intro k hk
+    have hP :=
+      Goldbach.BG_Bank.payload_bound_window (X := X) (N := N) hX hN (k := k)
+    have hQ := pref_bound_on_window (X := X) (N := N) hX hN hk
+    have htri :
+        |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
+          ≤ |Goldbach.BG_Bank.P_BG X N k| + |BG_Identity.Pref X N k| := by
+      simpa [sub_eq_add_neg, abs_neg] using
+        (abs_add_le (Goldbach.BG_Bank.P_BG X N k) (-BG_Identity.Pref X N k))
+    exact htri.trans (add_le_add hP hQ)
+
+  have hsum :
+      BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N
+        = Finset.sum BG_Identity.S_BG (fun k =>
+            BG_Identity.K_full k *
+              (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k)) := by
+    classical
+    -- `conv_ref` is a `bandU`-sum with an `if`, but that `if` restricts it to `S_BG`.
+    have hconvref :
+        BG_Identity.conv_ref X N
+          = Finset.sum BG_Identity.S_BG (fun k =>
+              (Goldbach.BG_Bank.P_BG X N k) * BG_Identity.K_full k) := by
+      classical
+      unfold BG_Identity.conv_ref BG_Identity.tentRefWeight BG_Identity.tentFullWeight
+      have hite :
+          (Finset.sum BG_Identity.bandU (fun k =>
+              Goldbach.BG_Bank.P_BG X N k * (if hk : k ∈ BG_Identity.S_BG then BG_Identity.K_full k else 0)))
+            =
+          (Finset.sum BG_Identity.bandU (fun k =>
+              if hk : k ∈ BG_Identity.S_BG then Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k else 0)) := by
+        refine Finset.sum_congr rfl ?_
+        intro k _hkU
+        by_cases hkS : k ∈ BG_Identity.S_BG <;> simp [hkS]
+      have hfilter :
+          (Finset.sum BG_Identity.bandU (fun k =>
+              if hk : k ∈ BG_Identity.S_BG then Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k else 0))
+            =
+          (Finset.sum (BG_Identity.bandU.filter fun k => k ∈ BG_Identity.S_BG) (fun k =>
+              Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k)) := by
+        simpa using (Finset.sum_filter (s := BG_Identity.bandU)
+          (p := fun k => k ∈ BG_Identity.S_BG)
+          (f := fun k => Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k)).symm
+      have hfilter_eq : BG_Identity.bandU.filter (fun k => k ∈ BG_Identity.S_BG) = BG_Identity.S_BG := by
+        ext k; constructor
+        · intro hk
+          exact (Finset.mem_filter.mp hk).2
+        · intro hk
+          refine Finset.mem_filter.mpr ?_
+          refine ⟨?_, hk⟩
+          exact BG_Identity.S_BG_subset_bandU hk
+      calc
+        (Finset.sum BG_Identity.bandU (fun k =>
+            Goldbach.BG_Bank.P_BG X N k *
+              (if hk : k ∈ BG_Identity.S_BG then BG_Identity.K_full k else 0)))
+            =
+          (Finset.sum BG_Identity.bandU (fun k =>
+              if hk : k ∈ BG_Identity.S_BG then Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k else 0)) := hite
+        _ =
+          (Finset.sum (BG_Identity.bandU.filter fun k => k ∈ BG_Identity.S_BG) (fun k =>
+              Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k)) := hfilter
+        _ =
+          (Finset.sum BG_Identity.S_BG (fun k =>
+              Goldbach.BG_Bank.P_BG X N k * BG_Identity.K_full k)) := by
+            simp [hfilter_eq]
+    have hconvref_const :
+        BG_Identity.conv_ref_const X N
+          = Finset.sum BG_Identity.S_BG (fun k =>
+              (BG_Identity.Pref X N k) * BG_Identity.K_full k) := by
+      simp [BG_Identity.conv_ref_const]
+    calc
+      BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N
+          = Finset.sum BG_Identity.S_BG (fun k =>
+              (Goldbach.BG_Bank.P_BG X N k) * BG_Identity.K_full k
+                - (BG_Identity.Pref X N k) * BG_Identity.K_full k) := by
+              rw [hconvref, hconvref_const]
+              exact
+                (Finset.sum_sub_distrib (s := BG_Identity.S_BG)
+                    (f := fun k => (Goldbach.BG_Bank.P_BG X N k) * BG_Identity.K_full k)
+                    (g := fun k => (BG_Identity.Pref X N k) * BG_Identity.K_full k)).symm
+      _ = Finset.sum BG_Identity.S_BG (fun k =>
+            BG_Identity.K_full k * (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k)) := by
+            refine Finset.sum_congr rfl ?_
+            intro k _hk
+            ring
+
+  have hswap' :=
+    BG_Identity.swap_bound_linf_l1
+      (P := fun k => Goldbach.BG_Bank.P_BG X N k)
+      (Q := fun k => BG_Identity.Pref X N k)
+      (M := Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+      (hM := by intro k hk; exact hM (k := k) hk)
+  simpa [hsum] using hswap'
+
+/-- Variant of `ref_to_M_bound` that only needs a bound on the constant-reference gap. -/
+lemma ref_to_Mfun_bound_of_const_gap
+    [SigmaUpperOnWindow]
+    (Mfun : ℕ → ℕ → ℝ)
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H)
+    (δ : ℝ)
+    (hAO : |BG_Identity.conv_ref_const X N - Mfun X N| ≤ δ) :
+    |BG_Identity.conv_ref X N - Mfun X N|
+      ≤ δ
+        + ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
+            (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
+  have hswap := conv_ref_sub_conv_ref_const_bound (X := X) (N := N) hX hN
+  have hdecomp :
+      BG_Identity.conv_ref X N - Mfun X N
+        = (BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+          + (BG_Identity.conv_ref_const X N - Mfun X N) := by ring
+  have htri :
+      |BG_Identity.conv_ref X N - Mfun X N|
+        ≤ |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+          + |BG_Identity.conv_ref_const X N - Mfun X N| := by
+    have habs : |BG_Identity.conv_ref X N - Mfun X N|
+        = |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+            + (BG_Identity.conv_ref_const X N - Mfun X N)| :=
+      congrArg (fun t : ℝ => |t|) hdecomp
+    have htri' :
+        |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+            + (BG_Identity.conv_ref_const X N - Mfun X N)|
+          ≤
+        |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+          + |BG_Identity.conv_ref_const X N - Mfun X N| :=
+      abs_add_le _ _
+    calc
+      |BG_Identity.conv_ref X N - Mfun X N|
+          =
+        |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+            + (BG_Identity.conv_ref_const X N - Mfun X N)| := habs
+      _ ≤
+        |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+          + |BG_Identity.conv_ref_const X N - Mfun X N| := htri'
+  -- Combine and present in the canonical order `δ + factor * (...)`.
+  have hsum :
+      |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+        + |BG_Identity.conv_ref_const X N - Mfun X N|
+        ≤ δ
+          + ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
+              (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
+    have h := add_le_add hswap hAO
+    simpa [add_comm, add_left_comm, add_assoc, mul_comm, mul_left_comm, mul_assoc] using h
+
+  exact le_trans htri hsum
 
 /-- Inner swap + AO envelope: bound the gap between `conv_ref` and `Mcanon`
     using (i) payload cap, (ii) σ upper bound, (iii) the AO error envelope. -/

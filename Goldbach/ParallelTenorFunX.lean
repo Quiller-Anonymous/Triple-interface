@@ -1,10 +1,7 @@
 import Mathlib
-import Goldbach.AO_Major
 import Goldbach.AO_InstantiateTenorFunX
 import Goldbach.BG_Calib
 import Goldbach.BG_Identity
-import Goldbach.BankPieces.DecompFromBound
-import Goldbach.TenorBridge
 import Goldbach.AnalyticPointwise
 
 namespace Goldbach.ParallelTenorFunX
@@ -24,7 +21,8 @@ abbrev S : ℝ := (1.0 : ℝ)
 abbrev c0 : ℝ := (0.05 : ℝ)
 abbrev ε : ℝ := (0.01 : ℝ)
 
-noncomputable abbrev M (N : ℕ) : ℝ := Goldbach.AO_Major.Mcanon N
+noncomputable abbrev M (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp) (X N : ℕ) : ℝ :=
+  Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N
 
 noncomputable def δAO_gap_bound [SigmaUpperOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp) : ℝ :=
@@ -35,21 +33,40 @@ noncomputable def δAO_gap_bound [SigmaUpperOnWindow]
 lemma conv_ref_Mcanon_gap_le_δAO_gap_bound [SigmaUpperOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp) :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
-      |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+      |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
         ≤ δAO_gap_bound (Hoff := Hoff) := by
   intro X N hX hN
-  -- Start from the generic bound in `BG_Calib`, instantiated with the FunX AO caps.
+  -- Bound the constant-reference gap using the parallel-track AO remainder bound.
+  have hconst :
+      Goldbach.BG_Identity.conv_ref_const X N = Goldbach.AO_Stages.M_raw X N := by
+    simpa [Goldbach.AO_Stages.M_raw, Goldbach.AO_Core.sigma, Goldbach.AO_Core.weight_mass,
+      Goldbach.AO_WeightMass.weight_mass] using
+        (Goldbach.BG_Identity.conv_ref_const_eq_sigma_mass (X := X) (N := N))
+  have hAO0 :
+      |Goldbach.BG_Identity.conv_ref_const X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
+        ≤ Goldbach.AO_AssembleEnvelope.δAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff) := by
+    have herr :=
+      Goldbach.AO_InstantiateTenorFunX.errAO_bound (Hoff := Hoff) (X := X) (N := N) hX hN
+    have hgap :
+        Goldbach.BG_Identity.conv_ref_const X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N
+          = -Goldbach.AO_InstantiateTenorFunX.errAO Hoff X N := by
+      -- `errAO = McanoN - M_raw`
+      simp [Goldbach.AO_InstantiateTenorFunX.errAO, Goldbach.AO_InstantiateTenorFunX.Mcanon, hconst]
+    simpa [hgap, abs_neg] using herr
+
+  -- Combine swap + constant-reference gap into a bound for `conv_ref - Mcanon`.
   have hRef :
-      |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+      |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
         ≤ Goldbach.AO_AssembleEnvelope.δAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff)
           + ((2 * H + 1 : ℝ) / (Goldbach.BG_Identity.Ucut : ℝ)) *
               (Goldbach.BG_Bank.payload_cap X N
                 + SigmaUpperOnWindow.Cσ / Goldbach.BG_Identity.mass_BG) := by
-    simpa using
-      (Goldbach.BG_Calib.ref_to_M_bound
-        (C := Goldbach.AO_InstantiateTenorFunX.channels Hoff)
-        (K := Goldbach.AO_InstantiateTenorFunX.caps Hoff)
-        (X := X) (N := N) hX hN)
+    simpa [mul_comm, mul_left_comm, mul_assoc] using
+      (Goldbach.BG_Calib.ref_to_Mfun_bound_of_const_gap
+        (Mfun := fun X N => Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N)
+        (X := X) (N := N) hX hN
+        (δ := Goldbach.AO_AssembleEnvelope.δAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff))
+        hAO0)
 
   -- Replace `payload_cap X N` by the numeric window bound `1252/10^6`.
   have hX' : Goldbach.BG_Bank.X0 ≤ X := by
@@ -99,7 +116,7 @@ theorem bank_cert_bound_funX [SigmaUpperOnWindow]
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
           + δAO_gap_bound (Hoff := Hoff) ≤ ε) :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
-      |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N| ≤ ε := by
+      |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ ε := by
   intro X N hX hN
   have hBridge :
       |(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
@@ -114,20 +131,20 @@ theorem bank_cert_bound_funX [SigmaUpperOnWindow]
         (Goldbach.BG_Identity.errTI_bound_closed (X := X) (N := N) hX hN)
 
   have hAO :
-      |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+      |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
         ≤ δAO_gap_bound (Hoff := Hoff) :=
     conv_ref_Mcanon_gap_le_δAO_gap_bound (Hoff := Hoff) (X := X) (N := N) hX hN
 
   have htri :
-      |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N|
+      |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
         ≤ |(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
           + |Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N|
-          + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N| := by
+          + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| := by
     set a : ℝ := (Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N
     set b : ℝ := Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N
-    set c : ℝ := Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N
+    set c : ℝ := Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N
     have hdecomp :
-        (Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N = a + b + c := by
+        (Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N = a + b + c := by
       subst a b c
       ring
     have hab : |a + b| ≤ |a| + |b| := by
@@ -137,12 +154,12 @@ theorem bank_cert_bound_funX [SigmaUpperOnWindow]
       simpa [add_assoc] using this
     have hsum : |a + b + c| ≤ |a| + |b| + |c| := by
       linarith [hab, habc]
-    have : |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N| ≤ |a| + |b| + |c| := by
+    have : |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ |a| + |b| + |c| := by
       simpa [hdecomp, add_assoc] using hsum
     simpa [a, b, c, add_assoc, add_left_comm, add_comm] using this
 
   calc
-    |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N|
+    |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
         ≤ Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
           + δAO_gap_bound (Hoff := Hoff) := by
@@ -155,7 +172,7 @@ theorem bank_cert_bound_funX [SigmaUpperOnWindow]
           have h123 :
               (|(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
                     + |Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N|)
-                  + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+                  + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
                 ≤ (Goldbach.BG_Calib.δbridge_canon
                       + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed))
                   + δAO_gap_bound (Hoff := Hoff) :=
@@ -163,46 +180,13 @@ theorem bank_cert_bound_funX [SigmaUpperOnWindow]
           have hRHS :
               |(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
                   + |Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N|
-                  + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+                  + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
                 ≤ Goldbach.BG_Calib.δbridge_canon
                   + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
                   + δAO_gap_bound (Hoff := Hoff) := by
             simpa [add_assoc] using h123
           exact le_trans htri hRHS
     _ ≤ ε := hBudget (X := X) (N := N) hX hN
-
-noncomputable def decompBounds_funX [SigmaUpperOnWindow]
-    (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
-    [Goldbach.BG_Calib.WeightsBridgeHyp]
-    (hBudget :
-      ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
-        Goldbach.BG_Calib.δbridge_canon
-          + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
-          + δAO_gap_bound (Hoff := Hoff) ≤ ε) :
-    Goldbach.BankPieces.DecompBounds X0 H S ε 0 Goldbach.AO_Major.Mcanon :=
-  Goldbach.BankPieces.decomp_of_bound (X0 := X0) (H := H) (S := S) (ε := ε) (δ := 0)
-    (M := Goldbach.AO_Major.Mcanon)
-    (h := by
-      intro X N hX hN
-      have hcert := bank_cert_bound_funX (Hoff := Hoff) (X := X) (N := N) hBudget hX hN
-      have hone : S = (1 : ℝ) := by norm_num [S]
-      simpa [hone] using hcert)
-
-lemma majorBound_funX
-    (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
-    (hc0 : c0 ≤ Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff)) :
-    Goldbach.AnalyticAssemble.MajorBound X0 H S c0 Goldbach.AO_Major.Mcanon := by
-  intro X N hX hN
-  have hX' : (10 ^ 6 : ℕ) ≤ X := by simpa [X0, BankParams.X0] using hX
-  have hN' : N ∈ Goldbach.Windows.EvenIn X (10 ^ 4) := by
-    simpa [H, BankParams.H] using hN
-  have h :=
-    Goldbach.AO_Major.major_lb_window
-      (C := Goldbach.AO_InstantiateTenorFunX.channels Hoff)
-      (K := Goldbach.AO_InstantiateTenorFunX.caps Hoff)
-      (hc0 := by simpa [c0] using hc0)
-      (X := X) (N := N) hX' hN'
-  simpa [S, c0] using h
 
 noncomputable def globalClosure_funX [SigmaUpperOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
@@ -214,14 +198,31 @@ noncomputable def globalClosure_funX [SigmaUpperOnWindow]
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
           + δAO_gap_bound (Hoff := Hoff) ≤ ε) :
     Goldbach.Bridge.GlobalClosurePointwise X0 H S c0 ε := by
-  have hS : 0 < S := by norm_num [S]
-  have hc0pos : 0 < c0 := by norm_num [c0]
-  have hεlt : ε < c0 := by norm_num [ε, c0]
-  exact
-    Goldbach.TenorBridge.toGlobal (X0 := X0) (H := H) (S := S) (c0 := c0) (ε := ε)
-      Goldbach.AO_Major.Mcanon hS hc0pos hεlt
-      (major := majorBound_funX (Hoff := Hoff) hc0)
-      (db := decompBounds_funX (Hoff := Hoff) hBudget)
+  intro X hX
+  refine ⟨by norm_num [S], by norm_num [c0], by norm_num [ε, c0], ?_⟩
+  intro N hN
+
+  have habs :
+      |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ ε :=
+    bank_cert_bound_funX (Hoff := Hoff) (X := X) (N := N) hBudget hX hN
+
+  have hbank :
+      (Goldbach.Rep.R N : ℝ) ≥ Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N - ε := by
+    have h1 : -ε ≤ (Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N :=
+      (abs_le.mp habs).1
+    linarith
+
+  have hmajor :
+      Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N ≥ c0 := by
+    have hM :
+        Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N
+          ≥ Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff) :=
+      Goldbach.AO_InstantiateTenorFunX.McanoN_lb_cAO (Hoff := Hoff) (X := X) (N := N) hX hN
+    exact le_trans hc0 hM
+
+  have : (Goldbach.Rep.R N : ℝ) ≥ c0 - ε := by linarith
+  have hone : S = (1 : ℝ) := by norm_num [S]
+  simpa [hone] using this
 
 noncomputable def witness_funX [SigmaUpperOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)

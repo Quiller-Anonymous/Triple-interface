@@ -7,6 +7,8 @@ Confirmed PRESENT:
 ENNReal.ofReal_tsum_of_nonneg —  YES
 ENNReal.ofReal_le_iff_le_toReal — YES (needs `y ≠ ⊤`)
 ENNReal.sum_ne_top — YES (gives finiteness of finite `Finset.sum` in ENNReal)
+ENNReal.tsum_comp_le_tsum_of_injective — YES (useful for reindexing `tsum` along an injection)
+ENNReal.tsum_prod — YES (Fubini for `ENNReal` over `α×β`)
 Real.tsum_le_of_sum_range_le — YES
 summable_of_sum_range_le — YES
 sum_Ioo_inv_sq_le (Analysis/PSeries) — YES

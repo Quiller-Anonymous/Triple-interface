@@ -1,0 +1,124 @@
+AOI Strategy 2 (Fallback Plan): make the AO main term explicitly X-dependent
+===========================================================================
+
+Context
+-------
+In the main track (AOI), we want a fully checked decomposition of the AO remainder term
+
+  errAO(X,N) = McanoN(N) - sigma(N) * weight_mass(X)
+
+into the four channels (smooth/mellin/kernel/off-diagonal) on the window N ∈ EvenIn(X,H).
+
+Strategy 1 (current direction) keeps McanoN as a function of N only and proves that it agrees
+with the fully staged term M_off(C,X,N) on the canonical window. This is Tenor-aligned if
+all “payload / truncation” choices are definitionally X-independent on the window.
+
+Strategy 2 is the “buyer’s remorse” escape hatch: if some part of the staged term genuinely
+depends on X and we do NOT want to force that dependence to disappear definitionally, then we
+should admit that the canonical AO main term is (at least) a function of (X,N).
+
+This does not abandon the goal of an unconditional Goldbach proof; it changes the internal
+ledger/API so that the decomposition lemma becomes definitionally true without a special
+comparison lemma “M_off(X)=M_off(X0)” on the window.
+
+
+What changes under Strategy 2
+-----------------------------
+
+1) Core API change
+   Replace the N-only McanoN by an X-dependent main term:
+
+     Mcanon : ℕ → ℕ → ℝ     (arguments: X N)
+
+   Then the “core remainder” becomes:
+
+     errAO : ℕ → ℕ → ℝ
+     errAO X N := Mcanon X N - sigma N * weight_mass X
+
+   Under this API, the identification McanoN = M_off becomes definitional by construction:
+
+     Mcanon X N := AO_Stages.M_off channels X N
+
+   so the AO decomposition is purely algebraic with no extra hypothesis.
+
+
+2) Where the refactor lands (file-level sketch)
+
+   A) Goldbach/AO_Core.lean
+      - Change `Mcanon : ℕ → ℝ` to `Mcanon : ℕ → ℕ → ℝ`.
+      - Update `errAO` accordingly.
+      - Keep `sigma : ℕ → ℝ` and `weight_mass : ℕ → ℝ` unchanged.
+
+   B) Goldbach/AO_Major.lean (and other “re-export” modules)
+      - Update the re-exported type/signature of `Mcanon`.
+      - Any downstream statement that expects `Mcanon N` will now carry `X` as well:
+          `Mcanon X N`.
+
+   C) Goldbach/AO_Stages.lean
+      - Either:
+        (i) keep `M_raw/M_off` as-is and define `AO_Core.Mcanon X N := M_off C X N`, or
+        (ii) eliminate the “wiring hook” layer entirely and make stages *the* definition.
+
+   D) Goldbach/AO_AssembleEnvelope.lean
+      - Decomposition typeclass currently states:
+          AO_Core.errAO X N = sum of channel errors
+        That remains the same, but it becomes provable without any McanoN-identification axiom.
+
+   E) Goldbach/AO_Instantiate.lean
+      - Deletes the McanoN “wiring obligation” completely; this file becomes only:
+        channel selection + cap selection + Bounds instance + final errAO_bound lemma.
+
+
+3) How this stays compatible with the unconditional goal
+   Strategy 2 does *not* insert new axioms. It only acknowledges that the analytic envelope is
+   parameterized by a scale X, and so the “canonical main term” used in the bookkeeping is also.
+
+   The final Goldbach theorem downstream is still quantified over N (and the window witnesses X
+   come from the window predicate EvenIn X H). In other words:
+     - the theorem statement remains “for all sufficiently large even N …”
+     - the proof carries an X witnessing membership in the canonical window
+     - AO bookkeeping is performed at that X.
+
+
+Pros / Cons / Risks
+-------------------
+
+Pros
+- No need for a comparison lemma “M_off(C,X,N) = M_off(C,X0,N)” on the window.
+- No need to fight definitional X-independence in bank payloads/truncations.
+- Cleanest algebraic story: McanoN is exactly the staged main term.
+
+Cons
+- Larger API surface: more modules will need to thread an extra parameter X.
+- More refactoring churn in downstream files that currently treat McanoN as N-only.
+
+Risks to the main track
+- Mostly mechanical, but it touches many files:
+  AO_Core, AO_Major, AO_ErrorEnvelope, AO_AssembleEnvelope, AO_Instantiate, and any consumer that
+  directly references McanoN.
+- If any consumer has “implicit X” baked in, typeclass inference may become noisier.
+
+Migration strategy (minimize damage)
+------------------------------------
+
+Phase 1 (mechanical compile)
+- Change signatures in AO_Core and AO_Major.
+- Add temporary compatibility abbreviations:
+    noncomputable abbrev Mcanon₀ (N : ℕ) : ℝ := Mcanon BankParams.X0 N
+  so downstream code can be migrated gradually.
+
+Phase 2 (wire definitionally)
+- Define `Mcanon X N := AO_Stages.M_off channels X N` in a non-cyclic module.
+- Delete any McanoN-identification axioms or “wiring typeclasses”.
+
+Phase 3 (cleanup)
+- Remove compatibility aliases once all consumers take X explicitly.
+
+
+When to switch to Strategy 2
+----------------------------
+Switch if any of these become true:
+- Some staged term genuinely depends on X in a way we cannot or should not erase definitionally.
+- The comparison lemma “M_off(X)=M_off(X0)” becomes a major technical/time sink.
+- We want to align more literally with Tenor’s presentation where Q and other cutoffs vary with X.
+

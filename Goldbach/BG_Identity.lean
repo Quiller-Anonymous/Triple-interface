@@ -11,7 +11,8 @@ import Mathlib  -- (you can slim later; keep it while stabilizing)
 import Mathlib.Data.Finset.Interval
 import Goldbach.BankParams
 import Goldbach.Windows
-import Goldbach.AO_Major          -- errAO
+import Goldbach.AO_SigmaModel
+import Goldbach.AO_WeightMass
 import Goldbach.BG_Bank
 import Goldbach.BG_Operator
 import Goldbach.TypeI_Tent
@@ -1243,7 +1244,7 @@ lemma mass_BG_pos : 0 < mass_BG := by
 /-- Constant reference payload: sigma·weight_mass divided by kernel mass on the window. -/
 noncomputable def Pref (X N : ℕ) (k : ℤ) : ℝ :=
   if _ : k ∈ S_BG then
-    (AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG
+    (Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X) / mass_BG
   else
     0
 
@@ -1254,39 +1255,46 @@ noncomputable def conv_ref_const (X N : ℕ) : ℝ :=
 
 /-- The constant reference operator equals `σ(N) * weight_mass(X)` by definition. -/
 lemma conv_ref_const_eq_sigma_mass (X N : ℕ) :
-    conv_ref_const X N = AO_Major.sigma N * AO_Major.weight_mass X := by
+    conv_ref_const X N =
+      Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X := by
   classical
   have hpos : 0 < mass_BG := mass_BG_pos
   have hne : mass_BG ≠ 0 := ne_of_gt hpos
   -- rewrite the sum as a constant factor times `mass_BG`
   have hrewrite :
       conv_ref_const X N
-        = ((AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG)
+        = ((Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X) / mass_BG)
             * (Finset.sum S_BG (fun k => K_full k)) := by
     unfold conv_ref_const
     -- on `S_BG`, the `if` in `Pref` always takes the inner branch
     have :
         (Finset.sum S_BG (fun k => Pref X N k * K_full k))
-          = Finset.sum S_BG (fun k => ((AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG) * K_full k) := by
+          = Finset.sum S_BG (fun k =>
+              ((Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X) / mass_BG) *
+                K_full k) := by
       refine Finset.sum_congr rfl ?_
       intro k hk
       simp [Pref, hk]
     -- factor out the constant
     calc
       (Finset.sum S_BG (fun k => Pref X N k * K_full k))
-          = Finset.sum S_BG (fun k => ((AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG) * K_full k) := this
-      _ = ((AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG)
+          = Finset.sum S_BG (fun k =>
+              ((Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X) / mass_BG) *
+                K_full k) := this
+      _ = ((Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X) / mass_BG)
             * (Finset.sum S_BG (fun k => K_full k)) := by
             simpa using
               (Finset.mul_sum (s := S_BG) (f := fun k => K_full k)
-                (a := (AO_Major.sigma N * AO_Major.weight_mass X) / mass_BG)).symm
+                (a := (Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X) / mass_BG)).symm
   -- substitute `mass_BG = ∑ K_full` and cancel
   unfold mass_BG at hrewrite
   have hm_ne : (Finset.sum S_BG (fun k => K_full k)) ≠ 0 := by
     simpa using hne
   have :
-      ((AO_Major.sigma N * AO_Major.weight_mass X) / (Finset.sum S_BG (fun k => K_full k)))
-        * (Finset.sum S_BG (fun k => K_full k)) = AO_Major.sigma N * AO_Major.weight_mass X := by
+      ((Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X) /
+          (Finset.sum S_BG (fun k => K_full k)))
+        * (Finset.sum S_BG (fun k => K_full k)) =
+          Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X := by
     -- `(a / m) * m = a` when `m ≠ 0`
     simp [div_eq_mul_inv, hm_ne]
   simpa [hrewrite] using this

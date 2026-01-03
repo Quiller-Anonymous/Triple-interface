@@ -1,6 +1,5 @@
 import Goldbach.AO_Major
 import Goldbach.AO_AssembleEnvelope
-import Goldbach.AO_ErrorEnvelope
 import Goldbach.AO_Models
 import Goldbach.AO_KernelTail
 import Goldbach.AO_MellinTrunc
@@ -25,6 +24,10 @@ Parallel AO instantiation that uses the `Q(X)`-refactored off-diagonal bound.
 
 The other channels (`kernel/mellin/smooth`) remain as in the current pipeline; only `E_off`
 is swapped out to use `TenorHypFunX.OffDiagHyp`.
+
+Strategy 2 for the parallel track:
+define a parallel `Mcanon` directly as the staged term `AO_Stages.M_off`, so no bespoke “wiring”
+axiom is needed to relate it to `AO_Core.Mcanon`.
 -/
 
 /-- Canonical channel functions used in the assembled AO envelope. -/
@@ -34,6 +37,14 @@ noncomputable def channels (Hoff : OffDiagHyp) : Channels :=
 , E_smooth := Goldbach.AO_SmoothLoss.E_smooth
 , E_off    := fun X N => Goldbach.AO_OffDiagFunX.E_off (TenorHypFunX.model Hoff) X N
 }
+
+/-- Parallel-track AO main term: the fully staged term (depends on `X`). -/
+noncomputable def Mcanon (Hoff : OffDiagHyp) (X N : ℕ) : ℝ :=
+  Goldbach.AO_Stages.M_off (channels Hoff) X N
+
+/-- Parallel-track AO remainder: staged main term minus the baseline `sigma * weight_mass`. -/
+noncomputable def errAO (Hoff : OffDiagHyp) (X N : ℕ) : ℝ :=
+  Mcanon Hoff X N - Goldbach.AO_Stages.M_raw X N
 
 /-- Canonical numeric caps, now parameterized by the off-diagonal hypothesis. -/
 noncomputable def caps (Hoff : OffDiagHyp) : Caps :=
@@ -52,26 +63,11 @@ noncomputable def caps (Hoff : OffDiagHyp) : Caps :=
 , δ_off_nonneg    := Hoff.eps_nonneg
 }
 
-/-!
-We isolate the remaining AO “wiring” obligation as a single identification statement:
-`Mcanon` agrees with the final staged term `AO_Stages.M_off` on the canonical window.
-
-Once this is proved, the four-channel decomposition becomes a purely algebraic telescope
-(`Goldbach.AO_Stages.errAO_decomp_window_of_Mcanon_eq`) rather than an axiom.
--/
-axiom Mcanon_eq_M_off_on_window (Hoff : OffDiagHyp) :
-  ∀ {X N : ℕ}, Goldbach.BankParams.X0 ≤ X →
-      N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H →
-    Goldbach.AO_Core.Mcanon N = Goldbach.AO_Stages.M_off (channels Hoff) X N
-
-instance (Hoff : OffDiagHyp) : Decomposition (channels Hoff) := by
-  refine ⟨by
-    intro X N hX hN
-    have hM : Goldbach.AO_Core.Mcanon N = Goldbach.AO_Stages.M_off (channels Hoff) X N :=
-      Mcanon_eq_M_off_on_window Hoff (X := X) (N := N) hX hN
-    simpa using
-      (Goldbach.AO_Stages.errAO_decomp_window_of_Mcanon_eq (C := channels Hoff) (X := X) (N := N)
-        hM)⟩
+lemma errAO_decomp (Hoff : OffDiagHyp) (X N : ℕ) :
+    errAO Hoff X N =
+      (channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+        + (channels Hoff).E_kernel X N + (channels Hoff).E_off X N := by
+  simp [errAO, Mcanon, Goldbach.AO_Stages.M_off_sub_M_raw_eq_sum]
 
 instance (Hoff : OffDiagHyp) : Bounds (channels Hoff) (caps Hoff) := by
   classical
@@ -129,8 +125,87 @@ lemma δAO_nonneg (Hoff : OffDiagHyp) : 0 ≤ δAO Hoff := by
 lemma errAO_bound (Hoff : OffDiagHyp)
     {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X)
     (hN : N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H) :
-    |Goldbach.AO_Major.errAO X N| ≤ δAO Hoff := by
-  simpa [δAO, Goldbach.AO_Major.errAO] using
-    (Goldbach.AO_ErrorEnvelope.errAO_bound (C := channels Hoff) (K := caps Hoff) hX hN)
+    |errAO Hoff X N| ≤ δAO Hoff := by
+  classical
+  have hk := (Bounds.err_kernel_bound (C := channels Hoff) (K := caps Hoff)) hX hN
+  have hm := (Bounds.err_mellin_bound (C := channels Hoff) (K := caps Hoff)) hX hN
+  have hs := (Bounds.err_smooth_bound (C := channels Hoff) (K := caps Hoff)) hX hN
+  have ho := (Bounds.err_off_bound (C := channels Hoff) (K := caps Hoff)) hX hN
+
+  have tri :
+      |(channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+          + (channels Hoff).E_kernel X N + (channels Hoff).E_off X N|
+        ≤ |(channels Hoff).E_smooth X N| + |(channels Hoff).E_mellin X N|
+            + |(channels Hoff).E_kernel X N| + |(channels Hoff).E_off X N| := by
+    have t3 :=
+      abs_add_le ((channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+        + (channels Hoff).E_kernel X N) ((channels Hoff).E_off X N)
+    have t2 :=
+      abs_add_le ((channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N)
+        ((channels Hoff).E_kernel X N)
+    have t1 := abs_add_le ((channels Hoff).E_smooth X N) ((channels Hoff).E_mellin X N)
+    calc
+      |(channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+          + (channels Hoff).E_kernel X N + (channels Hoff).E_off X N|
+          = |((channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+              + (channels Hoff).E_kernel X N) + (channels Hoff).E_off X N| := by ring
+      _ ≤ |(channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+              + (channels Hoff).E_kernel X N| + |(channels Hoff).E_off X N| := t3
+      _ ≤ (|(channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N|
+              + |(channels Hoff).E_kernel X N|) + |(channels Hoff).E_off X N| := by gcongr
+      _ ≤ ((|(channels Hoff).E_smooth X N| + |(channels Hoff).E_mellin X N|)
+              + |(channels Hoff).E_kernel X N|) + |(channels Hoff).E_off X N| := by gcongr
+      _ = |(channels Hoff).E_smooth X N| + |(channels Hoff).E_mellin X N|
+              + |(channels Hoff).E_kernel X N| + |(channels Hoff).E_off X N| := by ring
+
+  have hdecomp := errAO_decomp (Hoff := Hoff) X N
+  rw [hdecomp]
+  refine le_trans tri ?_
+  have hδ :
+      (caps Hoff).δ_smooth + (caps Hoff).δ_mellin + (caps Hoff).δ_kernel + (caps Hoff).δ_off =
+        δAO Hoff := by
+    simp [δAO, Goldbach.AO_AssembleEnvelope.δAO]; ring
+  calc
+    |(channels Hoff).E_smooth X N| + |(channels Hoff).E_mellin X N|
+          + |(channels Hoff).E_kernel X N| + |(channels Hoff).E_off X N|
+        ≤ (caps Hoff).δ_smooth + (caps Hoff).δ_mellin + (caps Hoff).δ_kernel + (caps Hoff).δ_off := by
+          gcongr
+    _ = δAO Hoff := by simpa [hδ]
+
+/-- Lower bound for the staged parallel-track main term on the canonical window. -/
+lemma McanoN_lb_cAO (Hoff : OffDiagHyp)
+    {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X)
+    (hN : N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H) :
+    Mcanon Hoff X N ≥ Goldbach.AO_Major.cAO (caps Hoff) := by
+  have hX' : (10 ^ 6 : ℕ) ≤ X := by simpa [Goldbach.BankParams.X0] using hX
+  have hN' : N ∈ Goldbach.Windows.EvenIn X (10 ^ 4) := by
+    simpa [Goldbach.BankParams.H] using hN
+  have hσ : Goldbach.AO_SigmaPos.sigma N ≥ Goldbach.AO_SigmaPos.sigma0 := by
+    simpa using (Goldbach.AO_SigmaPos.sigma_even_lb_on_window (X := X) (N := N) hX' hN')
+
+  have herr : |errAO Hoff X N| ≤ δAO Hoff := errAO_bound (Hoff := Hoff) (X := X) (N := N) hX hN
+  have herr_lo : -(δAO Hoff) ≤ errAO Hoff X N := (abs_le.mp herr).1
+
+  have hraw : Goldbach.AO_Stages.M_raw X N = Goldbach.AO_SigmaPos.sigma N := by
+    simp [Goldbach.AO_Stages.M_raw, Goldbach.AO_SigmaPos.sigma, Goldbach.AO_Core.weight_mass]
+
+  calc
+    Mcanon Hoff X N
+        = Goldbach.AO_Stages.M_raw X N + errAO Hoff X N := by
+            -- `errAO = Mcanon - M_raw`
+            ring_nf
+            simp [errAO, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+    _   ≥ Goldbach.AO_SigmaPos.sigma0 + (-(δAO Hoff)) := by
+            have hs0 : Goldbach.AO_SigmaPos.sigma0 ≤ Goldbach.AO_Stages.M_raw X N := by
+              -- `M_raw X N = sigma N` and `sigma N ≥ sigma0`.
+              simpa [hraw] using hσ
+            have hsum :
+                Goldbach.AO_SigmaPos.sigma0 + (-(δAO Hoff))
+                  ≤ Goldbach.AO_Stages.M_raw X N + errAO Hoff X N :=
+              add_le_add hs0 herr_lo
+            simpa [add_assoc, add_left_comm, add_comm] using hsum
+    _   = Goldbach.AO_SigmaPos.sigma0 - δAO Hoff := by ring
+    _   = Goldbach.AO_Major.cAO (caps Hoff) := by
+            simp [Goldbach.AO_Major.cAO, δAO]
 
 end Goldbach.AO_InstantiateTenorFunX

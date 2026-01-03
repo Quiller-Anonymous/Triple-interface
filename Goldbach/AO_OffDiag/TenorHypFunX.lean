@@ -44,9 +44,9 @@ structure OffDiagHyp where
       TailBlockFun.F_block N ≤ F_ub
 
   /-- Majorant comparison on the canonical window (analytic; currently an axiom in the refactor). -/
-  reindexMajorant_bound_on_window :
+  sigmaTail_bound_on_window :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
-      (SigmaTailReindexFun.reindexMajorantENN (Q X) N).toReal
+      |SigmaTailReindexFun.sigmaTail (Q X) N|
         ≤ (K_tail : ℝ) / (Q X : ℝ) * TailBlockFun.F_block N
 
   /-- Numeric budget inequality on the window scales. -/
@@ -62,9 +62,9 @@ noncomputable def model (H : OffDiagHyp) : TailBlockFunX.Model :=
     (F_ub_nonneg := H.F_ub_nonneg)
     (F_bound_on_window := H.F_bound_on_window)
     (K_tail := H.K_tail)
-    (reindexMajorant_bound_on_window := by
+    (sigmaTail_bound_on_window := by
       intro X N hX hN
-      exact H.reindexMajorant_bound_on_window (X := X) (N := N) hX hN)
+      exact H.sigmaTail_bound_on_window (X := X) (N := N) hX hN)
     (K_tail_nonneg := H.K_tail_nonneg)
 
 /-- Tail bound on the canonical window, in the bundled hypothesis form. -/

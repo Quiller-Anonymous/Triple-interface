@@ -1,8 +1,8 @@
 import Mathlib.Data.Real.Basic
 import Mathlib.Tactic
-import Goldbach.AO_Core
 import Goldbach.AO_OffDiag.TailBlockFunX
 import Goldbach.AO_OffDiag.WeightMass
+import Goldbach.AO_WeightMass
 import Goldbach.BankParams
 import Goldbach.Windows
 
@@ -24,7 +24,8 @@ This is the analogue of `Goldbach/AO_OffDiagFun.lean`, but for `TailBlockFunX.Mo
 
 /-- Off-diagonal AO error term (X-dependent sigma witness). -/
 noncomputable def E_off (M : TailBlockFunX.Model) (X N : ℕ) : ℝ :=
-  (M.sigma X N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N) * AO_Core.weight_mass X
+  (M.sigma X N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N) *
+    Goldbach.AO_WeightMass.weight_mass X
 
 theorem E_off_bound
     (M : TailBlockFunX.Model)
@@ -37,7 +38,7 @@ theorem E_off_bound
     (hX : BankParams.X0 ≤ X)
     (hN : N ∈ Windows.EvenIn X BankParams.H) :
   |E_off M X N| ≤ eps := by
-  have hmass : |Goldbach.AO_Core.weight_mass X| ≤ (1 : ℝ) :=
+  have hmass : |Goldbach.AO_WeightMass.weight_mass X| ≤ (1 : ℝ) :=
     (inferInstance : WeightMassOnWindow).weight_mass_abs_le_one_on_window (X := X) hX
   have htail :
       |M.sigma X N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N| ≤ eps :=
@@ -49,12 +50,12 @@ theorem E_off_bound
   calc
     |E_off M X N|
         = |(M.sigma X N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N)
-            * Goldbach.AO_Core.weight_mass X| := by
+            * Goldbach.AO_WeightMass.weight_mass X| := by
             simp [E_off]
     _   = |M.sigma X N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N|
-            * |Goldbach.AO_Core.weight_mass X| := by
+            * |Goldbach.AO_WeightMass.weight_mass X| := by
             simp
-    _   ≤ eps * |Goldbach.AO_Core.weight_mass X| := by
+    _   ≤ eps * |Goldbach.AO_WeightMass.weight_mass X| := by
             exact mul_le_mul_of_nonneg_right htail (abs_nonneg _)
     _   ≤ eps * 1 := by
             exact mul_le_mul_of_nonneg_left hmass eps_nonneg
@@ -62,4 +63,3 @@ theorem E_off_bound
 
 end AO_OffDiagFunX
 end Goldbach
-

@@ -11,6 +11,7 @@
 import Mathlib
 import Goldbach.Windows
 import Goldbach.AO_SigmaModel
+import Goldbach.AO_Mcanon
 
 namespace Goldbach.AO_Core
 
@@ -21,8 +22,8 @@ open Goldbach.Windows
 /-- Singular series (σ-model). Positivity/estimates live in `AO_SigmaPos`. -/
 noncomputable abbrev sigma : ℕ → ℝ := Goldbach.AO_SigmaModel.sigma
 
-/-- Canonical AO main term (placeholder). -/
-noncomputable def Mcanon : ℕ → ℝ := fun _ => 0
+/-- Canonical AO main term (main track). -/
+noncomputable abbrev Mcanon : ℕ → ℝ := Goldbach.AO_Mcanon.Mcanon
 
 /-- Major-arc weight mass (ledger normalization = 1). -/
 @[simp] def weight_mass (_X : ℕ) : ℝ := (1 : ℝ)

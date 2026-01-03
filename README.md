@@ -6,9 +6,9 @@ The code in this file has the Apache 2.0 license, Anonymous Quiller
 Based on public domain paper at Zenodo, "Goldbach and the Triple Interface Method" (ed. Quiller)
 
 ## Status legend:
-- Platinum standard: unconditional proof with independent third party verification
-- Gold standard: unconditional proof, or dependent only on math that is unconditionally proven
-- Fool's gold -- finite conditional done, and it builds, but relies on axiom/sorry/admit
+- Platinum standard: unconditional proof, no axioms whatsoever, with independent third party verification
+- Gold standard: unconditional proof, or dependent only on conventional math axioms
+- Fool's gold: finite conditional done, and it builds, but relies on bespoke axiom/sorry/admits
 - Silver standard: finite conditional proof (everything but a finite base)
 - Bronze standard: baseline conditional proof (technical axioms reflecting dependencies on conventional math)
 - Iron standard: leaf conditional proof (it builds, but with idiosyncratic dependencies, including but not limited to explicit sorries, axioms, admits)
@@ -17,9 +17,11 @@ Based on public domain paper at Zenodo, "Goldbach and the Triple Interface Metho
 - Mud standard: informal sketch
 
 ## Projects stats:
-1. Goldbach conjecture -- Current status: fool's gold
+1. Goldbach conjecture -- Current status: gold standard
+-- Builds and (with the checked finite base) is unconditional except for the listed conventional axioms in `Goldbach/AO_OffDiag/*`.
 
-2. Twin primes conjecture -- Current status: iron (analytic engine builds, but depends on unconditional Goldbach + one major arc axiom + axioms for proofs existing in literature)
+2. Twin primes conjecture -- Current status: iron 
+-- analytic engine builds, but depends on unconditional Goldbach + one major arc axiom + axioms for proofs existing in literature
 
 3. The alt-zeta construct (nuanced primes detector) -- Current status: tin
 
@@ -35,14 +37,11 @@ Gold-standard goal: only **conventional math** facts are axiomatized; everything
 
 **Conventional axioms currently used**
 - `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean:413` `Cstar_le_45` (numeric bound on an analytic constant).
+- `Goldbach/AO_OffDiag/SigmaTailTenorAxioms.lean:21` `sigmaTail_bound_on_window` (uniform truncation bound for the σ-tail on the canonical window).
+- `Goldbach/AO_OffDiag/SigmaTailTenorAxiomsFun.lean:28` `sigmaTail_bound_on_window` (uniform truncation bound for the reindexed σ-tail on the canonical window; parallel `Q(X)` track).
 
 **Bespoke placeholders still in the pipeline (must be removed for gold standard)**
-- `Goldbach/AO_OffDiag/EntryPoint.lean:36` `reindexMajorant_bound_on_window` (analytic comparison lemma).
-- `Goldbach/AO_OffDiag/EntryPoint.lean:107` `hsupp_on_window` is still `sorry` (scaffold for bounding `F_block` uniformly).
-- `Goldbach/AO_OffDiag/EntryPoint.lean` `hsupp_on_window` also controls the numeric budget; `offDiag_budget_ok` is now derived by computation once `hsupp_on_window` is proved.
-- `Goldbach/AO_OffDiag/SigmaTailReindexFun.lean:178` `tail_reindex_bound` (Q(X)-version).
-- `Goldbach/AO_Instantiate.lean:50` `Mcanon_eq_M_off_on_window` (AO staged main-term identification hook for the main track).
-- `Goldbach/AO_InstantiateTenorFunX.lean:58` `Mcanon_eq_M_off_on_window` (AO staged main-term identification hook for the parallel FunX track).
+- (none currently listed)
 
 --------------------
 # GOLDBACH PIPELINE

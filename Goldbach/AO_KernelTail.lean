@@ -18,6 +18,10 @@ open Real Goldbach Goldbach.Windows
 noncomputable def E_kernel (X N : ℕ) : ℝ :=
   BG_Identity.errTI X N
 
+lemma E_kernel_congr_X (X₁ X₂ N : ℕ) : E_kernel X₁ N = E_kernel X₂ N := by
+  -- All `X`-dependence is syntactic (via `wX`) and cancels definitionally.
+  simp [E_kernel, Goldbach.BG_Identity.errTI, Goldbach.BG_Bank.P_BG, Goldbach.BG_Bank.wX]
+
 /-- **Kernel tail bound** (no axioms): closed-form tail mass × payload cap. -/
 theorem E_kernel_bound
   {X N : ℕ} (hX : BG_Bank.X0 ≤ X) (hN : N ∈ EvenIn X BG_Bank.H) :

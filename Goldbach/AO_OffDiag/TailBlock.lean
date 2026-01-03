@@ -62,6 +62,167 @@ noncomputable def F_block (N : ℕ) : ℝ :=
 /-- Multiplicative form of `F_block`, recorded separately for clarity. -/
 noncomputable def F_block_prod (N : ℕ) : ℝ := F_block N
 
+/-!
+### Structural lemmas for `F_block`
+
+These are “pure bookkeeping” facts about the Euler-factor expression used in the off-diagonal
+tail bound. They are intended to support later proofs of window-uniform bounds.
+-/
+
+private lemma inv_totient_prod_primes (s : Finset ℕ) (hs : ∀ p ∈ s, p.Prime) :
+    (1 / (Nat.totient (∏ p ∈ s, p) : ℝ)) = ∏ p ∈ s, (1 / ((p - 1 : ℕ) : ℝ)) := by
+  classical
+  revert hs
+  refine Finset.induction_on s ?_ ?_
+  · intro _hs
+    simp
+  · intro p s hp_not_mem ih hs
+    have hp_prime : p.Prime := hs p (by simp [hp_not_mem])
+    have hs_prime : ∀ q ∈ s, q.Prime := by
+      intro q hq
+      exact hs q (by simp [hq, hp_not_mem])
+
+    have hcop : Nat.Coprime p (∏ q ∈ s, q) := by
+      -- `p` is coprime to every distinct prime in `s`, hence to their product.
+      refine (Nat.coprime_prod_right_iff (x := p) (t := s) (s := fun q : ℕ => q)).2 ?_
+      intro q hq
+      have hq_prime : q.Prime := hs_prime q hq
+      have hpq_ne : p ≠ q := by
+        intro h
+        subst h
+        exact hp_not_mem hq
+      refine (hp_prime.coprime_iff_not_dvd).2 ?_
+      intro hp_dvd_q
+      have : p = q := (Nat.prime_dvd_prime_iff_eq hp_prime hq_prime).1 hp_dvd_q
+      exact hpq_ne this
+
+    have htot : Nat.totient (p * (∏ q ∈ s, q)) = Nat.totient p * Nat.totient (∏ q ∈ s, q) :=
+      Nat.totient_mul hcop
+    have htot' :
+        (Nat.totient (p * (∏ q ∈ s, q)) : ℝ) =
+          (Nat.totient p : ℝ) * (Nat.totient (∏ q ∈ s, q) : ℝ) := by
+      exact_mod_cast htot
+    have hphi_p : (Nat.totient p : ℝ) = (p - 1 : ℕ) := by
+      simpa [Nat.totient_prime hp_prime]
+
+    calc
+      (1 / (Nat.totient (∏ q ∈ insert p s, q) : ℝ))
+          =
+        1 / (Nat.totient (p * (∏ q ∈ s, q)) : ℝ) := by
+          simp [Finset.prod_insert, hp_not_mem, mul_comm, mul_left_comm, mul_assoc]
+      _ = (1 / (Nat.totient p : ℝ)) * (1 / (Nat.totient (∏ q ∈ s, q) : ℝ)) := by
+          simp [one_div, htot', mul_assoc, mul_left_comm, mul_comm]
+      _ = (1 / ((p - 1 : ℕ) : ℝ)) * ∏ q ∈ s, (1 / ((q - 1 : ℕ) : ℝ)) := by
+          simp [hphi_p, ih hs_prime]
+      _ = ∏ q ∈ insert p s, (1 / ((q - 1 : ℕ) : ℝ)) := by
+          simp [Finset.prod_insert, hp_not_mem, mul_assoc, mul_left_comm, mul_comm]
+
+lemma F_block_eq_sum_squarefree_divisors {N : ℕ} (hN : N ≠ 0) :
+    F_block N =
+      ∑ d ∈ N.divisors with Squarefree d, (1 / (Nat.totient d : ℝ)) := by
+  classical
+  set P : Finset ℕ := (Nat.factorization N).support
+
+  -- The primes dividing `N` as a finset can be seen both via `Nat.factorization` and via
+  -- `UniqueFactorizationMonoid.normalizedFactors`.
+  have hfac : (UniqueFactorizationMonoid.normalizedFactors N).toFinset = P := by
+    calc
+      (UniqueFactorizationMonoid.normalizedFactors N).toFinset
+          = N.primeFactors := by
+              -- `normalizedFactors N = primeFactorsList N` (as a multiset), and `primeFactors` is
+              -- definitionally `primeFactorsList.toFinset`.
+              have h1 :
+                  (UniqueFactorizationMonoid.normalizedFactors N).toFinset =
+                    ((N.primeFactorsList : List ℕ) : Multiset ℕ).toFinset :=
+                congrArg Multiset.toFinset (Nat.factors_eq N)
+              have h2 : ((N.primeFactorsList : List ℕ) : Multiset ℕ).toFinset = N.primeFactorsList.toFinset := by
+                rfl
+              have h3 : N.primeFactorsList.toFinset = N.primeFactors := by
+                rfl
+              exact h1.trans (h2.trans h3)
+      _ = (Nat.factorization N).support := by
+              simpa using (Nat.support_factorization N).symm
+      _ = P := by rfl
+
+  -- Rewrite the divisor sum as a powerset sum over the prime factors.
+  have hsum :
+      (∑ d ∈ N.divisors with Squarefree d, (1 / (Nat.totient d : ℝ))) =
+        ∑ s ∈ P.powerset, (1 / (Nat.totient (s.val.prod : ℕ) : ℝ)) := by
+    simpa [hfac, P] using
+      (Nat.sum_divisors_filter_squarefree (n := N) hN (f := fun d => (1 / (Nat.totient d : ℝ))))
+
+  -- Primehood on `P`.
+  have hP_prime : ∀ p ∈ P, p.Prime := by
+    intro p hp
+    have : p.Prime ∧ p ∣ N ∧ N ≠ 0 := by
+      -- `P` is (definitionally) `N.primeFactors`.
+      simpa [P, Nat.support_factorization, Nat.mem_primeFactors] using hp
+    exact this.1
+
+  -- Expand `F_block` as a sum over subsets of the prime factors (powerset expansion),
+  -- then rewrite the subset-product as `1/φ(product)` using multiplicativity of `φ` on squarefree products.
+  have hF :
+      F_block N =
+        ∑ s ∈ P.powerset, (1 / (Nat.totient (s.val.prod : ℕ) : ℝ)) := by
+    -- `prod_one_add` expansion (kept in `Finset.prod` form to avoid binder-notation hassles).
+    have hprod :
+        P.prod (fun p : ℕ => (1 : ℝ) + (1 / ((p : ℝ) - 1)))
+          =
+        ∑ s ∈ P.powerset, s.prod (fun p : ℕ => (1 / ((p : ℝ) - 1))) := by
+      simpa using
+        (Finset.prod_one_add (s := P) (f := fun p : ℕ => (1 / ((p : ℝ) - 1))))
+
+    -- rewrite each subset product
+    have hterm :
+        ∀ s : Finset ℕ, s ∈ P.powerset →
+          (s.prod (fun p : ℕ => (1 / ((p : ℝ) - 1)))) =
+            (1 / (Nat.totient (s.val.prod : ℕ) : ℝ)) := by
+      intro s hs
+      -- work in the binder-product form so we can reuse `inv_totient_prod_primes`
+      change (∏ p ∈ s, (1 / ((p : ℝ) - 1))) = (1 / (Nat.totient (s.val.prod : ℕ) : ℝ))
+      have hs_prime : ∀ p ∈ s, p.Prime := by
+        intro p hp
+        exact hP_prime p ((Finset.mem_powerset.mp hs) hp)
+      have hcast : ∀ p : ℕ, p ∈ s → (p : ℝ) - 1 = ((p - 1 : ℕ) : ℝ) := by
+        intro p hp
+        have hp1 : 1 ≤ p := Nat.one_le_of_lt (hs_prime p hp).one_lt
+        simpa [Nat.cast_sub hp1, Nat.cast_one] using (rfl : ((p : ℝ) - 1) = (p : ℝ) - 1)
+
+      have hφ :
+          (1 / (Nat.totient (∏ p ∈ s, p) : ℝ)) = ∏ p ∈ s, (1 / ((p - 1 : ℕ) : ℝ)) := by
+        simpa using (inv_totient_prod_primes (s := s) hs_prime)
+      have hφ' :
+          (1 / (Nat.totient (∏ p ∈ s, p) : ℝ)) = ∏ p ∈ s, (1 / ((p : ℝ) - 1)) := by
+        refine hφ.trans ?_
+        refine Finset.prod_congr rfl ?_
+        intro p hp
+        have : (p : ℝ) - 1 = ((p - 1 : ℕ) : ℝ) := hcast p hp
+        simpa [this]
+
+      have hprod_nat : (∏ p ∈ s, p) = (s.val.prod : ℕ) := by
+        -- unfold the finset product and simplify `Multiset.map id`
+        change (s.val.map (fun p : ℕ => p)).prod = s.val.prod
+        simpa using congrArg Multiset.prod (by simpa using (Multiset.map_id s.val))
+
+      -- rewrite the totient argument and flip the equality to match the goal
+      have hφ'' := hφ'
+      rw [hprod_nat] at hφ''
+      exact hφ''.symm
+
+    -- Put it together
+    calc
+      F_block N
+          = P.prod (fun p : ℕ => (1 : ℝ) + (1 / ((p : ℝ) - 1))) := by
+              rfl
+      _ = ∑ s ∈ P.powerset, s.prod (fun p : ℕ => (1 / ((p : ℝ) - 1))) := hprod
+      _ = ∑ s ∈ P.powerset, (1 / (Nat.totient (s.val.prod : ℕ) : ℝ)) := by
+            refine Finset.sum_congr rfl ?_
+            intro s hs
+            exact hterm s hs
+
+  -- Combine the two characterizations.
+  exact hF.trans hsum.symm
+
 /--
 Tail-block facts packaged as a `Model`.
 

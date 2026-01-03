@@ -1,8 +1,8 @@
 import Mathlib.Data.Real.Basic
 import Mathlib.Tactic
-import Goldbach.AO_Core
 import Goldbach.AO_OffDiag.TailBlockFun
 import Goldbach.AO_OffDiag.WeightMass
+import Goldbach.AO_WeightMass
 import Goldbach.BankParams
 import Goldbach.Windows
 
@@ -31,7 +31,8 @@ to produce a bound on the off-diagonal error term `E_off`.
 
 /-- Off-diagonal AO error term at variable truncation height `Q(X)`. -/
 noncomputable def E_off (M : Goldbach.AO_OffDiag.TailBlockFun.Model) (X N : ℕ) : ℝ :=
-  (M.sigma N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N) * AO_Core.weight_mass X
+  (M.sigma N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N) *
+    Goldbach.AO_WeightMass.weight_mass X
 
 /--
 If the tail bound holds on the canonical window, then `E_off` is bounded by the same epsilon
@@ -44,11 +45,11 @@ theorem E_off_bound_of_tail_bound
     (htail :
       ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ Windows.EvenIn X BankParams.H →
         |M.sigma N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N| ≤ eps)
-    {X N : ℕ}
+  {X N : ℕ}
     (hX : BankParams.X0 ≤ X)
     (hN : N ∈ Windows.EvenIn X BankParams.H) :
   |E_off M X N| ≤ eps := by
-  have hmass : |Goldbach.AO_Core.weight_mass X| ≤ (1 : ℝ) :=
+  have hmass : |Goldbach.AO_WeightMass.weight_mass X| ≤ (1 : ℝ) :=
     (inferInstance : WeightMassOnWindow).weight_mass_abs_le_one_on_window (X := X) hX
   have htail' :
       |M.sigma N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N| ≤ eps :=
@@ -56,12 +57,12 @@ theorem E_off_bound_of_tail_bound
   calc
     |E_off M X N|
         = |(M.sigma N - TailBlockFun.sigma_trunc (M.Q X) N)
-            * Goldbach.AO_Core.weight_mass X| := by
+            * Goldbach.AO_WeightMass.weight_mass X| := by
             simp [E_off]
     _   = |M.sigma N - TailBlockFun.sigma_trunc (M.Q X) N|
-            * |Goldbach.AO_Core.weight_mass X| := by
+            * |Goldbach.AO_WeightMass.weight_mass X| := by
             simp
-    _   ≤ eps * |Goldbach.AO_Core.weight_mass X| := by
+    _   ≤ eps * |Goldbach.AO_WeightMass.weight_mass X| := by
             exact mul_le_mul_of_nonneg_right htail' (abs_nonneg _)
     _   ≤ eps * 1 := by
             exact mul_le_mul_of_nonneg_left hmass eps_nonneg
