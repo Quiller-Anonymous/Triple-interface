@@ -19,9 +19,27 @@ This file supplies the Euler-style tail bound needed downstream.
 We package *both* summability and the numerical inequality.
 
 Missing in this Mathlib snapshot: a finite nonnegative sum is ≤ the `tsum`. -/
-axiom finset_sum_le_tsum
+
+/-!
+## Conventional axioms
+
+The axioms in this file are intended to be **conventional/library-level** (not bespoke):
+
+* `finset_sum_le_tsum`: finite nonnegative sum ≤ corresponding `tsum` under `Summable`.
+  This should be available in Mathlib under some name; we isolate it here because our current
+  toolchain snapshot may not expose the exact lemma we need.
+
+* `euler_tail_summable`: summability of `eulerTailFun`. In principle this should follow from
+  the tail bound proved in `SigmaTailEuler_Analytic` (or standard comparison tests), so it is
+  a good candidate to eliminate once the proof is stabilized.
+-/
+
+-- In this toolchain, this lemma is available as `Summable.sum_le_tsum`.
+theorem finset_sum_le_tsum
   {s : Finset ℕ} {f : ℕ → ℝ} :
   (∀ n, 0 ≤ f n) → Summable f → s.sum f ≤ ∑' n : ℕ, f n
+  | hf, hs => by
+    simpa using (Summable.sum_le_tsum (s := s) (f := f) (fun n _ => hf n) hs)
 
 noncomputable def eulerTailFun (R N : ℕ) : ℕ → ℝ :=
   fun r =>
@@ -33,8 +51,68 @@ noncomputable def eulerTailFun (R N : ℕ) : ℕ → ℝ :=
 def EulerTailConst : ℝ := 90
 
 /-- If you still want the *pair form* (Summable ∧ bound), keep only Summable axiomatic for now. -/
-axiom euler_tail_summable (R N : ℕ) (hR : 1 ≤ R) :
-  Summable (eulerTailFun R N)
+theorem euler_tail_summable (R N : ℕ) (hR : 1 ≤ R) :
+  Summable (eulerTailFun R N) := by
+  classical
+
+  have hnonneg : ∀ r : ℕ, 0 ≤ eulerTailFun R N r := by
+    intro r
+    by_cases h : R < r ∧ Squarefree r ∧ Nat.Coprime r N
+    · simp [eulerTailFun, h]
+      positivity
+    · simp [eulerTailFun, h]
+
+  -- Use the ENNReal tail bound to show that *every* finite subsum is bounded, hence summable.
+  refine summable_of_sum_le (ι := ℕ) (f := eulerTailFun R N) (c := (90 : ℝ) / R)
+    (fun r => hnonneg r) (fun u => ?_)
+
+  -- Work in `ℝ≥0∞` where `tsum` is unconditional.
+  let fE : ℕ → ENNReal := fun r =>
+    if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
+      ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
+    else 0
+
+  have hsumE :
+      ENNReal.ofReal (∑ r ∈ u, eulerTailFun R N r) = ∑ r ∈ u, fE r := by
+    -- `ofReal` commutes with finite sums under nonnegativity.
+    -- Then rewrite `ENNReal.ofReal (ite ...)` into `ite (ENNReal.ofReal ...) 0` pointwise.
+    have h :=
+      (ENNReal.ofReal_sum_of_nonneg (s := u) (f := fun r => eulerTailFun R N r)
+        (hf := fun r _ => hnonneg r))
+    refine h.trans ?_
+    refine Finset.sum_congr rfl ?_
+    intro r hr
+    by_cases hcond : R < r ∧ Squarefree r ∧ Nat.Coprime r N
+    ·
+      have ofReal_if (p : Prop) [Decidable p] (a : ℝ) :
+          ENNReal.ofReal (if p then a else 0) = if p then ENNReal.ofReal a else 0 := by
+        by_cases hp : p <;> simp [hp]
+      simpa [fE, eulerTailFun, hcond, one_div] using
+        (ofReal_if (p := Nat.Coprime r N) (a := ((Nat.totient r : ℝ) ^ 2)⁻¹))
+    · simp [fE, eulerTailFun, hcond, one_div]
+
+  have hfin_le_tsum : (∑ r ∈ u, fE r) ≤ ∑' r : ℕ, fE r := by
+    simpa [fE] using (ENNReal.sum_le_tsum (s := u) (f := fE))
+
+  have htsum :
+      (∑' r : ℕ, fE r) ≤ ENNReal.ofReal ((90 : ℝ) / R) := by
+    -- This is the ENNReal Euler-tail bound from `SigmaTailEuler_Analytic`.
+    simpa [fE, EulerTailConst, one_div] using
+      (_root_.Goldbach.AO_OffDiag.euler_tail_bound_tsum_ENNReal (R := R) (N := N) hR)
+
+  have hE :
+      ENNReal.ofReal (∑ r ∈ u, eulerTailFun R N r) ≤ ENNReal.ofReal ((90 : ℝ) / R) := by
+    calc
+      ENNReal.ofReal (∑ r ∈ u, eulerTailFun R N r)
+          = ∑ r ∈ u, fE r := hsumE
+      _ ≤ ∑' r : ℕ, fE r := hfin_le_tsum
+      _ ≤ ENNReal.ofReal ((90 : ℝ) / R) := htsum
+
+  -- Convert back to a real inequality (handle the `ofReal` truncation honestly).
+  have hRnonneg : 0 ≤ (90 : ℝ) / (R : ℝ) := by
+    have hRpos : (0 : ℝ) < (R : ℝ) := by exact_mod_cast (Nat.succ_le_iff.mp hR)
+    exact div_nonneg (by norm_num) (le_of_lt hRpos)
+  exact (ENNReal.ofReal_le_ofReal_iff hRnonneg).1 hE
 
 theorem euler_tail_bound_tsum_le (R N : ℕ) (hR : 1 ≤ R) :
   (∑' r : ℕ, eulerTailFun R N r) ≤ (EulerTailConst : ℝ) / (R : ℝ) := by
@@ -76,8 +154,8 @@ theorem euler_tail_bound
     have hRlt : R < r := Nat.lt_of_lt_of_le (Nat.lt_succ_self R) hrIcc
     have hsq : Squarefree r := (Finset.mem_filter.mp hr).2
     by_cases hcop : Nat.Coprime r N
-    · simp [f, g, hRlt, hsq, hcop]
-    · simp [f, g, hRlt, hsq, hcop]
+    · simp [f, g, hRlt, hsq]
+    · simp [f, g, hRlt, hsq]
 
   have hnonneg : ∀ r : ℕ, 0 ≤ g r := by
     intro r
@@ -116,7 +194,7 @@ private lemma one_le_prod_of_one_le_real
     have ha1 : (1 : ℝ) ≤ f a := hs a (by simp [ha])
     have hs1 : ∀ i ∈ s, (1 : ℝ) ≤ f i := by
       intro i hi
-      exact hs i (by simp [hi, ha])
+      exact hs i (by simp [hi])
     have ih1 : (1 : ℝ) ≤ s.prod f := ih hs1
     have ha0 : (0 : ℝ) ≤ f a := le_trans (by norm_num) ha1
     have hmul : (1 : ℝ) ≤ f a * s.prod f := by
@@ -177,7 +255,7 @@ theorem F_block_le_FprodQ
     exact Finset.disjoint_sdiff
 
   have hunion : S ∪ T = smallPrimes := by
-    simpa [T, Finset.union_sdiff_of_subset hsub]
+    simp [T, Finset.union_sdiff_of_subset hsub]
 
   -- product over smallPrimes splits as product over S times product over T
   have hprod_split :
@@ -209,7 +287,7 @@ theorem F_block_le_FprodQ
             -- rewrite using the split equality
             -- hprod_split : smallPrimes.prod f = S.prod f * T.prod f
             -- so S.prod f * T.prod f = smallPrimes.prod f
-            simpa [hprod_split, mul_comm, mul_left_comm, mul_assoc]
+            simp [hprod_split]
 
   -- Relate `F_block` to the product over `S`
   have hblock : F_block N = S.prod f := by
@@ -232,7 +310,7 @@ Honest window lemma (Step 1 form): if you can supply the prime-support hypothesi
 then you get the uniform numeric bound `F_block N ≤ 330`.
 -/
 theorem F_block_bound_on_window
-  {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H)
+  {X N : ℕ} (_hX : BankParams.X0 ≤ X) (_hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H)
   (hsupp : ∀ p, p ∈ (Nat.factorization N).support → p ∈ smallPrimes) :
   F_block N ≤ (330 : ℝ) := by
   have hle : F_block N ≤ ((FprodQ : ℚ) : ℝ) := F_block_le_FprodQ (N := N) hsupp

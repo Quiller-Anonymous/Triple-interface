@@ -625,9 +625,130 @@ lemma payload_cap_window_const
   have hmul := mul_le_mul_of_nonneg_left hsq hconst_nonneg
   simpa [payload_cap] using hmul
 
-/-- Numeric log fact (TODO: replace by an analytic proof). -/
-axiom log_ratio_sq_le :
-  (Real.log (1010001:ℝ) / Real.log (1000000:ℝ))^2 ≤ (62591 : ℝ) / 62500
+/-- Numeric log fact (proved from coarse analytic bounds). -/
+lemma log_ratio_sq_le :
+  (Real.log (1010001:ℝ) / Real.log (1000000:ℝ))^2 ≤ (62591 : ℝ) / 62500 := by
+  have hlog2 : (69 : ℝ) / 100 < Real.log 2 := by
+    have h₁ : (69 : ℝ) / 100 < (0.6931471803 : ℝ) := by norm_num
+    exact lt_trans h₁ Real.log_two_gt_d9
+
+  have hlog125 : (2 : ℝ) / 9 ≤ Real.log ((5 : ℝ) / 4) := by
+    have h :=
+      Real.le_log_one_add_of_nonneg (x := (4 : ℝ)⁻¹) (by positivity : (0 : ℝ) ≤ (4 : ℝ)⁻¹)
+    have hL : (2 : ℝ) * (4 : ℝ)⁻¹ / ((4 : ℝ)⁻¹ + 2) = (2 : ℝ) / 9 := by norm_num
+    have hR : (1 : ℝ) + (4 : ℝ)⁻¹ = (5 : ℝ) / 4 := by norm_num
+    simpa [hL, hR] using h
+
+  have hlogX0_lb : (2063 : ℝ) / 150 ≤ Real.log (1000000 : ℝ) := by
+    have hX : (1000000 : ℝ) = (2 : ℝ) ^ 18 * ((5 : ℝ) / 4) ^ 6 := by norm_num
+    have hlog :
+        Real.log (1000000 : ℝ) =
+          (18 : ℝ) * Real.log 2 + (6 : ℝ) * Real.log ((5 : ℝ) / 4) := by
+      have hmul :
+          Real.log ((2 : ℝ) ^ 18 * ((5 : ℝ) / 4) ^ 6) =
+            Real.log ((2 : ℝ) ^ 18) + Real.log (((5 : ℝ) / 4) ^ 6) := by
+        simpa using
+          Real.log_mul (pow_ne_zero 18 (by norm_num : (2 : ℝ) ≠ 0))
+            (pow_ne_zero 6 (by norm_num : ((5 : ℝ) / 4) ≠ 0))
+      calc
+        Real.log (1000000 : ℝ)
+            = Real.log ((2 : ℝ) ^ 18 * ((5 : ℝ) / 4) ^ 6) := by simpa [hX]
+        _ = Real.log ((2 : ℝ) ^ 18) + Real.log (((5 : ℝ) / 4) ^ 6) := hmul
+        _ = (18 : ℝ) * Real.log 2 + (6 : ℝ) * Real.log ((5 : ℝ) / 4) := by
+              simp [Real.log_pow, add_comm, add_left_comm, add_assoc]
+
+    have hlog2' : (69 : ℝ) / 100 ≤ Real.log 2 := le_of_lt hlog2
+    have h18 : 0 ≤ (18 : ℝ) := by norm_num
+    have h6 : 0 ≤ (6 : ℝ) := by norm_num
+    have hcomb :
+        (18 : ℝ) * ((69 : ℝ) / 100) + (6 : ℝ) * ((2 : ℝ) / 9) ≤
+          (18 : ℝ) * Real.log 2 + (6 : ℝ) * Real.log ((5 : ℝ) / 4) :=
+      add_le_add (mul_le_mul_of_nonneg_left hlog2' h18) (mul_le_mul_of_nonneg_left hlog125 h6)
+    have hleft :
+        (2063 : ℝ) / 150 = (18 : ℝ) * ((69 : ℝ) / 100) + (6 : ℝ) * ((2 : ℝ) / 9) := by
+      norm_num
+    simpa [hleft, hlog] using hcomb
+
+  have hlogX0_pos : 0 < Real.log (1000000 : ℝ) :=
+    lt_of_lt_of_le (by norm_num : (0 : ℝ) < (2063 : ℝ) / 150) hlogX0_lb
+  have hlogX0_ne : Real.log (1000000 : ℝ) ≠ 0 := ne_of_gt hlogX0_pos
+
+  let c : ℝ := (1010001 : ℝ) / (1000000 : ℝ)
+
+  have hc_pos : 0 < c := by
+    dsimp [c]
+    positivity
+  have hc_ne : c ≠ 0 := ne_of_gt hc_pos
+
+  have hlogc_le : Real.log c ≤ (10001 : ℝ) / 1000000 := by
+    have h := Real.log_le_sub_one_of_pos (x := c) hc_pos
+    have : c - 1 = (10001 : ℝ) / 1000000 := by
+      dsimp [c]
+      norm_num
+    simpa [this] using h
+
+  have hlogc_nonneg : 0 ≤ Real.log c := by
+    have : (1 : ℝ) ≤ c := by
+      dsimp [c]
+      norm_num
+    exact Real.log_nonneg this
+
+  have hratio_eq :
+      Real.log (1010001 : ℝ) / Real.log (1000000 : ℝ) =
+        1 + Real.log c / Real.log (1000000 : ℝ) := by
+    have hm : (1000000 : ℝ) * c = (1010001 : ℝ) := by
+      dsimp [c]
+      field_simp
+    have hlogmul : Real.log ((1000000 : ℝ) * c) = Real.log (1000000 : ℝ) + Real.log c := by
+      simpa using Real.log_mul (by norm_num : (1000000 : ℝ) ≠ 0) hc_ne
+    calc
+      Real.log (1010001 : ℝ) / Real.log (1000000 : ℝ)
+          = Real.log ((1000000 : ℝ) * c) / Real.log (1000000 : ℝ) := by simpa [hm]
+      _ = (Real.log (1000000 : ℝ) + Real.log c) / Real.log (1000000 : ℝ) := by
+            simp [hlogmul]
+      _ = 1 + Real.log c / Real.log (1000000 : ℝ) := by
+            simp [add_div, div_self, hlogX0_ne]
+
+  have hratio_nonneg : 0 ≤ Real.log (1010001 : ℝ) / Real.log (1000000 : ℝ) := by
+    have hnum_pos : 0 ≤ Real.log (1010001 : ℝ) := by
+      have : (1 : ℝ) ≤ (1010001 : ℝ) := by norm_num
+      exact Real.log_nonneg this
+    exact div_nonneg hnum_pos (le_of_lt hlogX0_pos)
+
+  have hfrac_le :
+      Real.log c / Real.log (1000000 : ℝ) ≤
+        ((10001 : ℝ) / 1000000) / ((2063 : ℝ) / 150) := by
+    have hden_pos : 0 < (2063 : ℝ) / 150 := by norm_num
+    have hinv :
+        (1 / Real.log (1000000 : ℝ)) ≤ (1 / ((2063 : ℝ) / 150)) :=
+      one_div_le_one_div_of_le hden_pos hlogX0_lb
+    have hstep1 :
+        Real.log c / Real.log (1000000 : ℝ) ≤ Real.log c / ((2063 : ℝ) / 150) := by
+      have hmul := mul_le_mul_of_nonneg_left hinv hlogc_nonneg
+      simpa [div_eq_mul_inv] using hmul
+    have hstep2 :
+        Real.log c / ((2063 : ℝ) / 150) ≤ ((10001 : ℝ) / 1000000) / ((2063 : ℝ) / 150) := by
+      have hpos : 0 ≤ (1 / ((2063 : ℝ) / 150)) := by positivity
+      have hmul := mul_le_mul_of_nonneg_right hlogc_le hpos
+      simpa [div_eq_mul_inv] using hmul
+    exact le_trans hstep1 hstep2
+
+  have hratio_le :
+      Real.log (1010001 : ℝ) / Real.log (1000000 : ℝ) ≤
+        1 + ((10001 : ℝ) / 1000000) / ((2063 : ℝ) / 150) := by
+    have h := add_le_add_left hfrac_le 1
+    simpa [hratio_eq] using h
+
+  have hsq :
+      (Real.log (1010001 : ℝ) / Real.log (1000000 : ℝ)) ^ 2 ≤
+        (1 + ((10001 : ℝ) / 1000000) / ((2063 : ℝ) / 150)) ^ 2 :=
+    pow_le_pow_left₀ hratio_nonneg hratio_le 2
+
+  have hfinal :
+      (1 + ((10001 : ℝ) / 1000000) / ((2063 : ℝ) / 150)) ^ 2 ≤ (62591 : ℝ) / 62500 := by
+    norm_num
+
+  exact le_trans hsq hfinal
 
 /-- Numeric corollary on the canonical window. -/
 lemma payload_cap_window_num

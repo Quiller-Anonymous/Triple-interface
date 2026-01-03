@@ -129,8 +129,7 @@ lemma pow_exp_le_26 {p e : ℕ} (hp : Nat.Prime p) (he3 : 3 ≤ e) (hle : p ^ e 
   have he_ge : 27 ≤ e := Nat.succ_le_of_lt (Nat.lt_of_not_ge hnot)
   rcases Nat.exists_eq_add_of_le he_ge with ⟨t, rfl⟩
   have h2t_pos : 0 < 2 ^ t := by
-    have := pow_pos (by decide : 0 < (2 : ℕ)) t
-    simpa using this
+    exact pow_pos (by decide : 0 < (2 : ℕ)) t
   have h27_le : 2 ^ 27 ≤ 2 ^ (27 + t) := by
     have hge1 : 1 ≤ 2 ^ t := Nat.succ_le_of_lt h2t_pos
     have : 2 ^ 27 * 1 ≤ 2 ^ 27 * 2 ^ t := Nat.mul_le_mul_left _ hge1
@@ -192,30 +191,38 @@ lemma oddPrimePower_complete_upto {n : ℕ}
 def NearCollisionCutoff (H B : ℕ) : Prop :=
   ∀ {a b : ℕ}, IsOddPrimePower a → IsOddPrimePower b → a < b → b - a ≤ H → b ≤ B
 
-/--
+/- 
 Conventional number theory hook (Pillai–Tijdeman / linear forms in logs style):
 for each fixed `H` there is some bound `B` such that any near-collision of odd prime powers
 within distance `H` occurs below `B`.
 
-This is “conventional math”, and we keep it as an axiom since Mathlib will not provide
-an explicit bound in the form we need.
+This is “conventional math”, but we currently keep it disabled because the Goldbach pipeline
+only needs the **in-range** collision prohibition via the finite certificate.
 -/
-axiom opp_near_collision_bounded (H : ℕ) : ∃ B : ℕ, NearCollisionCutoff H B
+/-!
+### (Optional) global near-collision cutoff axiom
 
-/--
-A *chosen* witness bound for the conventional axiom (no minimality required).
+This axiom is a conventional “there exists a bound” statement from exponential Diophantine theory.
+However, the current Goldbach pipeline uses only the **in-range** collision prohibition via the
+finite certificate `oddPrimePowers` (see `no_near_collision_upto_Bgap` / `gap_gt_H_of_oddPrimePower`),
+so we keep the global cutoff *disabled* to avoid accidental reliance on it.
+
+If/when you want to use it elsewhere, re-enable this block.
 -/
-noncomputable def Bopp (H : ℕ) : ℕ := Classical.choose (opp_near_collision_bounded H)
-
-/-- The cutoff property for the chosen witness `Bopp H`. -/
-lemma nearCollision_le_Bopp_of_lt {H a b : ℕ} :
-  IsOddPrimePower a → IsOddPrimePower b → a < b → b - a ≤ H → b ≤ Bopp H := by
-  classical
-  -- `Classical.choose_spec` gives the property of the chosen witness
-  simpa [Bopp, NearCollisionCutoff] using (Classical.choose_spec (opp_near_collision_bounded H))
+-- axiom opp_near_collision_bounded (H : ℕ) : ∃ B : ℕ, NearCollisionCutoff H B
+--
+-- /-- A chosen witness bound for the conventional axiom (no minimality required). -/
+-- noncomputable def Bopp (H : ℕ) : ℕ := Classical.choose (opp_near_collision_bounded H)
+--
+-- /-- The cutoff property for the chosen witness `Bopp H`. -/
+-- lemma nearCollision_le_Bopp_of_lt {H a b : ℕ} :
+--   IsOddPrimePower a → IsOddPrimePower b → a < b → b - a ≤ H → b ≤ Bopp H := by
+--   classical
+--   -- `Classical.choose_spec` gives the property of the chosen witness
+--   simpa [Bopp, NearCollisionCutoff] using (Classical.choose_spec (opp_near_collision_bounded H))
 
 /-- In-range contradiction using the checked certificate. -/
-  lemma no_near_collision_upto_Bgap
+lemma no_near_collision_upto_Bgap
       {a b : ℕ}
       (ha : IsOddPrimePower a) (hb : IsOddPrimePower b)
       (ha_lo : 495000 ≤ a) (hb_lo : 495000 ≤ b)

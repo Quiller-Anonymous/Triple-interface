@@ -1330,6 +1330,60 @@ lemma sum_bandU_outer_inner (f : ℤ → ℝ) :
     _ = (∑ k ∈ outerBand, f k) + (∑ k ∈ S_BG, f k) := by
       simpa using (Finset.sum_union hdisj (f := f))
 
+/-- Pure algebra: the full-vs-reference convolution gap equals the Type-I tail `errTI`. -/
+lemma conv_full_sub_conv_ref_eq_errTI (X N : ℕ) :
+    conv_full X N - conv_ref X N = errTI X N := by
+  classical
+  have hfull :=
+    sum_bandU_outer_inner (f := fun k => P_BG X N k * tentFullWeight k)
+  have href :=
+    sum_bandU_outer_inner (f := fun k => P_BG X N k * tentRefWeight k)
+
+  have houter_ref :
+      Finset.sum outerBand (fun k => P_BG X N k * tentRefWeight k) = 0 := by
+    refine Finset.sum_eq_zero ?_
+    intro k hk
+    have hk' : k ∉ S_BG := (Finset.mem_sdiff.mp (by simpa [outerBand] using hk)).2
+    simp [tentRefWeight, hk']
+
+  have hinner_ref :
+      Finset.sum S_BG (fun k => P_BG X N k * tentRefWeight k)
+        = Finset.sum S_BG (fun k => P_BG X N k * tentFullWeight k) := by
+    refine Finset.sum_congr rfl ?_
+    intro k hk
+    simp [tentRefWeight, hk]
+
+  have hfull' :
+      conv_full X N
+        = Finset.sum outerBand (fun k => P_BG X N k * tentFullWeight k)
+          + Finset.sum S_BG (fun k => P_BG X N k * tentFullWeight k) := by
+    simpa [conv_full] using hfull
+
+  have href' :
+      conv_ref X N
+        = Finset.sum outerBand (fun k => P_BG X N k * tentRefWeight k)
+          + Finset.sum S_BG (fun k => P_BG X N k * tentRefWeight k) := by
+    simpa [conv_ref] using href
+
+  calc
+    conv_full X N - conv_ref X N
+        =
+          (Finset.sum outerBand (fun k => P_BG X N k * tentFullWeight k)
+              + Finset.sum S_BG (fun k => P_BG X N k * tentFullWeight k))
+            - (Finset.sum outerBand (fun k => P_BG X N k * tentRefWeight k)
+              + Finset.sum S_BG (fun k => P_BG X N k * tentRefWeight k)) := by
+            simp [hfull', href']
+    _ = Finset.sum outerBand (fun k => P_BG X N k * tentFullWeight k) := by
+          have :
+              (Finset.sum outerBand (fun k => P_BG X N k * tentFullWeight k)
+                  + Finset.sum S_BG (fun k => P_BG X N k * tentFullWeight k))
+                - (0 + Finset.sum S_BG (fun k => P_BG X N k * tentFullWeight k))
+                = Finset.sum outerBand (fun k => P_BG X N k * tentFullWeight k) := by
+            ring
+          simpa [houter_ref, hinner_ref] using this
+    _ = errTI X N := by
+          simp [errTI]
+
 /-- The full tent kernel is nonnegative on its support. -/
 lemma K_full_nonneg_band {k : ℤ} (_hk : k ∈ bandU) : 0 ≤ K_full k :=
   K_full_nonneg k
@@ -1430,6 +1484,383 @@ lemma errTI_bound_simple :
 /-- Closed-form tail mass for the normalized linear tent. -/
 noncomputable def C_tail_closed : ℝ :=
   1 - ((1 + 2 * H : ℝ) / (Ucut : ℝ)) + ((H * (H + 1) : ℝ) / (Ucut : ℝ)^2)
+
+/-- **Tail mass vs. closed form (TODO)**: the outer-band mass of the tent kernel is bounded by the
+closed-form expression `C_tail_closed`.
+
+This is a bespoke, kernel-specific arithmetic fact (not a “conventional math” input).  We keep it
+as an explicit lemma so it can be proved later without hiding the dependency inside other bounds.
+-/
+lemma tail_mass_le_C_tail_closed :
+    Finset.sum outerBand (fun k => K_full k) ≤ C_tail_closed := by
+  classical
+  -- A small arithmetic library for range sums in ℝ.
+  have sum_range_id_real (n : ℕ) :
+      (∑ i ∈ Finset.range n, (i : ℝ)) = (n * (n - 1) : ℝ) / 2 := by
+    cases n with
+    | zero =>
+        simp
+    | succ n =>
+        -- In the successor case the subtraction disappears: `n.succ - 1 = n`.
+        have hNat : (∑ i ∈ Finset.range (Nat.succ n), i) * 2 = (Nat.succ n) * n := by
+          simpa using (Finset.sum_range_id_mul_two (Nat.succ n))
+        have hReal2 :
+            (∑ i ∈ Finset.range (Nat.succ n), (i : ℝ)) * 2 = ((Nat.succ n) * n : ℝ) := by
+          have hNatCast :
+              (((∑ i ∈ Finset.range (Nat.succ n), i) * 2 : ℕ) : ℝ) = ((Nat.succ n) * n : ℝ) := by
+            exact_mod_cast hNat
+          simpa [Nat.cast_sum] using hNatCast
+        have hReal :
+            (∑ i ∈ Finset.range (Nat.succ n), (i : ℝ)) = ((Nat.succ n) * n : ℝ) / 2 := by
+          nlinarith [hReal2]
+        -- match the target RHS shape
+        simpa [Nat.succ_sub_one] using hReal
+
+  have sum_range_succ_real (n : ℕ) :
+      (∑ i ∈ Finset.range n, (Nat.succ i : ℝ)) = (n * (n + 1) : ℝ) / 2 := by
+    -- ∑ (i+1) = ∑ i + ∑ 1
+    have h1 :
+        (∑ i ∈ Finset.range n, (Nat.succ i : ℝ))
+          = (∑ i ∈ Finset.range n, (i : ℝ)) + (n : ℝ) := by
+      calc
+        (∑ i ∈ Finset.range n, (Nat.succ i : ℝ))
+            = ∑ i ∈ Finset.range n, ((i : ℝ) + 1) := by
+                simp [Nat.succ_eq_add_one, Nat.cast_add]
+        _ = (∑ i ∈ Finset.range n, (i : ℝ)) + ∑ _i ∈ Finset.range n, (1 : ℝ) := by
+              simpa [Finset.sum_add_distrib]
+        _ = (∑ i ∈ Finset.range n, (i : ℝ)) + (n : ℝ) := by
+              simp
+    -- substitute the closed form for ∑ i
+    have h0 : (∑ i ∈ Finset.range n, (i : ℝ)) = (n * (n - 1) : ℝ) / 2 :=
+      sum_range_id_real n
+    nlinarith [h1, h0]
+
+  have sum_range_add_one_real (n : ℕ) :
+      (∑ i ∈ Finset.range n, ((i : ℝ) + 1)) = (n * (n + 1) : ℝ) / 2 := by
+    simpa [Nat.succ_eq_add_one, Nat.cast_add] using sum_range_succ_real n
+
+  -- Closed form for the tent mass on the symmetric integer interval `[-n,n]` (with `n ≤ Ucut`).
+  have sum_Icc_K_full (n : ℕ) (hnpos : 0 < n) (hn : n ≤ Ucut) :
+      Finset.sum (Finset.Icc (-(n : ℤ)) (n : ℤ)) (fun k => K_full k)
+        = ((1 + 2 * n : ℝ) / (Ucut : ℝ))
+            - ((n * (n + 1) : ℝ) / (Ucut : ℝ) ^ 2) := by
+    classical
+    let s : Finset ℤ := Finset.Icc (-(n : ℤ)) (n : ℤ)
+    have hs0 : (0 : ℤ) ∈ s := by
+      simp [s]
+
+    -- Positive/negative enumerations of `{±1, …, ±n}`.
+    let embPos : ℕ ↪ ℤ :=
+      ⟨fun k : ℕ => (Nat.succ k : ℤ), by
+        intro a b h
+        exact Nat.succ.inj (Int.ofNat.inj (by simpa using h))⟩
+    let embNeg : ℕ ↪ ℤ :=
+      ⟨fun k : ℕ => -(Nat.succ k : ℤ), by
+        intro a b h
+        have : (Nat.succ a : ℤ) = (Nat.succ b : ℤ) := by
+          -- cancel the negations
+          linarith
+        exact Nat.succ.inj (Int.ofNat.inj (by simpa using this))⟩
+    let pos : Finset ℤ := (Finset.range n).map embPos
+    let neg : Finset ℤ := (Finset.range n).map embNeg
+
+    have hdisj : Disjoint pos neg := by
+      refine Finset.disjoint_left.2 ?_
+      intro x hxpos hxneg
+      rcases Finset.mem_map.1 hxpos with ⟨a, ha, rfl⟩
+      rcases Finset.mem_map.1 hxneg with ⟨b, hb, hbEq⟩
+      have hEq : (Nat.succ a : ℤ) = -(Nat.succ b : ℤ) := by
+        simpa [embNeg, embPos] using hbEq.symm
+      have haPos : (0 : ℤ) < (Nat.succ a : ℤ) := by
+        exact_mod_cast (Nat.succ_pos a)
+      have hbNonpos : (-(Nat.succ b : ℤ)) ≤ 0 := by
+        exact neg_nonpos.mpr (by exact_mod_cast (Nat.zero_le (Nat.succ b)))
+      have haLe0 : (Nat.succ a : ℤ) ≤ 0 := by simpa [hEq] using hbNonpos
+      exact (not_lt_of_ge haLe0) haPos
+
+    have herase : s.erase 0 = pos ∪ neg := by
+      -- membership description: all nonzero z with `|z| ≤ n` are ±(k+1) for some k<n.
+      apply Finset.ext
+      intro z
+      constructor
+      · intro hz
+        have hz0 : z ≠ 0 := (Finset.mem_erase.mp hz).1
+        have hzI : z ∈ s := (Finset.mem_erase.mp hz).2
+        have hzIcc : (-(n : ℤ) ≤ z) ∧ (z ≤ (n : ℤ)) := Finset.mem_Icc.mp hzI
+        -- deduce `natAbs z ≤ n`
+        have hzAbsZ : (z.natAbs : ℤ) ≤ (n : ℤ) := by
+          have habs : |z| ≤ (n : ℤ) := (abs_le).2 hzIcc
+          -- avoid `simp` unfolding loops: rewrite the LHS only
+          have habs' := habs
+          -- `|z| = (z.natAbs : ℤ)`
+          rw [Int.abs_eq_natAbs] at habs'
+          exact habs'
+        have hzAbs : z.natAbs ≤ n := by exact_mod_cast hzAbsZ
+        have hzAbs_ne0 : z.natAbs ≠ 0 := by
+          intro h
+          have : z = 0 := (Int.natAbs_eq_zero.mp h)
+          exact hz0 this
+        have hzAbs_pos : 0 < z.natAbs := Nat.pos_of_ne_zero hzAbs_ne0
+        let k : ℕ := z.natAbs - 1
+        have hklt : k < n := by
+          have hklt' : k < z.natAbs := by
+            -- `m-1 < m` for `m>0`
+            simpa [k] using (Nat.pred_lt hzAbs_ne0)
+          exact lt_of_lt_of_le hklt' hzAbs
+        have hkMem : k ∈ Finset.range n := Finset.mem_range.mpr hklt
+        have hsucc : Nat.succ k = z.natAbs := by
+          simpa [k] using (Nat.succ_pred_eq_of_pos hzAbs_pos)
+        -- decide sign and land in the corresponding side
+        by_cases hzNonneg : 0 ≤ z
+        · -- z is nonnegative, so z = ofNat (toNat z) = ofNat (natAbs z)
+          have hzEq' : (z.natAbs : ℤ) = z := Int.natAbs_of_nonneg hzNonneg
+          apply Finset.mem_union.mpr
+          left
+          refine Finset.mem_map.mpr ?_
+          refine ⟨k, hkMem, ?_⟩
+          -- embPos k = z
+          have hsuccZ : (Nat.succ k : ℤ) = (z.natAbs : ℤ) := by exact_mod_cast hsucc
+          calc
+            embPos k = (Nat.succ k : ℤ) := rfl
+            _ = (z.natAbs : ℤ) := hsuccZ
+            _ = z := hzEq'
+        · -- z is negative, so z = - ofNat (natAbs z)
+          have hzNonpos : z ≤ 0 := le_of_not_ge hzNonneg
+          have hzNatAbs : (z.natAbs : ℤ) = -z := Int.ofNat_natAbs_of_nonpos hzNonpos
+          have hzEq' : -(z.natAbs : ℤ) = z := by linarith
+          apply Finset.mem_union.mpr
+          right
+          refine Finset.mem_map.mpr ?_
+          refine ⟨k, hkMem, ?_⟩
+          have hsuccZ : (Nat.succ k : ℤ) = (z.natAbs : ℤ) := by exact_mod_cast hsucc
+          have hsuccZneg : -(Nat.succ k : ℤ) = -(z.natAbs : ℤ) := by
+            simpa using congrArg Neg.neg hsuccZ
+          calc
+            embNeg k = -(Nat.succ k : ℤ) := rfl
+            _ = -(z.natAbs : ℤ) := hsuccZneg
+            _ = z := hzEq'
+      · intro hz
+        rcases Finset.mem_union.mp hz with hzPos | hzNeg
+        · -- positive side
+          rcases Finset.mem_map.mp hzPos with ⟨k, hk, rfl⟩
+          refine Finset.mem_erase.mpr ?_
+          refine ⟨?_, ?_⟩
+          · -- `embPos k ≠ 0`
+            have hkpos : (0 : ℤ) < (Nat.succ k : ℤ) := by
+              exact_mod_cast (Nat.succ_pos k)
+            exact ne_of_gt hkpos
+          ·
+            have hklt : k < n := Finset.mem_range.mp hk
+            have hle : Nat.succ k ≤ n := Nat.succ_le_of_lt hklt
+            have hIcc : embPos k ∈ Finset.Icc (-(n : ℤ)) (n : ℤ) := by
+              refine Finset.mem_Icc.mpr ?_
+              refine ⟨?_, ?_⟩
+              · -- -(n:ℤ) ≤ embPos k
+                have hn0 : (-(n : ℤ)) ≤ 0 := by
+                  exact neg_nonpos.mpr (by exact_mod_cast (Nat.zero_le n))
+                have hk0 : (0 : ℤ) ≤ (Nat.succ k : ℤ) := by
+                  exact_mod_cast (Nat.zero_le (Nat.succ k))
+                simpa [embPos] using (le_trans hn0 hk0)
+              · -- embPos k ≤ n
+                simpa [embPos] using (by
+                  exact_mod_cast hle : (Nat.succ k : ℤ) ≤ (n : ℤ))
+            simpa [s] using hIcc
+        · -- negative side
+          rcases Finset.mem_map.mp hzNeg with ⟨k, hk, rfl⟩
+          refine Finset.mem_erase.mpr ?_
+          refine ⟨?_, ?_⟩
+          · -- `-(succ k) ≠ 0`
+            have hkpos : (0 : ℤ) < (Nat.succ k : ℤ) := by
+              exact_mod_cast (Nat.succ_pos k)
+            have : (-(Nat.succ k : ℤ)) < 0 := by linarith
+            exact ne_of_lt this
+          · have hklt : k < n := Finset.mem_range.mp hk
+            have hle : Nat.succ k ≤ n := Nat.succ_le_of_lt hklt
+            refine Finset.mem_Icc.mpr ?_
+            constructor
+            · -- -n ≤ -(succ k)
+              have hnle : (Nat.succ k : ℤ) ≤ (n : ℤ) := by exact_mod_cast hle
+              exact neg_le_neg hnle
+            · -- -(succ k) ≤ n
+              have hk0 : (-(Nat.succ k : ℤ)) ≤ 0 := by linarith
+              exact le_trans hk0 (by exact_mod_cast (Nat.zero_le n))
+
+    -- Pair ±k and compute the sum on `s.erase 0`.
+    have hpair :
+        Finset.sum neg (fun k => K_full k) = Finset.sum pos (fun k => K_full k) := by
+      -- Both are sums over `range n`, and `K_full` is even.
+      have hneg :
+          (∑ z ∈ neg, K_full z) = ∑ x ∈ Finset.range n, K_full (embNeg x) := by
+        simpa [neg] using
+          (Finset.sum_map (s := Finset.range n) (e := embNeg) (f := fun z => K_full z))
+      have hpos :
+          (∑ z ∈ pos, K_full z) = ∑ x ∈ Finset.range n, K_full (embPos x) := by
+        simpa [pos] using
+          (Finset.sum_map (s := Finset.range n) (e := embPos) (f := fun z => K_full z))
+      -- rewrite both sides as `range` sums, then use evenness pointwise
+      rw [hneg, hpos]
+      refine Finset.sum_congr rfl ?_
+      intro x _hx
+      simpa [embNeg, embPos] using (K_full_neg (Nat.succ x : ℤ))
+
+    have hsumErase :
+        Finset.sum (s.erase 0) (fun k => K_full k)
+          = 2 * Finset.sum (Finset.range n) (fun k => K_full ((k : ℤ) + 1)) := by
+      have hsumUnion :
+          Finset.sum (pos ∪ neg) (fun k => K_full k)
+            = Finset.sum pos (fun k => K_full k) + Finset.sum neg (fun k => K_full k) := by
+        simpa using (Finset.sum_union hdisj (f := fun k => K_full k))
+      -- rewrite `s.erase 0` as the disjoint union and collapse the symmetric sums
+      calc
+        Finset.sum (s.erase 0) (fun k => K_full k)
+            = Finset.sum (pos ∪ neg) (fun k => K_full k) := by simpa [herase]
+        _ = Finset.sum pos (fun k => K_full k) + Finset.sum neg (fun k => K_full k) := hsumUnion
+        _ = 2 * Finset.sum pos (fun k => K_full k) := by nlinarith [hpair]
+        _ = 2 * Finset.sum (Finset.range n) (fun k => K_full ((k : ℤ) + 1)) := by
+              simp [pos, embPos, Nat.succ_eq_add_one, Nat.cast_add, Nat.cast_one, add_assoc]
+
+    have hK0 : K_full (0 : ℤ) = (1 : ℝ) / (Ucut : ℝ) := by
+      unfold K_full K_full_raw
+      simp
+
+    -- Evaluate the positive side sum using `K_full_ofNat_le`.
+    have hpos_eval :
+        Finset.sum (Finset.range n) (fun k => K_full ((k : ℤ) + 1))
+          = ((n : ℝ) - ((n * (n + 1) : ℝ) / 2) / (Ucut : ℝ)) / (Ucut : ℝ) := by
+      calc
+        Finset.sum (Finset.range n) (fun k => K_full ((k : ℤ) + 1))
+            = Finset.sum (Finset.range n)
+                (fun k => ((1 : ℝ) - ((k : ℝ) + 1) / (Ucut : ℝ)) / (Ucut : ℝ)) := by
+                  refine Finset.sum_congr rfl ?_
+                  intro k hk
+                  have hklt : k < n := Finset.mem_range.mp hk
+                  have hksucc : Nat.succ k ≤ Ucut := le_trans (Nat.succ_le_of_lt hklt) hn
+                  -- rewrite `((k:ℤ)+1)` as `(Nat.succ k : ℤ)` and use the evaluation lemma
+                  -- The RHS is already in the `((k:ℝ)+1)` form.
+                  simpa [Nat.succ_eq_add_one, Nat.cast_add, Nat.cast_one, add_assoc] using
+                    (K_full_ofNat_le (m := Nat.succ k) hksucc)
+        _ = (Finset.sum (Finset.range n) (fun k => (1 : ℝ) - ((k : ℝ) + 1) / (Ucut : ℝ)))
+              / (Ucut : ℝ) := by
+              -- pull the outer division out of the sum
+              simpa using
+                (Finset.sum_div (s := Finset.range n)
+                  (f := fun k => (1 : ℝ) - ((k : ℝ) + 1) / (Ucut : ℝ)) (a := (Ucut : ℝ))).symm
+        _ = ((Finset.sum (Finset.range n) (fun _k => (1 : ℝ)))
+                - Finset.sum (Finset.range n) (fun k => ((k : ℝ) + 1) / (Ucut : ℝ)))
+              / (Ucut : ℝ) := by
+              simp [Finset.sum_sub_distrib]
+        _ = ((n : ℝ) - Finset.sum (Finset.range n) (fun k => ((k : ℝ) + 1) / (Ucut : ℝ)))
+              / (Ucut : ℝ) := by
+              simp
+        _ = ((n : ℝ) - ((Finset.sum (Finset.range n) (fun k => (k : ℝ) + 1)) / (Ucut : ℝ)))
+              / (Ucut : ℝ) := by
+              simp [Finset.sum_div]
+        _ = ((n : ℝ) - (((n * (n + 1) : ℝ) / 2) / (Ucut : ℝ))) / (Ucut : ℝ) := by
+              -- use the closed form for `∑ (k+1)`
+              have hsum : (∑ k ∈ Finset.range n, ((k : ℝ) + 1)) = (n * (n + 1) : ℝ) / 2 :=
+                sum_range_add_one_real n
+              simpa [hsum]
+
+    -- Assemble the symmetric interval sum.
+    have hmain :
+        Finset.sum s (fun k => K_full k)
+          = ((1 + 2 * n : ℝ) / (Ucut : ℝ))
+              - ((n * (n + 1) : ℝ) / (Ucut : ℝ) ^ 2) := by
+      have hU0 : (Ucut : ℝ) ≠ 0 := Ucut_ne_zero_real
+      have hsum0 : Finset.sum s (fun k => K_full k) =
+          K_full 0 + Finset.sum (s.erase 0) (fun k => K_full k) := by
+        simpa [s] using (Finset.sum_erase_add (s := s) (f := fun k => K_full k) hs0).symm
+      -- rewrite the erase-sum via the positive side and simplify
+      calc
+        Finset.sum s (fun k => K_full k)
+            = K_full 0 + Finset.sum (s.erase 0) (fun k => K_full k) := hsum0
+        _ = (1 : ℝ) / (Ucut : ℝ)
+              + 2 * (Finset.sum (Finset.range n) (fun k => K_full ((k : ℤ) + 1))) := by
+              simpa [hK0, hsumErase]
+        _ = (1 : ℝ) / (Ucut : ℝ)
+              + 2 * (((n : ℝ) - ((n * (n + 1) : ℝ) / 2) / (Ucut : ℝ)) / (Ucut : ℝ)) := by
+              simp [hpos_eval]
+        _ = ((1 + 2 * n : ℝ) / (Ucut : ℝ))
+              - ((n * (n + 1) : ℝ) / (Ucut : ℝ) ^ 2) := by
+              field_simp [hU0]
+              ring
+    simpa [s] using hmain
+
+  -- Evaluate the two pieces: full-band mass and inner-band mass.
+  have hUpos : 0 < Ucut := by
+    -- Ucut is a positive numeral (since H>0)
+    have : 0 < BankParams.H := by simp [BankParams.H]
+    have : 0 < Ucut := lt_of_lt_of_le this (by simp [Ucut])
+    exact this
+
+  have hfull :
+      Finset.sum bandU (fun k => K_full k) = (1 : ℝ) := by
+    -- bandU = Icc(-Ucut,Ucut)
+    have hIcc := sum_Icc_K_full (n := Ucut) (hnpos := hUpos) (hn := le_rfl)
+    have hBand :
+        Finset.sum bandU (fun k => K_full k)
+          = ((1 + 2 * Ucut : ℝ) / (Ucut : ℝ))
+              - ((Ucut * (Ucut + 1) : ℝ) / (Ucut : ℝ) ^ 2) := by
+      -- avoid `simp` unfolding of `Ucut`; just unfold `bandU`
+      change
+        Finset.sum (Finset.Icc (-(Ucut : ℤ)) (Ucut : ℤ)) (fun k => K_full k)
+          = ((1 + 2 * Ucut : ℝ) / (Ucut : ℝ))
+              - ((Ucut * (Ucut + 1) : ℝ) / (Ucut : ℝ) ^ 2)
+      simpa using hIcc
+    -- simplify the closed form at n = Ucut
+    have hU0 : (Ucut : ℝ) ≠ 0 := Ucut_ne_zero_real
+    -- (1+2U)/U - U(U+1)/U^2 = 1
+    have : ((1 + 2 * Ucut : ℝ) / (Ucut : ℝ)) - ((Ucut * (Ucut + 1) : ℝ) / (Ucut : ℝ) ^ 2) = (1 : ℝ) := by
+      field_simp [hU0]
+      ring
+    simpa [hBand, this]
+
+  have hHle : BankParams.H ≤ Ucut := by
+    -- Ucut = H + ceil(H/100)
+    simp [Ucut]
+
+  have hinner :
+      Finset.sum S_BG (fun k => K_full k)
+        = ((1 + 2 * H : ℝ) / (Ucut : ℝ))
+            - ((H * (H + 1) : ℝ) / (Ucut : ℝ) ^ 2) := by
+    have hIcc := sum_Icc_K_full (n := H)
+      (hnpos := by simp [BankParams.H])
+      (hn := hHle)
+    simpa [S_BG, Goldbach.BG_Bank.S_BG] using hIcc
+
+  -- Now recover the tail as `full - inner` using the `bandU = outer ⊔ inner` decomposition.
+  have hsplit :
+      Finset.sum bandU (fun k => K_full k)
+        = Finset.sum outerBand (fun k => K_full k) + Finset.sum S_BG (fun k => K_full k) := by
+    simpa using (sum_bandU_outer_inner (f := fun k => K_full k))
+  have houter :
+      Finset.sum outerBand (fun k => K_full k) = C_tail_closed := by
+    have houter' :
+        Finset.sum outerBand (fun k => K_full k)
+          = Finset.sum bandU (fun k => K_full k) - Finset.sum S_BG (fun k => K_full k) := by
+      linarith [hsplit]
+    calc
+      Finset.sum outerBand (fun k => K_full k)
+          = Finset.sum bandU (fun k => K_full k) - Finset.sum S_BG (fun k => K_full k) := houter'
+      _ = (1 : ℝ)
+            - (((1 + 2 * H : ℝ) / (Ucut : ℝ)) - ((H * (H + 1) : ℝ) / (Ucut : ℝ) ^ 2)) := by
+            simpa [hfull, hinner]
+      _ = C_tail_closed := by
+            -- `1 - (a - b) = 1 - a + b`
+            simp [C_tail_closed, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+  exact le_of_eq houter
+
+/-- **Kernel-friendly Type-I tail bound**: closed-form tail mass × payload cap.
+
+This is the bound consumed downstream by the AO kernel-tail module.  The only missing ingredient
+is the bespoke arithmetic lemma `tail_mass_le_C_tail_closed`.
+-/
+lemma errTI_bound_closed :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ Goldbach.Windows.EvenIn X H →
+      |errTI X N| ≤ payload_cap X N * C_tail_closed := by
+  intro X N hX hN
+  exact errTI_bound_from_tail (X := X) (N := N) hX hN (tail_mass := C_tail_closed)
+    tail_mass_le_C_tail_closed
 
 /-- Numeric corollary for the tail mass. -/
 lemma C_tail_closed_le : C_tail_closed ≤ (98 : ℝ) / 10^6 := by

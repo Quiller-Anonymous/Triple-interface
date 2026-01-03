@@ -157,7 +157,7 @@ open Goldbach.Base
 open Goldbach.FiniteBase.Completeness
 
 set_option maxRecDepth 8000
-set_option diagnostics true
+set_option diagnostics false
 
 namespace {ns}.Chunks.{mod}
 

@@ -29,6 +29,21 @@ Based on public domain paper at Zenodo, "Goldbach and the Triple Interface Metho
 
 See DontHassleMe.txt for Mathlib constants and lemmas that are present or missing.
 
+## Conventional axioms (transparency list)
+
+Gold-standard goal: only **conventional math** facts are axiomatized; everything bespoke should be proved or backed by checked certificates.
+
+**Conventional axioms currently used**
+- `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean:413` `Cstar_le_45` (numeric bound on an analytic constant).
+
+**Bespoke placeholders still in the pipeline (must be removed for gold standard)**
+- `Goldbach/AO_OffDiag/EntryPoint.lean:36` `reindexMajorant_bound_on_window` (analytic comparison lemma).
+- `Goldbach/AO_OffDiag/EntryPoint.lean:107` `hsupp_on_window` is still `sorry` (scaffold for bounding `F_block` uniformly).
+- `Goldbach/AO_OffDiag/EntryPoint.lean` `hsupp_on_window` also controls the numeric budget; `offDiag_budget_ok` is now derived by computation once `hsupp_on_window` is proved.
+- `Goldbach/AO_OffDiag/SigmaTailReindexFun.lean:178` `tail_reindex_bound` (Q(X)-version).
+- `Goldbach/AO_Instantiate.lean:50` `Mcanon_eq_M_off_on_window` (AO staged main-term identification hook for the main track).
+- `Goldbach/AO_InstantiateTenorFunX.lean:58` `Mcanon_eq_M_off_on_window` (AO staged main-term identification hook for the parallel FunX track).
+
 --------------------
 # GOLDBACH PIPELINE
 

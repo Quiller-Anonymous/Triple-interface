@@ -1,0 +1,136 @@
+import Goldbach.AO_Major
+import Goldbach.AO_AssembleEnvelope
+import Goldbach.AO_ErrorEnvelope
+import Goldbach.AO_Models
+import Goldbach.AO_KernelTail
+import Goldbach.AO_MellinTrunc
+import Goldbach.AO_SmoothLoss
+import Goldbach.AO_OffDiag.TenorHypFunX
+import Goldbach.AO_OffDiagFunX
+import Goldbach.AO_Stages
+import Goldbach.BankParams
+import Goldbach.Windows
+
+namespace Goldbach.AO_InstantiateTenorFunX
+
+open Goldbach
+open Goldbach.AO_Models
+open Goldbach.AO_Major
+open Goldbach.AO_AssembleEnvelope
+open Goldbach.AO_OffDiag
+open Goldbach.AO_OffDiag.TenorHypFunX
+
+/-!
+Parallel AO instantiation that uses the `Q(X)`-refactored off-diagonal bound.
+
+The other channels (`kernel/mellin/smooth`) remain as in the current pipeline; only `E_off`
+is swapped out to use `TenorHypFunX.OffDiagHyp`.
+-/
+
+/-- Canonical channel functions used in the assembled AO envelope. -/
+noncomputable def channels (Hoff : OffDiagHyp) : Channels :=
+{ E_kernel := Goldbach.AO_KernelTail.E_kernel
+, E_mellin := Goldbach.AO_MellinTrunc.E_mellin
+, E_smooth := Goldbach.AO_SmoothLoss.E_smooth
+, E_off    := fun X N => Goldbach.AO_OffDiagFunX.E_off (TenorHypFunX.model Hoff) X N
+}
+
+/-- Canonical numeric caps, now parameterized by the off-diagonal hypothesis. -/
+noncomputable def caps (Hoff : OffDiagHyp) : Caps :=
+{ δ_kernel := ((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed
+, δ_mellin := Goldbach.AO_MellinTrunc.δ_mellin_canon
+, δ_smooth := (0.0008 : ℝ)
+, δ_off    := Hoff.eps
+, δ_kernel_nonneg := by
+    have htail_val : Goldbach.BG_Identity.C_tail_closed = (99 : ℝ) / 1020100 := by
+      norm_num [Goldbach.BG_Identity.C_tail_closed, Goldbach.BG_Identity.Ucut, Goldbach.BankParams.H]
+    have htail_nonneg : 0 ≤ Goldbach.BG_Identity.C_tail_closed := by nlinarith [htail_val]
+    have hconst : 0 ≤ ((1252 : ℝ) / 10^6) := by norm_num
+    exact mul_nonneg hconst htail_nonneg
+, δ_mellin_nonneg := Goldbach.AO_MellinTrunc.δ_mellin_nonneg
+, δ_smooth_nonneg := by norm_num
+, δ_off_nonneg    := Hoff.eps_nonneg
+}
+
+/-!
+We isolate the remaining AO “wiring” obligation as a single identification statement:
+`Mcanon` agrees with the final staged term `AO_Stages.M_off` on the canonical window.
+
+Once this is proved, the four-channel decomposition becomes a purely algebraic telescope
+(`Goldbach.AO_Stages.errAO_decomp_window_of_Mcanon_eq`) rather than an axiom.
+-/
+axiom Mcanon_eq_M_off_on_window (Hoff : OffDiagHyp) :
+  ∀ {X N : ℕ}, Goldbach.BankParams.X0 ≤ X →
+      N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H →
+    Goldbach.AO_Core.Mcanon N = Goldbach.AO_Stages.M_off (channels Hoff) X N
+
+instance (Hoff : OffDiagHyp) : Decomposition (channels Hoff) := by
+  refine ⟨by
+    intro X N hX hN
+    have hM : Goldbach.AO_Core.Mcanon N = Goldbach.AO_Stages.M_off (channels Hoff) X N :=
+      Mcanon_eq_M_off_on_window Hoff (X := X) (N := N) hX hN
+    simpa using
+      (Goldbach.AO_Stages.errAO_decomp_window_of_Mcanon_eq (C := channels Hoff) (X := X) (N := N)
+        hM)⟩
+
+instance (Hoff : OffDiagHyp) : Bounds (channels Hoff) (caps Hoff) := by
+  classical
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro X N hX hN
+    have hX' : Goldbach.BG_Bank.X0 ≤ X := by simpa [Goldbach.BG_Bank.X0] using hX
+    have hN' : N ∈ Goldbach.Windows.EvenIn X Goldbach.BG_Bank.H := by
+      simpa [Goldbach.BG_Bank.H] using hN
+    have hkernel :
+        |Goldbach.AO_KernelTail.E_kernel X N|
+          ≤ Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed := by
+      simpa using (Goldbach.AO_KernelTail.E_kernel_bound (X := X) (N := N) hX' hN')
+    have hcap :
+        Goldbach.BG_Bank.payload_cap X N ≤ (1252 : ℝ) / 10^6 := by
+      simpa [Goldbach.BG_Bank.X0, Goldbach.BG_Bank.H] using
+        (Goldbach.BG_Bank.payload_cap_window_num (X := X) (N := N) hX' hN')
+    have htail_val : Goldbach.BG_Identity.C_tail_closed = (99 : ℝ) / 1020100 := by
+      norm_num [Goldbach.BG_Identity.C_tail_closed, Goldbach.BG_Identity.Ucut, Goldbach.BankParams.H]
+    have htail_nonneg : 0 ≤ Goldbach.BG_Identity.C_tail_closed := by nlinarith [htail_val]
+    have hprod :
+        Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed
+          ≤ ((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed :=
+      mul_le_mul_of_nonneg_right hcap htail_nonneg
+    have : |(channels Hoff).E_kernel X N| ≤ (caps Hoff).δ_kernel := by
+      simpa [channels, caps] using le_trans hkernel hprod
+    simpa using this
+  · intro X N hX hN
+    have hmellin :
+        |Goldbach.AO_MellinTrunc.E_mellin X N|
+          ≤ Goldbach.AO_MellinTrunc.δ_mellin_canon :=
+      Goldbach.AO_MellinTrunc.E_mellin_bound (X := X) (N := N) hX hN
+    simpa [channels, caps] using hmellin
+  · intro X N hX hN
+    have hsmooth :
+        |Goldbach.AO_SmoothLoss.E_smooth X N| ≤ (0.0008 : ℝ) := by
+      have hX' : Goldbach.BG_Bank.X0 ≤ X := by simpa [Goldbach.BG_Bank.X0] using hX
+      have hN' : N ∈ Goldbach.Windows.EvenIn X Goldbach.BG_Bank.H := by
+        simpa [Goldbach.BG_Bank.H] using hN
+      simpa using (Goldbach.AO_SmoothLoss.E_smooth_bound (X := X) (N := N) hX' hN')
+    simpa [channels, caps] using hsmooth
+  · intro X N hX hN
+    have hoff :
+        |Goldbach.AO_OffDiagFunX.E_off (TenorHypFunX.model Hoff) X N| ≤ Hoff.eps :=
+      TenorHypFunX.E_off_bound (H := Hoff) (X := X) (N := N) hX hN
+    simpa [channels, caps] using hoff
+
+/-- Total AO cap for these caps. -/
+noncomputable abbrev δAO (Hoff : OffDiagHyp) : ℝ :=
+  Goldbach.AO_AssembleEnvelope.δAO (caps Hoff)
+
+lemma δAO_nonneg (Hoff : OffDiagHyp) : 0 ≤ δAO Hoff := by
+  simpa [δAO] using (Goldbach.AO_AssembleEnvelope.δAO_nonneg (caps Hoff))
+
+/-- The assembled AO envelope bound in the `AO_Major` shape used downstream. -/
+lemma errAO_bound (Hoff : OffDiagHyp)
+    {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X)
+    (hN : N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H) :
+    |Goldbach.AO_Major.errAO X N| ≤ δAO Hoff := by
+  simpa [δAO, Goldbach.AO_Major.errAO] using
+    (Goldbach.AO_ErrorEnvelope.errAO_bound (C := channels Hoff) (K := caps Hoff) hX hN)
+
+end Goldbach.AO_InstantiateTenorFunX

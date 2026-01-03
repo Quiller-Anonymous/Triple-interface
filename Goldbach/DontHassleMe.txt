@@ -5,6 +5,19 @@ https://leanprover-community.github.io/contribute/porting.html
 
 Confirmed PRESENT:
 ENNReal.ofReal_tsum_of_nonneg —  YES
+ENNReal.ofReal_le_iff_le_toReal — YES (needs `y ≠ ⊤`)
+ENNReal.sum_ne_top — YES (gives finiteness of finite `Finset.sum` in ENNReal)
+Real.tsum_le_of_sum_range_le — YES
+summable_of_sum_range_le — YES
+sum_Ioo_inv_sq_le (Analysis/PSeries) — YES
+div_le_div_of_nonneg_left — YES
+Nat.totient_eq_mul_prod_factors — YES
+Nat.totient_eq_div_primeFactors_mul — YES
+Nat.totient_mul_prod_primeFactors — YES
+Nat.sum_divisors_filter_squarefree — YES
+Nat.factors_eq (normalizedFactors = primeFactorsList) — YES
+Int.natCast_natAbs — YES (`(k.natAbs : ℤ) = |k|`)
+WithTop.lt_top_iff_ne_top — YES (useful for finiteness bookkeeping)
 Real.summable_nat_pow_inv — YES
 tsum_mul_right - YES
 tsum_mul_left - YES

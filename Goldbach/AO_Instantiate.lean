@@ -6,6 +6,7 @@ import Goldbach.AO_KernelTail
 import Goldbach.AO_MellinTrunc
 import Goldbach.AO_SmoothLoss
 import Goldbach.AO_OffDiag
+import Goldbach.AO_Stages
 import Goldbach.BankParams
 import Goldbach.Windows
 
@@ -41,25 +42,24 @@ noncomputable def caps : Caps :=
 }
 
 /-!
-If you already have an axiom/lemma `errAO_decomp_api` elsewhere, keep it there.
-You now use it to build the `Decomposition channels` instance.
+We isolate the remaining AO “wiring” obligation as a single identification statement:
+`Mcanon` agrees with the final staged term `AO_Stages.M_off` on the canonical window.
 
-If your `Decomposition` class has a *single* field, this `refine ⟨...⟩` works.
-If it has a named field, replace `⟨...⟩` with `⟨errAO_decomp_api⟩` accordingly.
+Once this is proved, the four-channel decomposition becomes a purely algebraic telescope
+(`Goldbach.AO_Stages.errAO_decomp_window_of_Mcanon_eq`) rather than an axiom.
 -/
-axiom errAO_decomp_api :
+axiom Mcanon_eq_M_off_on_window :
   ∀ {X N : ℕ}, Goldbach.BankParams.X0 ≤ X →
       N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H →
-    Goldbach.AO_Core.errAO X N
-      = channels.E_smooth X N
-      + channels.E_mellin X N
-      + channels.E_kernel X N
-      + channels.E_off X N
+    Goldbach.AO_Core.Mcanon N = Goldbach.AO_Stages.M_off channels X N
 
 instance : Decomposition channels := by
   refine ⟨by
     intro X N hX hN
-    simpa [channels] using (errAO_decomp_api (X := X) (N := N) hX hN)⟩
+    have hM : Goldbach.AO_Core.Mcanon N = Goldbach.AO_Stages.M_off channels X N :=
+      Mcanon_eq_M_off_on_window (X := X) (N := N) hX hN
+    simpa using
+      (Goldbach.AO_Stages.errAO_decomp_window_of_Mcanon_eq (C := channels) (X := X) (N := N) hM)⟩
 
 instance : Bounds channels caps := by
   refine ⟨?_, ?_, ?_, ?_⟩

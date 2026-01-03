@@ -39,10 +39,11 @@ def toGlobal
   : Goldbach.Bridge.GlobalClosurePointwise X0 H S c0 ε :=
 by
   -- Build the algebraic analytic hypothesis
+  letI : Goldbach.BankPieces.BankAbsDeviation X0 H S ε M := db.abs
   let A :=
     Goldbach.AnalyticAssemble.mkAnalyticHyp
       (X0:=X0) (H:=H) (S:=S) (c0:=c0) (ε:=ε)
-      hS hc0 hε M major db
+      hS hc0 hε M major
   -- Turn AnalyticHyp into GlobalClosurePointwise (unpack fields)
   intro X hX
   refine And.intro A.S_pos (And.intro A.c0_pos (And.intro A.eps_lt ?bound))

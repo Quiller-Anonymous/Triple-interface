@@ -40,10 +40,236 @@ noncomputable def Cstar : ENNReal :=
   ∑' d : ℕ, ∑' e : ℕ,
     W d * W e * ENNReal.ofReal (1 / (Nat.lcm d e : ℝ))
 
-/-- Step 1 (still to be proved): divisor expansion for `n/φ(n)` with `muSq`. -/
-axiom totient_divisor_expansion (n : ℕ) (hn : n ≠ 0) :
+/- Step 1 (still to be proved): divisor expansion for `n/φ(n)` with `muSq`. -/
+/-!
+## Conventional axioms in this file
+
+We isolate “literature facts” here so the rest of the pipeline stays axiom-free/bespoke-free.
+
+* `totient_divisor_expansion`: a standard identity expressing `n/φ(n)` as a divisor sum with a
+  squarefree indicator. This should be provable from Mathlib’s arithmetic function API, but may
+  require some setup work in this toolchain snapshot.
+
+* `Cstar_le_45`: a global bound on the Euler-product-style constant `Cstar`. The intended proof
+  is conventional analytic number theory (Euler product + exponential bound), but it is not
+  expected to be present in Mathlib in the exact numeric form we want.
+-/
+private lemma inv_totient_prod_primes (s : Finset ℕ) (hs : ∀ p ∈ s, p.Prime) :
+    (1 / (Nat.totient (∏ p ∈ s, p) : ℝ)) = ∏ p ∈ s, (1 / ((p - 1 : ℕ) : ℝ)) := by
+  classical
+  revert hs
+  refine Finset.induction_on s ?_ ?_
+  · intro hs
+    simp
+  · intro p s hp_not_mem ih hs
+    have hp_prime : p.Prime := hs p (by simp [hp_not_mem])
+    have hs_prime : ∀ q ∈ s, q.Prime := by
+      intro q hq
+      exact hs q (by simp [hq, hp_not_mem])
+
+    have hcop : Nat.Coprime p (∏ q ∈ s, q) := by
+      -- `p` is coprime to every distinct prime factor in `s`, hence to their product.
+      refine (Nat.coprime_prod_right_iff (x := p) (t := s) (s := fun q : ℕ => q)).2 ?_
+      intro q hq
+      have hq_prime : q.Prime := hs_prime q hq
+      have hpq_ne : p ≠ q := by
+        intro h
+        subst h
+        exact hp_not_mem hq
+      refine (hp_prime.coprime_iff_not_dvd).2 ?_
+      intro hp_dvd_q
+      have : p = q := (Nat.prime_dvd_prime_iff_eq hp_prime hq_prime).1 hp_dvd_q
+      exact hpq_ne this
+
+    have htot : Nat.totient (p * (∏ q ∈ s, q)) = Nat.totient p * Nat.totient (∏ q ∈ s, q) :=
+      Nat.totient_mul hcop
+
+    have htot' :
+        (Nat.totient (p * (∏ q ∈ s, q)) : ℝ) =
+          (Nat.totient p : ℝ) * (Nat.totient (∏ q ∈ s, q) : ℝ) := by
+      exact_mod_cast htot
+
+    have hphi_p : (Nat.totient p : ℝ) = (p - 1 : ℕ) := by
+      simpa [Nat.totient_prime hp_prime]
+
+    calc
+      (1 / (Nat.totient (∏ q ∈ insert p s, q) : ℝ))
+          =
+        1 / (Nat.totient (p * (∏ q ∈ s, q)) : ℝ) := by
+          simp [Finset.prod_insert, hp_not_mem, mul_comm, mul_left_comm, mul_assoc]
+      _ = (1 / (Nat.totient p : ℝ)) * (1 / (Nat.totient (∏ q ∈ s, q) : ℝ)) := by
+          -- rewrite `φ(p*s)=φ(p)*φ(s)` and invert
+          simp [one_div, htot', mul_assoc, mul_left_comm, mul_comm]
+      _ = (1 / ((p - 1 : ℕ) : ℝ)) * ∏ q ∈ s, (1 / ((q - 1 : ℕ) : ℝ)) := by
+          simp [hphi_p, ih hs_prime]
+      _ = ∏ q ∈ insert p s, (1 / ((q - 1 : ℕ) : ℝ)) := by
+          simp [Finset.prod_insert, hp_not_mem, mul_assoc, mul_left_comm, mul_comm]
+
+theorem totient_divisor_expansion (n : ℕ) (hn : n ≠ 0) :
   (n : ℝ) / (Nat.totient n : ℝ) =
-    (Nat.divisors n).sum (fun d => muSq d * (1 / (Nat.totient d : ℝ)))
+    (Nat.divisors n).sum (fun d => muSq d * (1 / (Nat.totient d : ℝ))) := by
+  classical
+  -- Rewrite the divisor sum as a sum over squarefree divisors.
+  have hsq :
+      (Nat.divisors n).sum (fun d => muSq d * (1 / (Nat.totient d : ℝ)))
+        =
+      ∑ d ∈ n.divisors with Squarefree d, (1 / (Nat.totient d : ℝ)) := by
+    -- `muSq d` is `1` on squarefree `d`, else `0`.
+    simpa [muSq] using
+      (Finset.sum_filter (s := n.divisors) (p := Squarefree) (f := fun d => (1 / (Nat.totient d : ℝ)))).symm
+
+  -- Enumerate squarefree divisors by subsets of prime factors.
+  have hpow :
+      (∑ d ∈ n.divisors with Squarefree d, (1 / (Nat.totient d : ℝ)))
+        =
+      ∑ s ∈ n.primeFactors.powerset, (1 / (Nat.totient (∏ p ∈ s, p) : ℝ)) := by
+    have h0 :=
+      (Nat.sum_divisors_filter_squarefree (n := n) hn (f := fun d : ℕ => (1 / (Nat.totient d : ℝ))))
+    -- Identify the `toFinset` of normalized factors with `n.primeFactors`.
+    have hS : (UniqueFactorizationMonoid.normalizedFactors n).toFinset = n.primeFactors := by
+      ext p
+      -- Avoid simp loops around `Nat.primeFactors`; expand memberships manually.
+      change (p ∈ (UniqueFactorizationMonoid.normalizedFactors n).toFinset) ↔
+        p ∈ n.primeFactorsList.toFinset
+      constructor
+      · intro hp
+        have hp' : p ∈ UniqueFactorizationMonoid.normalizedFactors n := by
+          -- membership in `toFinset` is membership in the multiset
+          simpa using (Multiset.mem_toFinset (a := p) (s := UniqueFactorizationMonoid.normalizedFactors n)).1 hp
+        have hp'' : p ∈ (n.primeFactorsList : Multiset ℕ) := by
+          simpa [Nat.factors_eq n] using hp'
+        have hpList : p ∈ n.primeFactorsList := by
+          simpa using hp''
+        exact List.mem_toFinset.2 hpList
+      · intro hp
+        have hpList : p ∈ n.primeFactorsList := List.mem_toFinset.1 hp
+        have hp'' : p ∈ (n.primeFactorsList : Multiset ℕ) := by
+          simpa using hpList
+        have hp' : p ∈ UniqueFactorizationMonoid.normalizedFactors n := by
+          simpa [Nat.factors_eq n] using hp''
+        exact (Multiset.mem_toFinset (a := p) (s := UniqueFactorizationMonoid.normalizedFactors n)).2 hp'
+    -- Rewrite the RHS along `hS`, and rewrite `s.val.prod` as `∏ p ∈ s, p`.
+    simpa [hS] using h0
+
+  -- Turn `1/φ(∏ p)` into `∏ 1/(p-1)` on every subset.
+  let g : ℕ → ℝ := fun p => 1 / ((p - 1 : ℕ) : ℝ)
+  have hterm :
+      (∑ s ∈ n.primeFactors.powerset, (1 / (Nat.totient (∏ p ∈ s, p) : ℝ)))
+        =
+      ∑ s ∈ n.primeFactors.powerset, ∏ p ∈ s, g p := by
+    refine Finset.sum_congr rfl ?_
+    intro s hs
+    -- every `p ∈ s` is a prime factor of `n`
+    have hs_primes : ∀ p ∈ s, p.Prime := by
+      intro p hp
+      have : p ∈ n.primeFactors := by
+        exact (Finset.mem_powerset.mp hs) hp
+      exact Nat.prime_of_mem_primeFactors this
+    simpa [g] using (inv_totient_prod_primes s hs_primes)
+
+  -- Subset expansion: the sum equals the product over prime factors.
+  have hprod :
+      (∑ s ∈ n.primeFactors.powerset, ∏ p ∈ s, g p) =
+        ∏ p ∈ n.primeFactors, (1 + g p) := by
+    simpa using (Finset.prod_one_add (s := n.primeFactors) (f := g)).symm
+
+  -- Compute the ratio `n/φ(n)` as `∏ p|n (p/(p-1)) = ∏ (1 + 1/(p-1))`.
+  have hphi_pos : 0 < Nat.totient n := Nat.totient_pos.2 (Nat.pos_of_ne_zero hn)
+  have hphi_ne : (Nat.totient n : ℝ) ≠ 0 := by exact_mod_cast (ne_of_gt hphi_pos)
+
+  have hQ_ne :
+      (∏ p ∈ n.primeFactors, ((p - 1 : ℕ) : ℝ)) ≠ 0 := by
+    have hQ_pos :
+        0 < (∏ p ∈ n.primeFactors, ((p - 1 : ℕ) : ℝ)) := by
+      refine Finset.prod_pos ?_
+      intro p hp
+      have hp' : p.Prime := Nat.prime_of_mem_primeFactors hp
+      exact_mod_cast Nat.sub_pos_of_lt hp'.one_lt
+    exact ne_of_gt hQ_pos
+
+  have hEuler :
+      (Nat.totient n : ℝ) * (∏ p ∈ n.primeFactors, (p : ℝ)) =
+        (n : ℝ) * (∏ p ∈ n.primeFactors, ((p - 1 : ℕ) : ℝ)) := by
+    -- Cast Euler's product formula in a controlled way.
+    have hNat := Nat.totient_mul_prod_primeFactors n
+    have hCast :
+        ((Nat.totient n * ∏ p ∈ n.primeFactors, p : ℕ) : ℝ) =
+          ((n * ∏ p ∈ n.primeFactors, (p - 1) : ℕ) : ℝ) := by
+      exact_mod_cast hNat
+    -- Push casts through `*` and `∏`.
+    simpa [Nat.cast_mul, Nat.cast_prod, mul_assoc, mul_left_comm, mul_comm] using hCast
+
+  have hratio :
+      (n : ℝ) / (Nat.totient n : ℝ) =
+        (∏ p ∈ n.primeFactors, (1 + g p)) := by
+    -- First, express `n/φ(n)` as `P/Q` using `φ(n)*P = n*Q`.
+    have hPQ :
+        (n : ℝ) / (Nat.totient n : ℝ) =
+          (∏ p ∈ n.primeFactors, (p : ℝ)) /
+            (∏ p ∈ n.primeFactors, ((p - 1 : ℕ) : ℝ)) := by
+      field_simp [hphi_ne, hQ_ne]
+      -- after clearing denominators, this is exactly Euler's product formula.
+      simpa [mul_assoc, mul_left_comm, mul_comm] using hEuler.symm
+
+    -- Next, rewrite `P/Q` as a product of `p/(p-1)` and then as `∏ (1 + 1/(p-1))`.
+    have hP :
+        (∏ p ∈ n.primeFactors, (p : ℝ)) /
+            (∏ p ∈ n.primeFactors, ((p - 1 : ℕ) : ℝ))
+          =
+        ∏ p ∈ n.primeFactors, (1 + g p) := by
+      -- `P/Q = ∏ (p/(p-1))`
+      have hdiv :
+          (∏ p ∈ n.primeFactors, (p : ℝ)) /
+              (∏ p ∈ n.primeFactors, ((p - 1 : ℕ) : ℝ))
+            =
+          ∏ p ∈ n.primeFactors, (p : ℝ) / ((p - 1 : ℕ) : ℝ) := by
+        simpa using (Finset.prod_div_distrib (s := n.primeFactors) (f := fun p => (p : ℝ))
+          (g := fun p => ((p - 1 : ℕ) : ℝ))).symm
+      -- and `p/(p-1) = 1 + 1/(p-1)`
+      have hpoint :
+          ∀ p ∈ n.primeFactors,
+            (p : ℝ) / ((p - 1 : ℕ) : ℝ) = 1 + g p := by
+        intro p hp
+        have hp' : p.Prime := Nat.prime_of_mem_primeFactors hp
+        have hne : ((p - 1 : ℕ) : ℝ) ≠ 0 := by
+          have : (0 : ℕ) < p - 1 := Nat.sub_pos_of_lt hp'.one_lt
+          exact_mod_cast (ne_of_gt this)
+        have hp_pos : 1 ≤ p := Nat.succ_le_of_lt hp'.pos
+        have hsplit : (p : ℝ) = ((p - 1 : ℕ) : ℝ) + 1 := by
+          -- `p = (p-1)+1` for `p ≥ 1`
+          exact_mod_cast (Nat.sub_add_cancel hp_pos).symm
+        calc
+          (p : ℝ) / ((p - 1 : ℕ) : ℝ)
+              = (((p - 1 : ℕ) : ℝ) + 1) / ((p - 1 : ℕ) : ℝ) := by
+                  simpa [hsplit]
+          _ = 1 + (1 / ((p - 1 : ℕ) : ℝ)) := by
+                -- `(a+1)/a = 1 + 1/a` for `a ≠ 0`
+                simp [add_div, hne, div_self]
+          _ = 1 + g p := by
+                simp [g]
+      -- finish by pointwise rewrite under the product
+      calc
+        (∏ p ∈ n.primeFactors, (p : ℝ)) / (∏ p ∈ n.primeFactors, ((p - 1 : ℕ) : ℝ))
+            = ∏ p ∈ n.primeFactors, (p : ℝ) / ((p - 1 : ℕ) : ℝ) := hdiv
+        _ = ∏ p ∈ n.primeFactors, (1 + g p) := by
+              refine Finset.prod_congr rfl ?_
+              intro p hp
+              simpa using (hpoint p hp)
+
+    exact hPQ.trans hP
+
+  -- Assemble everything.
+  calc
+    (n : ℝ) / (Nat.totient n : ℝ)
+        = ∏ p ∈ n.primeFactors, (1 + g p) := hratio
+    _ = (∑ s ∈ n.primeFactors.powerset, ∏ p ∈ s, g p) := by
+          simpa [hprod] using hprod.symm
+    _ = (∑ s ∈ n.primeFactors.powerset, (1 / (Nat.totient (∏ p ∈ s, p) : ℝ))) := by
+          simpa [hterm] using hterm.symm
+    _ = (∑ d ∈ n.divisors with Squarefree d, (1 / (Nat.totient d : ℝ))) := by
+          simpa [hpow] using hpow.symm
+    _ = (Nat.divisors n).sum (fun d => muSq d * (1 / (Nat.totient d : ℝ))) := by
+          simpa [hsq] using hsq.symm
 
 /-!
 ## Step 2: a divisor-expansion bound for `1/φ(n)²`
