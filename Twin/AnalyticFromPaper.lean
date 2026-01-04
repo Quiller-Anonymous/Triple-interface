@@ -7,7 +7,6 @@ import Twin.Bridge
 import Twin.Ledger
 import Twin.AnalyticCore
 import Twin.CLSFromL2
-import Twin.MajorArcPin
 import Twin.MajorArc.Pin
 import Twin.MajorArc.SWUniform
 import Twin.SW.Defs
@@ -21,75 +20,50 @@ open Twin Twin.GoalAPI
 /-- Concrete parameters from the paper. -/
 def P : Params := Twin.PaperParams.P
 
-/-- Banked minor-arc remainder (placeholder; fill later). -/
-def emin : ℕ → ℝ := fun _ => 0
+/-!
+This file is a *constructor* layer: it specifies what analytic data from the
+paper must be supplied in order to instantiate the final Twin pipeline.
 
-/-- Desmoothing / prime-power correction (placeholder; fill later). -/
-def eds  : ℕ → ℝ := fun _ => 0
+In particular, the minor-arc remainder `emin` and the desmoothing/prime-power
+correction `eds` are not hard-coded here: they come from the analytic TI stack.
+-/
 
-/-- CLS bound obtained from the zero-case L² estimate. -/
-theorem cls_bound : Twin.AnalyticCore.CLSBound P emin := by
-  -- `emin = 0`, so re-use the zero L² bound from `Twin.CLSL2`.
-  have hL2 : Twin.CLSL2.Bound P emin := by
-    simpa [emin] using Twin.CLSL2.fromZero (P := P)
-  exact Twin.CLSFromL2.toCLS (P := P) (e := emin) hL2
+/-- Analytic data for the minor arcs and desmoothing channels.
 
+`l2_minor` is the L² “CLS” bound for the banked minor arcs; we derive the
+linear CLS bound from it via `Twin.CLSFromL2.toCLS`.
+`desmooth` is the windowed budget for the desmoothing/prime-power correction. -/
+structure ErrorData where
+  emin : ℕ → ℝ
+  eds  : ℕ → ℝ
+  l2_minor : Twin.CLSL2.Bound P emin
+  desmooth : Twin.AnalyticCore.DesmoothBound P eds
 
-/-- Desmoothing/prime-power budget from §4: window sum of `eds` ≤ (eps·SS)·(H+1)/3. -/
-theorem desmooth_bound : Twin.AnalyticCore.DesmoothBound P eds := by
-  classical
-  intro X hX
-  -- with eds = 0, LHS is 0
-  have hzero : Twin.Ledger.windowSum X P.H eds = 0 := by
-    unfold Twin.Ledger.windowSum Twin.Ledger.windowSumN
-    simp [eds]
+/-- Derived CLS bound from the L² input. -/
+theorem cls_bound (E : ErrorData) : Twin.AnalyticCore.CLSBound P E.emin :=
+  Twin.CLSFromL2.toCLS (P := P) (e := E.emin) E.l2_minor
 
-  -- use Params fields
-  have h_eps_nonneg : 0 ≤ (P.eps : ℝ) := le_of_lt P.eps_pos
-  have hS_ge3 : ∀ p ∈ P.S, 3 ≤ p := P.S_ge_three   -- ← PASTE THIS LINE HERE
-
-  -- SS ≥ 0 via strict positivity from S ≥ 3
-  have hSS_nonneg : 0 ≤ Twin.truncSingularSeries P.S := by
-    exact le_of_lt (Twin.truncSingularSeries_pos_of_all_ge_three (S := P.S) hS_ge3)
-
-  -- (H+1) ≥ 0
-  have h_H_nonneg : 0 ≤ (P.H + 1 : ℝ) := by
-    exact_mod_cast Nat.succ_le_succ (Nat.zero_le P.H)
-
-  -- RHS ≥ 0, so 0 ≤ RHS
-  have rhs_nonneg :
-      0 ≤ P.eps * Twin.truncSingularSeries P.S * (P.H + 1) / 3 := by
-    have : 0 ≤ P.eps * Twin.truncSingularSeries P.S * (P.H + 1) :=
-      mul_nonneg (mul_nonneg h_eps_nonneg hSS_nonneg) h_H_nonneg
-    simpa using div_nonneg this (by norm_num : (0 : ℝ) ≤ 3)
-
-  simpa [hzero] using rhs_nonneg
+/-- Desmoothing/prime-power budget from the supplied data. -/
+@[inline] def desmooth_bound (E : ErrorData) : Twin.AnalyticCore.DesmoothBound P E.eds :=
+  E.desmooth
 
 /-- Gate inequality obtained *from inputs*: CLS, desmoothing, and a smooth
 major-arc estimate.  This has the "baseline-conditional" shape that we
 eventually want, but for now it still delegates to the pinned major-arc
-axiom via `Twin.MajorArc.gate_pointwise_of_SME_CLS`. -/
-theorem gate_pointwise_of_SME
-  {A B : ℝ} {Λ : ℕ → ℝ} {W Ŵ : ℝ → ℝ}
-  (sme  : Twin.MajorArc.SmoothMajorArcEstimate A B Λ W Ŵ)
+axiom via `Twin.MajorArc.gate_onWindow_of_SME_CLS`. -/
+theorem gate_onWindow_of_SME
+  {A B : ℝ} {Λ : ℕ → ℝ} {W W_hat : ℝ → ℝ}
+  (E : ErrorData)
+  (sme  : Twin.MajorArc.SmoothMajorArcEstimate A B Λ W W_hat)
   (spec : Twin.MajorArc.GateSpec P) :
-  AnalyticCore.GatePointwise P emin eds :=
+  AnalyticCore.GateOnWindow P E.emin E.eds :=
 by
   -- Currently we ignore the extra hypotheses and transparently use the
   -- pinned gate axiom.  The statement is ready for a future honest proof.
   simpa using
-    Twin.MajorArc.gate_pointwise_of_SME_CLS
-      (P := P) (emin := emin) (eds := eds)
-      (hCLS := cls_bound) (hDesm := desmooth_bound)
-      sme spec
-
-/-- Legacy wrapper: the concrete `gate_pointwise` used by the bricks
-instance.  For now this still calls the pinned axiom directly, so the
-logical strength of the project is unchanged.  Once a real SW-based proof
-of `gate_pointwise_of_SME` is available, this definition is the natural
-place to switch it over. -/
-@[inline] def gate_pointwise :
-    AnalyticCore.GatePointwise P emin eds :=
-  Twin.MajorArcPin.gate_pointwise P emin eds
+    Twin.MajorArc.gate_onWindow_of_SME_CLS
+      (P := P) (emin := E.emin) (eds := E.eds)
+      (_hCLS := cls_bound (E := E)) (_hDesm := desmooth_bound (E := E))
+      (_sme := sme) (_spec := spec)
 
 end Twin.AnalyticFromPaper

@@ -623,7 +623,971 @@ theorem tsum_multiples_inv_sq_le (R L : ℕ) (hR : 1 ≤ R) (hL : 1 ≤ L) :
 Mathematically, one proves
 `Cstar = ∏' p, (1 + 2/(p*(p-1)) + 1/(p*(p-1)^2)) ≤ exp(3) < 45`.
 -/
-axiom Cstar_le_45 : Cstar ≤ ENNReal.ofReal 45
+private def CstarTerm (d e : ℕ) : ENNReal :=
+  W d * W e * ENNReal.ofReal (1 / (Nat.lcm d e : ℝ))
+
+private def CstarTermPair (x : ℕ × ℕ) : ENNReal :=
+  CstarTerm x.1 x.2
+
+private lemma Cstar_eq_tsum_term : Cstar = ∑' x : ℕ × ℕ, CstarTermPair x := by
+  simpa [Cstar, CstarTermPair, CstarTerm] using
+    (ENNReal.tsum_prod (f := fun d e : ℕ =>
+      W d * W e * ENNReal.ofReal (1 / (Nat.lcm d e : ℝ)))).symm
+
+private lemma W_eq_zero_of_not_squarefree {d : ℕ} (hd : ¬ Squarefree d) : W d = 0 := by
+  simp [W, muSq, hd]
+
+private lemma CstarTerm_eq_zero_of_not_squarefree_left {d e : ℕ} (hd : ¬ Squarefree d) :
+    CstarTerm d e = 0 := by
+  simp [CstarTerm, W_eq_zero_of_not_squarefree hd]
+
+private lemma CstarTerm_eq_zero_of_not_squarefree_right {d e : ℕ} (he : ¬ Squarefree e) :
+    CstarTerm d e = 0 := by
+  simp [CstarTerm, W_eq_zero_of_not_squarefree he]
+
+private noncomputable def factorR (p : ℕ) : ℝ :=
+  1 + 2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) + 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)
+
+private noncomputable def factorENN (p : ℕ) : ENNReal :=
+  ENNReal.ofReal (factorR p)
+
+private noncomputable def prodOf (s : Finset ℕ) : ℕ :=
+  ∏ p ∈ s, p
+
+private lemma prodOf_eq (s : Finset ℕ) : prodOf s = ∏ p ∈ s, p := by
+  rfl
+
+private lemma primeFactors_prodOf {s : Finset ℕ} (hs : ∀ p ∈ s, p.Prime) :
+    Nat.primeFactors (prodOf s) = s := by
+  simpa [prodOf] using (Nat.primeFactors_prod (s := s) hs)
+
+private lemma squarefree_prodOf {s : Finset ℕ} (hs : ∀ p ∈ s, p.Prime) :
+    Squarefree (prodOf s) := by
+  classical
+  -- `prodOf s` is a product of pairwise-coprime squarefree terms (primes), hence squarefree.
+  have hs_pairwise : Set.Pairwise (s : Set ℕ) (fun a b : ℕ => IsRelPrime a b) := by
+    intro a ha b hb hab
+    have ha' : a.Prime := hs a ha
+    have hb' : b.Prime := hs b hb
+    -- distinct primes are coprime
+    refine (Nat.coprime_iff_isRelPrime).1 ?_
+    exact (ha'.coprime_iff_not_dvd).2 (by
+      intro h
+      have : a = b := (Nat.prime_dvd_prime_iff_eq ha' hb').1 h
+      exact hab this)
+  have hs_sq : ∀ p ∈ s, Squarefree p := by
+    intro p hp
+    exact (hs p hp).squarefree
+  have hs_pairwise' : Set.Pairwise (s : Set ℕ) (fun a b : ℕ => IsRelPrime (a : ℕ) (b : ℕ)) := hs_pairwise
+  -- apply the general lemma on `Finset` products
+  simpa [prodOf] using
+    (Finset.squarefree_prod_of_pairwise_isCoprime (s := s) (f := fun p : ℕ => p) hs_pairwise' hs_sq)
+
+private lemma factorR_nonneg {p : ℕ} : 0 ≤ factorR p := by
+  -- holds for all `p` by monotonicity of `ofReal`; in usage we only apply it at primes (`p ≥ 2`)
+  dsimp [factorR]
+  positivity
+
+private lemma prodOf_insert {p : ℕ} {s : Finset ℕ} (hp : p ∉ s) :
+    prodOf (insert p s) = p * prodOf s := by
+  classical
+  simp [prodOf, Finset.prod_insert, hp, mul_assoc, mul_left_comm, mul_comm]
+
+private lemma prime_not_dvd_lcm_of_not_dvd {p d e : ℕ} (hp : p.Prime) (hpd : ¬ p ∣ d) (hpe : ¬ p ∣ e) :
+    ¬ p ∣ Nat.lcm d e := by
+  intro h
+  have hlcm_dvd : Nat.lcm d e ∣ d * e := by
+    -- `lcm` divides `gcd * lcm = d * e`
+    have : Nat.lcm d e ∣ Nat.gcd d e * Nat.lcm d e := dvd_mul_left _ _
+    simpa [Nat.gcd_mul_lcm] using this
+  have : p ∣ d * e := dvd_trans h hlcm_dvd
+  rcases hp.dvd_mul.mp this with h | h
+  · exact hpd h
+  · exact hpe h
+
+private lemma coprime_prime_lcm_of_not_dvd {p d e : ℕ} (hp : p.Prime) (hpd : ¬ p ∣ d) (hpe : ¬ p ∣ e) :
+    Nat.Coprime p (Nat.lcm d e) :=
+  (hp.coprime_iff_not_dvd).2 (prime_not_dvd_lcm_of_not_dvd hp hpd hpe)
+
+private lemma lcm_mul_prime_right {p d e : ℕ} (hp : p.Prime) (hpd : ¬ p ∣ d) (hpe : ¬ p ∣ e) :
+    Nat.lcm d (p * e) = p * Nat.lcm d e := by
+  refine Nat.dvd_antisymm ?_ ?_
+  · -- `lcm d (p*e)` divides `p*lcm d e` since that is a common multiple
+    refine Nat.lcm_dvd ?_ ?_
+    · exact dvd_mul_of_dvd_right (Nat.dvd_lcm_left d e) p
+    · exact (Nat.mul_dvd_mul_left p (Nat.dvd_lcm_right d e))
+  · -- `p*lcm d e` divides `lcm d (p*e)` by coprimality + two divisibilities
+    have hcop : Nat.Coprime p (Nat.lcm d e) := coprime_prime_lcm_of_not_dvd hp hpd hpe
+    refine hcop.mul_dvd_of_dvd_of_dvd ?_ ?_
+    · -- `p ∣ lcm d (p*e)`
+      exact dvd_trans (dvd_mul_right p e) (Nat.dvd_lcm_right d (p * e))
+    · -- `lcm d e ∣ lcm d (p*e)` since it divides any common multiple of `d` and `e`
+      refine Nat.lcm_dvd ?_ ?_
+      · exact Nat.dvd_lcm_left d (p * e)
+      ·
+        -- `e ∣ p*e`, hence `e ∣ lcm d (p*e)`
+        refine dvd_trans ?_ (Nat.dvd_lcm_right d (p * e))
+        exact ⟨p, by simpa [Nat.mul_comm]⟩
+
+private lemma lcm_mul_prime_left {p d e : ℕ} (hp : p.Prime) (hpd : ¬ p ∣ d) (hpe : ¬ p ∣ e) :
+    Nat.lcm (p * d) e = p * Nat.lcm d e := by
+  simpa [mul_assoc, mul_left_comm, mul_comm, Nat.lcm_comm] using
+    (lcm_mul_prime_right (p := p) (d := e) (e := d) hp hpe hpd)
+
+private lemma W_mul_prime_right {p e : ℕ} (hp : p.Prime) (he : Squarefree e) (hpe : ¬ p ∣ e) :
+    W (p * e) = W e * ENNReal.ofReal (1 / ((p - 1 : ℕ) : ℝ)) := by
+  have hcop : Nat.Coprime p e := (hp.coprime_iff_not_dvd).2 hpe
+  have hsf : Squarefree (p * e) := (Nat.squarefree_mul hcop).2 ⟨hp.squarefree, he⟩
+  have htot : Nat.totient (p * e) = Nat.totient p * Nat.totient e := Nat.totient_mul hcop
+  have htot' : (Nat.totient (p * e) : ℝ) = (Nat.totient p : ℝ) * (Nat.totient e : ℝ) := by
+    exact_mod_cast htot
+  have hphi_p : (Nat.totient p : ℝ) = (p - 1 : ℕ) := by
+    simpa [Nat.totient_prime hp]
+  have hnonneg : (0 : ℝ) ≤ 1 / ((p - 1 : ℕ) : ℝ) := by positivity
+  -- expand `W` on both sides; `muSq` is `1` for squarefree arguments
+  simp [W, muSq, hsf, he, htot', hphi_p, ENNReal.ofReal_mul hnonneg, mul_assoc, mul_left_comm,
+    mul_comm, one_div, div_eq_mul_inv]
+
+private lemma W_mul_prime_left {p d : ℕ} (hp : p.Prime) (hd : Squarefree d) (hpd : ¬ p ∣ d) :
+    W (p * d) = W d * ENNReal.ofReal (1 / ((p - 1 : ℕ) : ℝ)) := by
+  simpa [mul_comm] using W_mul_prime_right (p := p) (e := d) hp hd hpd
+
+private lemma CstarTerm_mul_prime_right {p d e : ℕ} (hp : p.Prime)
+    (hd : Squarefree d) (he : Squarefree e) (hpd : ¬ p ∣ d) (hpe : ¬ p ∣ e) :
+    CstarTerm d (p * e) =
+      CstarTerm d e * ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) := by
+  have hlcm : Nat.lcm d (p * e) = p * Nat.lcm d e := lcm_mul_prime_right (p := p) (d := d) (e := e) hp hpd hpe
+  have hW : W (p * e) = W e * ENNReal.ofReal (1 / ((p - 1 : ℕ) : ℝ)) :=
+    W_mul_prime_right (p := p) (e := e) hp he hpe
+  have hnonneg1 : (0 : ℝ) ≤ 1 / ((p - 1 : ℕ) : ℝ) := by positivity
+  have hnonneg2 : (0 : ℝ) ≤ 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by positivity
+  -- rewrite everything and regroup
+  simp [CstarTerm, hW, hlcm, ENNReal.ofReal_mul hnonneg1, ENNReal.ofReal_mul hnonneg2,
+    mul_assoc, mul_left_comm, mul_comm]
+
+private lemma CstarTerm_mul_prime_left {p d e : ℕ} (hp : p.Prime)
+    (hd : Squarefree d) (he : Squarefree e) (hpd : ¬ p ∣ d) (hpe : ¬ p ∣ e) :
+    CstarTerm (p * d) e =
+      CstarTerm d e * ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) := by
+  have hlcm : Nat.lcm (p * d) e = p * Nat.lcm d e :=
+    lcm_mul_prime_left (p := p) (d := d) (e := e) hp hpd hpe
+  have hW : W (p * d) = W d * ENNReal.ofReal (1 / ((p - 1 : ℕ) : ℝ)) :=
+    W_mul_prime_left (p := p) (d := d) hp hd hpd
+  have hnonneg1 : (0 : ℝ) ≤ 1 / ((p - 1 : ℕ) : ℝ) := by positivity
+  have hnonneg2 : (0 : ℝ) ≤ 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by positivity
+  simp [CstarTerm, hW, hlcm, ENNReal.ofReal_mul hnonneg1, ENNReal.ofReal_mul hnonneg2,
+    mul_assoc, mul_left_comm, mul_comm]
+
+private lemma CstarTerm_mul_prime_both {p d e : ℕ} (hp : p.Prime)
+    (hd : Squarefree d) (he : Squarefree e) (hpd : ¬ p ∣ d) (hpe : ¬ p ∣ e) :
+    CstarTerm (p * d) (p * e) =
+      CstarTerm d e * ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) := by
+  have hlcm : Nat.lcm (p * d) (p * e) = p * Nat.lcm d e := by
+    refine Nat.dvd_antisymm ?_ ?_
+    · refine Nat.lcm_dvd ?_ ?_
+      · exact Nat.mul_dvd_mul_left p (Nat.dvd_lcm_left d e)
+      · exact Nat.mul_dvd_mul_left p (Nat.dvd_lcm_right d e)
+    · have hcop : Nat.Coprime p (Nat.lcm d e) := coprime_prime_lcm_of_not_dvd hp hpd hpe
+      refine hcop.mul_dvd_of_dvd_of_dvd ?_ ?_
+      · exact dvd_trans (dvd_mul_right p d) (Nat.dvd_lcm_left (p * d) (p * e))
+      · refine Nat.lcm_dvd ?_ ?_
+        · exact (Nat.dvd_mul_left d p).trans (Nat.dvd_lcm_left (p * d) (p * e))
+        · exact (Nat.dvd_mul_left e p).trans (Nat.dvd_lcm_right (p * d) (p * e))
+  have hWl : W (p * d) = W d * ENNReal.ofReal (1 / ((p - 1 : ℕ) : ℝ)) := W_mul_prime_left hp hd hpd
+  have hWr : W (p * e) = W e * ENNReal.ofReal (1 / ((p - 1 : ℕ) : ℝ)) := W_mul_prime_right hp he hpe
+  have hnonnegP : (0 : ℝ) ≤ 1 / ((p - 1 : ℕ) : ℝ) := by positivity
+  have hnonneg : (0 : ℝ) ≤ 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2) := by positivity
+  have hpos' : (0 : ℝ) < ((p - 1 : ℕ) : ℝ) := by
+    have : 0 < (p - 1 : ℕ) := Nat.sub_pos_of_lt hp.one_lt
+    exact_mod_cast this
+  have hx : ((p - 1 : ℕ) : ℝ) ≠ 0 := ne_of_gt hpos'
+  have hsq :
+      ENNReal.ofReal (((p - 1 : ℕ) : ℝ)⁻¹) * ENNReal.ofReal (((p - 1 : ℕ) : ℝ)⁻¹) =
+        ENNReal.ofReal ((((p - 1 : ℕ) : ℝ) ^ 2)⁻¹) := by
+    have hnonnegInv : (0 : ℝ) ≤ (((p - 1 : ℕ) : ℝ)⁻¹) := by positivity
+    have hreal : (((p - 1 : ℕ) : ℝ)⁻¹) * (((p - 1 : ℕ) : ℝ)⁻¹) = (((p - 1 : ℕ) : ℝ) ^ 2)⁻¹ := by
+      field_simp [pow_two, hx]
+    calc
+      ENNReal.ofReal (((p - 1 : ℕ) : ℝ)⁻¹) * ENNReal.ofReal (((p - 1 : ℕ) : ℝ)⁻¹)
+          = ENNReal.ofReal ((((p - 1 : ℕ) : ℝ)⁻¹) * (((p - 1 : ℕ) : ℝ)⁻¹)) := by
+              simpa using (ENNReal.ofReal_mul hnonnegInv (b := ((p - 1 : ℕ) : ℝ)⁻¹)).symm
+      _ = ENNReal.ofReal ((((p - 1 : ℕ) : ℝ) ^ 2)⁻¹) := by simpa [hreal]
+  -- expand and regroup; the factor is `1/p` from the lcm and `1/(p-1)^2` from `W` twice
+  simp [CstarTerm, hWl, hWr, hlcm, ENNReal.ofReal_mul hnonnegP, ENNReal.ofReal_mul hnonneg,
+    mul_assoc, mul_left_comm, mul_comm]
+  -- collapse the two `(p-1)⁻¹` factors into `((p-1)^2)⁻¹`
+  have hCCX :
+      ENNReal.ofReal (↑(p - 1))⁻¹ * (ENNReal.ofReal (↑(p - 1))⁻¹ * (W d * W e)) =
+        (ENNReal.ofReal (↑(p - 1))⁻¹ * ENNReal.ofReal (↑(p - 1))⁻¹) * (W d * W e) := by
+    simpa [mul_assoc]
+  -- now it is a direct rewrite
+  rw [hCCX, hsq]
+
+private lemma exp_three_le_45 : Real.exp 3 ≤ (45 : ℝ) := by
+  -- A very safe numeric upper bound:
+  -- from `1 + x ≤ exp x` at `x = -3/10`, we get `exp(3/10) ≤ 10/7`,
+  -- hence `exp 3 = (exp(3/10))^10 ≤ (10/7)^10 < 45`.
+  have hpos : (0 : ℝ) < (1 - (3 / 10 : ℝ)) := by norm_num
+  have hlin : (1 - (3 / 10 : ℝ)) ≤ Real.exp (-(3 / 10 : ℝ)) := by
+    -- `add_one_le_exp` is stated as `x + 1 ≤ exp x`.
+    -- Convert `(-3/10) + 1` into `1 - 3/10`.
+    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using
+      (Real.add_one_le_exp (-(3 / 10 : ℝ)))
+  have hinv : (1 / Real.exp (-(3 / 10 : ℝ))) ≤ (1 / (1 - (3 / 10 : ℝ))) :=
+    one_div_le_one_div_of_le hpos hlin
+  have hexp_small : Real.exp (3 / 10 : ℝ) ≤ (10 / 7 : ℝ) := by
+    calc
+      Real.exp (3 / 10 : ℝ) = 1 / Real.exp (-(3 / 10 : ℝ)) := by
+        simp [Real.exp_neg]
+      _ ≤ 1 / (1 - (3 / 10 : ℝ)) := hinv
+      _ = (10 / 7 : ℝ) := by norm_num
+  have hexp3 : Real.exp (3 : ℝ) ≤ (10 / 7 : ℝ) ^ (10 : ℕ) := by
+    calc
+      Real.exp (3 : ℝ) = Real.exp ((10 : ℕ) * (3 / 10 : ℝ)) := by norm_num
+      _ = (Real.exp (3 / 10 : ℝ)) ^ (10 : ℕ) := by
+        -- `exp (n*x) = (exp x)^n`
+        simpa using (exp_nat_mul (x := (3 / 10 : ℝ)) (n := (10 : ℕ)))
+      _ ≤ (10 / 7 : ℝ) ^ (10 : ℕ) := by
+        exact pow_le_pow_left₀ (by positivity) hexp_small _
+  have hrat : ((10 / 7 : ℝ) ^ (10 : ℕ)) ≤ (45 : ℝ) := by
+    -- purely numeric
+    norm_num
+  exact le_trans hexp3 hrat
+
+/-!
+The main analytic/numerical content is to show `Cstar` is bounded by the finite-prime
+products `∏_{p∈S} (1 + 2/(p(p-1)) + 1/(p(p-1)^2))`, hence by `exp 3`, hence by `45`.
+
+We isolate the remaining bookkeeping into a single lemma `Cstar_le_exp_three` below.
+It is conventional analytic number theory (Euler-product style), but the argument is completely
+finite: it bounds every finite partial sum of the defining `tsum`.
+-/
+private def fullSum (S : Finset ℕ) : ENNReal :=
+  ∑ d ∈ S.powerset, ∑ e ∈ S.powerset, CstarTerm (prodOf d) (prodOf e)
+
+private lemma fullSum_eq_sum_product (S : Finset ℕ) :
+    fullSum S =
+      ∑ x ∈ S.powerset.product S.powerset, CstarTerm (prodOf x.1) (prodOf x.2) := by
+  classical
+  simp [fullSum, Finset.sum_product]
+
+/-- A small wrapper for rewriting a sum over an `image` along an injective map.
+
+We keep this local because (in this toolchain snapshot) it is easy to get argument-order
+inference wrong when using `Finset.sum_image` directly inside `simp`/`simpa`.
+-/
+private lemma sum_image_eq_of_injOn {α β γ : Type*} [DecidableEq β] [AddCommMonoid γ]
+    (s : Finset α) (f : α → β) (g : β → γ)
+    (hinj : ∀ a₁ ∈ s, ∀ a₂ ∈ s, f a₁ = f a₂ → a₁ = a₂) :
+    (s.image f).sum g = s.sum (fun a => g (f a)) := by
+  classical
+  revert hinj
+  refine Finset.induction_on s ?_ ?_
+  · intro _hinj
+    simp
+  · intro a s ha_not_mem ih hinj
+    have hinj_s : ∀ b₁ ∈ s, ∀ b₂ ∈ s, f b₁ = f b₂ → b₁ = b₂ := by
+      intro b₁ hb₁ b₂ hb₂ hEq
+      exact hinj b₁ (by simp [hb₁, ha_not_mem]) b₂ (by simp [hb₂, ha_not_mem]) hEq
+    have ih' : (s.image f).sum g = s.sum (fun b => g (f b)) := ih hinj_s
+    have hfa_not_mem : f a ∉ s.image f := by
+      intro hmem
+      rcases Finset.mem_image.1 hmem with ⟨b, hb, hfb⟩
+      have hab : a = b := hinj a (by simp [ha_not_mem]) b (by simp [hb, ha_not_mem]) hfb.symm
+      exact ha_not_mem (hab ▸ hb)
+    simp [Finset.image_insert, Finset.sum_insert, ha_not_mem, hfa_not_mem, ih']
+
+private lemma not_dvd_prodOf_of_not_mem {p : ℕ} {s : Finset ℕ}
+    (hp : p.Prime) (hs : ∀ q ∈ s, q.Prime) (hp_not : p ∉ s) :
+    ¬ p ∣ prodOf s := by
+  classical
+  -- Use the generic `Prime.not_dvd_finset_prod` lemma.
+  refine Prime.not_dvd_finset_prod (pp := hp.prime) (S := s) (g := fun q : ℕ => q) ?_
+  intro q hq
+  have hqP : q.Prime := hs q hq
+  intro hpq
+  have : p = q := (Nat.prime_dvd_prime_iff_eq hp hqP).1 hpq
+  exact hp_not (this ▸ hq)
+
+private lemma fullSum_insert {s : Finset ℕ} {p : ℕ} (hp : p.Prime) (hp_not_mem : p ∉ s)
+    (hs : ∀ q ∈ s, q.Prime) :
+    fullSum (insert p s) = fullSum s * factorENN p := by
+  classical
+  let A : Finset (Finset ℕ) := s.powerset
+  let B : Finset (Finset ℕ) := A.image (insert p)
+  have hPow : (insert p s).powerset = A ∪ B := by
+    simpa [A, B] using (Finset.powerset_insert s p)
+  have hdisj : Disjoint A B := by
+    refine Finset.disjoint_left.2 ?_
+    intro t htA htB
+    -- `t ⊆ s`, so `p ∉ t`; but `t = insert p u` implies `p ∈ t`.
+    have hp_not_t : p ∉ t := Finset.notMem_of_mem_powerset_of_notMem (s := s) (t := t) htA hp_not_mem
+    rcases Finset.mem_image.1 htB with ⟨u, huA, rfl⟩
+    exact hp_not_t (Finset.mem_insert_self p u)
+
+  -- Abbreviate the term to reduce rewriting noise.
+  let F : Finset ℕ → Finset ℕ → ENNReal :=
+    fun d e => CstarTerm (prodOf d) (prodOf e)
+
+  -- The two “single prime” coefficients that appear in the split.
+  let α : ENNReal := ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))
+  let β : ENNReal := ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2))
+
+  have hαβ : factorENN p = (1 : ENNReal) + 2 * α + β := by
+    have h0 : (0 : ℝ) ≤ (2 : ℝ) := by positivity
+    have hαr : (0 : ℝ) ≤ 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by positivity
+    have hβr : (0 : ℝ) ≤ 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2) := by positivity
+    -- `2/(p*(p-1))` as `2 * (1/(p*(p-1)))`, so `ofReal` matches `2 * α`.
+    have h2 : ENNReal.ofReal (2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) = 2 * α := by
+      -- `2/x = 2 * (1/x)` and `ofReal` respects products of nonneg reals.
+      simpa [α, div_eq_mul_inv, ENNReal.ofReal_mul h0, mul_assoc, mul_left_comm, mul_comm]
+    -- Now unfold `factorENN`/`factorR` and convert the `ofReal` of a sum.
+    dsimp [factorENN, factorR, α, β]
+    -- `ofReal (1 + a + b) = ofReal (1 + a) + ofReal b = 1 + ofReal a + ofReal b`.
+    have hsum1 :
+        ENNReal.ofReal
+            (1 + 2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) + 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) =
+          (1 : ENNReal)
+            + ENNReal.ofReal (2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))
+            + ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) := by
+      -- Associate as `(1 + a) + b`.
+      have h1a : (0 : ℝ) ≤ 1 + 2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by positivity
+      have hA : (0 : ℝ) ≤ 1 := by positivity
+      have hB : (0 : ℝ) ≤ 2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by positivity
+      calc
+        ENNReal.ofReal ((1 + 2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) + 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) =
+            ENNReal.ofReal (1 + 2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) +
+              ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) := by
+            simpa [add_assoc] using (ENNReal.ofReal_add h1a hβr)
+        _ = (ENNReal.ofReal (1 : ℝ) + ENNReal.ofReal (2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) +
+              ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) := by
+            -- expand `ofReal (1 + a)`
+            simpa using
+              congrArg
+                (fun x =>
+                  x + ENNReal.ofReal (((p - 1 : ℕ) ^ 2 : ℝ)⁻¹) * ENNReal.ofReal ((p : ℝ)⁻¹))
+                (ENNReal.ofReal_add hA hB)
+        _ = (1 : ENNReal) + ENNReal.ofReal (2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) +
+              ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) := by
+            simp [add_assoc]
+    -- Finish: rewrite `ofReal 1 = 1`, `ofReal(...) = β`, and the `2/(...)` term.
+    calc
+      ENNReal.ofReal
+          (1 + 2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) +
+            1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) =
+          (1 : ENNReal) + ENNReal.ofReal (2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) +
+            ENNReal.ofReal (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) := hsum1
+      _ = (1 : ENNReal) + 2 * α + β := by
+          simp [h2, β, add_assoc, add_left_comm, add_comm]
+
+  -- Unfold `fullSum` at the inserted set and split the two powersets.
+  have hSplit :
+      fullSum (insert p s) =
+        (∑ d ∈ A, ∑ e ∈ A, F d e) +
+        (∑ d ∈ A, ∑ e ∈ B, F d e) +
+        (∑ d ∈ B, ∑ e ∈ A, F d e) +
+        (∑ d ∈ B, ∑ e ∈ B, F d e) := by
+    -- Expand both occurrences of `powerset (insert p s)` as `A ∪ B`.
+    simp [fullSum, F, hPow, Finset.sum_union hdisj, Finset.sum_add_distrib, add_assoc, add_left_comm,
+      add_comm, A, B]
+
+  have hBase : (∑ d ∈ A, ∑ e ∈ A, F d e) = fullSum s := by
+    simp [fullSum, F, A]
+
+  -- Convert sums over `B = A.image (insert p)` into sums over `A`, using injectivity of `insert p`
+  -- on subsets of `s`.
+  have hInsert_inj : ∀ {u v : Finset ℕ}, u ∈ A → v ∈ A → insert p u = insert p v → u = v := by
+    intro u v hu hv huv
+    have hpu : p ∉ u := Finset.notMem_of_mem_powerset_of_notMem (s := s) (t := u) hu hp_not_mem
+    have hpv : p ∉ v := Finset.notMem_of_mem_powerset_of_notMem (s := s) (t := v) hv hp_not_mem
+    -- erase `p` from both sides
+    have := congrArg (fun t : Finset ℕ => t.erase p) huv
+    simpa [Finset.erase_insert hpu, Finset.erase_insert hpv] using this
+
+  have hAB :
+      (∑ d ∈ A, ∑ e ∈ B, F d e) = (fullSum s) * α := by
+    -- Rewrite the `e ∈ B` sum as `e = insert p e'` with `e' ∈ A`.
+    have hsumE :
+        (Finset.sum B (fun e => ∑ d ∈ A, F d e)) =
+          Finset.sum A (fun e' => ∑ d ∈ A, F d (insert p e')) := by
+      classical
+      -- Expand `B = A.image (insert p)` and rewrite the sum via an injective-image lemma.
+      simpa [B] using
+        (sum_image_eq_of_injOn
+          (s := A)
+          (f := fun u : Finset ℕ => insert p u)
+          (g := fun e : Finset ℕ => ∑ d ∈ A, F d e)
+          (hinj := by
+            intro u hu v hv huv
+            exact hInsert_inj hu hv huv))
+    -- Now use the prime-multiplication lemma to factor out `α`.
+    -- We proceed by rewriting `F d (insert p e')` as `F d e' * α`, then pulling `α` out.
+    have hTerm :
+        ∀ d ∈ A, ∀ e' ∈ A, F d (insert p e') = F d e' * α := by
+      intro d hd e' he'
+      have hdPr : ∀ q ∈ d, q.Prime := by
+        intro q hq
+        exact hs q ((Finset.mem_powerset.1 hd) hq)
+      have hePr : ∀ q ∈ e', q.Prime := by
+        intro q hq
+        exact hs q ((Finset.mem_powerset.1 he') hq)
+      have hdSq : Squarefree (prodOf d) := squarefree_prodOf hdPr
+      have heSq : Squarefree (prodOf e') := squarefree_prodOf hePr
+      have hpd : p ∉ d := Finset.notMem_of_mem_powerset_of_notMem (s := s) (t := d) hd hp_not_mem
+      have hpe : p ∉ e' := Finset.notMem_of_mem_powerset_of_notMem (s := s) (t := e') he' hp_not_mem
+      have hpd' : ¬ p ∣ prodOf d := not_dvd_prodOf_of_not_mem hp hdPr hpd
+      have hpe' : ¬ p ∣ prodOf e' := not_dvd_prodOf_of_not_mem hp hePr hpe
+      -- Turn `prodOf (insert p e')` into `p * prodOf e'` and apply `CstarTerm_mul_prime_right`.
+      have hprod : prodOf (insert p e') = p * prodOf e' := prodOf_insert (p := p) (s := e') hpe
+      dsimp [F]
+      -- rewrite and apply the lemma
+      simpa [hprod, α, mul_assoc, mul_left_comm, mul_comm] using
+        (CstarTerm_mul_prime_right (p := p) (d := prodOf d) (e := prodOf e') hp hdSq heSq hpd' hpe')
+    -- Put the pieces together and pull out `α` using distributivity.
+    -- First swap the order so the factoring lemma applies cleanly.
+    calc
+      (∑ d ∈ A, ∑ e ∈ B, F d e)
+          = ∑ e ∈ B, ∑ d ∈ A, F d e := by
+              simpa using
+                (Finset.sum_comm :
+                  (∑ d ∈ A, ∑ e ∈ B, F d e) = ∑ e ∈ B, ∑ d ∈ A, F d e)
+      _ = ∑ e' ∈ A, ∑ d ∈ A, F d (insert p e') := by
+              simpa [hsumE]
+      _ = ∑ e' ∈ A, ∑ d ∈ A, (F d e') * α := by
+              refine Finset.sum_congr rfl ?_
+              intro e' he'
+              refine Finset.sum_congr rfl ?_
+              intro d hd
+              exact hTerm d hd e' he'
+      _ = (∑ e' ∈ A, ∑ d ∈ A, F d e') * α := by
+              simp [Finset.sum_mul, mul_assoc]
+      _ = (∑ d ∈ A, ∑ e' ∈ A, F d e') * α := by
+              congr 1
+              simpa using
+                (Finset.sum_comm :
+                  (∑ e' ∈ A, ∑ d ∈ A, F d e') = ∑ d ∈ A, ∑ e' ∈ A, F d e')
+      _ = (fullSum s) * α := by
+              simp [fullSum, F, A, mul_assoc]
+
+  have hBA :
+      (∑ d ∈ B, ∑ e ∈ A, F d e) = (fullSum s) * α := by
+    -- Symmetric to `hAB` by commutativity of the two sides.
+    -- Expand `d ∈ B` as `d = insert p d'` and use `CstarTerm_mul_prime_left`.
+    have hsumD :
+        (∑ d ∈ B, ∑ e ∈ A, F d e) =
+          ∑ d' ∈ A, ∑ e ∈ A, F (insert p d') e := by
+      classical
+      -- Expand `B = A.image (insert p)` and rewrite the outer sum via an injective-image lemma.
+      simpa [B] using
+        (sum_image_eq_of_injOn
+          (s := A)
+          (f := fun u : Finset ℕ => insert p u)
+          (g := fun d : Finset ℕ => ∑ e ∈ A, F d e)
+          (hinj := by
+            intro u hu v hv huv
+            exact hInsert_inj hu hv huv))
+    have hTerm :
+        ∀ d' ∈ A, ∀ e ∈ A, F (insert p d') e = F d' e * α := by
+      intro d' hd' e he
+      have hdPr : ∀ q ∈ d', q.Prime := by
+        intro q hq
+        exact hs q ((Finset.mem_powerset.1 hd') hq)
+      have hePr : ∀ q ∈ e, q.Prime := by
+        intro q hq
+        exact hs q ((Finset.mem_powerset.1 he) hq)
+      have hdSq : Squarefree (prodOf d') := squarefree_prodOf hdPr
+      have heSq : Squarefree (prodOf e) := squarefree_prodOf hePr
+      have hpd : p ∉ d' := Finset.notMem_of_mem_powerset_of_notMem (s := s) (t := d') hd' hp_not_mem
+      have hpe : p ∉ e := Finset.notMem_of_mem_powerset_of_notMem (s := s) (t := e) he hp_not_mem
+      have hpd' : ¬ p ∣ prodOf d' := not_dvd_prodOf_of_not_mem hp hdPr hpd
+      have hpe' : ¬ p ∣ prodOf e := not_dvd_prodOf_of_not_mem hp hePr hpe
+      have hprod : prodOf (insert p d') = p * prodOf d' := prodOf_insert (p := p) (s := d') hpd
+      dsimp [F]
+      simpa [hprod, α, mul_assoc, mul_left_comm, mul_comm] using
+        (CstarTerm_mul_prime_left (p := p) (d := prodOf d') (e := prodOf e) hp hdSq heSq hpd' hpe')
+    calc
+      (∑ d ∈ B, ∑ e ∈ A, F d e)
+          = ∑ d ∈ B, ∑ e ∈ A, F d e := rfl
+      _ = ∑ d' ∈ A, ∑ e ∈ A, F (insert p d') e := by
+            simpa [hsumD]
+      _ = ∑ d' ∈ A, ∑ e ∈ A, (F d' e) * α := by
+            refine Finset.sum_congr rfl ?_
+            intro d' hd'
+            refine Finset.sum_congr rfl ?_
+            intro e he
+            exact hTerm d' hd' e he
+      _ = (∑ d' ∈ A, ∑ e ∈ A, F d' e) * α := by
+            simp [Finset.sum_mul, mul_assoc]
+      _ = (fullSum s) * α := by
+            simp [fullSum, F, A, mul_assoc, mul_left_comm, mul_comm]
+
+  have hBB :
+      (∑ d ∈ B, ∑ e ∈ B, F d e) = (fullSum s) * β := by
+    -- Expand both `d` and `e` from `B` as `insert p d'` and `insert p e'`, and use the `both` lemma.
+    have hsumD : (∑ d ∈ B, ∑ e ∈ B, F d e) =
+        ∑ d' ∈ A, ∑ e' ∈ A, F (insert p d') (insert p e') := by
+      classical
+      -- Rewrite both `B`-sums via `B = A.image (insert p)`.
+      have houter :
+          (∑ d ∈ B, ∑ e ∈ B, F d e) = ∑ d' ∈ A, ∑ e ∈ B, F (insert p d') e := by
+        simpa [B] using
+          (sum_image_eq_of_injOn
+            (s := A)
+            (f := fun u : Finset ℕ => insert p u)
+            (g := fun d : Finset ℕ => ∑ e ∈ B, F d e)
+            (hinj := by
+              intro u hu v hv huv
+              exact hInsert_inj hu hv huv))
+      have hinner :
+          ∀ d' ∈ A, (∑ e ∈ B, F (insert p d') e) = ∑ e' ∈ A, F (insert p d') (insert p e') := by
+        intro d' _hd'
+        simpa [B] using
+          (sum_image_eq_of_injOn
+            (s := A)
+            (f := fun u : Finset ℕ => insert p u)
+            (g := fun e : Finset ℕ => F (insert p d') e)
+            (hinj := by
+              intro u hu v hv huv
+              exact hInsert_inj hu hv huv))
+      -- Apply the inner rewrite inside the outer sum.
+      calc
+        (∑ d ∈ B, ∑ e ∈ B, F d e) = ∑ d' ∈ A, ∑ e ∈ B, F (insert p d') e := houter
+        _ = ∑ d' ∈ A, ∑ e' ∈ A, F (insert p d') (insert p e') := by
+              refine Finset.sum_congr rfl ?_
+              intro d' hd'
+              exact hinner d' hd'
+    have hTerm :
+        ∀ d' ∈ A, ∀ e' ∈ A, F (insert p d') (insert p e') = F d' e' * β := by
+      intro d' hd' e' he'
+      have hdPr : ∀ q ∈ d', q.Prime := by
+        intro q hq
+        exact hs q ((Finset.mem_powerset.1 hd') hq)
+      have hePr : ∀ q ∈ e', q.Prime := by
+        intro q hq
+        exact hs q ((Finset.mem_powerset.1 he') hq)
+      have hdSq : Squarefree (prodOf d') := squarefree_prodOf hdPr
+      have heSq : Squarefree (prodOf e') := squarefree_prodOf hePr
+      have hpd : p ∉ d' := Finset.notMem_of_mem_powerset_of_notMem (s := s) (t := d') hd' hp_not_mem
+      have hpe : p ∉ e' := Finset.notMem_of_mem_powerset_of_notMem (s := s) (t := e') he' hp_not_mem
+      have hpd' : ¬ p ∣ prodOf d' := not_dvd_prodOf_of_not_mem hp hdPr hpd
+      have hpe' : ¬ p ∣ prodOf e' := not_dvd_prodOf_of_not_mem hp hePr hpe
+      have hprodD : prodOf (insert p d') = p * prodOf d' := prodOf_insert (p := p) (s := d') hpd
+      have hprodE : prodOf (insert p e') = p * prodOf e' := prodOf_insert (p := p) (s := e') hpe
+      dsimp [F]
+      simpa [hprodD, hprodE, β, mul_assoc, mul_left_comm, mul_comm] using
+        (CstarTerm_mul_prime_both (p := p) (d := prodOf d') (e := prodOf e') hp hdSq heSq hpd' hpe')
+    calc
+      (∑ d ∈ B, ∑ e ∈ B, F d e)
+          = ∑ d' ∈ A, ∑ e' ∈ A, F (insert p d') (insert p e') := by
+              simpa [hsumD]
+      _ = ∑ d' ∈ A, ∑ e' ∈ A, (F d' e') * β := by
+              refine Finset.sum_congr rfl ?_
+              intro d' hd'
+              refine Finset.sum_congr rfl ?_
+              intro e' he'
+              exact hTerm d' hd' e' he'
+      _ = (∑ d' ∈ A, ∑ e' ∈ A, F d' e') * β := by
+              simp [Finset.sum_mul, mul_assoc]
+      _ = (fullSum s) * β := by
+              simp [fullSum, F, A, mul_assoc, mul_left_comm, mul_comm]
+
+  -- Combine the four quadrants and identify the coefficient with `factorENN p`.
+  have hsum4 :
+      fullSum (insert p s) =
+        (fullSum s) + (fullSum s) * α + (fullSum s) * α + (fullSum s) * β := by
+    simpa [hBase, hAB, hBA, hBB, add_assoc, add_left_comm, add_comm] using hSplit
+
+  -- Factor out `fullSum s` and rewrite the coefficient.
+  calc
+    fullSum (insert p s)
+        = (fullSum s) * ((1 : ENNReal) + 2 * α + β) := by
+            -- `a + a*α + a*α + a*β = a*(1 + 2*α + β)`
+            simp [hsum4, mul_add, add_mul, add_assoc, add_left_comm, add_comm, two_mul, mul_assoc]
+    _ = (fullSum s) * factorENN p := by
+            simpa [hαβ]
+
+private lemma fullSum_eq_prod_factorENN (S : Finset ℕ) (hS : ∀ p ∈ S, p.Prime) :
+    fullSum S = ∏ p ∈ S, factorENN p := by
+  classical
+  revert hS
+  refine Finset.induction_on S ?_ ?_
+  · intro _hS
+    -- `powerset ∅ = {∅}` and `prodOf ∅ = 1`, so this is just `CstarTerm 1 1 = 1`.
+    simp [fullSum, CstarTerm, W, muSq, prodOf]
+  · intro p s hp_not_mem ih hS
+    have hpP : p.Prime := hS p (by simp [hp_not_mem])
+    have hsP : ∀ q ∈ s, q.Prime := by
+      intro q hq
+      exact hS q (by simp [hq, hp_not_mem])
+    have ih' : fullSum s = ∏ q ∈ s, factorENN q := ih hsP
+    -- Expand `fullSum (insert p s)` using the recursion lemma and then simplify.
+    calc
+      fullSum (insert p s) = fullSum s * factorENN p :=
+        fullSum_insert (s := s) (p := p) hpP hp_not_mem hsP
+      _ = (∏ q ∈ s, factorENN q) * factorENN p := by simpa [ih']
+      _ = factorENN p * ∏ q ∈ s, factorENN q := by simp [mul_comm, mul_left_comm, mul_assoc]
+      _ = ∏ q ∈ insert p s, factorENN q := by
+            simp [Finset.prod_insert, hp_not_mem, mul_assoc]
+
+private lemma sum_range_inv_mul_sub_eq (B : ℕ) (hB : 2 ≤ B) :
+    (∑ n ∈ Finset.range (B + 1), (1 / ((n : ℝ) * ((n - 1 : ℕ) : ℝ)))) = 1 - 1 / (B : ℝ) := by
+  -- Peel off the `n = 0` and `n = 1` terms (both are `0`), rewrite the remaining sum over
+  -- `k = 0..B-2`, and telescope.
+  have hB' : 1 ≤ B := le_trans (by decide : (1 : ℕ) ≤ 2) hB
+
+  -- Shift the range sum to start at `n = 2`.
+  have hshift :
+      (∑ n ∈ Finset.range (B + 1), (1 / ((n : ℝ) * ((n - 1 : ℕ) : ℝ))))
+        = ∑ k ∈ Finset.range (B - 1), (1 / (((k + 2 : ℕ) : ℝ) * ((k + 1 : ℕ) : ℝ))) := by
+    -- First shift: drop `n = 0`.
+    rw [Finset.sum_range_succ']
+    simp
+    -- Second shift: drop `n = 1`.
+    have hdecomp : B = (B - 1) + 1 := (Nat.sub_add_cancel hB').symm
+    -- Rewrite `range B` as `range ((B-1)+1)` and shift again.
+    rw [hdecomp, Finset.sum_range_succ']
+    simp [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm]
+    -- The remaining normalization is just `(↑k + 1 + 1) = (↑k + 2)`.
+    refine Finset.sum_congr rfl ?_
+    intro k hk
+    have hcast : ((k : ℝ) + 1 + 1) = (k : ℝ) + 2 := by ring
+    simpa [hcast, add_assoc]
+
+  -- Now telescope the shifted sum.
+  have htel :
+      (∑ k ∈ Finset.range (B - 1), (1 / (((k + 2 : ℕ) : ℝ) * ((k + 1 : ℕ) : ℝ))))
+        = 1 - 1 / (B : ℝ) := by
+    have hterm :
+        ∀ k : ℕ,
+          (1 / (((k + 2 : ℕ) : ℝ) * ((k + 1 : ℕ) : ℝ))) =
+            (1 / ((k + 1 : ℕ) : ℝ)) - (1 / ((k + 2 : ℕ) : ℝ)) := by
+      intro k
+      have ha : ((k + 1 : ℕ) : ℝ) ≠ 0 := by exact_mod_cast (Nat.succ_ne_zero k)
+      have hb : ((k + 2 : ℕ) : ℝ) ≠ 0 := by exact_mod_cast (Nat.succ_ne_zero (k + 1))
+      field_simp [ha, hb]
+      -- remaining goal is the simple identity `(k+2) - (k+1) = 1` after casts
+      have hdiff :
+          (((2 + k : ℕ) : ℝ) - ((1 + k : ℕ) : ℝ)) = (1 : ℝ) := by
+        -- rewrite casts to `k + c` in `ℝ` and finish by `ring`
+        have : ((k : ℝ) + (2 : ℝ)) - ((k : ℝ) + (1 : ℝ)) = (1 : ℝ) := by ring
+        simpa [Nat.cast_add, add_assoc, add_left_comm, add_comm] using this
+      simpa using hdiff.symm
+    calc
+      (∑ k ∈ Finset.range (B - 1), (1 / (((k + 2 : ℕ) : ℝ) * ((k + 1 : ℕ) : ℝ))))
+          = ∑ k ∈ Finset.range (B - 1),
+              ((1 / ((k + 1 : ℕ) : ℝ)) - (1 / ((k + 2 : ℕ) : ℝ))) := by
+              refine Finset.sum_congr rfl ?_
+              intro k hk
+              rw [hterm k]
+      _ = (1 / ((0 + 1 : ℕ) : ℝ)) - (1 / (((B - 1 : ℕ) + 1 : ℕ) : ℝ)) := by
+              -- `sum_range_sub'` telescopes `f k - f(k+1)`.
+              simpa [Finset.sum_range_sub', Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using
+                (Finset.sum_range_sub' (f := fun k : ℕ => (1 / ((k + 1 : ℕ) : ℝ))) (n := (B - 1)))
+      _ = 1 - 1 / (B : ℝ) := by
+              have : (B - 1 : ℕ) + 1 = B := Nat.sub_add_cancel hB'
+              simp [this]
+
+  exact hshift.trans htel
+
+private lemma sum_inv_p_mul_sub_le_one (s : Finset ℕ) (hs : ∀ p ∈ s, p.Prime) :
+    (∑ p ∈ s, (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) ≤ 1 := by
+  classical
+  by_cases h0 : s = ∅
+  · simp [h0]
+  · -- Let `B` be the maximum element; since all elements are prime, `B ≥ 2`.
+    let B : ℕ := s.max' (Finset.nonempty_iff_ne_empty.2 h0)
+    have hBmem : B ∈ s := Finset.max'_mem s (Finset.nonempty_iff_ne_empty.2 h0)
+    have hBprime : B.Prime := hs B hBmem
+    have hB2 : 2 ≤ B := hBprime.two_le
+    have hsub : s ⊆ Finset.range (B + 1) := by
+      intro n hn
+      have hnle : n ≤ B := Finset.le_max' s n hn
+      exact Finset.mem_range.2 (Nat.lt_succ_of_le hnle)
+    -- compare the sum over `s` to the sum over the full range.
+    have hle :
+        (∑ p ∈ s, (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))))
+          ≤
+        (∑ n ∈ Finset.range (B + 1), (1 / ((n : ℝ) * ((n - 1 : ℕ) : ℝ)))) := by
+      refine Finset.sum_le_sum_of_subset_of_nonneg hsub ?_
+      intro n hn hn_not
+      positivity
+    have hsum :
+        (∑ n ∈ Finset.range (B + 1), (1 / ((n : ℝ) * ((n - 1 : ℕ) : ℝ)))) = 1 - 1 / (B : ℝ) :=
+      sum_range_inv_mul_sub_eq B hB2
+    have hpos : (0 : ℝ) ≤ 1 / (B : ℝ) := by positivity
+    -- `1 - 1/B ≤ 1` since `1/B ≥ 0`.
+    have hle1 : (1 - 1 / (B : ℝ)) ≤ 1 := by
+      simpa using (sub_le_self (1 : ℝ) hpos)
+    -- Avoid `simp` rewriting `one_div` into inverses.
+    have hrange :
+        (∑ n ∈ Finset.range (B + 1), (1 / ((n : ℝ) * ((n - 1 : ℕ) : ℝ)))) ≤ 1 := by
+      rw [hsum]
+      exact hle1
+    exact le_trans hle hrange
+
+private lemma factorENN_le_exp (p : ℕ) (hp : p.Prime) :
+    factorENN p ≤ ENNReal.ofReal (Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) := by
+  -- Bound `factorR p` by `1 + 3/(p(p-1)) ≤ exp(3/(p(p-1)))`.
+  have hpos : (0 : ℝ) < ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by
+    have hp2 : 2 ≤ p := hp.two_le
+    have hp_pos : (0 : ℝ) < (p : ℝ) := by exact_mod_cast (lt_of_lt_of_le (Nat.zero_lt_succ 1) hp2)
+    have hm_pos : (0 : ℝ) < ((p - 1 : ℕ) : ℝ) := by
+      have : 0 < (p - 1 : ℕ) := Nat.sub_pos_of_lt hp.one_lt
+      exact_mod_cast this
+    nlinarith
+  have hle_inv :
+      (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)) ≤ (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) := by
+    have hpm1 : (1 : ℝ) ≤ ((p - 1 : ℕ) : ℝ) := by
+      have : (1 : ℕ) ≤ p - 1 := Nat.succ_le_iff.2 (Nat.sub_pos_of_lt hp.one_lt)
+      exact_mod_cast this
+    have hsq : ((p - 1 : ℕ) : ℝ) ≤ ((p - 1 : ℕ) : ℝ) ^ 2 := by
+      -- `x ≤ x^2` for `x ≥ 1`
+      simpa [pow_two] using (mul_le_mul_of_nonneg_left hpm1 (by positivity : (0 : ℝ) ≤ ((p - 1 : ℕ) : ℝ)))
+    have hden :
+        ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) ≤ ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2) := by
+      exact mul_le_mul_of_nonneg_left hsq (by positivity : (0 : ℝ) ≤ (p : ℝ))
+    -- Apply `one_div_le_one_div_of_le` to the denominators.
+    -- From `a ≤ b` with `a>0`, we get `1/b ≤ 1/a`.
+    have := one_div_le_one_div_of_le hpos hden
+    simpa [one_div] using this
+  have hX :
+      factorR p ≤ 1 + 3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by
+    -- `2/(p(p-1)) + 1/(p(p-1)^2) ≤ 3/(p(p-1))`.
+    dsimp [factorR]
+    have hx : ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) ≠ 0 := ne_of_gt hpos
+    have hsum_le :
+        2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) + 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)
+          ≤ 3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by
+      calc
+        2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) + 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ) ^ 2)
+            ≤ 2 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) + 1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by
+                exact add_le_add_left hle_inv _
+        _ = 3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)) := by
+              -- `2/x + 1/x = 3/x`
+              -- avoid `simp` leaving `inv`-normal forms behind
+              field_simp [hx]
+              ring
+    -- Add `1` to both sides.
+    have := add_le_add_left hsum_le (1 : ℝ)
+    -- normalize the associativity/commutativity of addition
+    simpa [add_assoc, add_left_comm, add_comm] using this
+  have hExp :
+      (1 + 3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) ≤ Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) := by
+    simpa [add_comm] using Real.add_one_le_exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))
+  have hR : factorR p ≤ Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) := le_trans (le_trans hX hExp) (le_rfl)
+  -- Push the inequality through `ENNReal.ofReal`.
+  exact (ENNReal.ofReal_le_ofReal hR)
+
+private lemma prod_factorENN_le_exp_three (S : Finset ℕ) (hS : ∀ p ∈ S, p.Prime) :
+    (∏ p ∈ S, factorENN p) ≤ ENNReal.ofReal (Real.exp 3) := by
+  classical
+  -- Compare each prime factor to an exponential.
+  have hstep :
+      (∏ p ∈ S, factorENN p) ≤ ∏ p ∈ S, ENNReal.ofReal (Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) := by
+    refine Finset.prod_le_prod' ?_
+    intro p hp
+    exact factorENN_le_exp p (hS p hp)
+  -- Turn the RHS product into `ofReal (exp (sum ...))`.
+  have hprodexp :
+      (∏ p ∈ S, ENNReal.ofReal (Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))))
+        = ENNReal.ofReal (Real.exp (∑ p ∈ S, 3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) := by
+    have hnonneg :
+        ∀ p, p ∈ S → (0 : ℝ) ≤ Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) := by
+      intro p hp
+      positivity
+    -- `ofReal` commutes with finite products of nonnegative reals.
+    have h_ofReal_prod :
+        (∏ p ∈ S, ENNReal.ofReal (Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))))
+          = ENNReal.ofReal (∏ p ∈ S, Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) := by
+      -- The lemma is stated in the opposite direction.
+      symm
+      exact ENNReal.ofReal_prod_of_nonneg (s := S)
+        (f := fun p => Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))))
+        (by intro p hp; exact hnonneg p hp)
+    -- `∏ exp = exp (∑ ...)` for finite `Finset`.
+    have h_real :
+        (∏ p ∈ S, Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))))
+          = Real.exp (∑ p ∈ S, 3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) := by
+      -- `Real.exp_sum` is `exp (∑ p in S, a p) = ∏ p in S, exp (a p)`.
+      simpa using
+        (Real.exp_sum (s := S) (f := fun p : ℕ => 3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))).symm
+    -- Put the two steps together.
+    calc
+      (∏ p ∈ S, ENNReal.ofReal (Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))))
+          = ENNReal.ofReal (∏ p ∈ S, Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) := h_ofReal_prod
+      _ = ENNReal.ofReal (Real.exp (∑ p ∈ S, 3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) := by
+            rw [h_real]
+  -- Bound the finite sum of coefficients by `3`.
+  have hsumInv : (∑ p ∈ S, (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) ≤ 1 :=
+    sum_inv_p_mul_sub_le_one S hS
+  have hsum3 :
+      (∑ p ∈ S, (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) ≤ 3 := by
+    -- rewrite `3/x` as `3 * (1/x)` and pull out the factor `3`
+    have hrew :
+        (∑ p ∈ S, (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))))
+          = (3 : ℝ) * (∑ p ∈ S, (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) := by
+      -- `3/x = 3 * (1/x)` and `∑ (3 * f p) = 3 * ∑ f p`.
+      have : (∑ p ∈ S, (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))))
+          = ∑ p ∈ S, (3 : ℝ) * (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))) := by
+            refine Finset.sum_congr rfl ?_
+            intro p hp
+            simp [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
+      -- Pull out the constant.
+      simpa [this, Finset.mul_sum, mul_assoc] using (Finset.mul_sum (a := (3 : ℝ)) (s := S)
+        (f := fun p : ℕ => (1 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))))).symm
+    -- Now bound by `3 * 1`.
+    have h3 : (0 : ℝ) ≤ (3 : ℝ) := by positivity
+    have := mul_le_mul_of_nonneg_left hsumInv h3
+    simpa [hrew] using this
+  -- Finish by monotonicity of `exp`.
+  have hexp : Real.exp (∑ p ∈ S, (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) ≤ Real.exp 3 :=
+    Real.exp_monotone hsum3
+  -- Combine all inequalities in `ENNReal`.
+  calc
+    (∏ p ∈ S, factorENN p)
+        ≤ ∏ p ∈ S, ENNReal.ofReal (Real.exp (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ)))) := hstep
+    _ = ENNReal.ofReal (Real.exp (∑ p ∈ S, (3 / ((p : ℝ) * ((p - 1 : ℕ) : ℝ))))) := hprodexp
+    _ ≤ ENNReal.ofReal (Real.exp 3) := by
+          exact ENNReal.ofReal_le_ofReal hexp
+
+private def primeFactorsPair (x : ℕ × ℕ) : Finset ℕ × Finset ℕ :=
+  (x.1.primeFactors, x.2.primeFactors)
+
+private lemma primeFactorsPair_inj {x y : ℕ × ℕ}
+    (hx : Squarefree x.1 ∧ Squarefree x.2) (hy : Squarefree y.1 ∧ Squarefree y.2)
+    (h : primeFactorsPair x = primeFactorsPair y) : x = y := by
+  rcases x with ⟨d1, e1⟩
+  rcases y with ⟨d2, e2⟩
+  simp [primeFactorsPair] at h
+  rcases h with ⟨hd, he⟩
+  have hd1 : (∏ p ∈ d1.primeFactors, p) = d1 := Nat.prod_primeFactors_of_squarefree hx.1
+  have hd2 : (∏ p ∈ d2.primeFactors, p) = d2 := Nat.prod_primeFactors_of_squarefree hy.1
+  have he1 : (∏ p ∈ e1.primeFactors, p) = e1 := Nat.prod_primeFactors_of_squarefree hx.2
+  have he2 : (∏ p ∈ e2.primeFactors, p) = e2 := Nat.prod_primeFactors_of_squarefree hy.2
+  have hdEq : d1 = d2 := by
+    simpa [hd1, hd2] using congrArg (fun s : Finset ℕ => ∏ p ∈ s, p) hd
+  have heEq : e1 = e2 := by
+    simpa [he1, he2] using congrArg (fun s : Finset ℕ => ∏ p ∈ s, p) he
+  simp [hdEq, heEq]
+
+private lemma finite_sum_le_fullSum (t : Finset (ℕ × ℕ)) :
+    (∑ x ∈ t, CstarTermPair x) ≤
+      fullSum (t.biUnion fun x => x.1.primeFactors ∪ x.2.primeFactors) := by
+  classical
+  let P : (ℕ × ℕ) → Prop := fun x => Squarefree x.1 ∧ Squarefree x.2
+  let tSF : Finset (ℕ × ℕ) := t.filter P
+  let S : Finset ℕ := t.biUnion fun x => x.1.primeFactors ∪ x.2.primeFactors
+  -- First: restrict to squarefree pairs (other terms are `0`).
+  have hrestrict :
+      (∑ x ∈ t, CstarTermPair x) = ∑ x ∈ tSF, CstarTermPair x := by
+    have hsum_if :
+        (∑ x ∈ t, CstarTermPair x) = ∑ x ∈ t, (if P x then CstarTermPair x else 0) := by
+      refine Finset.sum_congr rfl ?_
+      intro x hx
+      by_cases hP : P x
+      · simp [hP]
+      · have : ¬ Squarefree x.1 ∨ ¬ Squarefree x.2 := not_and_or.mp hP
+        cases this with
+        | inl hd =>
+            simp [P, hP, CstarTermPair, CstarTerm_eq_zero_of_not_squarefree_left (d := x.1) (e := x.2) hd]
+        | inr he =>
+            simp [P, hP, CstarTermPair, CstarTerm_eq_zero_of_not_squarefree_right (d := x.1) (e := x.2) he]
+    -- Use `sum_filter` to rewrite the RHS sum over `tSF`.
+    simpa [tSF, Finset.sum_filter, hsum_if, P]
+
+  -- Second: reindex the squarefree sum into a sum over pairs of prime-factor sets.
+  let u : Finset (Finset ℕ × Finset ℕ) := tSF.image primeFactorsPair
+  let g : (Finset ℕ × Finset ℕ) → ENNReal := fun x => CstarTerm (prodOf x.1) (prodOf x.2)
+
+  have hu_eq :
+      (∑ x ∈ tSF, CstarTermPair x) = ∑ y ∈ u, g y := by
+    -- `primeFactorsPair` is injective on `tSF` (squarefree numbers are determined by their primeFactors).
+    have hinj :
+        ∀ x1 ∈ tSF, ∀ x2 ∈ tSF, primeFactorsPair x1 = primeFactorsPair x2 → x1 = x2 := by
+      intro x1 hx1 x2 hx2 h'
+      have hx1' : P x1 := (Finset.mem_filter.1 hx1).2
+      have hx2' : P x2 := (Finset.mem_filter.1 hx2).2
+      exact primeFactorsPair_inj hx1' hx2' h'
+    -- Rewrite the sum over the image.
+    have himg :
+        (∑ y ∈ u, g y) = ∑ x ∈ tSF, g (primeFactorsPair x) := by
+      -- Use a small local lemma to rewrite `sum` over `image` under injectivity.
+      -- (We avoid relying on the exact argument order of Mathlib’s `Finset.sum_image`.)
+      simpa [u] using (sum_image_eq_of_injOn (s := tSF) (f := primeFactorsPair) (g := g) hinj)
+    -- Now show `g (primeFactorsPair x) = CstarTermPair x` on `tSF`.
+    have hterm :
+        ∀ x ∈ tSF, g (primeFactorsPair x) = CstarTermPair x := by
+      intro x hx
+      have hxP : P x := (Finset.mem_filter.1 hx).2
+      -- rewrite `x.1` and `x.2` as products of their prime factors
+      have hd : prodOf x.1.primeFactors = x.1 := by
+        simpa [prodOf] using (Nat.prod_primeFactors_of_squarefree hxP.1)
+      have he : prodOf x.2.primeFactors = x.2 := by
+        simpa [prodOf] using (Nat.prod_primeFactors_of_squarefree hxP.2)
+      simp [g, primeFactorsPair, CstarTermPair, CstarTerm, hd, he]
+    -- Combine.
+    have : (∑ x ∈ tSF, CstarTermPair x) = ∑ x ∈ tSF, g (primeFactorsPair x) := by
+      refine Finset.sum_congr rfl ?_
+      intro x hx
+      simpa using (hterm x hx).symm
+    exact this.trans himg.symm
+
+  -- Third: show `u` sits inside `S.powerset × S.powerset`, and use monotonicity of `sum`.
+  have hsubset : u ⊆ S.powerset.product S.powerset := by
+    intro y hy
+    rcases Finset.mem_image.1 hy with ⟨x, hx, rfl⟩
+    have hx_mem : x ∈ t := (Finset.mem_filter.1 hx).1
+    have hU : x.1.primeFactors ∪ x.2.primeFactors ⊆ S :=
+      Finset.subset_biUnion_of_mem (s := t) (u := fun x => x.1.primeFactors ∪ x.2.primeFactors) hx_mem
+    have h1 : x.1.primeFactors ⊆ S := subset_trans Finset.subset_union_left hU
+    have h2 : x.2.primeFactors ⊆ S := subset_trans Finset.subset_union_right hU
+    refine Finset.mem_product.2 ?_
+    exact ⟨Finset.mem_powerset.2 h1, Finset.mem_powerset.2 h2⟩
+
+  have hsum_le :
+      (∑ y ∈ u, g y) ≤ ∑ y ∈ S.powerset.product S.powerset, g y := by
+    refine Finset.sum_le_sum_of_subset_of_nonneg hsubset ?_
+    intro y hy hy_not
+    exact bot_le
+
+  -- Convert the RHS to `fullSum S`.
+  have hfull : (∑ y ∈ S.powerset.product S.powerset, g y) = fullSum S := by
+    simpa [fullSum_eq_sum_product, g]
+
+  -- Assemble.
+  calc
+    (∑ x ∈ t, CstarTermPair x)
+        = ∑ x ∈ tSF, CstarTermPair x := hrestrict
+    _ = ∑ y ∈ u, g y := hu_eq
+    _ ≤ ∑ y ∈ S.powerset.product S.powerset, g y := hsum_le
+    _ = fullSum S := hfull
+
+private lemma Cstar_le_exp_three : Cstar ≤ ENNReal.ofReal (Real.exp 3) := by
+  classical
+  -- Reduce to bounding each finite partial sum.
+  rw [Cstar_eq_tsum_term, ENNReal.tsum_eq_iSup_sum]
+  refine iSup_le ?_
+  intro t
+  let S : Finset ℕ := t.biUnion fun x => x.1.primeFactors ∪ x.2.primeFactors
+  have hS : ∀ p ∈ S, p.Prime := by
+    intro p hp
+    rcases Finset.mem_biUnion.1 hp with ⟨x, hx, hp'⟩
+    rcases Finset.mem_union.1 hp' with hp' | hp'
+    · exact Nat.prime_of_mem_primeFactors hp'
+    · exact Nat.prime_of_mem_primeFactors hp'
+  have hsum_le : (∑ x ∈ t, CstarTermPair x) ≤ fullSum S := finite_sum_le_fullSum t
+  have hfull :
+      fullSum S ≤ ENNReal.ofReal (Real.exp 3) := by
+    -- `fullSum S = ∏_{p∈S} factorENN p ≤ exp 3`
+    have hfac : fullSum S = ∏ p ∈ S, factorENN p := fullSum_eq_prod_factorENN S hS
+    have hprod : (∏ p ∈ S, factorENN p) ≤ ENNReal.ofReal (Real.exp 3) := prod_factorENN_le_exp_three S hS
+    simpa [hfac] using hprod
+  exact le_trans hsum_le hfull
+
+theorem Cstar_le_45 : Cstar ≤ ENNReal.ofReal 45 := by
+  have hC : Cstar ≤ ENNReal.ofReal (Real.exp 3) := Cstar_le_exp_three
+  have hE : (Real.exp 3 : ℝ) ≤ (45 : ℝ) := exp_three_le_45
+  exact le_trans hC (by simpa using ENNReal.ofReal_le_ofReal hE)
 
 
 --/ ## Main: unconditional totient-squared tail, then filtered corollary-/

@@ -46,7 +46,7 @@ lemma windowSumN_add (X N : ℕ) (f g : ℕ → β) :
   = windowSumN X N f + windowSumN X N g := by
   classical
   unfold windowSumN
-  simpa [Finset.sum_add_distrib]
+  simp [Finset.sum_add_distrib]
 
 /-- Specialization to `ℝ`: sum of the constant-one function. -/
 @[simp] lemma windowSumN_const_one (X N : ℕ) :
@@ -54,12 +54,11 @@ lemma windowSumN_add (X N : ℕ) (f g : ℕ → β) :
   classical
   induction' N with N ih
   · simp [windowSumN]
-  · simp [windowSumN, Finset.sum_range_succ, ih, add_comm, add_left_comm, add_assoc]
+  · simp [windowSumN]
 
 @[simp] lemma windowSum_const_one (X H : ℕ) :
     windowSum X H (fun _ => (1 : ℝ)) = (H+1 : ℝ) := by
   classical
-  unfold windowSum
-  simpa using windowSumN_const_one X (H+1)
+  simp [windowSum, windowSumN_const_one]
 
 end Twin.Ledger

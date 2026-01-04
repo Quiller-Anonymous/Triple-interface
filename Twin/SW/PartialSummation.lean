@@ -1,9 +1,9 @@
 -- Twin/SW/PartialSummation.lean
-import Mathlib.Algebra.BigOperators.Basic
+import Mathlib.Algebra.BigOperators.Group.Finset.Basic
 import Mathlib.Data.Finset.Interval
 import Mathlib.Data.Real.Basic
-import Mathlib.Topology.Algebra.InfiniteSum
-import Mathlib.Analysis.SpecialFunctions.Log
+import Mathlib.Topology.Algebra.InfiniteSum.Basic
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 noncomputable section
 open scoped BigOperators

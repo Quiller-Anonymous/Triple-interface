@@ -14,17 +14,12 @@ open Twin Twin.GoalAPI
 
 /-- Major-arc pinned lower bound (paper §7).
     This is the *single external axiom* the Twin pipeline depends on. -/
-axiom gate_pointwise
+axiom gate_onWindow
   (P : Params) (emin eds : ℕ → ℝ) :
-  AnalyticCore.GatePointwise P emin eds
-
--- still in Twin/MajorArcPin.lean
-namespace MajorArcPin
+  AnalyticCore.GateOnWindow P emin eds
 
 @[inline] def gateCert (P : Params) (emin eds : ℕ → ℝ) :
-    AnalyticCore.GatePointwise P emin eds :=
-  gate_pointwise P emin eds
-
-end MajorArcPin
+    AnalyticCore.GateOnWindow P emin eds :=
+  gate_onWindow P emin eds
 
 end Twin.MajorArcPin

@@ -49,3 +49,8 @@ MISCELLANEOUS HINTS AND TRICKS
 1) Avoid Finset.card_sdiff misuse: use disjoint union instead. 
 Disjoint S_BG outerBand via Finset.disjoint_sdiff_right, S_BG ∪ outerBand = bandU via Finset.union_sdiff_of_subset hsubset then gets bandU.card = S_BG.card + outerBand.card using Finset.card_union_of_disjoint
 2) Don’t apply Finset.mem_filter.mp to a membership-in-sdiff. So hk : k ∈ outerBand must be unpacked with: Finset.mem_sdiff.mp hk (or .1/.2 after that)
+
+3) `Finset.sum_image` is easy to misapply in this toolchain snapshot (argument inference/order can go sideways inside `simp`).
+   If you need to rewrite a sum over `s.image f` under an injectivity hypothesis, prefer a small wrapper lemma of the shape:
+     `(s.image f).sum g = s.sum (fun a => g (f a))`
+   proved by `Finset.induction_on` (see `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean` for one such helper).

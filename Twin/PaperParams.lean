@@ -39,11 +39,9 @@ def P : Twin.GoalAPI.Params :=
   S           := S,
   eps         := eps,
   eps_pos     := by
-    -- 0 < 1/10
-    simpa [eps] using (by norm_num : (0 : ℝ) < 1/10),
+    norm_num [eps],
   eps_lt_half := by
-    -- 1/10 < 1/2
-    simpa [eps] using (by norm_num : (1/10 : ℝ) < 1/2),
+    norm_num [eps],
   S_ge_three  := S_ge_three,
   err         := err }
 

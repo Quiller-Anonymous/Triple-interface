@@ -22,7 +22,7 @@ lemma windowSum_indicator_eq_mass (X H : ℕ) :
   classical
   unfold Twin.Ledger.windowSum Twin.Ledger.windowSumN Twin.Bridge.localizedTwinMass
   refine Finset.sum_congr rfl (fun k hk => ?_)
-  simp [Nat.add_sub_cancel]
+  simp
 end Internal
 
 /-- Build a witness using the ON-WINDOW pointwise assemble inequality. -/

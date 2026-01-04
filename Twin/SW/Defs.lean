@@ -1,9 +1,12 @@
 -- Twin/SW/Defs.lean
-import Mathlib.Data.Real.Basic
-import Mathlib.Data.Complex.Exponential
-import Mathlib.Analysis.SpecialFunctions.Log
+import Mathlib
+import Mathlib.NumberTheory.ArithmeticFunction
+import Mathlib.Data.Nat.Totient
 
 open scoped BigOperators
+open scoped ArithmeticFunction.Moebius
+
+noncomputable section
 
 namespace Twin.SW
 
@@ -14,35 +17,35 @@ namespace Twin.SW
 /-- Smoothed prime exponential sum centered at `X` with scale `H` and phase `α`. -/
 def sumValue (Λ : ℕ → ℝ) (W : ℝ → ℝ) (X H α : ℝ) : ℂ :=
   ∑' n : ℕ,
-    Complex.ofReal (Λ n * W ((n.toReal - X) / H)) * χ_add (α * n)
+    Complex.ofReal (Λ n * W (((n : ℝ) - X) / H)) * χ_add (α * (n : ℝ))
 
-/-- Major-arc main term near `a/q` with `(a,q)=1`.  Here `Ŵ` is the
-Fourier transform of `W`, normalized so that `Ŵ(0) = ∫ W`. -/
-def mainTerm (Ŵ : ℝ → ℝ) (X H α : ℝ) (a q : ℕ) : ℂ :=
-  let coeff : ℝ := (Nat.mobius q : ℤ).toReal / (Nat.totient q : ℝ)
-  Complex.ofReal coeff
-  * χ_add ((α - (a : ℝ)/q) * X)
-  * Complex.ofReal (X * Ŵ (H * (α - (a : ℝ)/q)))
+/-- Major-arc main term near `a/q` with `(a,q)=1`.  Here `W_hat` is the
+Fourier transform of `W`, normalized so that `W_hat(0) = ∫ W`. -/
+@[simp] def muOverPhi (q : ℕ) : ℝ :=
+  ((ArithmeticFunction.moebius q : ℤ) : ℝ) / (Nat.totient q : ℝ)
+
+def mainTerm (W_hat : ℝ → ℝ) (X H α : ℝ) (a q : ℕ) : ℂ :=
+  Complex.ofReal (muOverPhi q)
+  * χ_add ((α - (a : ℝ) / q) * X)
+  * Complex.ofReal (X * W_hat (H * (α - (a : ℝ) / q)))
 
 /-- Uniform smoothed major-arc estimate at scale `H` for the model
-`Λ, W, Ŵ`.  For fixed `A,B>0`, this records a polylogarithmic major-arc
+`Λ, W, W_hat`.  For fixed `A,B>0`, this records a polylogarithmic major-arc
 box, a starting point `X0`, and a global constant `C` such that, on all
 major arcs `|α - a/q| ≤ δ/(H+1)` with `1 ≤ q ≤ (log X)^B`, the
 smoothed exponential sum is within `≪ C · X/(log X)^A` of its expected
 main term. -/
 structure SmoothMajorArcEstimate
-  (A B : ℝ) (Λ : ℕ → ℝ) (W Ŵ : ℝ → ℝ) : Prop :=
-  (δ   : ℝ)
-  (δ_pos : 0 < δ)
-  (X0  : ℝ)
-  (C   : ℝ)
-  (bound :
+  (A B : ℝ) (Λ : ℕ → ℝ) (W W_hat : ℝ → ℝ) where
+  δ   : ℝ
+  δ_pos : 0 < δ
+  X0  : ℝ
+  C   : ℝ
+  bound :
     ∀ {X H : ℝ}, X0 ≤ X → 1 ≤ H →
-    ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ (Real.log X)^B → Nat.Coprime a q →
+    ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ Real.rpow (Real.log X) B → Nat.Coprime a q →
     ∀ {α : ℝ}, |α - (a : ℝ)/q| ≤ δ / (H + 1) →
-      Complex.abs
-        (sumValue Λ W X H α
-          - mainTerm Ŵ X H α a q)
-        ≤ C * (X / (Real.log X)^A))
+      ‖sumValue Λ W X H α - mainTerm W_hat X H α a q‖
+        ≤ C * (X / Real.rpow (Real.log X) A)
 
 end Twin.SW

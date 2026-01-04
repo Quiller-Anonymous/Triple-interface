@@ -11,6 +11,7 @@ import Mathlib.Data.Real.Basic
 import Mathlib.Tactic
 import Twin.LedgerExtra
 import Twin.GoalAPI
+import Twin.SingularSeries
 
 namespace Twin
 namespace Compat
@@ -19,11 +20,11 @@ open Real
 
 /-! ## √-helpers (proved) -/
 
-/-! ## (Optional) Positivity of the truncated singular series
-    Replace this axiom with your real lemma if available. -/
-axiom truncSS_nonneg_of_ge3
+/-! ## Positivity of the truncated singular series -/
+theorem truncSS_nonneg_of_ge3
   (S : Finset ℕ) (hS : ∀ p ∈ S, 3 ≤ p) :
-  0 ≤ truncSingularSeries S
+  0 ≤ truncSingularSeries S :=
+  Twin.truncSingularSeries_nonneg_of_ge_three (S := S) hS
 
 /-- For `a,b ≥ 0`, we have `sqrt (a+b) ≤ sqrt a + sqrt b`. -/
 lemma sqrt_add_le (a b : ℝ) (ha : 0 ≤ a) (hb : 0 ≤ b) :

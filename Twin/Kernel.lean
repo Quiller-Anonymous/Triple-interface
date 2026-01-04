@@ -10,7 +10,7 @@ namespace Twin.Kernel
 def J (H n : ℕ) : ℝ := if n ≤ H then 1 else 0
 
 @[simp] lemma J_of_le {H n : ℕ} (h : n ≤ H) : J H n = 1 := by
-  unfold J; simpa [h]
+  simp [J, h]
 
 @[simp] lemma J_of_gt {H n : ℕ} (h : H < n) : J H n = 0 := by
   unfold J; simp [Nat.not_le.mpr h]

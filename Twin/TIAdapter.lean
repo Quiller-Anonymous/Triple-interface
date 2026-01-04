@@ -27,13 +27,14 @@ class HasTwinTI (P : GoalAPI.Params) where
     ∀ {X}, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H eds
         ≤ P.eps * truncSingularSeries P.S * ((P.H : ℝ) + 1) / 3
-  -- Pinned major-arc lower bound (uniform in k ≤ H)
+  -- Pinned major-arc lower bound, in window-sum form (uniform in X ≥ X0)
   pinned :
-    ∀ {X k}, P.X0 ≤ X → k ≤ P.H →
-      (1 - P.eps) * truncSingularSeries P.S
-        ≤ Kernel.J P.H k * Bridge.twinIndicator (X + k)
-            + emin (X + k) + eds (X + k)
-            + (P.eps * truncSingularSeries P.S) / 3
+    ∀ {X}, P.X0 ≤ X →
+      (1 - P.eps) * truncSingularSeries P.S * ((P.H : ℝ) + 1)
+        ≤ Bridge.localizedTwinMass X P.H
+          + Ledger.windowSum X P.H emin
+          + Ledger.windowSum X P.H eds
+          + (P.eps * truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
 
 namespace HasTwinTI
 
@@ -41,7 +42,7 @@ namespace HasTwinTI
 def toAnalytic (P : GoalAPI.Params) [T : HasTwinTI P] :
   AnalyticCore.CLSBound P T.emin
   ∧ AnalyticCore.DesmoothBound P T.eds
-  ∧ AnalyticCore.GatePointwise P T.emin T.eds :=
+  ∧ AnalyticCore.GateOnWindow P T.emin T.eds :=
 by
   classical
   have hL2 : CLSFromL2.Bound P T.emin := ⟨fun {X} hX => (T.l2_minor (X:=X) hX)⟩
@@ -51,7 +52,7 @@ by
   · -- desmoothing budget: direct
     intro X hX; exact T.desmooth (X:=X) hX
   · -- pinned major-arc inequality: direct
-    intro X k hX hk; exact T.pinned (X:=X) (k:=k) hX hk
+    intro X hX; exact T.pinned (X := X) hX
 
 end HasTwinTI
 end Twin

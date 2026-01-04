@@ -23,7 +23,7 @@ lemma sum_const_mul {α} [DecidableEq α] (s : Finset α) (c : ℝ) (f : α → 
   refine Finset.induction_on s ?h0 ?hstep
   · simp
   · intro a s ha ih
-    simp [ha, ih, mul_add, add_comm, add_left_comm, add_assoc]
+    simp [ha, ih, mul_add]
 
 /-- Monotonicity of windowed sums under pointwise inequality. -/
 lemma windowSum_mono_of_pointwise
@@ -34,10 +34,12 @@ lemma windowSum_mono_of_pointwise
   -- windowSum X H f = ∑_{k=0}^H f (X+k)
   unfold Twin.Ledger.windowSum Twin.Ledger.windowSumN
   -- use explicit Finset.sum (no binder macro)
-  set S := Finset.range (H+1)
-  change S.sum (fun k => a (X + k)) ≤ S.sum (fun k => b (X + k))
-  refine Finset.sum_le_sum (fun k hk => ?_)
-  exact h (X + k)
+  set S := Finset.range (H + 1)
+  have : S.sum (fun k => a (X + k)) ≤ S.sum (fun k => b (X + k)) := by
+    refine Finset.sum_le_sum (fun k hk => ?_)
+    exact h (X + k)
+  simpa [S]
+    using this
 
 /--
 **PSB assembly (windowed form).**
@@ -63,10 +65,10 @@ theorem assemble_lower_bound
       S.sum (fun k => (c * L (X + k) - E (X + k)))
         = c * S.sum (fun k => L (X + k))
           -   S.sum (fun k => E (X + k)) := by
-    have := Finset.sum_sub_distrib
+    have hsub := Finset.sum_sub_distrib
               (s := S) (f := fun k => c * L (X + k)) (g := fun k => E (X + k))
     -- rewrite the first term using `sum_const_mul`
-    simpa [this, sum_const_mul S c (fun k => L (X + k))]
+    simp [hsub, sum_const_mul S c (fun k => L (X + k))]
 
   -- Rephrase in terms of `windowSum`
   have hsum' :

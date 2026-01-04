@@ -60,13 +60,9 @@ lemma windowSum_indicator_eq_mass (X H : ℕ) :
   classical
   -- expand both sides as ∑_{k=0}^H ...
   unfold Twin.Ledger.windowSum Twin.Ledger.windowSumN Twin.Bridge.localizedTwinMass
-  -- rewrite (X+k) - X = k in ℕ
-  have : ∀ k, Twin.Kernel.J H ((X + k) - X) * Twin.Bridge.twinIndicator (X + k)
-            = Twin.Kernel.J H k * Twin.Bridge.twinIndicator (X + k) := by
-    intro k; simp [Nat.add_sub_cancel]
   -- pointwise congruence under the sum
   refine Finset.sum_congr rfl (fun k hk => ?_)
-  simpa using this k
+  simp
 
 end Internal
 

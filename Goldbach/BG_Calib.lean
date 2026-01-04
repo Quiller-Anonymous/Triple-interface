@@ -718,10 +718,128 @@ class WeightsBridgeHyp : Prop where
       |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N| ≤ δbridge_canon
 
 /-- Exported bridge bound, packaged as a hypothesis rather than an axiom. -/
-lemma weights_bridge_full
+  lemma weights_bridge_full
     {X N : ℕ} [WeightsBridgeHyp] (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
     |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N| ≤ δbridge_canon :=
   WeightsBridgeHyp.bound (X := X) (N := N) hX hN
+
+/-- Algebraic split of the main bridge term: rewrite `R - conv_full` via `conv_ref` and `errTI`. -/
+lemma R_minus_conv_full
+    {X N : ℕ} :
+    (Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N
+      = (Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N - BG_Identity.errTI X N := by
+  -- `conv_full = conv_ref + errTI` by definition (`conv_full_sub_conv_ref_eq_errTI`).
+  have hgap := BG_Identity.conv_full_sub_conv_ref_eq_errTI (X := X) (N := N)
+  have hcf : BG_Identity.conv_full X N = BG_Identity.conv_ref X N + BG_Identity.errTI X N := by
+    -- algebra: move `conv_ref` to the RHS
+    linarith
+  calc
+    (Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N
+        = (Goldbach.Rep.R N : ℝ) - (BG_Identity.conv_ref X N + BG_Identity.errTI X N) := by
+            -- rewrite `conv_full`
+            simp [hcf]
+    _ = (Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N - BG_Identity.errTI X N := by
+            ring
+
+/-- Triangle inequality upgrade: relate the raw representation count to `conv_ref`,
+    paying the bridge gap plus the Type-I tail. This is the mechanically checked
+    version of the informal “bridge = inner swap + contamination + tail” split. -/
+lemma bridge_conv_ref_bound
+    {X N : ℕ} [WeightsBridgeHyp] (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N|
+      ≤ δbridge_canon + Goldbach.BG_Bank.payload_cap X N * BG_Identity.C_tail_closed := by
+  have hbridge : |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N| ≤ δbridge_canon :=
+    WeightsBridgeHyp.bound (X := X) (N := N) hX hN
+  have htail :
+      |BG_Identity.errTI X N|
+        ≤ Goldbach.BG_Bank.payload_cap X N * BG_Identity.C_tail_closed :=
+    BG_Identity.errTI_bound_closed (X := X) (N := N) hX hN
+  have hgap := BG_Identity.conv_full_sub_conv_ref_eq_errTI (X := X) (N := N)
+  have hrewrite :
+      (Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N
+        = (Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N
+            + BG_Identity.errTI X N := by
+    linarith
+  calc
+    |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N|
+        = |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N + BG_Identity.errTI X N| := by
+            simpa [hrewrite]
+    _ ≤ |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N|
+          + |BG_Identity.errTI X N| := by
+            -- use the norm triangle inequality (norm = abs on ℝ)
+            have h :=
+              norm_add_le ((Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N)
+                (BG_Identity.errTI X N)
+            -- convert norms to abs
+            have h' :
+                |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N
+                    + BG_Identity.errTI X N|
+                  ≤ |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_full X N|
+                      + |BG_Identity.errTI X N| := by
+              simpa [Real.norm_eq_abs, add_comm, add_left_comm, add_assoc] using h
+            linarith
+    _ ≤ δbridge_canon
+          + Goldbach.BG_Bank.payload_cap X N * BG_Identity.C_tail_closed := by
+            linarith
+
+/-- Numeric corollary on the canonical window: the Type-I tail product is bounded by `0.01`. -/
+lemma bridge_conv_ref_bound_window
+    {X N : ℕ} [WeightsBridgeHyp] (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N| ≤ δbridge_canon + 0.01 := by
+  have hbase := bridge_conv_ref_bound (X := X) (N := N) (hX := hX) (hN := hN)
+  have htail := tail_budget (X := X) (N := N) hX hN
+  nlinarith
+
+/-- Window-level bound from the raw representation count all the way to the AO main term. -/
+lemma R_to_Mcanon_window
+    (C : AO_AssembleEnvelope.Channels) (K : AO_AssembleEnvelope.Caps)
+    [AO_AssembleEnvelope.Decomposition C] [AO_AssembleEnvelope.Bounds C K]
+    [SigmaUpperOnWindow] [WeightsBridgeHyp]
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N|
+      ≤ δbridge_canon + 0.01
+        + (AO_AssembleEnvelope.δAO K
+            + ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
+                (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)) := by
+  -- split R - Mcanon through conv_ref
+  have hdecomp :
+      (Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N
+        = ((Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N)
+            + (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N) := by ring
+  have htriangle :
+      |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N|
+        ≤ |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N|
+          + |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N| := by
+    -- triangle inequality on the split `(R - conv_ref) + (conv_ref - Mcanon)`
+    have hnorm :
+        |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N
+            + (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N)|
+          ≤ |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N|
+              + |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N| := by
+      simpa [Real.norm_eq_abs] using
+        (norm_add_le
+          ((Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N)
+          (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N))
+    have hsum :
+        (Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N
+          + (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N)
+          = (Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N := by ring
+    -- rewrite the left side using `hsum`
+    simpa [hsum] using hnorm
+  -- bounds for each part
+  have hbridge := bridge_conv_ref_bound_window (X := X) (N := N) (hX := hX) (hN := hN)
+  have href :=
+    ref_to_M_bound (C := C) (K := K) (X := X) (N := N) hX hN
+  calc
+    |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_Major.Mcanon N|
+        ≤ |(Goldbach.Rep.R N : ℝ) - BG_Identity.conv_ref X N|
+          + |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N| := htriangle
+    _ ≤ (δbridge_canon + 0.01)
+          + (AO_AssembleEnvelope.δAO K
+              + ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
+                  (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)) := by
+          have hsum := add_le_add hbridge href
+          linarith [hsum]
 
 end Goldbach.BG_Calib
 

@@ -13,16 +13,33 @@ open scoped BigOperators
 
 namespace Twin.Bridge
 
-/-- Indicator (ℝ-valued) for "there is a twin pair at n". -/
+/-- Log-weighted indicator (ℝ-valued) for "there is a twin pair at n".
+
+This matches the analytic normalization of the von Mangoldt weights:
+heuristically, each twin pair contributes ≍ `(log n)^2`, so the average size of
+this function over `[1..X]` is ≍ a constant. -/
 def twinIndicator (n : ℕ) : ℝ :=
   by
     classical
-    exact (if Twin.TwinPairAt n then 1 else 0)
+    exact
+      if h : Twin.TwinPairAt n then
+        Real.log (n : ℝ) * Real.log ((n + 2 : ℕ) : ℝ)
+      else
+        0
 
 lemma twinIndicator_nonneg (n : ℕ) : 0 ≤ twinIndicator n := by
   classical
   by_cases h : Twin.TwinPairAt n
-  · simp [twinIndicator, h]
+  · have hn1 : (1 : ℝ) ≤ (n : ℝ) := by
+      have hn1' : 1 ≤ n := le_trans (by decide : 1 ≤ 2) h.1.two_le
+      exact_mod_cast hn1'
+    have hn2 : (1 : ℝ) ≤ ((n + 2 : ℕ) : ℝ) := by
+      have hn2' : 1 ≤ n + 2 := le_trans (by decide : 1 ≤ 2) h.2.two_le
+      exact_mod_cast hn2'
+    have hlog1 : 0 ≤ Real.log (n : ℝ) := Real.log_nonneg hn1
+    have hlog2 : 0 ≤ Real.log ((n + 2 : ℕ) : ℝ) := Real.log_nonneg hn2
+    have : 0 ≤ Real.log (n : ℝ) * Real.log ((n + 2 : ℕ) : ℝ) := mul_nonneg hlog1 hlog2
+    simpa [twinIndicator, h] using this
   · simp [twinIndicator, h]
 
 /-- Localized twin mass in the window `[X, X+H]` using the kernel `J`. -/

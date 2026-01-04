@@ -12,15 +12,15 @@ import Twin.PipelineOnWindow
 namespace Twin.GoalAPI
 
 /-- Parameters that your paper fixes for the analysis. -/
-structure Params : Type :=
-  (H   : ℕ)
-  (X0  : ℕ)
-  (S   : Finset ℕ)
-  (eps : ℝ)
-  (err         : ℕ → ℝ)
-  (eps_pos     : 0 < eps)      -- ← was `0 ≤ eps`, make it strict
-  (eps_lt_half : eps < 1/2)    -- keep strict, as used elsewhere
-  (S_ge_three  : ∀ p ∈ S, 3 ≤ p) -- if you already have this, keep it; otherwise add it
+structure Params where
+  H   : ℕ
+  X0  : ℕ
+  S   : Finset ℕ
+  eps : ℝ
+  err : ℕ → ℝ
+  eps_pos     : 0 < eps        -- ← was `0 ≤ eps`, make it strict
+  eps_lt_half : eps < 1 / 2    -- keep strict, as used elsewhere
+  S_ge_three  : ∀ p ∈ S, 3 ≤ p -- if you already have this, keep it; otherwise add it
 
 /-- Backward-compatible accessor for `eps_pos`. Enables `P.epsPos`. -/
 @[simp] theorem Params.epsPos (P : Params) : 0 < P.eps :=

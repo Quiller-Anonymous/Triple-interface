@@ -3,6 +3,8 @@ import Goldbach.CoreTypes
 import Goldbach.AnalyticPointwiseFunCompat
 import Goldbach.FinalFun
 import Goldbach.ParallelTenorFunX
+import Goldbach.AO_SigmaPos   -- provides the canonical `SigmaUpperOnWindow` instance
+import Goldbach.BG_CalibBridgeStub
 
 open Goldbach
 
@@ -43,5 +45,27 @@ theorem goldbach_from_tenorFunX_fun
   have hBase' : FiniteBaseUpTo wFun.X0 := by simpa [hX0] using hBase
   intro n hn h4
   exact goldbach_final_fun (w := wFun) (hBase := hBase') (N := n) hn h4
+
+/--
+Convenience wrapper using the canonical σ-upper certificate. It exposes only the
+remaining external hypotheses (`OffDiagHyp`, the budget split, `WeightsBridgeHyp`,
+and the finite base) while relying on the default `SigmaUpperOnWindow` instance
+from `AO_SigmaPos`.
+-/
+theorem goldbach_from_tenorFunX_fun_canon
+    (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
+    (hc0 : (0.05 : ℝ) ≤ Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff))
+    [Goldbach.BG_Calib.WeightsBridgeHyp]
+    (hBudget :
+      ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ Goldbach.Windows.EvenIn X (10_000 : ℕ) →
+        Goldbach.BG_Calib.δbridge_canon
+          + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
+          + Goldbach.ParallelTenorFunX.δAO_gap_bound (Hoff := Hoff) ≤ (0.01 : ℝ))
+    (hBase : FiniteBaseUpTo 1_000_000) :
+    ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
+  -- hand off to the general theorem, letting typeclass inference supply the sigma instance
+  simpa using
+    (goldbach_from_tenorFunX_fun
+      (Hoff := Hoff) (hc0 := hc0) (hBudget := hBudget) (hBase := hBase))
 
 end Goldbach

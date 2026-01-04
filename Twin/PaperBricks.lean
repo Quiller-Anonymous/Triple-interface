@@ -35,25 +35,22 @@ end ErrorPieces
 /-
   Obligations from the paper (pure math, to be discharged later):
 
-  • `gate_major_min`:  pinned gate lower bound at each window offset k, with
-                       RHS = J·indicator + emin + eds + (tail cap).
-  • `tail_sup_budget`: a *pointwise* cap for the pin tail (uniform for k ≤ H):
-                       tail(k) ≤ (eps * SS)/3.
+  • `gate_major`:      pinned *window-sum* lower bound:
+                       (1 - eps)·SS·(H+1) ≤ mass + windowSum emin + windowSum eds + tailcap·(H+1).
   • `cls_budget`:      window-summed budget for |emin|.
   • `desmooth_budget`: window-summed budget for eds.
 -/
 structure Bricks (P : Twin.GoalAPI.Params) where
   E : ErrorPieces P
-  /-- Pointwise gate lower bound (uniform in X ≥ X0, k ≤ H).
-      This is Lemma A + Lemma B from the math plan:
-      (1 - eps)·SS ≤ J·1_twin + emin + eds + tail(k), with tail(k) capped below. -/
-  gate_major_min :
+  /-- Window-sum gate lower bound (uniform in X ≥ X0).
+      This is the major-arc pinned lower bound after summing over `k=0..H`. -/
+  gate_major :
     ∀ {X : ℕ}, P.X0 ≤ X →
-      ∀ {k : ℕ}, k ≤ P.H →
-        (1 - P.eps) * Twin.truncSingularSeries P.S
-          ≤ Twin.Kernel.J P.H k * Twin.Bridge.twinIndicator (X + k)
-            + E.emin (X + k) + E.eds (X + k)
-            + (P.eps * Twin.truncSingularSeries P.S) / 3
+      (1 - P.eps) * Twin.truncSingularSeries P.S * (P.H + 1)
+        ≤ Twin.Bridge.localizedTwinMass X P.H
+          + Twin.Ledger.windowSum X P.H E.emin
+          + Twin.Ledger.windowSum X P.H E.eds
+          + (P.eps * Twin.truncSingularSeries P.S) * (P.H + 1) / 3
   /-- CLS window-sum budget for the minor-arc piece. -/
   cls_budget :
     ∀ {X : ℕ}, P.X0 ≤ X →

@@ -31,9 +31,9 @@ lemma window_l1_le_sqrt_span_mul_window_l2
   -- convenient shorthands for the two windowed sums
   set A := Ledger.windowSum X H (fun n => |e n|)
   set L2 := Ledger.windowSum X H (fun n => e n ^ 2)
-  have hA_sum : A = ∑ k in s, |e (X + k)| := by
+  have hA_sum : A = Finset.sum s (fun k => |e (X + k)|) := by
     simp [A, Ledger.windowSum, Ledger.windowSumN, s]
-  have hL2_sum : L2 = ∑ k in s, e (X + k) ^ 2 := by
+  have hL2_sum : L2 = Finset.sum s (fun k => e (X + k) ^ 2) := by
     simp [L2, Ledger.windowSum, Ledger.windowSumN, s]
   have hs_card : (s.card : ℝ) = (H : ℝ) + 1 := by
     simp [s, Nat.cast_add, Nat.cast_one]
@@ -54,28 +54,40 @@ lemma window_l1_le_sqrt_span_mul_window_l2
     have hcs :=
       (sq_sum_le_card_mul_sum_sq
           (s := s) (f := fun k : ℕ => |e (X + k)|) :
-        (∑ k in s, |e (X + k)|) ^ 2
-          ≤ (s.card : ℝ) * ∑ k in s, |e (X + k)| ^ 2)
+        (Finset.sum s (fun k => |e (X + k)|)) ^ 2
+          ≤ (s.card : ℝ) * Finset.sum s (fun k => |e (X + k)| ^ 2))
     have habs_sq :
-        ∑ k in s, |e (X + k)| ^ 2 = ∑ k in s, e (X + k) ^ 2 := by
+        Finset.sum s (fun k => |e (X + k)| ^ 2)
+          = Finset.sum s (fun k => e (X + k) ^ 2) := by
       refine Finset.sum_congr rfl ?_
       intro k _; simp [pow_two, abs_mul_self]
     simpa [hA_sum, hL2_sum, hs_card, habs_sq] using hcs
   -- turn the squared inequality into the desired square-root form
-  have hB_nonneg :
-      0 ≤ Real.sqrt ((H : ℝ) + 1) * Real.sqrt L2 :=
+  have hB_nonneg : 0 ≤ Real.sqrt ((H : ℝ) + 1) * Real.sqrt L2 :=
     mul_nonneg (Real.sqrt_nonneg _) (Real.sqrt_nonneg _)
-  have hA_le_abs :
-      |A| ≤ |Real.sqrt ((H : ℝ) + 1) * Real.sqrt L2| := by
-    have h_goal :
-        A ^ 2
-          ≤ (Real.sqrt ((H : ℝ) + 1) * Real.sqrt L2) ^ 2 := by
-      simpa [pow_two, mul_comm, mul_left_comm, mul_assoc,
-             Real.mul_self_sqrt hN_nonneg, Real.mul_self_sqrt hL2_nonneg]
-        using h_sq
-    exact (sq_le_sq).1 h_goal
-  simpa [A, Real.abs_of_nonneg hA_nonneg, Real.abs_of_nonneg hB_nonneg]
-    using hA_le_abs
+
+  have h_goal : A ^ 2 ≤ (Real.sqrt ((H : ℝ) + 1) * Real.sqrt L2) ^ 2 := by
+    have hB_sq :
+        (Real.sqrt ((H : ℝ) + 1) * Real.sqrt L2) ^ 2
+          = ((H : ℝ) + 1) * L2 := by
+      -- `(√a * √b)^2 = a*b` by `mul_pow` plus `mul_self_sqrt`.
+      have hmul :
+          (Real.sqrt ((H : ℝ) + 1) * Real.sqrt L2) ^ 2
+            = (Real.sqrt ((H : ℝ) + 1)) ^ 2 * (Real.sqrt L2) ^ 2 := by
+        simpa using (mul_pow (Real.sqrt ((H : ℝ) + 1)) (Real.sqrt L2) (2 : ℕ))
+      have hsq₁ : (Real.sqrt ((H : ℝ) + 1)) ^ 2 = (H : ℝ) + 1 := by
+        simpa [pow_two] using (Real.mul_self_sqrt hN_nonneg)
+      have hsq₂ : (Real.sqrt L2) ^ 2 = L2 := by
+        simpa [pow_two] using (Real.mul_self_sqrt hL2_nonneg)
+      -- rewrite and finish
+      simpa [hmul, hsq₁, hsq₂, mul_assoc, mul_left_comm, mul_comm]
+    -- rewrite RHS using `hB_sq`, then use `h_sq`
+    simpa [hB_sq] using h_sq
+
+  have hA_le_abs : |A| ≤ |Real.sqrt ((H : ℝ) + 1) * Real.sqrt L2| :=
+    (sq_le_sq).1 h_goal
+
+  simpa [abs_of_nonneg hA_nonneg, abs_of_nonneg hB_nonneg] using hA_le_abs
 
 /-- For `H : ℕ`, `√(H+1) * √((H+1)/9) = (H+1)/3` in `ℝ`. -/
 lemma sqrt_span_mul_sqrt_span_div9 (H : ℕ) :
@@ -88,7 +100,6 @@ lemma sqrt_span_mul_sqrt_span_div9 (H : ℕ) :
   have hα : 0 ≤ a / 9 := div_nonneg ha (by norm_num : (0 : ℝ) ≤ 9)
 
   -- First: √(a/9) = √a / 3  (no division by √9 anywhere)
- -- First: √(a/9) = √a / 3  (no division by √9, no nested `trans`)
   have h1 : sqrt (a / 9) = sqrt (a * (1 / 9)) := by
     simpa [div_eq_mul_inv]
   have h1over9_nonneg : 0 ≤ (1 / (9 : ℝ)) :=

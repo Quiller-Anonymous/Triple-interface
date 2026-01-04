@@ -6,19 +6,18 @@ The code in this file has the Apache 2.0 license, Anonymous Quiller
 Based on public domain paper at Zenodo, "Goldbach and the Triple Interface Method" (ed. Quiller)
 
 ## Status legend:
-- Platinum standard: unconditional proof, no axioms whatsoever, with independent third party verification
-- Gold standard: unconditional proof, or dependent only on conventional math axioms
-- Fool's gold: finite conditional done, and it builds, but relies on bespoke axiom/sorry/admits
-- Silver standard: finite conditional proof (everything but a finite base)
-- Bronze standard: baseline conditional proof (technical axioms reflecting dependencies on conventional math)
+- Platinum standard: unconditional proof, no axioms whatsoever
+- Gold standard: end-to-end proof that builds and is dependent only on explicitly listed conventional math axioms
+- Fool's gold: finite conditional proof, and it builds, but relies on bespoke axiom/sorry/admits
+- Silver standard: finite conditional proof (everything but a finite base) that builds
 - Iron standard: leaf conditional proof (it builds, but with idiosyncratic dependencies, including but not limited to explicit sorries, axioms, admits)
 - Lead standard: machine checked (it builds, whatever it is)
 - Tin standard: not machine checked, but it works on paper... probably (no successful build)
 - Mud standard: informal sketch
 
 ## Projects stats:
-1. Goldbach conjecture -- Current status: gold standard
--- Builds and (with the checked finite base) is unconditional except for the listed conventional axioms in `Goldbach/AO_OffDiag/*`.
+1. Goldbach conjecture -- Current status: iron
+-- The reduction pipeline builds, but the exported “complete” entry points still require explicit non-conventional hypotheses (listed below), in addition to the conventional AO_OffDiag axioms.
 
 2. Twin primes conjecture -- Current status: iron 
 -- analytic engine builds, but depends on unconditional Goldbach + one major arc axiom + axioms for proofs existing in literature
@@ -35,21 +34,28 @@ See DontHassleMe.txt for Mathlib constants and lemmas that are present or missin
 
 Gold-standard goal: only **conventional math** facts are axiomatized; everything bespoke should be proved or backed by checked certificates.
 
-**Conventional axioms currently used**
-- `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean:413` `Cstar_le_45` (numeric bound on an analytic constant).
-- `Goldbach/AO_OffDiag/SigmaTailTenorAxioms.lean:21` `sigmaTail_bound_on_window` (uniform truncation bound for the σ-tail on the canonical window).
+**Conventional axioms currently used (explicit `axiom`s)**
+- `Goldbach/AO_OffDiag/SigmaTailTenorAxioms.lean:24` `sigmaTail_bound_on_window` (uniform truncation bound for the σ-tail on the canonical window).
 - `Goldbach/AO_OffDiag/SigmaTailTenorAxiomsFun.lean:28` `sigmaTail_bound_on_window` (uniform truncation bound for the reindexed σ-tail on the canonical window; parallel `Q(X)` track).
 
-**Bespoke placeholders still in the pipeline (must be removed for gold standard)**
-- (none currently listed)
+**Admitted placeholders**
+- none active in the analytic pipeline; the Euler-product bound `Cstar_le_45` is now proved in `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean` without sorries/admits.
+
+**Other explicit hypotheses still required by some entry points (not axioms, but not yet discharged here)**
+- `Goldbach/BG_Calib.lean:709` `WeightsBridgeHyp` (deweighting + contamination control: `R` close to `conv_full` on the canonical window).
+- `Goldbach/CompleteTenorFunX.lean:18` `goldbach_from_tenorFunX_fun` still takes `OffDiagHyp` and a numeric budget hypothesis `hBudget` (see signature).
+- Certificate wiring status:
+  - `SigmaUpperOnWindow` has a canonical instance in `AO_SigmaPos`; import that module (or `ParallelTenorFunX`) to satisfy the class.
+  - `WeightsBridgeHyp` currently has no instance; it remains a required hypothesis to run the BG calibration (any bridge certificate should be exposed as an instance here when available).
 
 --------------------
 # GOLDBACH PIPELINE
 
 ## Entry points
 
-All.lean (default Lake target) builds:
-Goldbach.Final (Goldbach conjecture result)
+All.lean (default Lake target) imports:
+Goldbach.CompleteFun
+Goldbach.CompleteTenorFunX
 Twin.Final (twin-primes companion project)
 
 ## High-level dependency flow
@@ -87,7 +93,9 @@ Goldbach/BG_Identity.lean: proves the key BG identity/estimates used to connect 
 
 ### Witness construction (glue for the final theorem)
 
-Goldbach/Analytic/Witnesses.lean: assembles a concrete PointwiseWitness from the numeric constants + bank certificates + AO/BG/PPBound infrastructure.
+Goldbach/Complete.lean, Goldbach/CompleteFun.lean: conditional final theorem, assuming an `AnalyticHyp` witness as input.
+
+Goldbach/CompleteTenorFunX.lean: conditional final theorem for the Tenor FunX track (assumes `OffDiagHyp`, `WeightsBridgeHyp`, and a numeric budget hypothesis).
 
 ### Closure and final theorem
 
@@ -117,4 +125,5 @@ TBC
 - By mid-October I had a complete draft of the proof, so I began exploring other applications of the same triple-interface method to similar ideas. We began drafts of the Twin Primes conjecture and the Riemann hypothesis.
 - A reasonable draft of Twin Primes was completed in October. No real progress was made on Riemann. It produced blather, in part because I had no insight into what was required to complete it.
 - In late November I began work on machine coding the proof of Goldbach (VS Code Studio, Lean 4), in an attempt to see if the underlying fundamentals were AI slop or genuine. I also started a new approach to Riemann (inspired by conversations with Copilot), which is the Alt-Zeta project, when I realized that the completion of the extended triple interface might help in creating an enhanced primes detector function that would be informative to efforts at solving Riemann.
-- December was all coding and revisions.
+- December was all coding and revisions, mainly struggles with compiling the finite base chunks, and then unexpected wiring issues in hooking up the finite base to the analytic engine.
+- Achieved a full end-to-end build of the reduction pipeline on Jan 3 2026

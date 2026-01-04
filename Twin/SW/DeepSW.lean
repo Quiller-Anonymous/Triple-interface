@@ -14,7 +14,7 @@ import Twin.SW.SiegelWalfisz
 import Twin.SW.Defs
 import Twin.SW.PartialSummation
 import Twin.MajorArc.SWUniform
-import Mathlib.Analysis.SpecialFunctions.Log
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 noncomputable section
 open scoped BigOperators

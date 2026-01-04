@@ -94,17 +94,18 @@ lemma window_lower_pos (i : Inputs) :
         ((1 - i.eps) * SS) * (i.H+1) - (i.eps * SS * (i.H+1))
           = (((1 - i.eps) * SS - i.eps * SS) * (i.H+1)) := by
       -- use (a - b) * c = a*c - b*c, backwards
-      have := (sub_mul ((1 - i.eps) * SS) (i.eps * SS) (i.H+1)).symm
-      simpa [mul_comm, mul_left_comm, mul_assoc, sub_eq_add_neg] using this
+      have h :=
+        (sub_mul ((1 - i.eps) * SS) (i.eps * SS) (i.H + 1)).symm
+      simpa [mul_assoc] using h
     have h2 :
         ((1 - i.eps) * SS - i.eps * SS) = ((1 - (2 * i.eps)) * SS) := by
       -- ((1-eps) - eps) * SS = (1 - 2eps) * SS
       have hsub : ((1 - i.eps) - i.eps) * SS
                     = ((1 - i.eps) * SS - i.eps * SS) := by
-        simpa [sub_mul]
+        simp [sub_mul]
       have hlin : (1 - i.eps) - i.eps = 1 - (2 * i.eps) := by ring
       simpa [hlin] using hsub.symm
-    simpa [h1, h2]
+    simp [h1, h2]
 
   -- Numerical positivity of the clean lower bound.
   have lb_pos : 0 < (1 - (2 * i.eps)) * SS * (i.H+1) :=
