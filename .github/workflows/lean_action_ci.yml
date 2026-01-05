@@ -2,7 +2,21 @@ name: Lean CI
 
 on:
   push:
+    # Optional but HIGH impact: avoid running CI when only non-build files change.
+    # Tune this list to your repo.
+    paths:
+      - "**/*.lean"
+      - "lakefile.lean"
+      - "lake-manifest.json"
+      - ".github/workflows/**"
+      - "lean-toolchain"
   pull_request:
+    paths:
+      - "**/*.lean"
+      - "lakefile.lean"
+      - "lake-manifest.json"
+      - ".github/workflows/**"
+      - "lean-toolchain"
   schedule:
     # Nightly heavy build (finite-base chunks + full Goldbach pipeline).
     - cron: "0 6 * * *"
@@ -13,8 +27,10 @@ on:
         required: false
         default: "false"
 
+# Make concurrency more specific so runs don’t cancel each other across event types,
+# but still cancel outdated runs for the SAME PR/branch + event.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -25,6 +41,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Cache Lake deps + build outputs.
+      # This is the main lever for “reasonable time” on repeated runs.
+      - name: Cache Lake
+        uses: actions/cache@v4
+        with:
+          path: |
+            .lake/packages
+            .lake/build
+          key: ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}
+          restore-keys: |
+            ${{ runner.os }}-lake-
+
       - name: Set up Lean
         uses: leanprover/lean-action@v1
 
@@ -34,7 +62,6 @@ jobs:
       - name: Fetch Mathlib cache
         run: lake exe cache get
 
-      # These targets avoid the finite base (chunks) but exercise the analytic + BG pipeline wiring.
       - name: Build fast Goldbach targets
         run: |
           set -euo pipefail
@@ -74,8 +101,6 @@ jobs:
               | python3 -c 'import sys, json; xs=[ln.strip() for ln in sys.stdin if ln.strip()]; print(json.dumps(xs))'
           )
 
-          # Batch prefixes to reduce job count and per-job setup overhead.
-          # Default: 8 prefixes per job (tune if needed).
           prefix_batches=$(
             PREFIXES_JSON="$prefixes_json" BATCH_SIZE="8" python3 - <<'PY'
           import json, os
@@ -100,6 +125,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Cache Lake
+        uses: actions/cache@v4
+        with:
+          path: |
+            .lake/packages
+            .lake/build
+          key: ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}
+          restore-keys: |
+            ${{ runner.os }}-lake-
+
       - name: Set up Lean
         uses: leanprover/lean-action@v1
 
@@ -109,7 +144,6 @@ jobs:
       - name: Fetch Mathlib cache
         run: lake exe cache get
 
-      # Compile the shared dependencies once and distribute them to chunk jobs as an artifact.
       - name: Build chunk dependency kit
         run: |
           set -euo pipefail
@@ -139,11 +173,23 @@ jobs:
       fail-fast: false
       matrix:
         batch: ${{ fromJson(needs.discover-chunks.outputs.prefix_batches) }}
-      # Keep this conservative for GitHub's default runners.
-      max-parallel: 8
+      # Consider lowering this if you see long queue times or throttling.
+      max-parallel: 6
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache Lake
+        uses: actions/cache@v4
+        with:
+          path: |
+            .lake/packages
+            .lake/build
+          # Use a slightly different key per batch to reduce cache stampede.
+          key: ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}-batch-${{ join(matrix.batch, '-') }}
+          restore-keys: |
+            ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}-
+            ${{ runner.os }}-lake-
 
       - name: Set up Lean
         uses: leanprover/lean-action@v1
@@ -176,7 +222,6 @@ jobs:
           set -euo pipefail
           shopt -s nullglob
 
-          # matrix.batch is a JSON array of three-digit prefixes.
           batch='${{ toJson(matrix.batch) }}'
           prefixes=$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])))' "$batch")
 
@@ -196,7 +241,6 @@ jobs:
           echo "Building ${#mods[@]} chunk modules in this batch:"
           printf '  %s\n' "${mods[@]}"
 
-          # Build in moderately sized groups to reduce `lake` startup overhead.
           printf '%s\n' "${mods[@]}" | xargs -n 50 lake build
 
       - name: Upload chunk artifacts
@@ -214,7 +258,6 @@ jobs:
     if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_finite_base == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
-
     steps:
       - name: Fail if chunk build failed
         if: ${{ needs.discover-chunks.outputs.count != '0' && needs.build-chunks.result != 'success' }}
@@ -223,6 +266,16 @@ jobs:
           exit 1
 
       - uses: actions/checkout@v4
+
+      - name: Cache Lake
+        uses: actions/cache@v4
+        with:
+          path: |
+            .lake/packages
+            .lake/build
+          key: ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}
+          restore-keys: |
+            ${{ runner.os }}-lake-
 
       - name: Set up Lean
         uses: leanprover/lean-action@v1

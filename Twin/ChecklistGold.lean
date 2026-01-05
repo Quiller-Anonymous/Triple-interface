@@ -28,10 +28,10 @@ We follow the intended “analytic `majMass`” checklist route:
 
 Current status (easiest-first development):
 - `Twin.ChecklistAxioms.majMassAnalytic` is the literal major-arc integral definition (paper §11/§14).
-- `Twin.ChecklistAxioms.majMass` is presently set to the *routed* mass
-  `MajorArcTransfer.routedMajMass`, so the transfer inequality is discharged definitionally.
-  This leaves the single remaining paper-facing lower bound as the one real “gate inequality”
-  to be supplied (see `Twin.ChecklistAxioms.h_lower`).
+- `Twin.ChecklistAxioms.majMass` is set to `majMassAnalytic` (paper-faithful choice).
+  The remaining paper-facing input on the **pinned majors** side is the raw inequality
+  `Twin.ChecklistAxioms.pinnedMajors_lower_raw`; `Twin.ChecklistAxioms.h_lower` is derived from it,
+  and `Twin.ChecklistAxioms.h_transfer` is now proved from the analytic definitions of `emin/eds`.
 
 Paper anchor for `Twin.ChecklistAxioms.gate_onWindow` (equivalently, the derived `pinnedMajors_lower`):
   §14.2 “Pinned major arcs, and closing the gate”, combined with

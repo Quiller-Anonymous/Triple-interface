@@ -1,4 +1,5 @@
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
+import Mathlib.MeasureTheory.Integral.IntegrableOn
 import Twin.MajorArc.SWUniform
 import Twin.SW.Defs
 
@@ -53,6 +54,77 @@ def minorArcInd (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H α : ℝ) : �
     classical
     exact if IsMajorArc (sme := sme) X H α then 0 else 1
 
+/-!
+Measurability + integrability plumbing for the major/minor decomposition
+-----------------------------------------------------------------------
+
+The basic “major + minor = full” integral identity is proved below under explicit
+`IntegrableOn` hypotheses. For later use, it is convenient to:
+
+* package the major-arc set as an explicit measurable set on `[0,1]`,
+* reduce integrability of the major/minor integrands to integrability of the full integrand,
+  via `IntegrableOn.indicator`.
+
+This keeps the measure-theory bookkeeping separate from the analytic content (which is
+responsible for proving that the full integrand is indeed integrable for the chosen model).
+-/
+
+def majorArcSet (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ) : Set ℝ :=
+  {α | IsMajorArc (sme := sme) X H α}
+
+lemma measurableSet_majorArcSet (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ) :
+    MeasurableSet (majorArcSet (sme := sme) X H) := by
+  classical
+  -- Expand the existential definition into a countable union of measurable sets.
+  let cond : ℕ → ℕ → Prop :=
+    fun q a =>
+      1 ≤ q ∧ (q : ℝ) ≤ Real.rpow (Real.log X) B ∧ Nat.Coprime a q
+  let arc : ℕ → ℕ → Set ℝ :=
+    fun q a => {α : ℝ | |α - (a : ℝ) / q| ≤ sme.δ / (H + 1)}
+  have hEq :
+      majorArcSet (sme := sme) X H
+        = ⋃ q : ℕ, ⋃ a : ℕ, (if cond q a then arc q a else (∅ : Set ℝ)) := by
+    ext α
+    constructor
+    · intro h
+      rcases h with ⟨q, a, hq1, hqB, hcop, hα⟩
+      refine Set.mem_iUnion.2 ⟨q, ?_⟩
+      refine Set.mem_iUnion.2 ⟨a, ?_⟩
+      have hc : cond q a := ⟨hq1, hqB, hcop⟩
+      simp [hc, arc, hα]
+    · intro h
+      rcases Set.mem_iUnion.1 h with ⟨q, hq⟩
+      rcases Set.mem_iUnion.1 hq with ⟨a, ha⟩
+      by_cases hc : cond q a
+      · have hα : |α - (a : ℝ) / q| ≤ sme.δ / (H + 1) := by
+          simpa [hc, arc] using ha
+        rcases hc with ⟨hq1, hqB, hcop⟩
+        exact ⟨q, a, hq1, hqB, hcop, hα⟩
+      · -- membership in the `if`-branch forces a contradiction
+        simpa [hc] using ha
+  -- Prove measurability of the RHS union.
+  have hMeas :
+      MeasurableSet (⋃ q : ℕ, ⋃ a : ℕ, (if cond q a then arc q a else (∅ : Set ℝ))) := by
+    refine MeasurableSet.iUnion ?_
+    intro q
+    refine MeasurableSet.iUnion ?_
+    intro a
+    by_cases hc : cond q a
+    · have hArc : MeasurableSet (arc q a) := by
+        -- `{α | |α - c| ≤ r}` is measurable since `α ↦ |α - c|` is measurable.
+        have h1 : Measurable (fun α : ℝ => |α - (a : ℝ) / q|) := by fun_prop
+        have h2 : Measurable (fun _ : ℝ => sme.δ / (H + 1)) := measurable_const
+        simpa [arc] using (measurableSet_le h1 h2)
+      simpa [hc] using hArc
+    · simpa [hc] using (MeasurableSet.empty : MeasurableSet (∅ : Set ℝ))
+  simpa [hEq] using hMeas
+
+lemma measurableSet_minorArcSet (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ) :
+    MeasurableSet {α | ¬ IsMajorArc (sme := sme) X H α} := by
+  -- this is just the complement of `majorArcSet`
+  change MeasurableSet ((majorArcSet (sme := sme) X H)ᶜ)
+  exact (measurableSet_majorArcSet (sme := sme) X H).compl
+
 /-- Twin-correlation Fourier integrand: `|S_X(α)|^2 e(-2α)` (real part).
 
 Here `S_X(α)` is the smoothed prime exponential sum `Twin.SW.sumValue`.
@@ -90,6 +162,103 @@ def fullTwinIntegrand (Λ : ℕ → ℝ) (W : ℝ → ℝ) (X H α : ℝ) : ℝ 
 /-- Complex-valued full integrand. -/
 def fullTwinIntegrandC (Λ : ℕ → ℝ) (W : ℝ → ℝ) (X H α : ℝ) : ℂ :=
   twinCorrIntegrandC Λ W X H α
+
+/-!
+Integrability reduction lemmas
+-----------------------------
+
+Once you know the *full* integrand is integrable on `[0,1]`, measurability of the
+major-arc set implies that the major/minor integrands are also integrable (as indicators),
+and then the “full = major + minor” identity follows from `integral_add`.
+-/
+
+lemma majorArcTwinIntegrand_eq_indicator
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ) :
+    (fun α => majorArcTwinIntegrand (sme := sme) (Λ := Λ) (W := W) X H α)
+      =
+    (majorArcSet (sme := sme) X H).indicator (fun α => fullTwinIntegrand (Λ := Λ) (W := W) X H α) := by
+  classical
+  funext α
+  by_cases h : IsMajorArc (sme := sme) X H α
+  · have : α ∈ majorArcSet (sme := sme) X H := by simpa [majorArcSet] using h
+    simp [majorArcTwinIntegrand, majorArcInd, fullTwinIntegrand, majorArcSet, h, this]
+  · have : α ∉ majorArcSet (sme := sme) X H := by simpa [majorArcSet] using h
+    simp [majorArcTwinIntegrand, majorArcInd, fullTwinIntegrand, majorArcSet, h, this]
+
+lemma minorArcTwinIntegrand_eq_indicator
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ) :
+    (fun α => minorArcTwinIntegrand (sme := sme) (Λ := Λ) (W := W) X H α)
+      =
+    {α | ¬ IsMajorArc (sme := sme) X H α}.indicator (fun α => fullTwinIntegrand (Λ := Λ) (W := W) X H α) := by
+  classical
+  funext α
+  by_cases h : IsMajorArc (sme := sme) X H α
+  · have : α ∉ {α | ¬ IsMajorArc (sme := sme) X H α} := by simp [h]
+    simp [minorArcTwinIntegrand, minorArcInd, fullTwinIntegrand, h, this]
+  · have : α ∈ {α | ¬ IsMajorArc (sme := sme) X H α} := by simp [h]
+    simp [minorArcTwinIntegrand, minorArcInd, fullTwinIntegrand, h, this]
+
+lemma majorArcTwinIntegrandC_eq_indicator
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ) :
+    (fun α => majorArcTwinIntegrandC (sme := sme) (Λ := Λ) (W := W) X H α)
+      =
+    (majorArcSet (sme := sme) X H).indicator (fun α => fullTwinIntegrandC (Λ := Λ) (W := W) X H α) := by
+  classical
+  funext α
+  by_cases h : IsMajorArc (sme := sme) X H α
+  · have : α ∈ majorArcSet (sme := sme) X H := by simpa [majorArcSet] using h
+    simp [majorArcTwinIntegrandC, majorArcInd, fullTwinIntegrandC, majorArcSet, h, this]
+  · have : α ∉ majorArcSet (sme := sme) X H := by simpa [majorArcSet] using h
+    simp [majorArcTwinIntegrandC, majorArcInd, fullTwinIntegrandC, majorArcSet, h, this]
+
+lemma minorArcTwinIntegrandC_eq_indicator
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ) :
+    (fun α => minorArcTwinIntegrandC (sme := sme) (Λ := Λ) (W := W) X H α)
+      =
+    {α | ¬ IsMajorArc (sme := sme) X H α}.indicator (fun α => fullTwinIntegrandC (Λ := Λ) (W := W) X H α) := by
+  classical
+  funext α
+  by_cases h : IsMajorArc (sme := sme) X H α
+  · have : α ∉ {α | ¬ IsMajorArc (sme := sme) X H α} := by simp [h]
+    simp [minorArcTwinIntegrandC, minorArcInd, fullTwinIntegrandC, h, this]
+  · have : α ∈ {α | ¬ IsMajorArc (sme := sme) X H α} := by simp [h]
+    simp [minorArcTwinIntegrandC, minorArcInd, fullTwinIntegrandC, h, this]
+
+theorem integrableOn_majorArcTwinIntegrand_of_full
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ)
+  (hFull : IntegrableOn (fun α => fullTwinIntegrand (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1)) :
+  IntegrableOn (fun α => majorArcTwinIntegrand (sme := sme) (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1) := by
+  have hMA : MeasurableSet (majorArcSet (sme := sme) X H) :=
+    measurableSet_majorArcSet (sme := sme) X H
+  simpa [majorArcTwinIntegrand_eq_indicator (sme := sme) (Λ := Λ) (W := W) X H] using
+    (IntegrableOn.indicator (h := hFull) (ht := hMA))
+
+theorem integrableOn_minorArcTwinIntegrand_of_full
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ)
+  (hFull : IntegrableOn (fun α => fullTwinIntegrand (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1)) :
+  IntegrableOn (fun α => minorArcTwinIntegrand (sme := sme) (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1) := by
+  have hMi : MeasurableSet {α | ¬ IsMajorArc (sme := sme) X H α} :=
+    measurableSet_minorArcSet (sme := sme) X H
+  simpa [minorArcTwinIntegrand_eq_indicator (sme := sme) (Λ := Λ) (W := W) X H] using
+    (IntegrableOn.indicator (h := hFull) (ht := hMi))
+
+theorem integrableOn_majorArcTwinIntegrandC_of_full
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ)
+  (hFull : IntegrableOn (fun α => fullTwinIntegrandC (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1)) :
+  IntegrableOn (fun α => majorArcTwinIntegrandC (sme := sme) (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1) := by
+  have hMA : MeasurableSet (majorArcSet (sme := sme) X H) :=
+    measurableSet_majorArcSet (sme := sme) X H
+  simpa [majorArcTwinIntegrandC_eq_indicator (sme := sme) (Λ := Λ) (W := W) X H] using
+    (IntegrableOn.indicator (h := hFull) (ht := hMA))
+
+theorem integrableOn_minorArcTwinIntegrandC_of_full
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ)
+  (hFull : IntegrableOn (fun α => fullTwinIntegrandC (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1)) :
+  IntegrableOn (fun α => minorArcTwinIntegrandC (sme := sme) (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1) := by
+  have hMi : MeasurableSet {α | ¬ IsMajorArc (sme := sme) X H α} :=
+    measurableSet_minorArcSet (sme := sme) X H
+  simpa [minorArcTwinIntegrandC_eq_indicator (sme := sme) (Λ := Λ) (W := W) X H] using
+    (IntegrableOn.indicator (h := hFull) (ht := hMi))
 
 lemma major_minor_integrand
   (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H α : ℝ) :
@@ -181,6 +350,17 @@ theorem majMassReal_add_minorMassReal_eq_fullMassReal
     simpa [major_minor_integrand, fullTwinIntegrand, add_comm, add_left_comm, add_assoc] using this
   simpa [majMassReal, minorMassReal, fullMassReal] using hSum
 
+/-- If the full integrand is integrable on `[0,1]`, then the full mass splits as major + minor. -/
+theorem majMassReal_add_minorMassReal_eq_fullMassReal_of_full
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ)
+  (hFull : IntegrableOn (fun α => fullTwinIntegrand (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1)) :
+  majMassReal (sme := sme) (X := X) (H := H)
+    + minorMassReal (sme := sme) (X := X) (H := H)
+    = fullMassReal (Λ := Λ) (W := W) (X := X) (H := H) := by
+  refine majMassReal_add_minorMassReal_eq_fullMassReal (sme := sme) (Λ := Λ) (W := W) (X := X) (H := H) ?_ ?_
+  · exact integrableOn_majorArcTwinIntegrand_of_full (sme := sme) (Λ := Λ) (W := W) (X := X) (H := H) hFull
+  · exact integrableOn_minorArcTwinIntegrand_of_full (sme := sme) (Λ := Λ) (W := W) (X := X) (H := H) hFull
+
 /-- Under integrability, the full complex mass splits as major + minor. -/
 theorem majMassC_add_minorMassC_eq_fullMassC
   (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ)
@@ -220,6 +400,17 @@ theorem majMassC_add_minorMassC_eq_fullMassC
     simpa [major_minor_integrandC, fullTwinIntegrandC, add_comm, add_left_comm, add_assoc] using this
   simpa [majMassC, minorMassC, fullMassC] using hSum
 
+/-- Complex-valued version: if the full integrand is integrable on `[0,1]`, then full = major + minor. -/
+theorem majMassC_add_minorMassC_eq_fullMassC_of_full
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℝ)
+  (hFull : IntegrableOn (fun α => fullTwinIntegrandC (Λ := Λ) (W := W) X H α) (Set.Icc (0 : ℝ) 1)) :
+  majMassC (sme := sme) (X := X) (H := H)
+    + minorMassC (sme := sme) (X := X) (H := H)
+    = fullMassC (Λ := Λ) (W := W) (X := X) (H := H) := by
+  refine majMassC_add_minorMassC_eq_fullMassC (sme := sme) (Λ := Λ) (W := W) (X := X) (H := H) ?_ ?_
+  · exact integrableOn_majorArcTwinIntegrandC_of_full (sme := sme) (Λ := Λ) (W := W) (X := X) (H := H) hFull
+  · exact integrableOn_minorArcTwinIntegrandC_of_full (sme := sme) (Λ := Λ) (W := W) (X := X) (H := H) hFull
+
 /-- Convenience wrapper: take `X : ℕ` and `H : ℕ` (used by the checklist route). -/
 noncomputable def majMass (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℕ) : ℝ :=
   majMassReal (sme := sme) (X := (X : ℝ)) (H := (H : ℝ))
@@ -243,6 +434,18 @@ noncomputable def fullMass (Λ : ℕ → ℝ) (W : ℝ → ℝ) (X H : ℕ) : �
 /-- Convenience wrapper for the complex-valued full mass. -/
 noncomputable def fullMassC_nat (Λ : ℕ → ℝ) (W : ℝ → ℝ) (X H : ℕ) : ℂ :=
   fullMassC (Λ := Λ) (W := W) (X := (X : ℝ)) (H := (H : ℝ))
+
+/-! Convenience nat-level split lemmas. -/
+
+theorem majMass_add_minorMass_eq_fullMass_of_full
+  (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H : ℕ)
+  (hFull : IntegrableOn (fun α => fullTwinIntegrand (Λ := Λ) (W := W) (X : ℝ) (H : ℝ) α) (Set.Icc (0 : ℝ) 1)) :
+  majMass (sme := sme) (X := X) (H := H)
+    + minorMass (sme := sme) (X := X) (H := H)
+    = fullMass (Λ := Λ) (W := W) (X := X) (H := H) := by
+  simpa [majMass, minorMass, fullMass] using
+    (majMassReal_add_minorMassReal_eq_fullMassReal_of_full (sme := sme) (Λ := Λ) (W := W)
+      (X := (X : ℝ)) (H := (H : ℝ)) hFull)
 
 end
 
