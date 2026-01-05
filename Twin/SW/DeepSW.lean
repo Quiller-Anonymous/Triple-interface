@@ -10,11 +10,11 @@ How to use:
 * Call the `.toSiegelWalfisz` or `.toSmoothedMajorArc` adapter to register an instance.
 -/
 
+import Mathlib
 import Twin.SW.SiegelWalfisz
 import Twin.SW.Defs
 import Twin.SW.PartialSummation
 import Twin.MajorArc.SWUniform
-import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 noncomputable section
 open scoped BigOperators
@@ -30,14 +30,14 @@ some constant `C`, we package that as a `SiegelWalfisz A B` instance.
 /-- A packaged ψ-bound in the Siegel–Walfisz range (Λ-model), ready to be
 registered as a `SiegelWalfisz A B` instance.  Provide this from your
 zero-free region + explicit formula pipeline. -/
-structure PsiTwistBound (A B : ℝ) : Prop :=
-  (C  : ℝ)
-  (bound :
+structure PsiTwistBound (A B : ℝ) where
+  C : ℝ
+  bound :
     ∀ ⦃x : ℝ⦄, 3 ≤ x →
-    ∀ ⦃q : ℕ⦄, 1 ≤ q ∧ (q : ℝ) ≤ (Real.log x)^B →
+    ∀ ⦃q : ℕ⦄, 1 ≤ q ∧ (q : ℝ) ≤ Real.rpow (Real.log x) B →
     ∀ (χ : DirichletCharacter q),
-      Complex.abs (twistedPsi χ x)
-        ≤ C * x / (Real.log x)^A)
+      ‖twistedPsi χ x‖
+        ≤ C * x / Real.rpow (Real.log x) A
 
 /-- Turn a packaged ψ-bound into a `SiegelWalfisz` instance. -/
 def PsiTwistBound.toSiegelWalfisz {A B : ℝ}
@@ -61,17 +61,17 @@ in `Twin.SW.Defs`.  Supply `C, δ, X0` and the bound; we can convert this into
 both the canonical `SmoothMajorArcEstimate` record and the major-arc
 `Twin.MajorArc.SiegelWalfisz` class instance. -/
 structure SmoothedMajorArcBound
-  (A B : ℝ) (Λ : ℕ → ℝ) (W W_hat : ℝ → ℝ) : Prop :=
-  (C  : ℝ)
-  (δ  : ℝ) (δ_pos : 0 < δ)
-  (X0 : ℝ)
-  (bound :
+  (A B : ℝ) (Λ : ℕ → ℝ) (W W_hat : ℝ → ℝ) where
+  C : ℝ
+  δ : ℝ
+  δ_pos : 0 < δ
+  X0 : ℝ
+  bound :
     ∀ {X H : ℝ}, X0 ≤ X → 1 ≤ H →
-    ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ (Real.log X)^B → Nat.Coprime a q →
+    ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ Real.rpow (Real.log X) B → Nat.Coprime a q →
     ∀ {α : ℝ}, |α - (a : ℝ)/q| ≤ δ / (H + 1) →
-      Complex.abs
-        (sumValue Λ W X H α - mainTerm W_hat X H α a q)
-      ≤ C * (X / (Real.log X)^A))
+      ‖sumValue Λ W X H α - mainTerm W_hat X H α a q‖
+        ≤ C * (X / Real.rpow (Real.log X) A)
 
 /-- Turn a packaged smoothed major-arc bound into the canonical
 `SmoothMajorArcEstimate` record in `Twin.SW.Defs`. -/

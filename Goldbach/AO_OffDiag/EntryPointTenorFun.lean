@@ -46,7 +46,11 @@ Derived `sigma_tail_block` inequality from:
 theorem sigma_tail_block_from_reindex
   (sigma : ℕ → ℝ) (Q : ℕ → ℕ) (K_tail : ℝ)
   (hsigma : SigmaSubTruncEqTailOnWindow sigma Q)
-  {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ EvenIn X BankParams.H) :
+  {X N : ℕ}
+  (hX : BankParams.X0 ≤ X) (hN : N ∈ EvenIn X BankParams.H)
+  (hQ : 1 ≤ Q X)
+  (hK : SigmaTailTenorAxiomsFun.K_tail_canon ≤ K_tail)
+  (hF : (1 : ℝ) ≤ TailBlockFun.F_block N) :
   |sigma N - TailBlockFun.sigma_trunc (Q X) N|
     ≤ (K_tail : ℝ) / (Q X : ℝ) * TailBlockFun.F_block N := by
   have hdiff :
@@ -55,11 +59,22 @@ theorem sigma_tail_block_from_reindex
   have h1 :
       |sigma N - TailBlockFun.sigma_trunc (Q X) N| = |SigmaTailReindexFun.sigmaTail (Q X) N| := by
     simpa [hdiff]
+  have htail0 :
+      |SigmaTailReindexFun.sigmaTail (Q X) N|
+        ≤ (K_tail : ℝ) / (Q X : ℝ) := by
+    exact SigmaTailTenorAxiomsFun.sigmaTail_bound_on_window (Q := Q) (K_tail := K_tail) hK hX hN hQ
+  have hK_nonneg : 0 ≤ K_tail := le_trans SigmaTailTenorAxiomsFun.K_tail_canon_nonneg hK
+  have hcoef_nonneg : 0 ≤ (K_tail : ℝ) / (Q X : ℝ) := by
+    have : 0 ≤ (Q X : ℝ) := by exact_mod_cast (Nat.zero_le (Q X))
+    exact div_nonneg hK_nonneg this
   have htail :
       |SigmaTailReindexFun.sigmaTail (Q X) N|
         ≤ (K_tail : ℝ) / (Q X : ℝ) * TailBlockFun.F_block N := by
-    simpa using SigmaTailTenorAxiomsFun.sigmaTail_bound_on_window
-      (Q := Q) (K_tail := K_tail) (X := X) (N := N) hX hN
+    have hmul :
+        (K_tail : ℝ) / (Q X : ℝ)
+          ≤ (K_tail : ℝ) / (Q X : ℝ) * TailBlockFun.F_block N :=
+      le_mul_of_one_le_right hcoef_nonneg hF
+    exact le_trans htail0 hmul
   exact (by simpa [h1] using htail)
 
 /--
@@ -81,7 +96,11 @@ noncomputable def offDiagModel
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
       TailBlockFun.F_block N ≤ F_ub)
   (K_tail : ℝ)
-  (K_tail_nonneg : 0 ≤ K_tail) :
+  (K_tail_nonneg : 0 ≤ K_tail)
+  (K_tail_canon_le : SigmaTailTenorAxiomsFun.K_tail_canon ≤ K_tail)
+  (F_block_one_le_on_window :
+    ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
+      (1 : ℝ) ≤ TailBlockFun.F_block N) :
   TailBlockFun.Model :=
   EntryPointFun.offDiagModel
     (Q := Q)
@@ -94,8 +113,11 @@ noncomputable def offDiagModel
     (sigma := sigma)
     (sigma_tail_block := by
       intro X N hX hN
+      have hQ : 1 ≤ Q X := Q_pos_on_window (X := X) (N := N) hX hN
+      have hF : (1 : ℝ) ≤ TailBlockFun.F_block N :=
+        F_block_one_le_on_window (X := X) (N := N) hX hN
       exact sigma_tail_block_from_reindex (sigma := sigma) (Q := Q) (K_tail := K_tail)
-        (hsigma := hsigma) hX hN)
+        (hsigma := hsigma) hX hN hQ K_tail_canon_le hF)
 
 end EntryPointTenorFun
 

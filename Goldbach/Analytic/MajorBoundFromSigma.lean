@@ -9,13 +9,14 @@ import Mathlib
 import Goldbach.SingularSeries   -- sigma, C2Const
 import Goldbach.MainTerm         -- M
 import Goldbach.Windows          -- Windows.EvenIn
-import Goldbach.AnalyticAssemble -- MajorBound
+import Goldbach.Analytic.MajorBound -- AnalyticAssemble.MajorBound (isolated)
 
 open scoped BigOperators
 
 namespace Goldbach.Analytic
 
-open Singular MainTerm AnalyticAssemble
+open Singular MainTerm
+open Goldbach.AnalyticAssemble
 
 /-- A window-wise lower bound for the singular series σ, parameterized by `C2`. -/
 structure SigmaLowerOn (X0 H : ℕ) (C : Singular.C2Const) (σmin : ℝ) : Prop :=

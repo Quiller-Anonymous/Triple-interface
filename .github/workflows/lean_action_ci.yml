@@ -3,18 +3,51 @@ name: Lean CI
 on:
   push:
   pull_request:
+  schedule:
+    # Nightly heavy build (finite-base chunks + full Goldbach pipeline).
+    - cron: "0 6 * * *"
   workflow_dispatch:
+    inputs:
+      build_finite_base:
+        description: "Build finite-base verified chunks (very slow)"
+        required: false
+        default: "false"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  build-fast:
+    name: Build Goldbach (fast targets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Lean
+        uses: leanprover/lean-action@v1
+
+      - name: Fetch dependencies
+        run: lake update
+
+      - name: Fetch Mathlib cache
+        run: lake exe cache get
+
+      # These targets avoid the finite base (chunks) but exercise the analytic + BG pipeline wiring.
+      - name: Build fast Goldbach targets
+        run: |
+          set -euo pipefail
+          lake build Goldbach.Final
+          lake build Goldbach.AO_OffDiag.EntryPoint
+          lake build Goldbach.BG_CalibBridgeStub
+
   discover-chunks:
     name: Discover finite-base chunks
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_finite_base == 'true') }}
     outputs:
-      prefixes: ${{ steps.prefixes.outputs.prefixes }}
+      prefix_batches: ${{ steps.prefixes.outputs.prefix_batches }}
       count: ${{ steps.prefixes.outputs.count }}
     steps:
       - uses: actions/checkout@v4
@@ -28,34 +61,84 @@ jobs:
 
           files=(Goldbach/FiniteBase/Chunks/Chunk*_verified.lean)
           if [ ${#files[@]} -eq 0 ]; then
-            echo "prefixes=[]" >> "$GITHUB_OUTPUT"
+            echo "prefix_batches=[]" >> "$GITHUB_OUTPUT"
             echo "count=0" >> "$GITHUB_OUTPUT"
             echo "No verified chunk files found."
             exit 0
           fi
 
-          prefixes=$(
+          prefixes_json=$(
             printf '%s\n' "${files[@]}" \
               | sed -E 's#.*/Chunk([0-9]{3})_.*#\1#' \
               | sort -u \
               | python3 -c 'import sys, json; xs=[ln.strip() for ln in sys.stdin if ln.strip()]; print(json.dumps(xs))'
           )
 
-          echo "prefixes=$prefixes" >> "$GITHUB_OUTPUT"
+          # Batch prefixes to reduce job count and per-job setup overhead.
+          # Default: 8 prefixes per job (tune if needed).
+          prefix_batches=$(
+            PREFIXES_JSON="$prefixes_json" BATCH_SIZE="8" python3 - <<'PY'
+          import json, os
+          prefixes = json.loads(os.environ["PREFIXES_JSON"])
+          batch_size = int(os.environ.get("BATCH_SIZE", "8"))
+          batches = [prefixes[i:i+batch_size] for i in range(0, len(prefixes), batch_size)]
+          print(json.dumps(batches))
+          PY
+          )
+
+          echo "prefix_batches=$prefix_batches" >> "$GITHUB_OUTPUT"
           echo "count=${#files[@]}" >> "$GITHUB_OUTPUT"
           echo "Found ${#files[@]} verified chunk files."
-          echo "Chunk groups: $prefixes"
+          echo "Prefix batches: $prefix_batches"
+
+  build-chunk-deps:
+    name: Build finite-base chunk dependencies
+    needs: discover-chunks
+    if: ${{ needs.discover-chunks.outputs.count != '0' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Lean
+        uses: leanprover/lean-action@v1
+
+      - name: Fetch dependencies
+        run: lake update
+
+      - name: Fetch Mathlib cache
+        run: lake exe cache get
+
+      # Compile the shared dependencies once and distribute them to chunk jobs as an artifact.
+      - name: Build chunk dependency kit
+        run: |
+          set -euo pipefail
+          lake build Goldbach.FiniteBase.FiniteBaseChunkKit
+          lake build Goldbach.FiniteBase.Completeness.CompletenessKit
+
+      - name: Upload chunk dependency artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: finite-base-chunk-deps
+          path: |
+            .lake/build/lib/lean/Goldbach/Base/*.olean
+            .lake/build/lib/lean/Goldbach/Base/*.ilean
+            .lake/build/lib/lean/Goldbach/FiniteBase/**/*.olean
+            .lake/build/lib/lean/Goldbach/FiniteBase/**/*.ilean
+            .lake/build/lib/lean/Goldbach/Windows.olean
+            .lake/build/lib/lean/Goldbach/Windows.ilean
+          retention-days: 1
 
   build-chunks:
     name: Build finite-base chunks
-    needs: discover-chunks
+    needs: [discover-chunks, build-chunk-deps]
     if: ${{ needs.discover-chunks.outputs.count != '0' }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     strategy:
       fail-fast: false
       matrix:
-        prefix: ${{ fromJson(needs.discover-chunks.outputs.prefixes) }}
+        batch: ${{ fromJson(needs.discover-chunks.outputs.prefix_batches) }}
       # Keep this conservative for GitHub's default runners.
       max-parallel: 8
 
@@ -71,41 +154,64 @@ jobs:
       - name: Fetch Mathlib cache
         run: lake exe cache get
 
-      - name: Build chunks (prefix ${{ matrix.prefix }})
+      - name: Download chunk dependency artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: finite-base-chunk-deps
+          path: .chunk_deps
+
+      - name: Install chunk dependency artifacts into `.lake/build`
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .lake/build/lib/lean/Goldbach/FiniteBase/Completeness
+          mkdir -p .lake/build/lib/lean/Goldbach/FiniteBase
+          mkdir -p .lake/build/lib/lean/Goldbach/Base
+          mkdir -p .lake/build/lib/lean/Goldbach
+          cp -a .chunk_deps/. .lake/build/lib/lean/Goldbach/
+
+      - name: Build chunks (batch ${{ toJson(matrix.batch) }})
         shell: bash
         run: |
           set -euo pipefail
           shopt -s nullglob
 
-          prefix="${{ matrix.prefix }}"
-          files=(Goldbach/FiniteBase/Chunks/Chunk${prefix}_*_verified.lean)
+          # matrix.batch is a JSON array of three-digit prefixes.
+          batch='${{ toJson(matrix.batch) }}'
+          prefixes=$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])))' "$batch")
 
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "No chunk files found for prefix $prefix"
+          mods=()
+          while IFS= read -r prefix; do
+            files=(Goldbach/FiniteBase/Chunks/Chunk${prefix}_*_verified.lean)
+            for f in "${files[@]}"; do
+              mods+=("Goldbach.FiniteBase.Chunks.$(basename "$f" .lean)")
+            done
+          done <<< "$prefixes"
+
+          if [ ${#mods[@]} -eq 0 ]; then
+            echo "No chunk modules found for batch: $batch"
             exit 0
           fi
 
-          echo "Building ${#files[@]} chunks for prefix $prefix:"
-          printf '  %s\n' "${files[@]}"
+          echo "Building ${#mods[@]} chunk modules in this batch:"
+          printf '  %s\n' "${mods[@]}"
 
-          for f in "${files[@]}"; do
-            mod=$(basename "$f" .lean)
-            lake build "Goldbach.FiniteBase.Chunks.${mod}"
-          done
+          # Build in moderately sized groups to reduce `lake` startup overhead.
+          printf '%s\n' "${mods[@]}" | xargs -n 50 lake build
 
       - name: Upload chunk artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: finite-base-chunks-${{ matrix.prefix }}
+          name: finite-base-chunks-batch-${{ join(matrix.batch, '-') }}
           path: |
-            .lake/build/lib/lean/Goldbach/FiniteBase/Chunks/Chunk${{ matrix.prefix }}_*.olean
-            .lake/build/lib/lean/Goldbach/FiniteBase/Chunks/Chunk${{ matrix.prefix }}_*.ilean
+            .lake/build/lib/lean/Goldbach/FiniteBase/Chunks/Chunk*_verified.olean
+            .lake/build/lib/lean/Goldbach/FiniteBase/Chunks/Chunk*_verified.ilean
           retention-days: 1
 
   build:
-    name: Build full project
+    name: Build Goldbach (full, incl. finite base)
     needs: [discover-chunks, build-chunks]
-    if: ${{ always() }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_finite_base == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
 
@@ -131,7 +237,7 @@ jobs:
         if: ${{ needs.discover-chunks.outputs.count != '0' }}
         uses: actions/download-artifact@v4
         with:
-          pattern: finite-base-chunks-*
+          pattern: finite-base-chunks-batch-*
           path: .chunk_artifacts
           merge-multiple: true
 
@@ -143,5 +249,7 @@ jobs:
           mkdir -p .lake/build/lib/lean/Goldbach/FiniteBase/Chunks
           cp -a .chunk_artifacts/. .lake/build/lib/lean/Goldbach/FiniteBase/Chunks/
 
-      - name: Build
-        run: lake build
+      - name: Build (Goldbach pipeline)
+        run: |
+          set -euo pipefail
+          lake build Goldbach.Complete

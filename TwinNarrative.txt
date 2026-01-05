@@ -1,0 +1,426 @@
+Twin primes project: outstanding proof obligations (Lean-facing)
+==============================================================
+
+0. What the project is trying to prove
+--------------------------------------
+
+The core mathematical statement used throughout the Twin project is:
+
+  Twin.ExistsTwinInWindow X H : Prop
+
+defined in `Twin/Rep.lean:16` as:
+  ∃ p, Twin.Windows.InWindow X H p ∧ Twin.TwinPairAt p.
+
+The main “paper-facing” entry point (currently the one you’ve been using as the target)
+is:
+
+  Twin.Main.windows_largeX_of_appendixA_ofSW
+  in `Twin/TwinMain.lean:106`
+
+It produces:
+
+  ∀ {X : ℕ}, P.X0 ≤ X → Twin.ExistsTwinInWindow X P.H
+
+where `P : Twin.GoalAPI.Params := Twin.PaperParams.P` (`Twin/TwinMain.lean:16`).
+
+This is stronger than the usual “infinitely many twin primes”: it asserts that every
+sufficiently large short interval `[X, X+H]` (with fixed H) contains a twin pair.
+
+All the wiring from these paper-facing hypotheses to the window conclusion is already
+implemented with no `sorry`/`axiom`; the remaining work is to supply the analytic
+inputs as actual Lean proofs (i.e. terms inhabiting the exact types below).
+
+
+1. How the build is structured (where obligations plug in)
+---------------------------------------------------------
+
+The “paper-facing” pipeline you call goes roughly:
+
+  windows_largeX_of_appendixA_ofSW
+    → `Twin.WiringFromPaper.windows_largeX_of_appendixA_ofSW` (`Twin/WiringFromPaper.lean:176`)
+      → builds `Twin.PaperBricks.Bricks P` (a record of 3 window-sum inequalities)
+      → `Twin.TwinFinalize.windows_largeX` (`Twin/TwinFinalize.lean`)
+        → `Twin.TargetsFromBricks.localizedTwinMass_pos_from_bricks` (`Twin/TargetsFromBricks.lean:36`)
+          → `Twin.Bridge.existsTwin_of_mass_pos` (`Twin/Bridge.lean:50`)
+            → `ExistsTwinInWindow X H`.
+
+So, the “outstanding obligations” are exactly the missing inhabitants of the analytic
+input records passed into `windows_largeX_of_appendixA_ofSW`.
+
+
+2. Concrete obligations (canonical route: Appendix-A + SW)
+----------------------------------------------------------
+
+Fix `P : Twin.GoalAPI.Params := Twin.PaperParams.P`.
+
+To *actually run* `Twin.Main.windows_largeX_of_appendixA_ofSW` (not just typecheck the
+code), you must provide these arguments/instances as Lean terms:
+
+2.1. Truncated singular series positivity (easy; already filled for the default P)
+----------------------------------------------------------------------------------
+
+Needed type:
+  ss_pos : 0 < Twin.truncSingularSeries P.S
+
+Provided for the default `P := Twin.PaperParams.P` as:
+  `Twin.PaperParams.ss_pos` in `Twin/PaperParams.lean:49`.
+
+Precision requirement:
+  A Lean proof of strict positivity `0 < ...` (no asymptotic notation).
+
+
+2.2. Minor-arc + desmoothing error data: `E : Twin.AnalyticFromPaper.ErrorData`
+-------------------------------------------------------------------------------
+
+Definition location:
+  `Twin/AnalyticFromPaper.lean:24`
+
+You must construct a term:
+
+  E : Twin.AnalyticFromPaper.ErrorData
+
+with fields (exact Lean types):
+
+  E.emin : ℕ → ℝ
+  E.eds  : ℕ → ℝ
+
+  E.l2_minor : Twin.CLSL2.Bound P E.emin
+    where `Twin.CLSL2.Bound` is defined in `Twin/CLSL2.lean:17` as the window L² bound
+    (uniform in X):
+      ∀ X, P.X0 ≤ X →
+        Twin.Ledger.windowSum X P.H (fun n => (E.emin n)^2)
+          ≤ (P.eps^2 * (Twin.truncSingularSeries P.S)^2) * (P.H + 1) / 9
+
+  E.desmooth : Twin.AnalyticCore.DesmoothBound P E.eds
+    where `DesmoothBound` is defined in `Twin/AnalyticCore.lean:21`:
+      ∀ {X}, P.X0 ≤ X →
+        Twin.Ledger.windowSum X P.H E.eds
+          ≤ P.eps * Twin.truncSingularSeries P.S * (P.H + 1) / 3
+
+Precision requirement:
+  Fully explicit inequalities at the exact constants `/9` and `/3`, with the same
+  normalization of `windowSum` as in `Twin/Ledger.lean`. A correct answer is a Lean
+  proof term that compiles with no `sorry`.
+
+Notes for the solver:
+  - `Twin.AnalyticFromPaper.cls_bound` derives the L¹ CLS bound from the L² bound
+    (`Twin/AnalyticFromPaper.lean:33`), so you only need to prove L² in `E.l2_minor`.
+  - The constant `/9` is chosen so that (by Cauchy–Schwarz on the window)
+      windowSum |emin| ≤ √(H+1) · √(windowSum emin^2)
+    becomes exactly
+      windowSum |emin| ≤ eps · SS · (H+1) / 3,
+    matching the budget split in `Twin/PaperBricks.lean:30` and `Twin/AnalyticCore.lean:14`.
+
+Mathematical meaning (what you are proving, independent of Lean):
+  You are choosing *two explicit real-valued functions on the integers*:
+    emin(n) : the “minor arcs / off-diagonal” error contribution attributed to integer n,
+    eds(n)  : the “desmoothing / prime-power disposal” correction attributed to integer n,
+  and proving *uniform in X* windowed bounds on their L² / L¹ sizes.
+
+  Concretely, the two inequalities are:
+    (Minor L²)   ∑_{k=0}^H (emin(X+k))^2  ≤  (eps^2 * SS^2) * (H+1)/9
+    (Desmooth)   ∑_{k=0}^H  eds(X+k)      ≤  (eps   * SS)   * (H+1)/3
+  where SS := truncSingularSeries(S).
+
+  These are “already normalized” to match the project’s log-weighted twin indicator
+  (`Twin/Bridge.lean:16`), so there is no explicit `1/(log X)^2` in the target.
+
+Well-formedness constraint (important for any “define emin by an integral” idea):
+  In the code, `emin` and `eds` are *global* functions `ℕ → ℝ`.
+  They are evaluated as `emin (X+k)` and `eds (X+k)` for many different window starts `X`.
+  So any “paper formula” you propose for `emin(n)` or `eds(n)` must not depend on an
+  extra choice of window start/center `X` unless you also specify a canonical convention
+  that makes it a function of `n` alone (or you define a global envelope such as a supremum
+  over all admissible windows containing `n`, and then re-prove the budgets for that envelope).
+
+
+2.3. Major-arc SW input: `[Twin.MajorArc.SiegelWalfisz A B Λ W W_hat]` (hard)
+--------------------------------------------------------------------------------
+
+Definition location:
+  `Twin/MajorArc/SWUniform.lean:8`
+
+This obligation is *exactly* the project’s formal notion of “Siegel–Walfisz on the
+major arcs, for a smoothed von Mangoldt exponential sum”.
+
+The relevant definitions (all in `Twin/SW/Defs.lean`) are:
+
+  χ_add(t) := exp(2π i t)                                     (`Twin/SW/Defs.lean:12`)
+
+  sumValue Λ W X H α :=
+    ∑' n≥0  (Λ(n) * W((n - X)/H)) · χ_add(α n)               (`Twin/SW/Defs.lean:15`)
+
+  muOverPhi(q) := μ(q)/φ(q) (as a real number)               (`Twin/SW/Defs.lean:21`)
+
+  mainTerm W_hat X H α a q :=
+    muOverPhi(q)
+    · χ_add((α - a/q)·X)
+    · (X · W_hat(H·(α - a/q)))                               (`Twin/SW/Defs.lean:24`)
+
+So the major-arc SW class instance is asking you to prove:
+  on all “major arcs” α near a/q with q ≤ (log X)^B,
+  sumValue ≈ mainTerm, with an explicit error ≤ C · X/(log X)^A.
+
+To use the `_ofSW` entry point, you must choose specific parameters:
+
+  A B : ℝ
+  Λ : ℕ → ℝ
+  W W_hat : ℝ → ℝ
+
+and provide an instance:
+
+  [Twin.MajorArc.SiegelWalfisz A B Λ W W_hat]
+
+with fields:
+  δ : ℝ, δ_pos : 0 < δ, X0 : ℝ, C : ℝ,
+  and a bound:
+
+    ∀ {X H : ℝ}, X0 ≤ X → 1 ≤ H →
+    ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ Real.rpow (Real.log X) B → Nat.Coprime a q →
+    ∀ {α : ℝ}, |α - (a : ℝ)/q| ≤ δ / (H + 1) →
+      ‖Twin.SW.sumValue Λ W X H α - Twin.SW.mainTerm W_hat X H α a q‖
+        ≤ C * (X / Real.rpow (Real.log X) A)
+
+Precision requirement:
+  This is a fully quantified Lean statement over reals with explicit constants `δ, X0, C`
+  and an explicit norm bound; “≪” or “O(…)” is not accepted unless already formalized
+  into this exact inequality. A complete answer is an actual instance value with the
+  `bound` field proved.
+
+Important note (what math it corresponds to):
+  This is the “smoothed major arc estimate”. It is typically proved from:
+  - a Siegel–Walfisz bound for twisted Chebyshev sums ψ(x,χ), and
+  - standard harmonic-analysis steps (Fourier inversion of W, Ramanujan sums, etc.).
+
+The repo also contains the *unsmoothed* SW statement (twisted ψ) as a separate class:
+  `Twin.SW.SiegelWalfisz A B` in `Twin/SW/SiegelWalfisz.lean:16`, where
+    twistedPsi χ x := ∑_{n≤x} Λ(n) χ(n).
+If you can supply this (or accept it as an axiom), you can then build smoothed bounds
+using the helper lemmas/adapters in `Twin/SW/DeepSW.lean` and `Twin/SW/SmoothMajorArc.lean`.
+
+Alternative packaging:
+  If you don’t want to register a typeclass instance, you can instead directly supply
+  `sme : Twin.MajorArc.SmoothMajorArcEstimate A B Λ W W_hat` (see
+  `Twin/MajorArc/SWUniform.lean:26`), but the convenience entry point you’ve been using
+  expects the instance.
+
+
+2.4. Gate bookkeeping spec: `spec : Twin.MajorArc.GateSpec P` (easy)
+--------------------------------------------------------------------
+
+Definition location:
+  `Twin/MajorArc/Pin.lean:16`
+
+Needed type:
+  spec : Twin.MajorArc.GateSpec P
+
+There is a helper constructor:
+  `Twin.MajorArc.gateCert P cStar hcStar` in `Twin/MajorArc/Pin.lean:23`
+
+This only requires choosing any `cStar : ℝ` with a Lean proof `0 < cStar`.
+Typically you can take `cStar := Twin.truncSingularSeries P.S` and use `ss_pos`.
+
+Precision requirement:
+  Straightforward Lean arithmetic/positivity proof; no analysis needed.
+
+
+2.5. Appendix-A inputs: `I : Twin.MajorArc.AppendixAInputs ...` (hard)
+----------------------------------------------------------------------
+
+Definition location:
+  `Twin/MajorArc/AppendixAAdapter.lean:51`
+
+You must produce:
+
+  I : Twin.MajorArc.AppendixAInputs
+        (P := P) (emin := E.emin) (eds := E.eds)
+        (sme := Twin.MajorArc.SmoothMajorArcEstimate.ofSW (A:=A) (B:=B) (Λ:=Λ) (W:=W) (W_hat:=W_hat))
+        (spec := spec)
+
+with fields:
+
+  I.Wmaj : ℕ → ℝ
+
+  I.lower :
+    Twin.MajorArc.MajorArcLower P (fun X => Twin.Ledger.windowSum X P.H I.Wmaj)
+    where `MajorArcLower` is in `Twin/MajorArc/GateBookkeeping.lean:25`:
+      ∀ {X}, P.X0 ≤ X →
+        (1 - P.eps) * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1)
+          ≤ majMass X + (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
+    (with `majMass X := windowSum X H Wmaj` in the Appendix-A adapter).
+
+  I.route_pointwise :
+    ∀ {X k}, P.X0 ≤ X → k ≤ P.H →
+      I.Wmaj (X + k)
+        ≤ Twin.Kernel.J P.H k * Twin.Bridge.twinIndicator (X + k)
+          + E.emin (X + k) + E.eds (X + k)
+
+Precision requirement:
+  These must be actual Lean proofs of the exact inequalities above, with the correct
+  constants and with `Wmaj` explicitly defined as a function `ℕ → ℝ`.
+
+Budget constants unpacked (what `I.lower` is numerically asking for):
+  Since `I.lower` is a `MajorArcLower` for `majMass X := windowSum X H Wmaj`,
+  the required inequality is:
+
+    windowSum X P.H I.Wmaj
+      ≥ (1 - P.eps) * SS * (H+1) - (P.eps * SS) * (H+1) / 3
+
+  i.e. a window-sum lower bound of roughly `(1 - 4·eps/3) * SS * (H+1)`.
+
+Interpretation:
+  - `I.lower` is the “pinned majors contribute the main term” inequality in the
+    window-sum normalization used by the project.
+  - `I.route_pointwise` is the “TwinWeight_k = W_k + e_k” routing inequality from
+    Appendix A, written pointwise so the adapter can sum it into a window-sum transfer.
+
+More concrete “paper meaning” for `I.Wmaj`, `I.lower`, `I.route_pointwise`:
+  - Think of `I.Wmaj(n)` as the *model major-arc contribution assigned to the integer n*
+    by the §14 “pin + major arcs” analysis (often coming from expanding a pinned integral
+    over α and isolating the major-arc main piece).
+  - `I.lower` is then the claim that, after summing over the window n = X..X+H, this model
+    contribution is (uniformly in X) at least a positive proportion of the truncated
+    singular series main term.
+  - `I.route_pointwise` says the model weight is controlled by the *actual* localized twin
+    weight plus explicit error channels. In this repo, note:
+      `Twin.Kernel.J H k` is the indicator of k ≤ H (`Twin/Kernel.lean:9`), so on the window
+      it is literally 1, and
+      `Twin.Bridge.twinIndicator` is the log-weighted twin indicator (`Twin/Bridge.lean:16`).
+    So morally this is bounding a major-arc “proxy weight” by the true twin weight plus
+    errors, pointwise on the window.
+
+Extra specificity (what a complete “paper-facing” answer should provide):
+  To make these obligations non-vacuous and paper-aligned, you normally want:
+
+  (a) An explicit definition of `Wmaj` in terms of your major-arc analysis.
+      A typical shape is:
+        Wmaj(n) := (some explicit finite sum/integral over q≤Q and a mod q)
+                   of a major-arc main-term expression (Ramanujan/μ/φ factors),
+                   evaluated at the integer n (or at n’s window coordinate k = n-X).
+
+      In other words: `Wmaj` should be definable *without referencing* `twinIndicator`,
+      because `Wmaj` is the “model” coming from major arcs, while `twinIndicator` is
+      the “truth”.
+
+  (b) A proof of `I.route_pointwise` that comes from a decomposition
+        (true weight) = (major-arc model) + (minor error) + (desmooth error) + (tail cap),
+      rearranged into
+        (major-arc model) ≤ (true weight) + (errors).
+
+      In the repo’s normalization, since `k ≤ H` on the window and `J(H,k)=1`,
+      the inequality is effectively:
+        Wmaj(X+k) ≤ twinIndicator(X+k) + emin(X+k) + eds(X+k).
+
+  (c) A proof of `I.lower` that comes from the §14 pinned-major-arc evaluation:
+      after summing over k=0..H, the major arcs contribute essentially
+        SS * (H+1)
+      up to the tail cap already budgeted as `(eps*SS)*(H+1)/3`.
+
+  If you want to ask a solver for “the missing theorem”, this is the cleanest way to ask it:
+    “Define Wmaj(n) from the pinned major arcs (paper §14), and prove:
+      (i)  ∀X≥X0,  ∑_{k≤H} Wmaj(X+k) ≥ (1-eps)*SS*(H+1) - (eps*SS)*(H+1)/3,
+      (ii) ∀X≥X0,∀k≤H, Wmaj(X+k) ≤ twinIndicator(X+k)+emin(X+k)+eds(X+k).”
+
+Sanity constraint (to avoid definitions that cannot possibly meet the budgets):
+  Since `twinIndicator(n)` is 0 for most integers (non-twin-starts), a “model weight”
+  `Wmaj(n)` that is positive and ≍ 1 for a positive density of integers would force
+  `emin(n)+eds(n)` to be ≳ 1 on most integers by the pointwise route inequality,
+  which would violate the window-sum budgets of size ≍ eps*SS*(H+1).
+
+  Therefore, in this repo’s current interface, a viable `Wmaj` for Appendix-A must be
+  much closer to an *actual major-arc contribution to the same object as `twinIndicator`*,
+  so that the pointwise “(true weight) = (model) + (errors)” decomposition is realistic.
+  A “singular-series density only” definition of `Wmaj` is typically appropriate for
+  a window-sum main term, but not for a pointwise routing inequality against a sparse
+  indicator unless you allow very large error terms.
+
+Truncation alignment constraint (to match `truncSingularSeries P.S`):
+  The constant `SS` appearing in the obligations is `Twin.truncSingularSeries P.S`,
+  i.e. a *fixed* finite Euler product over the specific `Finset` of primes `P.S`
+  (`Twin/SingularSeries.lean:18`, `Twin/PaperParams.lean:19`).
+  If you define `Wmaj` using a cutoff `Q(n)` over moduli `q ≤ Q(n)`, you must also provide
+  a precise lemma relating the resulting window sum to that fixed Euler product—this
+  generally requires choosing the truncation so it matches the same prime set, or else
+  proving a comparison lemma between your chosen truncation and `P.S`.
+
+
+3. Equivalent obligations (alternate routes you can target)
+----------------------------------------------------------
+
+If the solver prefers different packaging, these are equivalent “interfaces” already
+present in the codebase:
+
+3.1. Paper checklist instead of Appendix-A inputs
+-------------------------------------------------
+
+File: `Twin/MajorArc/PaperChecklist.lean:38`
+
+Provide:
+  C : Twin.MajorArc.PaperMajorArcChecklist (P := P) (emin := E.emin) (eds := E.eds) (sme := sme) (spec := spec)
+
+Fields:
+  C.majMass : ℕ → ℝ
+  C.lower : Twin.MajorArc.MajorArcLower P C.majMass
+  C.transfer : Twin.MajorArc.MajorArcTransfer P E.emin E.eds C.majMass
+    (`MajorArcTransfer` is `Twin/MajorArc/GateBookkeeping.lean:37`).
+
+Then call `Twin.Main.windows_largeX_of_checklist_ofSW` instead.
+
+3.2. Raw major-arc package
+--------------------------
+
+File: `Twin/MajorArc/Pin.lean:41`
+
+Provide:
+  pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds) (sme := sme) (spec := spec)
+
+Fields are exactly the same as the checklist, just packaged differently.
+
+3.3. Direct gate inequality (bypasses major arcs packaging entirely)
+--------------------------------------------------------------------
+
+File: `Twin/AnalyticCore.lean:47`
+
+Provide:
+  gate : Twin.AnalyticCore.GateOnWindow P E.emin E.eds
+
+Then you can repack it into a `MajorArcPackage` via
+  `Twin.MajorArc.MajorArcPackage.of_gate` (`Twin/MajorArc/Pin.lean:54`)
+and proceed without proving `MajorArcLower`/`MajorArcTransfer` separately.
+
+This is “logically later” in the paper: you’ve already done the §14 bookkeeping.
+
+3.4. Minimal GoalAPI route (very abstract, but often easiest for early progress)
+-------------------------------------------------------------------------------
+
+File: `Twin/GoalAPI.lean`
+
+Provide:
+  hSN : Twin.GoalAPI.SpectralNullOnWindow P
+  hEB : Twin.GoalAPI.ErrorBudget P
+plus `ss_pos` and the epsilon side conditions.
+
+Then `Twin.GoalAPI.twins_in_all_large_windows_from_goals` yields the same window theorem.
+
+Concrete meaning of the GoalAPI obligations:
+  - `SpectralNullOnWindow` (`Twin/GoalAPI.lean:30`) is a *pointwise-in-k* inequality
+    on each window: “main term minus error ≤ J_H(k)·twinIndicator(X+k)”.
+  - `ErrorBudget` (`Twin/GoalAPI.lean:39`) is the corresponding *window-sum* bound on the
+    total error function `P.err`.
+  If you already have the paper’s Appendix-A decomposition on the window, it is often
+  easier to target these directly than to go through the SW/major-arc packaging first.
+
+
+4. What counts as “complete answers” for the solver
+---------------------------------------------------
+
+For each of the obligations above, a complete answer must be a Lean term of the exact
+required type (either a structure instance or a theorem proof) that compiles with
+no `sorry`, no new bespoke `axiom`, and no missing lemmas.
+
+In particular:
+  - “Proof sketches” or informal big-O arguments are not complete unless they are
+    converted into the explicit inequalities demanded by the types.
+  - Any new analytic theorem from the literature must be imported as an actual Lean lemma,
+    or fully proved in Lean, or (if you accept it as an axiom) introduced explicitly and
+    then counted as a non-gold dependency.

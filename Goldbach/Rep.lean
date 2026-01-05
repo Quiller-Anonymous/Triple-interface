@@ -14,6 +14,15 @@ def primePairs (N : ℕ) : Finset (ℕ × ℕ) :=
 /-- Goldbach representation count (ordered pairs). -/
 def R (N : ℕ) : ℕ := (primePairs N).card
 
+/--
+Alias for the *raw* Goldbach representation count.
+
+Downstream analytic files use a banked/normalized representation functional (introduced elsewhere)
+that lives on the same scale as `conv_full`. Keeping this alias lets us refer to the raw
+combinatorial count unambiguously once that functional is in place.
+-/
+abbrev R_raw (N : ℕ) : ℕ := R N
+
 /-- `R N > 0` iff there exists a prime pair summing to `N`. -/
 lemma R_pos_iff_exists_pair {N : ℕ} :
   0 < R N ↔ ∃ p q, Nat.Prime p ∧ Nat.Prime q ∧ p + q = N := by

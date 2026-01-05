@@ -49,21 +49,20 @@ theorem cls_bound (E : ErrorData) : Twin.AnalyticCore.CLSBound P E.emin :=
 
 /-- Gate inequality obtained *from inputs*: CLS, desmoothing, and a smooth
 major-arc estimate.  This has the "baseline-conditional" shape that we
-eventually want, but for now it still delegates to the pinned major-arc
-axiom via `Twin.MajorArc.gate_onWindow_of_SME_CLS`. -/
+eventually want, but for now it assumes the (still-unproved) major-arc package
+interface exposed in `Twin.MajorArc.Pin`. -/
 theorem gate_onWindow_of_SME
   {A B : ℝ} {Λ : ℕ → ℝ} {W W_hat : ℝ → ℝ}
   (E : ErrorData)
   (sme  : Twin.MajorArc.SmoothMajorArcEstimate A B Λ W W_hat)
-  (spec : Twin.MajorArc.GateSpec P) :
+  (spec : Twin.MajorArc.GateSpec P)
+  (pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds)
+    (sme := sme) (spec := spec)) :
   AnalyticCore.GateOnWindow P E.emin E.eds :=
 by
-  -- Currently we ignore the extra hypotheses and transparently use the
-  -- pinned gate axiom.  The statement is ready for a future honest proof.
   simpa using
-    Twin.MajorArc.gate_onWindow_of_SME_CLS
+    Twin.MajorArc.gate_onWindow_of_SME
       (P := P) (emin := E.emin) (eds := E.eds)
-      (_hCLS := cls_bound (E := E)) (_hDesm := desmooth_bound (E := E))
-      (_sme := sme) (_spec := spec)
+      (sme := sme) (spec := spec) (pkg := pkg)
 
 end Twin.AnalyticFromPaper

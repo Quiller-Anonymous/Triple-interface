@@ -7,13 +7,12 @@ This file contains only *algebra* — no axioms/sorries.
 -/
 import Mathlib
 import Goldbach.Windows
-import Goldbach.Rep
+import Goldbach.BG_Identity
 
 namespace Goldbach
 
 open Real
 open Goldbach.Windows
-open Goldbach.Rep
 
 /-- The analytic hypothesis the bridge consumes. -/
 structure AnalyticHyp (X0 H : ℕ) (S c0 ε : ℝ) where
@@ -22,7 +21,7 @@ structure AnalyticHyp (X0 H : ℕ) (S c0 ε : ℝ) where
   eps_lt : ε < c0
   bound  :
     ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-      ((R N : ℝ) / S) ≥ c0 - ε
+      ((BG_Identity.R_bank X N) / S) ≥ c0 - ε
 
 /-- The two tenor inequalities, uniform on the window. -/
 structure TenorHyp (X0 H : ℕ) (S c0 ε : ℝ) where
@@ -37,7 +36,7 @@ structure TenorHyp (X0 H : ℕ) (S c0 ε : ℝ) where
   /-- Bank–projection lower bound: uniform on the window. -/
   bank   :
     ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-      (R N : ℝ) ≥ M N - ε * S
+      (BG_Identity.R_bank X N) ≥ M N - ε * S
 
 /-- Bridge: `TenorHyp` ⇒ `AnalyticHyp` (pure algebra; no sorries). -/
 def AnalyticHyp.ofTenor
@@ -56,12 +55,12 @@ by
 
   /- Step 1 (bank): from `R ≥ M − ε S`, multiply both sides by `1/S ≥ 0` -/
   have h_bank_scaled :
-      (1 / S) * (R N : ℝ) ≥ (1 / S) * (t.M N - ε * S) :=
+      (1 / S) * (BG_Identity.R_bank X N) ≥ (1 / S) * (t.M N - ε * S) :=
     mul_le_mul_of_nonneg_left (t.bank hX hN) inv_nonneg
 
   -- rewrite LHS/RHS into divisions and cancel the `(1/S)*S` on the error term
-  have h1 : (R N : ℝ) / S ≥ t.M N / S - ε := by
-    have hL : (1 / S) * (R N : ℝ) = (R N : ℝ) / S := by
+  have h1 : (BG_Identity.R_bank X N) / S ≥ t.M N / S - ε := by
+    have hL : (1 / S) * (BG_Identity.R_bank X N) = (BG_Identity.R_bank X N) / S := by
       simp [div_eq_mul_inv, one_div, mul_comm]
     have hR : (1 / S) * (t.M N - ε * S) = t.M N / S - ε := by
       have hA : (1 / S) * t.M N = t.M N / S := by
@@ -88,7 +87,7 @@ by
       using h_major_scaled
 
   /- Step 3: chain the two inequalities -/
-  have : c0 - ε ≤ (R N : ℝ) / S := by
+  have : c0 - ε ≤ (BG_Identity.R_bank X N) / S := by
     have left  : c0 - ε ≤ t.M N / S - ε := sub_le_sub_right h2 _
     exact le_trans left h1
   exact this
@@ -101,7 +100,7 @@ def TenorHyp.mkPack
     (major :
       ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H → M N ≥ c0 * S)
     (bank  :
-      ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H → (R N : ℝ) ≥ M N - ε * S)
+      ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H → (BG_Identity.R_bank X N) ≥ M N - ε * S)
     : TenorHyp X0 H S c0 ε :=
 { S_pos  := S_pos,  c0_pos := c0_pos,  eps_lt := eps_lt
 , M := M, major := major, bank := bank }
@@ -111,7 +110,7 @@ def TenorHyp.mkPack
 theorem main_pointwise_lower_bound
   (X0 H : ℕ) (S c0 ε : ℝ) (hyp : AnalyticHyp X0 H S c0 ε) :
   ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-    ((R N : ℝ) / S) ≥ c0 - ε :=
+    ((BG_Identity.R_bank X N) / S) ≥ c0 - ε :=
   hyp.bound
 
 end Goldbach

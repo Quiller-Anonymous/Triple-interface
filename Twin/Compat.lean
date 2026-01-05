@@ -65,12 +65,12 @@ lemma sqrt_mul_split_of_nonneg (a b : ℝ) (ha : 0 ≤ a) (hb : 0 ≤ b) :
     simpa [pow_two] using Real.mul_self_sqrt hab
   have hR2 : (sqrt a * sqrt b) ^ 2 = a * b := by
     simp [pow_two, Real.mul_self_sqrt ha, Real.mul_self_sqrt hb,
-          mul_comm, mul_left_comm, mul_assoc]
+          mul_comm, mul_left_comm]
   -- From equality of squares, get ≤ both ways via `sq_le_sq` and drop abs
   have h1sq : (sqrt (a * b)) ^ 2 ≤ (sqrt a * sqrt b) ^ 2 := by
-    simpa [hL2, hR2] using (le_of_eq hR2.symm)
+    simp [hL2, hR2]
   have h2sq : (sqrt a * sqrt b) ^ 2 ≤ (sqrt (a * b)) ^ 2 := by
-    simpa [hL2, hR2] using (le_of_eq hR2)
+    simp [hL2, hR2]
   have h1abs : |sqrt (a * b)| ≤ |sqrt a * sqrt b| := (sq_le_sq).1 h1sq
   have h2abs : |sqrt a * sqrt b| ≤ |sqrt (a * b)| := (sq_le_sq).1 h2sq
   have h1 : sqrt (a * b) ≤ sqrt a * sqrt b := by

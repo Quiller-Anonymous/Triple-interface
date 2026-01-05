@@ -4,6 +4,7 @@ import Goldbach.AnalyticPointwiseFunCompat
 import Goldbach.FinalFun
 import Goldbach.ParallelTenorFunX
 import Goldbach.AO_SigmaPos   -- provides the canonical `SigmaUpperOnWindow` instance
+import Goldbach.AO_OffDiag.TenorHypFunX_Canon
 import Goldbach.BG_CalibBridgeStub
 
 open Goldbach
@@ -67,5 +68,37 @@ theorem goldbach_from_tenorFunX_fun_canon
   simpa using
     (goldbach_from_tenorFunX_fun
       (Hoff := Hoff) (hc0 := hc0) (hBudget := hBudget) (hBase := hBase))
+
+end Goldbach
+
+namespace Goldbach
+
+/-!
+Medium-task wiring: expose a *canonical* `OffDiagHyp` for the FunX track, so users
+don’t have to manually assemble the `Hoff` record to run the reduction.
+
+This does **not** solve the remaining hard problem (`WeightsBridgeHyp`) and does not
+attempt to prove the numeric global budget `hBudget`; it simply fixes `Hoff`.
+-/
+
+theorem goldbach_from_tenorFunX_fun_autoHoff
+    [Goldbach.AO_SigmaPos.SigmaUpperOnWindow]
+    (hc0 : (0.05 : ℝ) ≤
+      Goldbach.AO_Major.cAO
+        (Goldbach.AO_InstantiateTenorFunX.caps Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff))
+    [Goldbach.BG_Calib.WeightsBridgeHyp]
+    (hBudget :
+      ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ Goldbach.Windows.EvenIn X (10_000 : ℕ) →
+        Goldbach.BG_Calib.δbridge_canon
+          + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
+          + Goldbach.ParallelTenorFunX.δAO_gap_bound
+              (Hoff := Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff) ≤ (0.01 : ℝ))
+    (hBase : FiniteBaseUpTo 1_000_000) :
+    ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
+  exact goldbach_from_tenorFunX_fun
+    (Hoff := Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff)
+    (hc0 := hc0)
+    (hBudget := hBudget)
+    (hBase := hBase)
 
 end Goldbach

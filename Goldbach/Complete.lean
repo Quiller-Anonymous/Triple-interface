@@ -17,7 +17,8 @@ theorem goldbach_from_hyp
   ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
   -- finite base proven up to 1_000_000
   have hBase : FiniteBaseUpTo 1_000_000 := Goldbach.FiniteBase.finiteBaseUpTo_1e6
-  exact goldbach_final (Analytic.toWitness A) (by simpa using hBase)
+  intro n hn h4
+  exact goldbach_final (w := Analytic.toWitness A) (hBase := by simpa using hBase) (N := n) hn h4
 
 /--
 Same as `goldbach_from_hyp`, but exposes the canonical sigma upper bound as an

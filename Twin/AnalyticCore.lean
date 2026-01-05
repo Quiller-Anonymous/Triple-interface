@@ -31,6 +31,31 @@ structure DesmoothBound (eds : ℕ → ℝ) : Prop where
     ∀ ⦃X⦄, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H eds
         ≤ P.eps * Twin.truncSingularSeries P.S * (P.H + 1) / 3
+
+namespace DesmoothBound
+
+variable {P}
+
+/-- Trivial desmoothing budget: taking `eds = 0` satisfies the `/3` window bound. -/
+theorem fromZero (P : Params) : DesmoothBound P (fun _ => (0 : ℝ)) := by
+  classical
+  refine ⟨?_⟩
+  intro X hX
+  have hLHS : Twin.Ledger.windowSum X P.H (fun _ => (0 : ℝ)) = 0 := by
+    unfold Twin.Ledger.windowSum Twin.Ledger.windowSumN
+    simp
+  have eps_nonneg : 0 ≤ P.eps := P.eps_nonneg
+  have ss_nonneg : 0 ≤ Twin.truncSingularSeries P.S :=
+    Twin.truncSingularSeries_nonneg_of_ge_three (S := P.S) P.S_ge_three
+  have hH_nonneg : 0 ≤ (P.H + 1 : ℝ) := by exact_mod_cast Nat.zero_le (P.H + 1)
+  have hRHS_nonneg :
+      0 ≤ P.eps * Twin.truncSingularSeries P.S * (P.H + 1) / 3 := by
+    have : 0 ≤ P.eps * Twin.truncSingularSeries P.S * (P.H + 1) :=
+      mul_nonneg (mul_nonneg eps_nonneg ss_nonneg) hH_nonneg
+    exact div_nonneg this (by norm_num)
+  simpa [hLHS] using hRHS_nonneg
+
+end DesmoothBound
 /-- Pinned gate inequality, pointwise in `k ≤ H`, *uniform in* `X ≥ X0`. -/
 
 structure GatePointwise (emin eds : ℕ → ℝ) : Prop where
@@ -86,8 +111,7 @@ theorem of_pointwise {emin eds : ℕ → ℝ}
   have hLHS :
       S.sum (fun _ => (1 - P.eps) * SS)
         = ((P.H : ℝ) + 1) * ((1 - P.eps) * SS) := by
-    simp [S, Nat.cast_add, Nat.cast_one, add_comm, add_left_comm, add_assoc, mul_comm,
-      mul_left_comm, mul_assoc]
+    simp [S, Nat.cast_add, Nat.cast_one]
 
   -- rewrite the RHS in terms of `localizedTwinMass` and `windowSum`
   have hMass :
@@ -105,8 +129,7 @@ theorem of_pointwise {emin eds : ℕ → ℝ}
 
   have hCap :
       S.sum (fun _ => cap) = ((P.H : ℝ) + 1) * cap := by
-    simp [S, Nat.cast_add, Nat.cast_one, add_comm, add_left_comm, add_assoc, mul_comm,
-      mul_left_comm, mul_assoc, cap]
+    simp [S, Nat.cast_add, Nat.cast_one, cap]
 
   have hRHS :
       S.sum (fun k =>

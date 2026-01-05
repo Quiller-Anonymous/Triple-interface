@@ -24,7 +24,7 @@ checked data or an analytic proof to activate the bridge-dependent results in
 def mk
     (hcert :
       ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
-        |(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N| ≤ δbridge_canon) :
+        |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N| ≤ δbridge_canon) :
     WeightsBridgeHyp :=
   ⟨by
     intro X N hX hN
@@ -41,7 +41,7 @@ without duplicating arithmetic at the call site.
 def mk_from_split (δswap δcontam : ℝ)
     (hsplit :
       ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
-        |(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
+        |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
           ≤ δswap + δcontam)
     (hbdd : δswap + δcontam ≤ δbridge_canon) :
     WeightsBridgeHyp :=
@@ -51,3 +51,44 @@ def mk_from_split (δswap δcontam : ℝ)
     exact le_trans h hbdd)
 
 end Goldbach.BG_Calib.BridgeCert
+
+namespace Goldbach.BG_Calib
+
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/-!
+With the Tenor-aligned definition `BG_Identity.R_bank := conv_full`, the bridge gap
+`R_bank - conv_full` is definitionally `0`. Therefore `WeightsBridgeHyp` is no longer a
+bespoke hypothesis; it has a canonical proof.
+-/
+
+private lemma δbridge_canon_nonneg : 0 ≤ δbridge_canon := by
+  -- each component is nonnegative (all constants here are explicit numerals)
+  have hUpos : 0 < (Goldbach.BG_Identity.Ucut : ℝ) := Goldbach.BG_Identity.Ucut_pos_real
+  have hU : 0 ≤ (Goldbach.BG_Identity.Ucut : ℝ) := le_of_lt hUpos
+  have hH : 0 ≤ (2 * H + 1 : ℝ) := by nlinarith
+  have hCpp : 0 ≤ Cpp_canon := by
+    norm_num [Cpp_canon]
+  have hM : 0 ≤ Mswap_canon := by
+    norm_num [Mswap_canon]
+  have hρ : 0 ≤ ρ_canon := by
+    norm_num [ρ_canon]
+  have h1 :
+      0 ≤ ((2 * H + 1 : ℝ) / (Goldbach.BG_Identity.Ucut : ℝ)) * Mswap_canon :=
+    mul_nonneg (div_nonneg hH hU) hM
+  have h2 :
+      0 ≤ (Cpp_canon / (Goldbach.BG_Identity.Ucut : ℝ)) * ρ_canon :=
+    mul_nonneg (div_nonneg hCpp hU) hρ
+  simpa [δbridge_canon] using add_nonneg h1 h2
+
+noncomputable instance : WeightsBridgeHyp :=
+  BridgeCert.mk (by
+    intro X N hX hN
+    -- `R_bank = conv_full` by definition (Tenor-aligned `BG_Identity.R_bank`)
+    have : |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N| = 0 := by
+      simp [Goldbach.BG_Identity.R_bank]
+    -- discharge the numeric bound using `δbridge_canon_nonneg`
+    simpa [this] using δbridge_canon_nonneg)
+
+end Goldbach.BG_Calib

@@ -29,13 +29,13 @@ namespace Twin
 namespace CLSL2
 
 /-- L² window bound with a *nonnegative* slack term `P.err X`. -/
-structure BoundWithSlack (P : GoalAPI.Params) (e : ℕ → ℝ) : Prop :=
-(bound :
-  ∀ {X}, P.X0 ≤ X →
-    Ledger.windowSum X P.H (fun n => (e n)^2)
-      ≤ P.eps^2 * (truncSingularSeries P.S)^2 * ((↑P.H : ℝ) + 1) / 9
-        + P.err X)
-(err_nonneg : ∀ {X}, 0 ≤ P.err X)
+structure BoundWithSlack (P : GoalAPI.Params) (e : ℕ → ℝ) : Prop where
+  bound :
+    ∀ {X}, P.X0 ≤ X →
+      Ledger.windowSum X P.H (fun n => (e n)^2)
+        ≤ P.eps^2 * (truncSingularSeries P.S)^2 * ((↑P.H : ℝ) + 1) / 9
+          + P.err X
+  err_nonneg : ∀ {X}, 0 ≤ P.err X
 
 end CLSL2
 end Twin
@@ -78,5 +78,13 @@ lemma window_zero (P : Params) :
   have h := (fromZero P).bound X hX
   simp only [zero_pow (by norm_num : (2 : ℕ) ≠ 0)] at h
   exact h
+
+namespace Bound
+
+/-- Convenience alias: the zero function satisfies the `/9` L² window bound. -/
+theorem fromZero (P : Params) : Bound P (fun _ => (0 : ℝ)) :=
+  Twin.CLSL2.fromZero P
+
+end Bound
 
 end Twin.CLSL2

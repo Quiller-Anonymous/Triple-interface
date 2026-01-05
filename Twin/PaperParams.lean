@@ -4,6 +4,7 @@
 -/
 import Mathlib
 import Twin.GoalAPI
+import Twin.SingularSeries
 
 noncomputable section
 open scoped BigOperators
@@ -44,5 +45,9 @@ def P : Twin.GoalAPI.Params :=
     norm_num [eps],
   S_ge_three  := S_ge_three,
   err         := err }
+
+lemma ss_pos : 0 < Twin.truncSingularSeries P.S := by
+  simpa [P, S, Twin.truncSingularSeries] using
+    Twin.truncSingularSeries_pos_of_all_ge_three (S := S) S_ge_three
 
 end Twin.PaperParams

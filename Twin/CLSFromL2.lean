@@ -71,13 +71,12 @@ theorem toCLS
     calc
       (ε * SS * Real.sqrt (N / 9)) ^ 2
           = (ε * SS) ^ 2 * (Real.sqrt (N / 9)) ^ 2 := by
-              simpa [pow_two, mul_comm, mul_left_comm, mul_assoc]
-                using (mul_pow (ε * SS) (Real.sqrt (N / 9)) (2 : ℕ))
+              simp [pow_two, mul_comm, mul_left_comm, mul_assoc]
       _   = (ε ^ 2 * SS ^ 2) * (N / 9) := by
               rw [pow_two, pow_two, Real.mul_self_sqrt hα_nonneg]
               ring
       _   = ε ^ 2 * SS ^ 2 * (N / 9) := by
-              simp [mul_comm, mul_left_comm, mul_assoc]
+              simp [mul_comm, mul_left_comm]
 
   -- From L² bound to a bound on √L2
   have hx : L2 ≤ R ^ 2 := by simpa [hR_sq] using hL2X'
@@ -105,8 +104,7 @@ theorem toCLS
   have hA_le_div : A ≤ (ε * SS * N) / 3 := by
     -- ε*SS*(N/3) = (ε*SS*N)/3
     have : ε * SS * (N / 3) = (ε * SS * N) / 3 := by
-      have : ε * SS * (N / 3) = (ε * SS) * (N / 3) := by simp [mul_assoc]
-      simpa [this, div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc]
+      simp [div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc]
     -- use hA_prod + span to get ε*SS*(N/3), then rewrite to (ε*SS*N)/3
     have hA_le' : A ≤ ε * SS * (N / 3) := by rw [← span]; exact hA_prod
     simpa [this] using hA_le'

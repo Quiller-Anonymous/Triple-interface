@@ -1,6 +1,6 @@
 import Mathlib
 import Goldbach.Windows
-import Goldbach.Rep
+import Goldbach.Analytic.MajorBound
 import Goldbach.AnalyticGlobal
 import Goldbach.BankPieces
 import Goldbach.Compat
@@ -16,14 +16,7 @@ namespace Goldbach.AnalyticAssemble
 
 open Goldbach
 open Goldbach.Windows
-open Goldbach.Rep
 open Goldbach.BankPieces
-
-/-- **Tenor Major** (HL-scale):
-    uniform projected main-term lower bound on the window. -/
-def MajorBound (X0 H : ℕ) (S c0 : ℝ) (M : ℕ → ℝ) : Prop :=
-  ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-    M N ≥ c0 * S
 
 /-- Build the bridge-ready analytic hypothesis from the major + bank leaves. -/
 def mkAnalyticHyp

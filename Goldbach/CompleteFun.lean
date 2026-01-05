@@ -27,6 +27,7 @@ theorem goldbach_from_hyp_fun
   -- build the fixed-width witness, then coerce to the scale-dependent witness
   let wFixed : Goldbach.Analytic.PointwiseWitness := Analytic.toWitness A
   let wFun : Goldbach.Analytic.PointwiseWitnessFun := Goldbach.Analytic.PointwiseWitness.toFun wFixed
+  intro n
   exact goldbach_final_fun wFun (by simpa using hBase)
 
 /--

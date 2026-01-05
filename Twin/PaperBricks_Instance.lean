@@ -22,6 +22,7 @@ def P : Params := Twin.PaperParams.P
 
 /-- Pure algebra: turn a verified analytic bundle into `Bricks P`. -/
 def bricks_of
+    {P : Params}
     (emin eds : ℕ → ℝ)
     (cls  : Twin.AnalyticCore.CLSBound P emin)
     (desm : Twin.AnalyticCore.DesmoothBound P eds)

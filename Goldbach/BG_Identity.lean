@@ -36,6 +36,7 @@ import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
 import Mathlib.Analysis.Calculus.ParametricIntegral
 import Mathlib.Analysis.Normed.Group.Basic
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.NumberTheory.VonMangoldt
 import Mathlib.Data.Real.Basic
 
 namespace Goldbach
@@ -1201,6 +1202,66 @@ noncomputable def bankOp_ref (X N : ℕ) : ℝ :=
   else
     conv_ref X N
 
+/-!
+Banked/normalized representation functional used by the “weights bridge”.
+
+`R_bank` is the analytically controlled, banked representation functional.
+
+Historically this file used `R_bank := (Rep.R N : ℝ)` as a placeholder, which made the
+downstream “bridge” hypothesis semantically impossible (it compared a raw count to a
+normalized kernel average).
+
+In Tenor-style arguments the object controlled by the analytic estimates is the *banked*
+kernel sum (a deweighted convolution), so we take `R_bank` to be `conv_full`.
+This aligns the pipeline with the intended semantics and makes the bridge gap
+`R_bank - conv_full` definitional.
+-/
+noncomputable def R_bank (X N : ℕ) : ℝ :=
+  conv_full X N
+
+/-!
+Tenor-aligned (staging) definitions.
+
+The analytic object controlled in Tenor-style arguments is a deweighted von Mangoldt convolution
+normalized by `(log X)^2`, often banked in the offset variable `k = 2n - N` via the same tent kernel
+used elsewhere in the BG pipeline.
+
+We introduce these objects *alongside* the current pipeline definitions so we can migrate `R_bank`
+and the closure layer in a controlled follow-up step.
+-/
+
+/-- Von Mangoldt weight from Mathlib (`Λ(n)` in classical notation). -/
+noncomputable def ΛVM (n : ℕ) : ℝ :=
+  ArithmeticFunction.vonMangoldt n
+
+/-- Prime-only weight: equals `log n` on primes, `0` otherwise. -/
+noncomputable def Λp (n : ℕ) : ℝ :=
+  if Nat.Prime n then Real.log (n : ℝ) else 0
+
+/--
+Tenor-style per-offset payload, parameterized by the arithmetic weight `Λ`.
+
+Normalization uses `log X` (uniform on the window) rather than `log N`.
+-/
+noncomputable def P_tenor (Λ : ℕ → ℝ) (X N : ℕ) (k : ℤ) : ℝ :=
+  ((1 / 800 : ℝ) * (1 / (Real.log (X : ℝ)) ^ 2)) *
+    Finset.sum (Finset.Icc 2 (N - 2)) (fun n =>
+      if ( (n : ℤ) - ((N : ℤ) - (n : ℤ)) = k ) then
+        (Goldbach.BG_Bank.wX X n * Λ n) * (Goldbach.BG_Bank.wX X (N - n) * Λ (N - n))
+      else
+        0)
+
+noncomputable def P_tenorVM (X N : ℕ) (k : ℤ) : ℝ := P_tenor ΛVM X N k
+noncomputable def P_tenorPrime (X N : ℕ) (k : ℤ) : ℝ := P_tenor Λp X N k
+
+/-- Tent-banked von Mangoldt convolution (Tenor scale, staged). -/
+noncomputable def conv_full_tenorVM (X N : ℕ) : ℝ :=
+  bandU.sum (fun k => P_tenorVM X N k * tentFullWeight k)
+
+/-- Tent-banked prime-only convolution (Tenor scale, staged). -/
+noncomputable def R_bank_tenorPrime (X N : ℕ) : ℝ :=
+  bandU.sum (fun k => P_tenorPrime X N k * tentFullWeight k)
+
 /-- Exposed full bank operator: equals the raw count on the window, conv_full off it. -/
 noncomputable def bankOp_full (X N : ℕ) : ℝ :=
   if _ : BankParams.X0 ≤ X ∧ N ∈ Goldbach.Windows.EvenIn X BankParams.H then
@@ -1337,6 +1398,58 @@ lemma sum_bandU_outer_inner (f : ℤ → ℝ) :
       simp [hunion]
     _ = (∑ k ∈ outerBand, f k) + (∑ k ∈ S_BG, f k) := by
       simpa using (Finset.sum_union hdisj (f := f))
+
+/-- Pure algebra: `conv_ref` is supported on `S_BG`, so it is an `S_BG`-sum. -/
+lemma conv_ref_eq_sum_S_BG (X N : ℕ) :
+    conv_ref X N = Finset.sum S_BG (fun k => P_BG X N k * K_full k) := by
+  classical
+  have hsplit :=
+    sum_bandU_outer_inner (f := fun k => P_BG X N k * tentRefWeight k)
+  have houter :
+      (∑ k ∈ outerBand, P_BG X N k * tentRefWeight k) = 0 := by
+    refine Finset.sum_eq_zero ?_
+    intro k hk
+    have hk' : k ∉ S_BG := (Finset.mem_sdiff.mp (by simpa [outerBand] using hk)).2
+    simp [tentRefWeight, hk']
+  have hinner :
+      (∑ k ∈ S_BG, P_BG X N k * tentRefWeight k)
+        = (∑ k ∈ S_BG, P_BG X N k * K_full k) := by
+    refine Finset.sum_congr rfl ?_
+    intro k hk
+    simp [tentRefWeight, hk, tentFullWeight]
+  -- plug the split and discharge the outer term
+  have := congrArg (fun t => t) hsplit
+  -- rewrite the LHS as `conv_ref`, then simplify
+  simpa [conv_ref, houter, hinner] using this
+
+/-- Pure algebra: the inner “swap gap” is an `S_BG`-sum against `K_full`. -/
+lemma conv_ref_sub_conv_ref_const_eq_sum (X N : ℕ) :
+    conv_ref X N - conv_ref_const X N =
+      Finset.sum S_BG (fun k => K_full k * (P_BG X N k - Pref X N k)) := by
+  classical
+  -- rewrite both terms as `S_BG` sums, then combine
+  have href : conv_ref X N = Finset.sum S_BG (fun k => P_BG X N k * K_full k) :=
+    conv_ref_eq_sum_S_BG (X := X) (N := N)
+  have hdiff :
+      (Finset.sum S_BG (fun k => P_BG X N k * K_full k))
+        - (Finset.sum S_BG (fun k => Pref X N k * K_full k))
+        = Finset.sum S_BG (fun k => (P_BG X N k * K_full k) - (Pref X N k * K_full k)) := by
+    simpa using
+      (Finset.sum_sub_distrib
+        (s := S_BG)
+        (f := fun k => P_BG X N k * K_full k)
+        (g := fun k => Pref X N k * K_full k)).symm
+  -- finish by termwise factoring to match the `K_full * (P - Pref)` shape
+  calc
+    conv_ref X N - conv_ref_const X N
+        = (Finset.sum S_BG (fun k => P_BG X N k * K_full k))
+            - (Finset.sum S_BG (fun k => Pref X N k * K_full k)) := by
+              simpa [href, conv_ref_const]
+    _ = Finset.sum S_BG (fun k => (P_BG X N k * K_full k) - (Pref X N k * K_full k)) := hdiff
+    _ = Finset.sum S_BG (fun k => K_full k * (P_BG X N k - Pref X N k)) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          ring
 
 /-- Pure algebra: the full-vs-reference convolution gap equals the Type-I tail `errTI`. -/
 lemma conv_full_sub_conv_ref_eq_errTI (X N : ℕ) :

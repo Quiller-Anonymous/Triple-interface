@@ -17,11 +17,13 @@ import Goldbach.AO_Major       -- sigma, weight_mass, Mcanon, ao_expansion
 import Goldbach.AO_ErrorEnvelope
 import Goldbach.AO_SigmaPos
 import Goldbach.BG_Calib
+import Goldbach.Rep
 
 open Real
 open Goldbach
 open Goldbach.Windows
 open Goldbach.BG_Calib
+open Goldbach.Rep
 
 namespace Goldbach
 namespace BankPieces
@@ -32,7 +34,7 @@ open Goldbach.Analytic   -- X0, H, C2_numeric
 
 /-- Triangle inequality (rewritten): `|a + b| ≤ |a| + |b|`. -/
 @[simp] lemma abs_add_le' (a b : ℝ) : |a + b| ≤ |a| + |b| := by
-  simpa using abs_add a b
+  simpa using abs_add_le a b
 
 /-- Hook: if on the working window you have `R - M = AO + BG` and each component
     is bounded by 0.005, then `|R - M| ≤ 0.01` on that window. -/

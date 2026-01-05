@@ -60,7 +60,7 @@ lemma window_l1_le_sqrt_span_mul_window_l2
         Finset.sum s (fun k => |e (X + k)| ^ 2)
           = Finset.sum s (fun k => e (X + k) ^ 2) := by
       refine Finset.sum_congr rfl ?_
-      intro k _; simp [pow_two, abs_mul_self]
+      intro k _; simp [pow_two]
     simpa [hA_sum, hL2_sum, hs_card, habs_sq] using hcs
   -- turn the squared inequality into the desired square-root form
   have hB_nonneg : 0 ≤ Real.sqrt ((H : ℝ) + 1) * Real.sqrt L2 :=
@@ -80,7 +80,7 @@ lemma window_l1_le_sqrt_span_mul_window_l2
       have hsq₂ : (Real.sqrt L2) ^ 2 = L2 := by
         simpa [pow_two] using (Real.mul_self_sqrt hL2_nonneg)
       -- rewrite and finish
-      simpa [hmul, hsq₁, hsq₂, mul_assoc, mul_left_comm, mul_comm]
+      simp [hmul, hsq₁, hsq₂]
     -- rewrite RHS using `hB_sq`, then use `h_sq`
     simpa [hB_sq] using h_sq
 
@@ -101,16 +101,16 @@ lemma sqrt_span_mul_sqrt_span_div9 (H : ℕ) :
 
   -- First: √(a/9) = √a / 3  (no division by √9 anywhere)
   have h1 : sqrt (a / 9) = sqrt (a * (1 / 9)) := by
-    simpa [div_eq_mul_inv]
-  have h1over9_nonneg : 0 ≤ (1 / (9 : ℝ)) :=
-    (one_div_pos.mpr (by norm_num : 0 < (9 : ℝ))).le
+    simp [div_eq_mul_inv]
   have h2 : sqrt (a * (1 / 9)) = sqrt a * sqrt (1 / 9) := by
-    simpa using Real.sqrt_mul ha h1over9_nonneg
+    exact Real.sqrt_mul ha (1 / 9 : ℝ)
   have h3 : sqrt (1 / 9 : ℝ) = 1 / 3 := by
-    have h9nonneg : 0 ≤ (9 : ℝ) := by norm_num
     have : sqrt (9 : ℝ) = 3 := by norm_num
-    -- sqrt(1/9) = 1 / sqrt 9 = 1/3
-    simpa [one_div, this] using Real.sqrt_inv (x := (9 : ℝ)) h9nonneg
+    calc
+      sqrt (1 / 9 : ℝ) = sqrt ((9 : ℝ)⁻¹) := by simp [one_div]
+      _ = (sqrt (9 : ℝ))⁻¹ := Real.sqrt_inv (x := (9 : ℝ))
+      _ = (3 : ℝ)⁻¹ := by simp [this]
+      _ = 1 / 3 := by simp [one_div]
   have h4 : sqrt a * sqrt (1 / 9) = sqrt a / 3 := by
     -- rewrite using h3, then turn (· * (1/3)) into (/ 3)
     rw [h3, one_div, div_eq_mul_inv]
@@ -124,11 +124,11 @@ lemma sqrt_span_mul_sqrt_span_div9 (H : ℕ) :
   have hmul : sqrt a * sqrt a = a := Real.mul_self_sqrt ha
   calc
     sqrt a * sqrt (a / 9)
-        = sqrt a * (sqrt a / 3) := by simpa [h_sqrt_div]
+        = sqrt a * (sqrt a / 3) := by simp [h_sqrt_div]
     _   = (sqrt a * sqrt a) * (1 / 3) := by
-            simp [div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc]
-    _   = a * (1 / 3) := by simpa [hmul]
-    _   = a / 3 := by simpa [one_div, div_eq_mul_inv]
+            simp [div_eq_mul_inv, mul_comm, mul_left_comm]
+    _   = a * (1 / 3) := by simp [hmul]
+    _   = a / 3 := by simp [div_eq_mul_inv]
     _   = ((↑H : ℝ) + 1) / 3 := rfl
 
 /-- Additivity of windowed sums for real-valued functions. -/
@@ -147,9 +147,8 @@ lemma windowSum_const (X H : ℕ) (c : ℝ) :
   unfold Ledger.windowSum Ledger.windowSumN
   have hsum :
       (Finset.range (H + 1)).sum (fun _ => c) = (H + 1) • c := by
-    simpa using Finset.sum_const (c := c) (Finset.range (H + 1))
-  simp [hsum, nsmul_eq_mul, Nat.cast_add, Nat.cast_one, add_comm, add_left_comm,
-        add_assoc]
+    simp
+  simp [hsum, nsmul_eq_mul, Nat.cast_add, Nat.cast_one]
 
 
 end LedgerExtra

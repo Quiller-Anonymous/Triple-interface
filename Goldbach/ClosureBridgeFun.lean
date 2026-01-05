@@ -1,5 +1,6 @@
 import Mathlib
-import Goldbach.Rep
+import Goldbach.ClosureBridge
+import Goldbach.BG_Identity
 import Goldbach.Windows
 import Goldbach.Base.FiniteBaseDefs
 -- DO NOT import any Goldbach.Analytic* module here
@@ -8,7 +9,7 @@ open Nat
 open Goldbach
 open Goldbach.Windows   -- IsEven, EvenIn, mem_EvenIn_self
 open Goldbach.Base      -- GoldbachRep / FiniteBaseUpTo
-open Goldbach.Rep
+open scoped BigOperators
 
 namespace Goldbach.Bridge
 
@@ -20,7 +21,7 @@ This is the “parallel” interface meant to match Tenor’s main-text regime w
 -/
 def ClosurePointwiseFun (X : ℕ) (H : ℕ → ℕ) (S c0 ε : ℝ) : Prop :=
   (0 < S) ∧ (0 < c0) ∧ (ε < c0) ∧
-  ∀ {N}, N ∈ EvenIn X (H X) → ((R N : ℝ) / S) ≥ c0 - ε
+  ∀ {N}, N ∈ EvenIn X (H X) → ((Goldbach.BG_Identity.R_bank X N) / S) ≥ c0 - ε
 
 lemma closurePointwiseFun_to_rep
   {X : ℕ} {H : ℕ → ℕ} {S c0 ε : ℝ}
@@ -30,23 +31,27 @@ lemma closurePointwiseFun_to_rep
   classical
   intro N hN
   rcases h with ⟨hSpos, hc0pos, hεlt, hpt⟩
-  have bound' : c0 - ε ≤ (R N : ℝ) / S := by simpa using hpt hN
+  have bound' : c0 - ε ≤ (Goldbach.BG_Identity.R_bank X N) / S := by simpa using hpt hN
 
   -- Multiply both sides by S ≥ 0, then simplify ((a / S) * S) = a using S ≠ 0.
-  have lower : (c0 - ε) * S ≤ (R N : ℝ) := by
+  have lower : (c0 - ε) * S ≤ (Goldbach.BG_Identity.R_bank X N) := by
     have hSnonneg : 0 ≤ S := le_of_lt hSpos
     have t := mul_le_mul_of_nonneg_right bound' hSnonneg
     have hSne : S ≠ 0 := ne_of_gt hSpos
     simpa [div_mul_eq_mul_div, hSne] using t
 
   have posConst : 0 < c0 - ε := sub_pos.mpr hεlt
-  have hRposℝ : 0 < (R N : ℝ) := lt_of_lt_of_le (mul_pos posConst hSpos) lower
-  have hRne : R N ≠ 0 := by
-    intro h0
-    have : (R N : ℝ) = 0 := by simp [h0]
-    exact (ne_of_gt hRposℝ) this
-  have hRpos : 0 < R N := Nat.pos_of_ne_zero hRne
-  exact (R_pos_iff_exists_pair (N := N)).1 hRpos
+  have hRpos : 0 < Goldbach.BG_Identity.R_bank X N :=
+    lt_of_lt_of_le (mul_pos posConst hSpos) lower
+  exact Goldbach.Bridge.closurePointwise_to_rep
+    (X := X) (H := H X) (S := S) (c0 := c0) (ε := ε)
+    (by
+      refine ⟨hSpos, hc0pos, hεlt, ?_⟩
+      intro N hN
+      simpa using (hpt (N := N) hN))
+    (N := N) (by
+      -- `EvenIn X (H X)` is definitional here
+      simpa using hN)
 
 /-- Scale-dependent global version: for every `X ≥ X₀`, closure holds on window width `H(X)`. -/
 def GlobalClosurePointwiseFun (X₀ : ℕ) (H : ℕ → ℕ) (S c0 ε : ℝ) : Prop :=

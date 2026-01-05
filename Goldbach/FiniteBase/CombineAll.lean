@@ -21411,6 +21411,6 @@ private def all_099 : FiniteBaseOn 4 1000000 :=
 theorem finiteBaseUpTo_1e6 : FiniteBaseUpTo 1_000_000 := by
   intro n hn h4 hnTop
   have hAll : FiniteBaseOn 4 1_000_000 := all_099
-  exact hAll n hn h4 hnTop
+  exact hAll (N := n) hn h4 hnTop
 
 end Goldbach.FiniteBase

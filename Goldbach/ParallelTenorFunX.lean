@@ -116,10 +116,10 @@ theorem bank_cert_bound_funX [SigmaUpperOnWindow]
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
           + δAO_gap_bound (Hoff := Hoff) ≤ ε) :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
-      |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ ε := by
+      |Goldbach.BG_Identity.R_bank X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ ε := by
   intro X N hX hN
   have hBridge :
-      |(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
+      |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
         ≤ Goldbach.BG_Calib.δbridge_canon :=
     Goldbach.BG_Calib.weights_bridge_full (X := X) (N := N) hX hN
 
@@ -136,15 +136,15 @@ theorem bank_cert_bound_funX [SigmaUpperOnWindow]
     conv_ref_Mcanon_gap_le_δAO_gap_bound (Hoff := Hoff) (X := X) (N := N) hX hN
 
   have htri :
-      |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
-        ≤ |(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
+      |Goldbach.BG_Identity.R_bank X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
+        ≤ |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
           + |Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N|
           + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| := by
-    set a : ℝ := (Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N
+    set a : ℝ := Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N
     set b : ℝ := Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N
     set c : ℝ := Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N
     have hdecomp :
-        (Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N = a + b + c := by
+        Goldbach.BG_Identity.R_bank X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N = a + b + c := by
       subst a b c
       ring
     have hab : |a + b| ≤ |a| + |b| := by
@@ -154,23 +154,23 @@ theorem bank_cert_bound_funX [SigmaUpperOnWindow]
       simpa [add_assoc] using this
     have hsum : |a + b + c| ≤ |a| + |b| + |c| := by
       linarith [hab, habc]
-    have : |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ |a| + |b| + |c| := by
+    have : |Goldbach.BG_Identity.R_bank X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ |a| + |b| + |c| := by
       simpa [hdecomp, add_assoc] using hsum
     simpa [a, b, c, add_assoc, add_left_comm, add_comm] using this
 
   calc
-    |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
+    |Goldbach.BG_Identity.R_bank X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
         ≤ Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
           + δAO_gap_bound (Hoff := Hoff) := by
           have h12 :
-              |(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
+              |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
                   + |Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N|
                 ≤ Goldbach.BG_Calib.δbridge_canon
                   + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed) :=
             add_le_add hBridge hTail
           have h123 :
-              (|(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
+              (|Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
                     + |Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N|)
                   + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
                 ≤ (Goldbach.BG_Calib.δbridge_canon
@@ -178,7 +178,7 @@ theorem bank_cert_bound_funX [SigmaUpperOnWindow]
                   + δAO_gap_bound (Hoff := Hoff) :=
             add_le_add h12 hAO
           have hRHS :
-              |(Goldbach.Rep.R N : ℝ) - Goldbach.BG_Identity.conv_full X N|
+              |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
                   + |Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N|
                   + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
                 ≤ Goldbach.BG_Calib.δbridge_canon
@@ -203,12 +203,12 @@ noncomputable def globalClosure_funX [SigmaUpperOnWindow]
   intro N hN
 
   have habs :
-      |(Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ ε :=
+      |Goldbach.BG_Identity.R_bank X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ ε :=
     bank_cert_bound_funX (Hoff := Hoff) (X := X) (N := N) hBudget hX hN
 
   have hbank :
-      (Goldbach.Rep.R N : ℝ) ≥ Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N - ε := by
-    have h1 : -ε ≤ (Goldbach.Rep.R N : ℝ) - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N :=
+      Goldbach.BG_Identity.R_bank X N ≥ Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N - ε := by
+    have h1 : -ε ≤ Goldbach.BG_Identity.R_bank X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N :=
       (abs_le.mp habs).1
     linarith
 
@@ -220,7 +220,7 @@ noncomputable def globalClosure_funX [SigmaUpperOnWindow]
       Goldbach.AO_InstantiateTenorFunX.McanoN_lb_cAO (Hoff := Hoff) (X := X) (N := N) hX hN
     exact le_trans hc0 hM
 
-  have : (Goldbach.Rep.R N : ℝ) ≥ c0 - ε := by linarith
+  have : Goldbach.BG_Identity.R_bank X N ≥ c0 - ε := by linarith
   have hone : S = (1 : ℝ) := by norm_num [S]
   simpa [hone] using this
 
