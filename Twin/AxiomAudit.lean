@@ -5,7 +5,7 @@ import Twin.Assumptions
 import Twin.TwinMain
 import Twin.AnalyticFromPaper
 import Twin.MajorArc.Pin
-import Twin.ChecklistGold
+import Twin.ChecklistGoldDefault
 
 -- What’s in the final namespace?
 #print prefix Twin.Final

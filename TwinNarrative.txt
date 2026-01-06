@@ -1,6 +1,74 @@
 Twin primes project: outstanding proof obligations (Lean-facing)
 ==============================================================
 
+Update (2026-01): Checklist “gold” route is now the active wiring
+---------------------------------------------------------------
+
+The Twin pipeline is now wired end-to-end through the **Checklist route**, not the Appendix-A
+route, for “gold status” development (axiomatize conventional analytic inputs; keep the rest
+machine-checked).
+
+Concrete entrypoints:
+  - `All.lean` imports `Twin.Gold` (so `lake build All` includes the Twin gold theorem).
+  - `Twin/Gold.lean` exports:
+      `Twin.Gold.twins_in_all_large_windows`
+    which is definitionally:
+      `Twin.ChecklistGold.twins_in_all_large_windows`.
+
+You can always see what remains axiomatized by running:
+  `lake env lean Twin/AxiomAudit.lean`
+
+At the moment, `#print axioms Twin.ChecklistGold.twins_in_all_large_windows` reports exactly
+these remaining (conventional / paper-facing) axioms (plus `propext`, `Classical.choice`, `Quot.sound`):
+  - `Twin.ChecklistSme.instSW_bound`
+      Smoothed Siegel–Walfisz-on-major-arcs bound for the frozen model
+      (`Twin/ChecklistSme.lean`; used only by the default `Twin.ChecklistGoldDefault` specialization).
+  - `Twin.ChecklistAxioms.minorMassAt_sq_sum_bigIcc_core_raw`
+      The “CLS/Type-II” minor-arc L² bound, in the enlarged-index-set form that feeds the `/9` budget
+      (`Twin/ChecklistAxioms.lean:413`).
+  - `Twin.ChecklistAxioms.fullMassAt_eq_smoothLambdaTwinMassAt`
+      Fourier inversion identity: torus-integral `fullMassAt` equals the explicit smooth ΛΛ sum
+      (`Twin/ChecklistAxioms.lean:540`).
+  - `Twin.ChecklistAxioms.dsFourierWindowTail_sum_bigIcc_raw`
+      Gaussian tail control for the smooth-vs-window comparison (`Twin/ChecklistAxioms.lean:1110`).
+  - `Twin.ChecklistAxioms.dsFourierWindowCoreBudget_sum_bigIcc_raw`
+      Smooth-vs-sharp window comparison budget on the core window (`Twin/ChecklistAxioms.lean:1115`).
+  - `Twin.ChecklistAxioms.dsPrimePowerLeftBudget_sum_bigIcc_raw`
+      Prime-power disposal budget (left factor) (`Twin/ChecklistAxioms.lean:1198`).
+  - `Twin.ChecklistAxioms.dsPrimePowerRightBudget_sum_bigIcc_raw`
+      Prime-power disposal budget (right factor) (`Twin/ChecklistAxioms.lean:1203`).
+  - `Twin.ChecklistAxioms.pinnedMajors_SW_error_raw`
+      SW-to-pinned-majors approximation error on the major arcs (`Twin/ChecklistAxioms.lean:2008`).
+  - `Twin.ChecklistAxioms.pinnedMajors_mainTerm_eval_raw`
+      Arithmetic evaluation of the pinned-major-arc main term against `SS := truncSingularSeries(P.S)`
+      (`Twin/ChecklistAxioms.lean:2014`).
+
+Notes:
+  - The window-facing interfaces (`Twin.CLSL2.Bound`, `Twin.AnalyticCore.DesmoothBound`,
+    `Twin.MajorArc.MajorArcLower`, `Twin.MajorArc.MajorArcTransfer`) are *not* axioms anymore:
+    they are derived in `Twin/ChecklistAxioms.lean` from the raw axioms above plus finitary inequalities.
+  - `Twin.ChecklistGold.lean` is wired into the normal build via `Twin/Gold.lean` and `All.lean`;
+    `Twin/AxiomAudit.lean` is intentionally *not* imported by the build (it prints audit output).
+
+Optional Goldbach-side “hook” (ETI/TI integration)
+--------------------------------------------------
+
+Twin itself still does not import Goldbach, but **Goldbach can import Twin** and provide
+a `Twin.HasTwinTI` instance as the bridge point.
+
+Concrete files:
+  - `Goldbach/TwinInstance.lean`: exports `instance : Twin.HasTwinTI Twin.Main.P` (currently reusing the Twin checklist axioms; no additional axioms live in `Goldbach/`).
+  - `Goldbach/TwinGold.lean`: consumes that instance and calls `Twin.Main.windows_largeX_of_errorData`
+    via `Twin.MajorArc.MajorArcPackage.of_gate`.
+  - `Goldbach/AxiomAuditTwinGold.lean`: `#print axioms` audit for the above theorem(s).
+
+Important:
+  - The integrability hypothesis is no longer an axiom: `Twin.ChecklistAxioms.fullIntegrable`
+    is now proved for the frozen Gaussian model in `Twin/ChecklistAxioms.lean`.
+  - The routing inequality (`h_transfer`) is no longer an axiom; it is proved in
+    `Twin/ChecklistAxioms.lean` from the analytic definitions of `majMass`/`minorMass`/`fullMass`
+    plus the definition-level domination lemmas for `emin` and `eds`.
+
 0. What the project is trying to prove
 --------------------------------------
 
@@ -50,6 +118,11 @@ input records passed into `windows_largeX_of_appendixA_ofSW`.
 
 2. Concrete obligations (canonical route: Appendix-A + SW)
 ----------------------------------------------------------
+
+NOTE (2026-01): This section predates the Checklist rewiring and is kept for historical context.
+For current work, treat `Twin/ChecklistAxioms.lean` as the single source of truth: the active
+gold/checklist route is exactly the axiom list reported by `Twin/AxiomAudit.lean` in the update
+section above.
 
 Fix `P : Twin.GoalAPI.Params := Twin.PaperParams.P`.
 

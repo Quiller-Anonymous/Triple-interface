@@ -1,4 +1,4 @@
-import Twin.ChecklistGold
+import Twin.ChecklistGoldDefault
 
 /-
   Twin/Gold.lean

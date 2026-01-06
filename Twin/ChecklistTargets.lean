@@ -1,5 +1,4 @@
 import Twin.ChecklistAssumptions
-import Twin.ChecklistSme
 
 namespace Twin.ChecklistTargets
 
@@ -24,7 +23,7 @@ via `Twin.ChecklistAssumptions.windows_largeX_all_windows`.
 -/
 structure Obligations where
   /-- Smoothed major-arc estimate (paper §11.2-style). -/
-  sme : Twin.MajorArc.SmoothMajorArcEstimate A B Lambda Wwin What := Twin.ChecklistSme.sme
+  sme : Twin.MajorArc.SmoothMajorArcEstimate A B Lambda Wwin What
   /-- Global error channels (functions of `n` only). -/
   emin : ℕ → ℝ
   eds : ℕ → ℝ
@@ -71,7 +70,7 @@ This is intended as the “easiest interface” to hand to an external solver.
 -/
 structure ObligationsExplicit where
   /-- Smoothed major-arc estimate (paper §11.2-style). -/
-  sme : Twin.MajorArc.SmoothMajorArcEstimate A B Lambda Wwin What := Twin.ChecklistSme.sme
+  sme : Twin.MajorArc.SmoothMajorArcEstimate A B Lambda Wwin What
   /-- Global error channels (functions of `n` only). -/
   emin : ℕ → ℝ
   eds : ℕ → ℝ

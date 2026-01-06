@@ -1,5 +1,6 @@
 import Mathlib
 import Goldbach.BG_Identity
+import Goldbach.ClosureBridgeTenor
 import Goldbach.Windows
 import Goldbach.Base.FiniteBaseDefs
 -- DO NOT import any Goldbach.Analytic* module here
@@ -88,12 +89,20 @@ private lemma tentFullWeight_nonneg (k : ℤ) : 0 ≤ Goldbach.BG_Identity.tentF
 private lemma rep_of_R_bank_pos {X N : ℕ} (hpos : 0 < Goldbach.BG_Identity.R_bank X N) :
     GoldbachRep N := by
   classical
+  -- On the canonical window, `R_bank` is Tenor-aligned (`R_bank_tenorPrime`);
+  -- off-window it falls back to `conv_full`.
+  by_cases hbank : Goldbach.BankParams.X0 ≤ X ∧ N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H
+  · have hR : Goldbach.BG_Identity.R_bank X N = Goldbach.BG_Identity.R_bank_tenorPrime X N := by
+      simp [Goldbach.BG_Identity.R_bank, Goldbach.BG_Identity.bankOp_full, hbank]
+    have hpos' : 0 < Goldbach.BG_Identity.R_bank_tenorPrime X N := by simpa [hR] using hpos
+    exact Goldbach.BridgeTenor.rep_of_R_bank_tenorPrime_pos (X := X) (N := N) hbank.1 hpos'
   -- unfold `R_bank` and `conv_full`
   have hsum_pos :
       0 <
         Goldbach.BG_Identity.bandU.sum (fun k =>
           Goldbach.BG_Bank.P_BG X N k * Goldbach.BG_Identity.tentFullWeight k) := by
-    simpa [Goldbach.BG_Identity.R_bank, Goldbach.BG_Identity.conv_full] using hpos
+    simpa [Goldbach.BG_Identity.R_bank, Goldbach.BG_Identity.bankOp_full, hbank,
+      Goldbach.BG_Identity.conv_full] using hpos
   have hterm_nonneg :
       ∀ k ∈ Goldbach.BG_Identity.bandU,
         0 ≤ (Goldbach.BG_Bank.P_BG X N k * Goldbach.BG_Identity.tentFullWeight k) := by

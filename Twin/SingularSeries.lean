@@ -20,6 +20,26 @@ def twinFactor (p : ℕ) : ℝ :=
 def truncSingularSeries (S : Finset ℕ) : ℝ :=
   ∏ p ∈ S, twinFactor p
 
+/-- Alternate (finite) expansion of the truncated singular series as a sum over subsets.
+
+This is the algebraic identity behind Euler-product expansions; it is useful for aligning
+the paper’s “sum over squarefree moduli” viewpoint with the definition
+`truncSingularSeries S = ∏ p∈S (1 - 1/(p-1)^2)`. -/
+def truncSingularSeriesExpansion (S : Finset ℕ) : ℝ :=
+  ∑ t ∈ S.powerset, (-1 : ℝ) ^ t.card * (∏ p ∈ t, ((p - 1 : ℝ) ^ 2))⁻¹
+
+lemma truncSingularSeries_eq_expansion (S : Finset ℕ) :
+    truncSingularSeries S = truncSingularSeriesExpansion S := by
+  classical
+  -- Apply the standard `∏ (f - g)` powerset expansion with `f ≡ 1` and `g(p)=1/(p-1)^2`.
+  have h :=
+    (Finset.prod_sub (f := fun _p : ℕ => (1 : ℝ))
+        (g := fun p : ℕ => (1 / ((p - 1 : ℝ) ^ 2))) S)
+  -- Simplify the `f ≡ 1` complement-product and rewrite the `g`-products via `prod_inv_distrib`.
+  -- (The `prod_inv_distrib` step is purely algebraic: ∏ (1/a_p) = (∏ a_p)⁻¹.)
+  simpa [truncSingularSeries, truncSingularSeriesExpansion, twinFactor, one_div,
+    sub_eq_add_neg, Finset.prod_const_one, Finset.prod_inv_distrib] using h
+
 /-- For every `p ≥ 3`, the local factor is strictly positive (indeed ≥ 3/4). -/
 lemma twinFactor_pos_of_three_le {p : ℕ} (hp3 : 3 ≤ p) :
   0 < twinFactor p := by

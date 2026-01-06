@@ -1,0 +1,127 @@
+Strategy 2 (fallback): keep the major-arc evaluation as a textbook-style axiom, and prove all project-specific bookkeeping from it
+==========================================================================================
+
+Context
+-------
+
+In the FunX (variable-Q) Goldbach track, the pipeline needs an “inner swap on window” bound:
+
+  |conv_ref X N - conv_ref_const X N| ≤ ((2H+1)/Ucut) * Mswap_canon
+
+for `X0 ≤ X` and `N ∈ EvenIn X H`.
+
+This is currently supplied by:
+
+  `Goldbach/AO_MajorSwapTenorAxiomsFunX.lean`:
+    `axiom goldbach_major_arc_eval_on_window_canon`.
+
+We also introduced an orthodox (PNT-in-AP / Siegel–Walfisz) scaffold:
+
+  `Goldbach/Cert/SiegelWalfiszAxioms.lean`:
+    `axiom siegelWalfisz_psi`.
+
+Strategy 1 is to *derive* the project’s major-arc bound from `siegelWalfisz_psi` plus a long chain
+of conventional Fourier/character manipulations (and then remove
+`goldbach_major_arc_eval_on_window_canon`).
+
+Strategy 2 is the pragmatic fallback when strategy 1 is too large to formalize in the current
+refactor: we replace the project-specific major-arc axiom by a more orthodox, general “smoothed
+major arc” axiom statement, and prove the project-specific instance from it.
+
+This is still honest provided:
+1) the axiom statement matches a standard result in analytic number theory texts, and
+2) the only “project-specific” work left is checking that our kernel/weights fit the hypotheses.
+
+
+Proposed orthodox axiom shape
+-----------------------------
+
+Rather than axiomatizing a bound directly in terms of `conv_ref`/`conv_ref_const`, axiomatize a
+standard major-arc evaluation for *smoothed von Mangoldt correlations*.
+
+At a high level, for a nonnegative smooth weight `wX(n)` supported on `n ~ X`:
+
+  RΛ(X,N) := (1/(800 log(X)^2)) * ∑_n wX(n)Λ(n) wX(N-n)Λ(N-n)
+
+Then the “textbook” major arc output is:
+
+  RΛ(X,N) = σ(N) * (main_mass(X,N)) + error(X,N),
+
+with `error(X,N)` uniformly small on the relevant window.
+
+For our pipeline, `main_mass(X,N)` is exactly the constant `mass_BG` (or `mass_BG / Ucut`
+depending on normalization choices already made elsewhere), and the required inequality is a
+numerical upper bound on `|error(X,N)|`.
+
+In Lean, the orthodox axiom could be packaged as:
+
+  axiom majorArc_smoothed_vonMangoldt_bound :
+    ∀ (A : ℕ), ∃ C : ℝ, 0 ≤ C ∧
+      ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+        |RΛ_bank X N - RΛ_model X N| ≤ C / (Real.log (X : ℝ)) ^ A
+
+or in the “Tenor-canonical” form (if we only ever use one `A` and one numerical cap):
+
+  axiom majorArc_smoothed_vonMangoldt_bound_canon :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+      |RΛ_bank X N - RΛ_model X N| ≤ ((2H+1)/Ucut)*Mswap_canon
+
+The first is more orthodox; the second is closer to what the pipeline consumes.
+
+
+How strategy 2 integrates with the current codebase
+---------------------------------------------------
+
+1) Keep `Goldbach/Cert/SiegelWalfiszAxioms.lean` as the *eventual* orthodox input, but do not
+   require it for the pipeline to run.
+
+2) Replace `Goldbach/AO_MajorSwapTenorAxiomsFunX.lean`’s current axiom by the more orthodox axiom
+   above (or move it to a new file `Goldbach/Cert/MajorArcAxioms.lean`).
+
+3) Prove the *project-specific* `InnerSwapOnWindow` instance by:
+   - unfolding `RΛ_bank := conv_ref` and `RΛ_model := conv_ref_const`, and
+   - using the already-written bookkeeping lemma:
+       `Goldbach/AO_MajorSwapBookkeeping.lean`:
+         `conv_ref_gap_le_of_payload_gap`
+     when the orthodox axiom is stated at the payload level; or directly by `simp` if stated at the
+     convolution level.
+
+4) Make sure all remaining project-specific steps are proved lemmas (no new axioms):
+   - normalization constants (the `1/800` and `log` choices),
+   - support/size facts for the window,
+   - nonnegativity / boundedness facts for the kernel and weight functions.
+
+This keeps the “axiom surface area” genuinely conventional and makes the refactor stable.
+
+
+What strategy 2 buys us (and what it doesn’t)
+---------------------------------------------
+
+Pros:
+- Removes the temptation to axiomatize a bespoke statement that mentions internal objects like
+  `P_BG`/`Pref` pointwise.
+- Keeps the pipeline honest: the only remaining assumptions are standard “major arc evaluation”
+  inputs, stated in general analytic language.
+- Allows gradual replacement: later, we can derive the major-arc axiom from `siegelWalfisz_psi` and
+  delete it without touching downstream files (only the instance provider changes).
+
+Cons:
+- Still leaves one high-level analytic theorem as an axiom.
+- Does not avoid the real work: proving the major-arc evaluation from SW remains a major project.
+
+
+Pointers to current code that already supports strategy 2
+---------------------------------------------------------
+
+- `Goldbach/AO_MajorSwapRewrites.lean`:
+  rewrites `conv_ref` (and `conv_ref - conv_ref_const`) as explicit finite sums over the Goldbach
+  split variable `n`. This is the starting point for either strategy 1 or strategy 2.
+
+- `Goldbach/AO_MajorSwapBookkeeping.lean`:
+  converts a pointwise payload cap into a convolution (kernel-averaged) bound without `simp`
+  explosions.
+
+- `Goldbach/AO_MajorSwapTenorAxiomsFunX.lean`:
+  currently provides the `InnerSwapOnWindow` instance for the FunX track; this is exactly the
+  location to swap in the strategy-2 axiom statement while keeping downstream wiring unchanged.
+

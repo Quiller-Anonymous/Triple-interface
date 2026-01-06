@@ -45,14 +45,19 @@ def toAnalytic (P : GoalAPI.Params) [T : HasTwinTI P] :
   ∧ AnalyticCore.GateOnWindow P T.emin T.eds :=
 by
   classical
-  have hL2 : CLSFromL2.Bound P T.emin := ⟨fun {X} hX => (T.l2_minor (X:=X) hX)⟩
-  refine ⟨?cls, ?desm, ?gate⟩
+  have hL2 : CLSL2.Bound P T.emin :=
+    ⟨by
+      intro X hX
+      simpa using (T.l2_minor (X := X) hX)⟩
+
+  refine ⟨?_, ?_⟩
   · -- CLS from L²
-    exact CLSFromL2.toCLS_withSlack_fromL2 (P := P) (emin := T.emin) hL2
-  · -- desmoothing budget: direct
-    intro X hX; exact T.desmooth (X:=X) hX
-  · -- pinned major-arc inequality: direct
-    intro X hX; exact T.pinned (X := X) hX
+    exact CLSFromL2.toCLS (P := P) (e := T.emin) hL2
+  · refine ⟨?_, ?_⟩
+    · -- desmoothing budget: direct
+      refine ⟨by intro X hX; simpa using (T.desmooth (X := X) hX)⟩
+    · -- pinned major-arc inequality: direct
+      refine ⟨by intro X hX; simpa using (T.pinned (X := X) hX)⟩
 
 end HasTwinTI
 end Twin

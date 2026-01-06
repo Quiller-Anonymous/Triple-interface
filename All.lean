@@ -1,6 +1,7 @@
 -- All.lean
 import Twin.Final
 import Twin.Gold
+import Goldbach.TwinGold
 
 -- Main track toggles
 -- import Goldbach.Final
@@ -11,6 +12,9 @@ import Twin.Gold
 -- import Goldbach.FinalTenor
 -- import Goldbach.CompleteTenor
 
--- Parallel track toggles (commented out by default).
-import Goldbach.CompleteFun
-import Goldbach.CompleteTenorFunX
+-- Canonical Goldbach track (Tenor-aligned parallel FunX).
+import Goldbach.GoldFunX
+
+-- Optional: conditional entry points (kept for reference).
+-- import Goldbach.CompleteFun
+-- import Goldbach.CompleteTenorFunX

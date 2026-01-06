@@ -57,9 +57,9 @@ noncomputable def Hoff : OffDiagHyp where
     -- delegate to the conventional axiom
     have hQ : 1 ≤ Qfun X := Qfun_pos_on_window (X := X) (N := N) hX hN
     -- delegate to the conventional axiom (monotone weakening at the canonical constant)
-    simpa [SigmaTailTenorAxiomsFun.K_tail_canon, K_tail, Qfun] using
+    simpa [SigmaTailTenorAxiomsFun.K_tail_canon, Goldbach.Cert.SigmaTailAxiomsFun.K_tail_canon, K_tail, Qfun] using
       Goldbach.AO_OffDiag.SigmaTailTenorAxiomsFun.sigmaTail_bound_on_window
-        (Q := Qfun) (K_tail := K_tail) (by simp [SigmaTailTenorAxiomsFun.K_tail_canon, K_tail])
+        (Q := Qfun) (K_tail := K_tail) (by simp [SigmaTailTenorAxiomsFun.K_tail_canon, Goldbach.Cert.SigmaTailAxiomsFun.K_tail_canon, K_tail])
         (X := X) (N := N) hX hN hQ
   budget_ok := by
     intro X hX

@@ -3,6 +3,7 @@ import Goldbach.AO_OffDiag.TailBlockFun
 import Goldbach.AO_OffDiag.SigmaTailReindexFun
 import Goldbach.BankParams
 import Goldbach.Windows
+import Goldbach.Cert.SigmaTailAxiomsFun
 
 namespace Goldbach
 namespace AO_OffDiag
@@ -25,21 +26,26 @@ Canonical truncation constant for the σ-tail bounds in the `Q(X)` (“Fun”) t
 This should be viewed as a single conventional numeric constant coming from the analytic
 literature. Downstream code may use any `K_tail ≥ K_tail_canon` without changing proofs.
 -/
-noncomputable def K_tail_canon : ℝ := (1.02 : ℝ)
+noncomputable def K_tail_canon : ℝ := Goldbach.Cert.SigmaTailAxiomsFun.K_tail_canon
 
 lemma K_tail_canon_nonneg : 0 ≤ K_tail_canon := by
-  norm_num [K_tail_canon]
+  simpa [K_tail_canon] using Goldbach.Cert.SigmaTailAxiomsFun.K_tail_canon_nonneg
 
 /--
 Conventional truncation input on the canonical window:
 for a positive truncation height `Q(X)`, the σ-tail is `O(1/Q(X))` with canonical constant
 `K_tail_canon`.
 -/
-axiom sigmaTail_bound_on_window_canon
+theorem sigmaTail_bound_on_window_canon
   (Q : ℕ → ℕ) :
   ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ EvenIn X BankParams.H → 1 ≤ Q X →
     |SigmaTailReindexFun.sigmaTail (Q X) N|
-      ≤ K_tail_canon / (Q X : ℝ)
+      ≤ K_tail_canon / (Q X : ℝ) := by
+  intro X N hX hN hQ
+  have h :=
+    Goldbach.Cert.SigmaTailAxiomsFun.sigmaTail_bound_on_window_canon (Q := Q) (X := X) (N := N) hX hN hQ
+  simpa [K_tail_canon] using h
+
 
 /--
 Monotone weakening: if `K_tail_canon ≤ K_tail`, then the same window bound holds with `K_tail`.

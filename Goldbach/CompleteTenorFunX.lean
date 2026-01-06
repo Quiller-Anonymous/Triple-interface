@@ -20,8 +20,10 @@ witness produced by `ParallelTenorFunX` to a constant-`H` `PointwiseWitnessFun`.
 -/
 theorem goldbach_from_tenorFunX_fun
     [Goldbach.AO_SigmaPos.SigmaUpperOnWindow]
+    [Goldbach.ParallelTenorFunX.InnerSwapOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
-    (hc0 : (0.05 : ℝ) ≤ Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff))
+    (hεlt : (0.01 : ℝ) <
+      Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff))
     [Goldbach.BG_Calib.WeightsBridgeHyp]
     (hBudget :
       ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ Goldbach.Windows.EvenIn X (10_000 : ℕ) →
@@ -31,7 +33,7 @@ theorem goldbach_from_tenorFunX_fun
     (hBase : FiniteBaseUpTo 1_000_000) :
     ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
   let wFixed : Goldbach.Analytic.PointwiseWitness :=
-    Goldbach.ParallelTenorFunX.witness_funX (Hoff := Hoff) hc0 (hBudget := hBudget)
+    Goldbach.ParallelTenorFunX.witness_funX (Hoff := Hoff) (hεlt := hεlt) (hBudget := hBudget)
   let wFun : Goldbach.Analytic.PointwiseWitnessFun :=
     Goldbach.Analytic.PointwiseWitness.toFun wFixed
   have hX0 : wFun.X0 = 1_000_000 := by
@@ -55,7 +57,9 @@ from `AO_SigmaPos`.
 -/
 theorem goldbach_from_tenorFunX_fun_canon
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
-    (hc0 : (0.05 : ℝ) ≤ Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff))
+    (hεlt : (0.01 : ℝ) <
+      Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff))
+    [Goldbach.ParallelTenorFunX.InnerSwapOnWindow]
     [Goldbach.BG_Calib.WeightsBridgeHyp]
     (hBudget :
       ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ Goldbach.Windows.EvenIn X (10_000 : ℕ) →
@@ -67,7 +71,7 @@ theorem goldbach_from_tenorFunX_fun_canon
   -- hand off to the general theorem, letting typeclass inference supply the sigma instance
   simpa using
     (goldbach_from_tenorFunX_fun
-      (Hoff := Hoff) (hc0 := hc0) (hBudget := hBudget) (hBase := hBase))
+      (Hoff := Hoff) (hεlt := hεlt) (hBudget := hBudget) (hBase := hBase))
 
 end Goldbach
 
@@ -83,7 +87,8 @@ attempt to prove the numeric global budget `hBudget`; it simply fixes `Hoff`.
 
 theorem goldbach_from_tenorFunX_fun_autoHoff
     [Goldbach.AO_SigmaPos.SigmaUpperOnWindow]
-    (hc0 : (0.05 : ℝ) ≤
+    [Goldbach.ParallelTenorFunX.InnerSwapOnWindow]
+    (hεlt : (0.01 : ℝ) <
       Goldbach.AO_Major.cAO
         (Goldbach.AO_InstantiateTenorFunX.caps Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff))
     [Goldbach.BG_Calib.WeightsBridgeHyp]
@@ -97,7 +102,7 @@ theorem goldbach_from_tenorFunX_fun_autoHoff
     ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
   exact goldbach_from_tenorFunX_fun
     (Hoff := Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff)
-    (hc0 := hc0)
+    (hεlt := hεlt)
     (hBudget := hBudget)
     (hBase := hBase)
 

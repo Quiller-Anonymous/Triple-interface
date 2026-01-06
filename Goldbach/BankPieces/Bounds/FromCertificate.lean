@@ -9,11 +9,11 @@
 -/
 import Mathlib.Data.Real.Basic
 import Goldbach.Windows
-import Goldbach.Rep
 import Goldbach.MainTerm
 import Goldbach.Analytic.NumericSigma     -- X0, H, C2_numeric
 import Goldbach.BankPieces                -- BankAbsDeviation, DecompBounds
 import Goldbach.BankPieces.DecompFromBound
+import Goldbach.BG_Identity
 
 namespace Goldbach
 namespace BankPieces
@@ -25,9 +25,9 @@ open Goldbach.Analytic
 theorem bound_working_from_cert
   (bank_cert_bound :
     ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-      |(Goldbach.Rep.R N : ℝ) - (Goldbach.MainTerm.M C2_numeric) N| ≤ (0.01 : ℝ)) :
+      |Goldbach.BG_Identity.R_bank X N - (Goldbach.MainTerm.M C2_numeric) N| ≤ (0.01 : ℝ)) :
   ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-    |(Goldbach.Rep.R N : ℝ) - (Goldbach.MainTerm.M C2_numeric) N| ≤ (0.01 : ℝ) * (1 : ℝ) := by
+    |Goldbach.BG_Identity.R_bank X N - (Goldbach.MainTerm.M C2_numeric) N| ≤ (0.01 : ℝ) * (1 : ℝ) := by
   intro X N hX hN
   simpa using bank_cert_bound (X:=X) (N:=N) hX hN
 
@@ -35,7 +35,7 @@ theorem bound_working_from_cert
 def decomp_canonical_from_cert
   (bank_cert_bound :
     ∀ {X N}, X0 ≤ X → N ∈ Windows.EvenIn X H →
-      |(Goldbach.Rep.R N : ℝ) - (Goldbach.MainTerm.M C2_numeric) N| ≤ (0.01 : ℝ)) :
+      |Goldbach.BG_Identity.R_bank X N - (Goldbach.MainTerm.M C2_numeric) N| ≤ (0.01 : ℝ)) :
   DecompBounds X0 H (1 : ℝ) (0.01 : ℝ) (0 : ℝ)
     (Goldbach.MainTerm.M C2_numeric) :=
   decomp_of_bound (X0:=X0) (H:=H) (S:=1) (ε:=0.01) (δ:=0)

@@ -65,8 +65,9 @@ jobs:
       - name: Build fast Goldbach targets
         run: |
           set -euo pipefail
-          lake build Goldbach.Final
-          lake build Goldbach.AO_OffDiag.EntryPoint
+          # Keep this job finite-base-free (the finite base is built only on the nightly/dispatch path).
+          lake build Goldbach.CompleteTenorFunX_CanonBudget
+          lake build Goldbach.AO_OffDiag.EntryPointTenorFunX
           lake build Goldbach.BG_CalibBridgeStub
 
   discover-chunks:
@@ -305,4 +306,5 @@ jobs:
       - name: Build (Goldbach pipeline)
         run: |
           set -euo pipefail
-          lake build Goldbach.Complete
+          # Full end-to-end build: canonical Tenor-aligned FunX track + checked finite base.
+          lake build Goldbach.GoldFunX

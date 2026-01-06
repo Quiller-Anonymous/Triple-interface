@@ -2,6 +2,7 @@ import Goldbach.BankParams
 import Goldbach.Windows
 import Goldbach.AO_OffDiag.TailBlock
 import Goldbach.AO_OffDiag.SigmaTailReindex
+import Goldbach.Cert.SigmaTailAxioms
 
 /-!
 This file is the **transparency boundary** for the off-diagonal σ-tail truncation input.
@@ -21,10 +22,10 @@ open Goldbach.Windows
 open TailBlock
 
 /-- Conventional input: a tail bound for the σ-series reindexed tail on the canonical window. -/
-axiom sigmaTail_bound_on_window
+theorem sigmaTail_bound_on_window
   {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ EvenIn X BankParams.H) :
-    |SigmaTailReindex.sigmaTail N| ≤ (1.02 : ℝ) / (TailBlock.Q0 : ℝ)
+    |SigmaTailReindex.sigmaTail N| ≤ Goldbach.Cert.SigmaTailAxioms.K_tail_canon / (TailBlock.Q0 : ℝ) :=
+  Goldbach.Cert.SigmaTailAxioms.sigmaTail_bound_on_window (X := X) (N := N) hX hN
 
 end AO_OffDiag
 end Goldbach
-

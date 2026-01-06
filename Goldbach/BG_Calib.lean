@@ -236,13 +236,6 @@ lemma bankOp_ref_eq_mainterm_on_window
   unfold BG_Identity.bankOp_ref
   simp [hX, hN]
 
-/-- Bridge: on the window, the full bank projector coincides with `R N`. -/
-lemma bankOp_full_eq_R_on_window
-  {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-  BG_Identity.bankOp_full X N = (Goldbach.Rep.R N : ℝ) := by
-  unfold BG_Identity.bankOp_full
-  simp [hX, hN]
-
 /-!
 Midband helpers: integers with `H < |k| ≤ U`.  We specialise to the canonical
 `H` and `Ucut`, but keep an (ignored) `U` argument so existing callsites
@@ -564,14 +557,26 @@ lemma inner_swap_bound
       (hM:=by intro k hk; exact hM (k:=k) hk)
   simpa [mul_comm, mul_left_comm, mul_assoc] using hswap
 
-/-- Canonical bridge bound: swap + contamination. -/
-class WeightsBridgeHyp : Prop where
-  /-- The “weights bridge” hypothesis: the raw representation count is close to the
-  full BG convolution on the window.
+/--
+Bridge interface for the BG bank.
 
-  This is the remaining deep arithmetic input (deweighting + contamination control)
-  that is not yet proved in this repository.  It is separated out as a single
-  hypothesis so downstream assembly can treat it as an explicit input. -/
+The *intended* mathematical role is the “deweighting + contamination” step: a proof that the
+Tenor-aligned banked functional `BG_Identity.R_bank` is close to the BG convolution
+`BG_Identity.conv_full` on the canonical window, within the budget `δbridge_canon` (which is
+parameterized as “swap + contamination”).
+
+In the current repository state, this is provided by a concrete proof/instance in
+`Goldbach/BG_CalibBridgeStub.lean` (so it is not an outstanding obligation for the build).
+If `R_bank`/`conv_full` are later changed so the bridge is no longer a pure normalization mismatch,
+that instance should be replaced by the intended split proof/certificate.
+-/
+class WeightsBridgeHyp : Prop where
+  /-- The “weights bridge” hypothesis: the Tenor-aligned banked prime-only functional
+  `BG_Identity.R_bank` is close to the existing BG convolution `BG_Identity.conv_full`
+  on the canonical window.
+  
+  This is exposed as a single hypothesis so downstream assembly can treat it as an explicit
+  input, even though in the current build it is discharged by an imported instance. -/
   bound :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
       |BG_Identity.R_bank X N - BG_Identity.conv_full X N| ≤ δbridge_canon

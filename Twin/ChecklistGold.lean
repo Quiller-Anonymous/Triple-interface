@@ -8,6 +8,13 @@ import Twin.ChecklistAxioms
   we allow *conventional* analytic inputs to be postulated as axioms (with citations),
   and then the remaining wiring is fully machine-checked.
 
+  This file is the **parameterized** checklist theorem: it assumes an arbitrary
+  `SmoothMajorArcEstimate` input `sme` and does not commit to any particular
+  choice of `sme` (so axiom audits can isolate which obligations truly depend on it).
+
+  The default frozen-model `sme` (and the specialization to it) lives in
+  `Twin/ChecklistGoldDefault.lean`.
+
   This file does NOT touch Goldbach.
 -/
 
@@ -26,12 +33,23 @@ Conventional analytic inputs (postulated):
 We follow the intended “analytic `majMass`” checklist route:
 `majMass X` is the checklist “major-arc mass” used by `Twin.Main.windows_largeX_of_checklist`.
 
-Current status (easiest-first development):
-- `Twin.ChecklistAxioms.majMassAnalytic` is the literal major-arc integral definition (paper §11/§14).
-- `Twin.ChecklistAxioms.majMass` is set to `majMassAnalytic` (paper-faithful choice).
-  The remaining paper-facing input on the **pinned majors** side is the raw inequality
-  `Twin.ChecklistAxioms.pinnedMajors_lower_raw`; `Twin.ChecklistAxioms.h_lower` is derived from it,
-  and `Twin.ChecklistAxioms.h_transfer` is now proved from the analytic definitions of `emin/eds`.
+  Current status (easiest-first development):
+  - `Twin.ChecklistAxioms.majMassAnalytic` is the literal major-arc integral definition (paper §11/§14).
+  - `Twin.ChecklistAxioms.majMass` is set to `majMassAnalytic` (paper-faithful choice).
+  The remaining paper-facing input on the **pinned majors** side is the evaluation axiom
+  split into `Twin.ChecklistAxioms.pinnedMajors_SW_error_raw` (SW approximation on majors) and
+  `Twin.ChecklistAxioms.pinnedMajors_mainTerm_eval_raw` (singular-series main-term evaluation);
+  `Twin.ChecklistAxioms.pinnedMajors_eval_raw` and `Twin.ChecklistAxioms.h_lower` are derived.
+  `Twin.ChecklistAxioms.h_transfer` is proved from the analytic definitions of `emin/eds`.
+
+  On the desmoothing side, the `/3` budget is decomposed into:
+  - Fourier inversion + smooth/sharp window comparison: `fullMassAt_eq_smoothLambdaTwinMassAt`
+    (so `dsFourierInvAt = 0`) and `dsFourierWindow_sum_bigIcc_raw`, where the latter is derived
+    from the tail/core split `dsFourierWindowTail_sum_bigIcc_raw` and `dsFourierWindowCore_sum_bigIcc_raw`,
+  - prime-power disposal split (left/right): `dsPrimePowerLeft_sum_bigIcc_raw` and
+    `dsPrimePowerRight_sum_bigIcc_raw` (derived from the more “budget-shaped”
+    `dsPrimePowerLeftBudget_sum_bigIcc_raw` and `dsPrimePowerRightBudget_sum_bigIcc_raw`),
+  and the combined `/3` inequality is derived by finitary triangle inequalities.
 
 Paper anchor for `Twin.ChecklistAxioms.gate_onWindow` (equivalently, the derived `pinnedMajors_lower`):
   §14.2 “Pinned major arcs, and closing the gate”, combined with
@@ -55,19 +73,15 @@ def O
     Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What) :
   Twin.ChecklistTargets.ObligationsExplicit :=
 { sme := sme
-, emin := Twin.ChecklistAxioms.emin
+, emin := Twin.ChecklistAxioms.emin (sme := sme)
 , eds := Twin.ChecklistAxioms.eds
-, majMass := Twin.ChecklistAxioms.majMass
-, l2_minor_onWindow := Twin.ChecklistAxioms.l2_minor_onWindow
+, majMass := Twin.ChecklistAxioms.majMass (sme := sme)
+, l2_minor_onWindow := Twin.ChecklistAxioms.l2_minor_onWindow (sme := sme)
 , desmooth_onWindow := Twin.ChecklistAxioms.desmooth_onWindow
-, routing_onWindow := Twin.ChecklistAxioms.routing_onWindow
-, pinnedMajors_lower := Twin.ChecklistAxioms.pinnedMajors_lower
+, routing_onWindow := Twin.ChecklistAxioms.routing_onWindow (sme := sme)
+, pinnedMajors_lower := Twin.ChecklistAxioms.pinnedMajors_lower (sme := sme)
 , ss_pos := Twin.PaperParams.ss_pos
 }
-
-/-- The bundled checklist obligations (SME defaults to `Twin.ChecklistSme.sme`). -/
-def O' : Twin.ChecklistTargets.Obligations :=
-  ((O Twin.ChecklistSme.sme).toObligations)
 
 /-- Gold-status theorem, but *parameterized by* an arbitrary `sme`.
 
@@ -83,11 +97,6 @@ by
   exact
     Twin.ChecklistTargets.windows_largeX_all_windows (O := (O sme).toObligations)
       (X := X) (by simpa [P] using hX)
-
-/-- Gold-status theorem (conditional on the conventional analytic axioms above). -/
-theorem twins_in_all_large_windows :
-    ∀ {X : ℕ}, P.X0 ≤ X → Twin.ExistsTwinInWindow X P.H :=
-  twins_in_all_large_windows_of_sme Twin.ChecklistSme.sme
 
 end
 

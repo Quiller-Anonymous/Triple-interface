@@ -289,6 +289,265 @@ private lemma sum_const_mul (s : Finset α) (a : ℝ) (f : α → ℝ) :
   · intro b t hb ih
     simp [Finset.sum_insert, hb, ih, mul_add]
 
+/-!
+`tentFullWeight` is the canonical triangular tent kernel on `bandU = [-Ucut, Ucut]`,
+normalized so that its total mass is `1`.
+-/
+
+/-- Total mass of the canonical tent kernel on `bandU` is `1`. -/
+lemma tentFullMass_eq_one : tentFullMass = 1 := by
+  classical
+  let S : Finset ℕ := Finset.range (Ucut + 1)
+  let pos0 : Finset ℤ := S.image Int.ofNat
+  let neg : Finset ℤ := (S.erase 0).image (fun m : ℕ => - (Int.ofNat m))
+
+  have htenteven : ∀ k : ℤ, tentFullWeight (-k) = tentFullWeight k := by
+    intro k
+    simp [tentFullWeight, K_full, K_full_raw, Int.natAbs_neg]
+
+  have hdisj : Disjoint pos0 neg := by
+    refine Finset.disjoint_left.2 ?_
+    intro k hkpos hkneg
+    rcases Finset.mem_image.mp hkpos with ⟨a, _ha, rfl⟩
+    rcases Finset.mem_image.mp hkneg with ⟨b, hb, hbEq⟩
+    have hb0 : b ≠ 0 := (Finset.mem_erase.mp hb).1
+    have hbpos : 0 < b := Nat.pos_of_ne_zero hb0
+    have hbposZ : (0 : ℤ) < (Int.ofNat b : ℤ) := by
+      simpa using (Int.ofNat_lt.2 hbpos)
+    have hlt : (-(Int.ofNat b : ℤ)) < 0 := (neg_lt_zero.mpr hbposZ)
+    have : (Int.ofNat a : ℤ) < 0 := by
+      -- avoid `simp` rewriting `hlt` back to `0 < b`
+      rw [hbEq.symm]
+      exact hlt
+    have hnonneg : 0 ≤ (Int.ofNat a : ℤ) := Int.natCast_nonneg a
+    exact (not_lt_of_ge hnonneg) this
+
+  have hdecomp : bandU = pos0 ∪ neg := by
+    ext k
+    constructor
+    · intro hk
+      have hkI := Finset.mem_Icc.mp hk
+      by_cases hk0 : 0 ≤ k
+      · have hk_toNat_le : k.toNat ≤ Ucut := by
+          have : (k.toNat : ℤ) ≤ (Ucut : ℤ) := by
+            simpa [Int.toNat_of_nonneg hk0] using hkI.2
+          exact Int.ofNat_le.mp this
+        have hk_mem : k.toNat ∈ S := Finset.mem_range.mpr (Nat.lt_succ_of_le hk_toNat_le)
+        have hk_eq : (Int.ofNat k.toNat : ℤ) = k := Int.toNat_of_nonneg hk0
+        have : k ∈ pos0 := Finset.mem_image.mpr ⟨k.toNat, hk_mem, hk_eq⟩
+        exact Finset.mem_union.mpr (Or.inl this)
+      · have hklt : k < 0 := lt_of_not_ge hk0
+        have hkpos : 0 < -k := neg_pos.mpr hklt
+        have hk_toNat_ne0 : (-k).toNat ≠ 0 := by
+          intro h
+          have : (-k) ≤ 0 := (Int.toNat_eq_zero).1 h
+          exact (not_le_of_gt hkpos) this
+        have hk_toNat_le : (-k).toNat ≤ Ucut := by
+          have hk_le : -k ≤ (Ucut : ℤ) := by
+            have : (-(Ucut : ℤ)) ≤ k := hkI.1
+            simpa using (neg_le_neg this)
+          have : ((-k).toNat : ℤ) ≤ (Ucut : ℤ) := by
+            have hk0' : 0 ≤ -k := le_of_lt hkpos
+            simpa [Int.toNat_of_nonneg hk0'] using hk_le
+          exact Int.ofNat_le.mp this
+        have hk_mem : (-k).toNat ∈ S.erase 0 :=
+          Finset.mem_erase.mpr
+            ⟨hk_toNat_ne0, Finset.mem_range.mpr (Nat.lt_succ_of_le hk_toNat_le)⟩
+        have hk_eq : (-(Int.ofNat ((-k).toNat) : ℤ)) = k := by
+          have hk0' : 0 ≤ -k := le_of_lt hkpos
+          have : (Int.ofNat ((-k).toNat) : ℤ) = -k := Int.toNat_of_nonneg hk0'
+          rw [this]
+          simp
+        have : k ∈ neg := Finset.mem_image.mpr ⟨(-k).toNat, hk_mem, hk_eq⟩
+        exact Finset.mem_union.mpr (Or.inr this)
+    · intro hk
+      rcases Finset.mem_union.mp hk with hkpos | hkneg
+      · rcases Finset.mem_image.mp hkpos with ⟨m, hm, rfl⟩
+        have hm_le : m ≤ Ucut := Nat.le_of_lt_succ (Finset.mem_range.mp hm)
+        refine Finset.mem_Icc.mpr ?_
+        constructor
+        · have hnonneg : 0 ≤ (Int.ofNat m : ℤ) := Int.natCast_nonneg m
+          have hnegU : (-(Ucut : ℤ)) ≤ 0 := by
+            have : (0 : ℤ) ≤ (Ucut : ℤ) := by exact_mod_cast (Nat.zero_le Ucut)
+            exact neg_nonpos.mpr this
+          exact le_trans hnegU hnonneg
+        · exact Int.ofNat_le.2 hm_le
+      · rcases Finset.mem_image.mp hkneg with ⟨m, hm, rfl⟩
+        have hm_mem : m ∈ S := (Finset.mem_erase.mp hm).2
+        have hm_le : m ≤ Ucut := Nat.le_of_lt_succ (Finset.mem_range.mp hm_mem)
+        refine Finset.mem_Icc.mpr ?_
+        constructor
+        · have : (Int.ofNat m : ℤ) ≤ (Ucut : ℤ) := Int.ofNat_le.2 hm_le
+          simpa using (neg_le_neg this)
+        · have hle0 : (-(Int.ofNat m : ℤ)) ≤ 0 := by
+            have : (0 : ℤ) ≤ (Int.ofNat m : ℤ) := Int.natCast_nonneg m
+            exact neg_nonpos.mpr this
+          have : (0 : ℤ) ≤ (Ucut : ℤ) := by exact_mod_cast (Nat.zero_le Ucut)
+          exact le_trans hle0 this
+
+  have hsum :
+      Finset.sum bandU (fun k => tentFullWeight k)
+        = Finset.sum pos0 (fun k => tentFullWeight k) + Finset.sum neg (fun k => tentFullWeight k) := by
+    rw [hdecomp]
+    simpa using
+      (Finset.sum_union (s₁ := pos0) (s₂ := neg) hdisj (f := fun k => tentFullWeight k))
+
+  have hpos0_sum :
+      Finset.sum pos0 (fun k => tentFullWeight k) =
+        Finset.sum S (fun m : ℕ => tentFullWeight (Int.ofNat m)) := by
+    have hinj : Set.InjOn (fun m : ℕ => (Int.ofNat m : ℤ)) (S : Set ℕ) := by
+      intro a ha b hb hab
+      exact Int.ofNat.inj hab
+    simpa [pos0] using (Finset.sum_image (s := S) (f := fun k : ℤ => tentFullWeight k) hinj)
+
+  have hneg_sum :
+      Finset.sum neg (fun k => tentFullWeight k) =
+        Finset.sum (S.erase 0) (fun m : ℕ => tentFullWeight (Int.ofNat m)) := by
+    have hinj :
+        Set.InjOn (fun m : ℕ => (-(Int.ofNat m : ℤ))) ((S.erase 0) : Set ℕ) := by
+      intro a ha b hb hab
+      have : (Int.ofNat a : ℤ) = Int.ofNat b := by
+        simpa using congrArg Neg.neg hab
+      exact Int.ofNat.inj this
+    have himage :
+        Finset.sum neg (fun k => tentFullWeight k)
+          = Finset.sum (S.erase 0) (fun m : ℕ => tentFullWeight (-(Int.ofNat m : ℤ))) := by
+      simpa [neg] using
+        (Finset.sum_image (s := S.erase 0) (f := fun k : ℤ => tentFullWeight k) hinj)
+    simpa [himage, htenteven]
+
+  have herase :
+      Finset.sum (S.erase 0) (fun m : ℕ => tentFullWeight (Int.ofNat m)) =
+        Finset.sum S (fun m : ℕ => tentFullWeight (Int.ofNat m)) - tentFullWeight (0 : ℤ) := by
+    have h0 : (0 : ℕ) ∈ S := by simp [S]
+    have h := Finset.sum_erase_add (s := S) (f := fun m : ℕ => tentFullWeight (Int.ofNat m)) h0
+    have h' := congrArg (fun t : ℝ => t - tentFullWeight (0 : ℤ)) h
+    simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using h'
+
+  have hT :
+      Finset.sum S (fun m : ℕ => tentFullWeight (Int.ofNat m))
+        = ((Ucut : ℝ) + 1) / (2 * (Ucut : ℝ)) := by
+    have hU0 : (Ucut : ℝ) ≠ 0 := by exact (ne_of_gt Ucut_pos_real)
+    have hterm :
+        ∀ m ∈ S,
+          tentFullWeight (Int.ofNat m) = ((1 : ℝ) - (m : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ) := by
+      intro m hm
+      have hm_le : m ≤ Ucut := Nat.le_of_lt_succ (Finset.mem_range.mp hm)
+      simpa [tentFullWeight] using (K_full_ofNat_le (m := m) hm_le)
+    have hrepl :
+        Finset.sum S (fun m : ℕ => tentFullWeight (Int.ofNat m))
+          = Finset.sum S (fun m : ℕ => ((1 : ℝ) - (m : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ)) := by
+      refine Finset.sum_congr rfl ?_
+      intro m hm
+      exact hterm m hm
+    have hdiv :
+        Finset.sum S (fun m : ℕ => ((1 : ℝ) - (m : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ))
+          = (1 / (Ucut : ℝ)) * Finset.sum S (fun m : ℕ => (1 : ℝ) - (m : ℝ) / (Ucut : ℝ)) := by
+      -- avoid `simp` unfolding `Ucut`
+      exact
+        (sum_div_const (s := S) (f := fun m : ℕ => (1 : ℝ) - (m : ℝ) / (Ucut : ℝ))
+          (U := (Ucut : ℝ)))
+    have hinner :
+        Finset.sum S (fun m : ℕ => (1 : ℝ) - (m : ℝ) / (Ucut : ℝ)) = ((Ucut : ℝ) + 1) / 2 := by
+      have hconst : Finset.sum S (fun _ : ℕ => (1 : ℝ)) = (Ucut + 1 : ℝ) := by
+        simp [S]
+      have hsum_m :
+          Finset.sum S (fun m : ℕ => (m : ℝ)) = ((Ucut : ℝ) + 1) * (Ucut : ℝ) / 2 := by
+        -- Avoid `Nat.cast_div`: use the multiplication-by-2 identity and divide in `ℝ`.
+        have hnat : (Finset.sum S (fun m : ℕ => m)) * 2 = (Ucut + 1) * Ucut := by
+          simpa [S] using (Finset.sum_range_id_mul_two (n := Ucut + 1))
+        have hcast :
+            ((Finset.sum S (fun m : ℕ => m) * 2 : ℕ) : ℝ) =
+              (((Ucut + 1) * Ucut : ℕ) : ℝ) :=
+          congrArg (fun t : ℕ => (t : ℝ)) hnat
+        have hsum_cast :
+            ((Finset.sum S (fun m : ℕ => m) : ℕ) : ℝ) = Finset.sum S (fun m : ℕ => (m : ℝ)) :=
+          Nat.cast_sum (R := ℝ) (s := S) (f := fun m : ℕ => m)
+        have hmul2 :
+            (Finset.sum S (fun m : ℕ => (m : ℝ))) * 2 = ((Ucut : ℝ) + 1) * (Ucut : ℝ) := by
+          -- normalize the casts in `hcast` and rewrite the `Nat` sum cast into a real sum
+          have hcast' := hcast
+          -- cast multiplication and cast `Ucut + 1`
+          -- (use `simp only` to avoid unfolding `[simp]` definitions like `Ucut`)
+          simp only [Nat.cast_mul, Nat.cast_add, Nat.cast_ofNat, Nat.cast_one] at hcast'
+          -- now `hcast' : ((∑ m, m : ℕ) : ℝ) * 2 = (Ucut:ℝ + 1) * (Ucut:ℝ)`
+          -- rewrite the casted nat sum as a real sum of casts via `hsum_cast`
+          have hcast'' := hcast'
+          rw [hsum_cast] at hcast''
+          exact hcast''
+        -- divide the `*2` identity in `ℝ`
+        exact (eq_div_iff (by norm_num : (2 : ℝ) ≠ 0)).2 hmul2
+      have hlin :
+          Finset.sum S (fun m : ℕ => (m : ℝ) / (Ucut : ℝ))
+            = (1 / (Ucut : ℝ)) * Finset.sum S (fun m : ℕ => (m : ℝ)) := by
+        have hrewrite :
+            Finset.sum S (fun m : ℕ => (m : ℝ) / (Ucut : ℝ))
+              = Finset.sum S (fun m : ℕ => (1 / (Ucut : ℝ)) * (m : ℝ)) := by
+          refine Finset.sum_congr rfl ?_
+          intro m hm
+          -- avoid `simp` unfolding `Ucut`
+          calc
+            (m : ℝ) / (Ucut : ℝ) = (m : ℝ) * (Ucut : ℝ)⁻¹ := by
+              simp [div_eq_mul_inv]
+            _ = (Ucut : ℝ)⁻¹ * (m : ℝ) := by
+              ac_rfl
+            _ = (1 / (Ucut : ℝ)) * (m : ℝ) := by
+              simp [one_div]
+        calc
+          Finset.sum S (fun m : ℕ => (m : ℝ) / (Ucut : ℝ))
+              = Finset.sum S (fun m : ℕ => (1 / (Ucut : ℝ)) * (m : ℝ)) := hrewrite
+          _ = (1 / (Ucut : ℝ)) * Finset.sum S (fun m : ℕ => (m : ℝ)) := by
+                exact
+                  (sum_const_mul (s := S) (a := (1 / (Ucut : ℝ))) (f := fun m : ℕ => (m : ℝ)))
+      calc
+        Finset.sum S (fun m : ℕ => (1 : ℝ) - (m : ℝ) / (Ucut : ℝ))
+            = Finset.sum S (fun _ : ℕ => (1 : ℝ)) - Finset.sum S (fun m : ℕ => (m : ℝ) / (Ucut : ℝ)) := by
+              -- avoid `simp` unfolding `Ucut`
+              exact
+                (Finset.sum_sub_distrib (s := S)
+                  (f := fun _ : ℕ => (1 : ℝ)) (g := fun m : ℕ => (m : ℝ) / (Ucut : ℝ)))
+        _ = (Ucut + 1 : ℝ) - (1 / (Ucut : ℝ)) * (((Ucut : ℝ) + 1) * (Ucut : ℝ) / 2) := by
+              -- avoid `simp` unfolding `Ucut`
+              rw [hconst, hlin, hsum_m]
+        _ = ((Ucut : ℝ) + 1) / 2 := by
+              field_simp [hU0]
+              ring
+    calc
+      Finset.sum S (fun m : ℕ => tentFullWeight (Int.ofNat m))
+          = Finset.sum S (fun m : ℕ => ((1 : ℝ) - (m : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ)) := hrepl
+      _ = (1 / (Ucut : ℝ)) * Finset.sum S (fun m : ℕ => (1 : ℝ) - (m : ℝ) / (Ucut : ℝ)) := hdiv
+      _ = (1 / (Ucut : ℝ)) * (((Ucut : ℝ) + 1) / 2) := by
+            rw [hinner]
+      _ = ((Ucut : ℝ) + 1) / (2 * (Ucut : ℝ)) := by
+            field_simp [hU0]
+
+  have h0val : tentFullWeight (0 : ℤ) = 1 / (Ucut : ℝ) := by
+    -- avoid unfolding `Ucut` via `[simp]`
+    have : K_full (0 : ℤ) = ((1 : ℝ) - (0 : ℝ) / (Ucut : ℝ)) / (Ucut : ℝ) := by
+      simpa using (K_full_ofNat_le (m := 0) (Nat.zero_le Ucut))
+    simpa [tentFullWeight, this]
+
+  have hmass :
+      Finset.sum bandU (fun k => tentFullWeight k)
+        = (2 : ℝ) * (((Ucut : ℝ) + 1) / (2 * (Ucut : ℝ))) - (1 / (Ucut : ℝ)) := by
+    calc
+      Finset.sum bandU (fun k => tentFullWeight k)
+          = Finset.sum pos0 (fun k => tentFullWeight k) + Finset.sum neg (fun k => tentFullWeight k) := hsum
+      _ = Finset.sum S (fun m : ℕ => tentFullWeight (Int.ofNat m))
+            + (Finset.sum S (fun m : ℕ => tentFullWeight (Int.ofNat m)) - tentFullWeight (0 : ℤ)) := by
+              -- no `simp`: rewrite directly
+              rw [hpos0_sum, hneg_sum, herase]
+      _ = (2 : ℝ) * Finset.sum S (fun m : ℕ => tentFullWeight (Int.ofNat m)) - tentFullWeight (0 : ℤ) := by ring
+      _ = (2 : ℝ) * (((Ucut : ℝ) + 1) / (2 * (Ucut : ℝ))) - (1 / (Ucut : ℝ)) := by
+            rw [hT, h0val]
+
+  unfold tentFullMass
+  have hU0 : (Ucut : ℝ) ≠ 0 := by exact ne_of_gt Ucut_pos_real
+  have : (2 : ℝ) * (((Ucut : ℝ) + 1) / (2 * (Ucut : ℝ))) - (1 / (Ucut : ℝ)) = 1 := by
+    field_simp [hU0]
+    ring
+  simpa [hmass] using this
+
 /-- Pointwise peak bound: the tent kernel is at most `1/U`. -/
 lemma K_full_peak_le (U : ℕ) (k : ℤ) : |K_full_raw U k| ≤ (U : ℝ)⁻¹ := by
   classical
@@ -1203,31 +1462,19 @@ noncomputable def bankOp_ref (X N : ℕ) : ℝ :=
     conv_ref X N
 
 /-!
-Banked/normalized representation functional used by the “weights bridge”.
+Tenor-aligned representation functional.
 
-`R_bank` is the analytically controlled, banked representation functional.
+In Tenor-style arguments the analytically controlled quantity is a *banked*, log-normalized
+convolution (not the raw prime-pair count `Rep.R`).  We keep the existing `conv_full` pipeline
+definitions (which use `log N` normalization), and introduce a Tenor-aligned prime-only version
+using `log X` normalization.
 
-Historically this file used `R_bank := (Rep.R N : ℝ)` as a placeholder, which made the
-downstream “bridge” hypothesis semantically impossible (it compared a raw count to a
-normalized kernel average).
+We then set `R_bank` to be:
+- the Tenor-aligned prime-only banked convolution on the canonical window, and
+- `conv_full` off that window (so legacy reasoning remains available outside the intended range).
 
-In Tenor-style arguments the object controlled by the analytic estimates is the *banked*
-kernel sum (a deweighted convolution), so we take `R_bank` to be `conv_full`.
-This aligns the pipeline with the intended semantics and makes the bridge gap
-`R_bank - conv_full` definitional.
--/
-noncomputable def R_bank (X N : ℕ) : ℝ :=
-  conv_full X N
-
-/-!
-Tenor-aligned (staging) definitions.
-
-The analytic object controlled in Tenor-style arguments is a deweighted von Mangoldt convolution
-normalized by `(log X)^2`, often banked in the offset variable `k = 2n - N` via the same tent kernel
-used elsewhere in the BG pipeline.
-
-We introduce these objects *alongside* the current pipeline definitions so we can migrate `R_bank`
-and the closure layer in a controlled follow-up step.
+With this choice, the “weights bridge” in `BG_Calib` becomes a genuine (scale-consistent) obligation:
+compare the Tenor-aligned `R_bank` to the existing `conv_full` on the window.
 -/
 
 /-- Von Mangoldt weight from Mathlib (`Λ(n)` in classical notation). -/
@@ -1262,17 +1509,22 @@ noncomputable def conv_full_tenorVM (X N : ℕ) : ℝ :=
 noncomputable def R_bank_tenorPrime (X N : ℕ) : ℝ :=
   bandU.sum (fun k => P_tenorPrime X N k * tentFullWeight k)
 
-/-- Exposed full bank operator: equals the raw count on the window, conv_full off it. -/
+/-- Exposed full bank operator: Tenor-aligned prime-only functional on-window, `conv_full` off it. -/
 noncomputable def bankOp_full (X N : ℕ) : ℝ :=
   if _ : BankParams.X0 ≤ X ∧ N ∈ Goldbach.Windows.EvenIn X BankParams.H then
-    (Goldbach.Rep.R N : ℝ)
+    R_bank_tenorPrime X N
   else
     conv_full X N
 
-/-- Calibration on the window: full bank operator reproduces `R`. -/
-lemma bankOp_full_eq_R_on_window {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
-    bankOp_full X N = (Goldbach.Rep.R N : ℝ) := by
+/-- Calibration on the canonical window: `bankOp_full` is the Tenor-aligned prime-only functional. -/
+lemma bankOp_full_eq_R_tenorPrime_on_window {X N : ℕ} (hX : BankParams.X0 ≤ X)
+    (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
+    bankOp_full X N = R_bank_tenorPrime X N := by
   simp [bankOp_full, hX, hN]
+
+/-- The “banked representation” used by the bridge: Tenor-aligned on-window, otherwise `conv_full`. -/
+noncomputable def R_bank (X N : ℕ) : ℝ :=
+  bankOp_full X N
 
 /-- Calibration on the window: reference bank operator reproduces `M`. -/
 lemma bankOp_ref_eq_M_on_window {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
