@@ -6,20 +6,21 @@ The code in this file has the Apache 2.0 license, Anonymous Quiller 2025-
 Based on public domain paper at Zenodo, "Goldbach and the Triple Interface Method" (ed. Quiller), 2025
 
 ## Status legend:
-- Platinum standard: unconditional proof, no axioms whatsoever
-- Gold standard: end-to-end proof that builds and is dependent only on explicitly listed conventional math axioms
-- Fool's gold standard: it builds, and finite base cert is done, but project relies on bespoke axiom/sorry/admits
-- Silver standard: finite conditional proof (everything but a finite base) that builds
-- Iron standard: leaf conditional proof -- it builds, but with idiosyncratic dependencies, including but not limited to explicit sorries, axioms, admits; no certificates are completed
-- Lead standard: machine checked (it builds, whatever it is)
-- Tin standard: not machine checked, but it works on paper... probably (no successful build)
-- Mud standard: informal sketch
+- **Conventional math axiom** (for “gold”): a textbook/Mathlib-candidate statement that is parameterized and invariant across project constants/encodings (i.e. it does not bake in our pinned windows, numeric caps, bespoke certificates, etc.).
+- Platinum standard: builds; unconditional proof; no `axiom`/`sorry`/`admit` dependencies (beyond core classical axioms).
+- Gold standard: builds; end-to-end proof depending only on explicitly listed **conventional math axioms** (as defined above).
+- Fool's gold standard: builds; end-to-end proof, but some remaining dependencies are *project-specific* axioms/sorries/admits (not conventional-math-invariant). If the project includes a finite-base/certificate component, that component is completed and checked; otherwise this clause is N/A.
+- Silver standard: builds; end-to-end conditional proof where a required project component (finite base, numeric certificates, calibration bounds, etc.) is still incomplete or not wired in.
+- Iron standard: builds; partial/leaf theorems exist but there is no stable end-to-end pipeline yet (assumptions may be idiosyncratic; certificates/components typically incomplete).
+- Lead standard: machine checked (it builds, whatever it is).
+- Tin standard: not machine checked / not building yet, but it works on paper... probably.
+- Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: gold
--- The default Lake target builds the full pipeline through the canonical (Tenor-aligned) parallel FunX track. The remaining assumptions are isolated as explicit axioms in `Goldbach/Cert/*` (see the transparency list below).
-2. Twin primes conjecture -- Current status: gold
--- The Twin checklist pipeline builds end-to-end with a short list of explicitly stated conventional analytic axioms, all isolated in `Twin/ChecklistSme.lean` (see the transparency list in “TWIN PRIMES” below and `Twin/AxiomAudit.lean`).
+1. Goldbach conjecture -- Current status: fool's gold
+-- The default Lake target builds the full pipeline through the canonical (Tenor-aligned) parallel FunX track, but the remaining assumptions are still *project-specific* (not textbook/Mathlib-invariant) axioms in `Goldbach/Cert/*` (see the transparency list below).
+2. Twin primes conjecture -- Current status: fool's gold
+-- The Twin checklist pipeline builds end-to-end, but its remaining assumptions are still *project-specific* axioms in `Twin/ChecklistSme.lean` (see `Twin/AxiomAudit.lean` for the current dependency list).
 -- Goldbach-side hook: `Goldbach/TwinGold.lean` runs the Twin pipeline using a `Twin.HasTwinTI` instance from `Goldbach/TI/TwinInstance.lean`. The Goldbach TI placeholder exports (`Goldbach/TI/TwinTIObjects.lean`) are currently *derived from the Twin checklist*, so this introduces no additional axioms beyond `Twin/ChecklistSme.lean`; see `Goldbach/AxiomAuditTwinGold.lean`.
 3. The alt-zeta construct (nuanced primes detector) -- Current status: tin
 4. The Riemann hypothesis -- Current status: mud
@@ -29,12 +30,16 @@ See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are presen
 
 ## Goldbach pipeline: axioms / hypotheses (transparency list)
 
-This section lists only potential question-beggers that can enter the Goldbach pipeline: explicit `axiom`s (and any remaining `sorry`/`admit` in imported modules). It intentionally does not enumerate proved constants, computational certificates, or non-imported material. Gold standard requires that all axioms be of conventional mathematics, of the sort you would find straight out of textbook.
+This section lists only potential question-beggers that can enter the Goldbach pipeline: explicit `axiom`s (and any remaining `sorry`/`admit` in imported modules). It intentionally does not enumerate proved constants, computational certificates, or non-imported material. Under the strict “conventional math” standard (Mathlib-candidate, invariant across project constants), the remaining Goldbach axioms below are still project-shaped, which is why the project is currently tagged “fool’s gold” above.
 
 **Axioms currently used by the Goldbach pipeline (explicit `axiom`s)**
-- `Goldbach/Cert/SigmaTailAxiomsFun.lean:33` `sigmaTail_bound_on_window_canon` (uniform truncation bound for the reindexed σ-tail in the `Q(X)` (“Fun”) track; re-exported as a theorem in `Goldbach/AO_OffDiag/SigmaTailTenorAxiomsFun.lean`).
-- `Goldbach/Cert/MajorArcAxiomsFunX.lean:102` `majorArc_calibration_canon` (calibration axiom that upgrades a textbook-style major-arc power-saving bound into the pinned numerical cap `δ_major_canon`; the theorem `major_arc_eval_on_window_canon` is derived from this and is what downstream files use).
-- `Goldbach/Cert/MajorArcAxiomsFunX.lean:124` `majorArc_powerSaving` (a textbook-style major-arc power-saving bound, packaged as `MajorArcPowerSaving`).
+- `Goldbach/Cert/SigmaTailAxiomsFun.lean:38` `sigmaTail_bound_on_window` (uniform truncation bound for the reindexed σ-tail in the `Q(X)` (“Fun”) track; specialized to the canonical window in `Goldbach/AO_OffDiag/SigmaTailTenorAxiomsFun.lean`).
+- `Goldbach/Cert/MajorArcCanonCert.lean:25` `major_arc_eval_on_window_canon` (pinned major-arc evaluation on the canonical window with the canonical numeric cap `δ_major_canon`, used by `Goldbach/AO_MajorSwapTenorAxiomsFunX.lean`).
+
+**Path back to gold (strict “conventional math” standard)**
+- Replace the pinned/cert-style axioms above by proved theorems derived from textbook-shaped inputs, and re-check via `Goldbach/AxiomAuditGold.lean`.
+- Major arcs: derive `major_arc_eval_on_window_canon` from `Goldbach/Cert/MajorArcAxiomsFunX.lean`’s textbook-shaped `MajorArcPowerSaving` (or ultimately `Goldbach/Cert/SiegelWalfiszAxioms.lean`) plus a *proved* calibration bound on the pinned window.
+- σ-tail: derive `sigmaTail_bound_on_window` from the existing reindex/majorant development in `Goldbach/AO_OffDiag/SigmaTailReindexFun.lean` together with a proved analytic bound on the relevant Euler-product tail (so `K_tail` is not axiomatized).
 
 --------------------
 # GOLDBACH PIPELINE
@@ -105,7 +110,7 @@ i.e. analytic witness on the window + checked finite base implies Goldbach for a
 
 ## Twin pipeline: axioms / hypotheses (transparency list)
 
-This section lists the explicit `axiom`s currently used by the Twin “gold status” theorem (`Twin.Gold.twins_in_all_large_windows`) and by the Goldbach-side hook (`Goldbach.TwinGold.twins_in_all_large_windows_default`). All are intended to be conventional analytic inputs (textbook / future-Mathlib style) and are recorded centrally in `Twin/ChecklistSme.lean`.
+This section lists the explicit `axiom`s currently used by the Twin checklist theorem (`Twin.Gold.twins_in_all_large_windows`) and by the Goldbach-side hook (`Goldbach.TwinGold.twins_in_all_large_windows_default`). Under the strict “conventional math” standard (Mathlib-candidate, invariant across project constants), several of these are still project-shaped numeric/budget axioms, which is why the project is currently tagged “fool’s gold” above.
 
 **Axioms currently used by the Twin pipeline (explicit `axiom`s)**
 - `Twin/ChecklistSme.lean:59` `instSW_bound` (smoothed major-arc Siegel–Walfisz estimate in the polylogarithmic major-arc range, used to build the frozen-model `SmoothMajorArcEstimate`).
@@ -136,6 +141,31 @@ explicit-formula style analytic control in a way that can be wired into later RH
   Goldbach ETI + Goldbach census certificates + Twin paper parameters
   (`AltZeta/GoldbachTwinHook.lean`).
 
+## Intended goals (testable targets A–F) + status
+
+This is a working menu of “Alt-Zeta outpowers ζ” target statements/metrics, tracked
+explicitly as subgoals. Status uses the project legend at the top of this README.
+
+- **A) Zero-free power at fixed assumptions & cost** — status: mud
+  - A1. Band zero-free coverage (localized bands) — mud
+  - A2. Margin efficiency per unit analytic input — mud
+- **B) Prime-counting & distribution quality** — status: iron
+  - B1. Short-interval primes in AP (NTT-style moduli) — mud
+  - B2. Windowed Chebyshev/ψ error bound — fool's gold
+    - Scaffold exists in `AltZeta/PrimeCounter.lean`, `AltZeta/B2Hypotheses.lean`,
+      `AltZeta/B2CompactTail.lean`, `AltZeta/B2RealParams.lean`, `AltZeta/B2RealBound.lean`.
+    - Remaining analytic payload is a single project-specific axiom in `AltZeta/B2RealTruncAxioms.lean`
+      (see `AltZeta/B2AxiomAudit.lean` for the current dependency list).
+- **C) Classifier-style prime detection** — status: mud
+  - C1. Score/threshold, AUC/PPV, certifiable recall — mud
+- **D) Computational budget fairness (proof/eval/search budgets)** — status: lead
+  - Baseline interface + gain metric are defined (`AltZeta/B2Comparator.lean`); simple
+    CSV/grid tooling exists under `AltZeta/Bench/`. Budget accounting is not yet formalized.
+- **E) Robustness & independence** — status: mud
+  - E1. Stability under parameter perturbation — mud
+- **F) Minimal “success bars” to publish** — status: mud
+  - F(Band success), F(AP short-interval), F(Classifier) — mud
+
 ## Build / status
 
 - Current status: tin (not continuously built / not stable yet).
@@ -156,16 +186,18 @@ not attempt to enumerate planned analytic inputs that are not yet represented).
   kernel term for the Heaviside/log bridge).
 - `AltZeta/Analytic/MellinBridge.lean:24` `mellin_indicator_eval` (evaluation of the
   Mellin indicator into a `0/1` outcome).
+- `AltZeta/B2RealTruncAxioms.lean:35` `trunc0_bound_axiom` (canonical B2 truncation-side
+  bound: `|Ψ_K^N(x) - x| ≤ CΓ + √x · S_cert` on the canonical window).
 
 ------------
 
 # History
 - September 2025: I used ChatGPT, then MathGPT by Pulsr, to explore ideas related to the Goldbach conjecture. Mostly false starts and deferred proofs that go nowhere. 
 - Near the end of the month, I asked it to imagine a sci-fi future where the problem was solved. It gave me three areas of future mathematics where a revolutionary discovery would be sufficient to solve the problem. I asked it to imagine a solution that instead involved incremental changes in all three instead of a revolutionary change in one. That was the "triple interface". It gave me a roadmap that it seemed to be confident in.
--- Through this process, I used a dialectical method to safeguard against sycophantic delusion. I also sanity checked proofs using other LLMs in case the results were just delusions unique to ChatGPT.
+-- Through this process, I used a dialectical method to mediate against sycophantic delusion. I also sanity checked proofs using other LLMs in case the results were just delusions unique to ChatGPT.
 - By mid-October I had a complete draft of the proof in Latex, so I began exploring other applications of the same triple-interface method to similar ideas (primes-related). We began drafts of the Twin Primes conjecture and the Riemann hypothesis.
 - A reasonable draft of Twin Primes was completed in October. No real progress was made on Riemann. It produced blather, in part because I had no insight into what was required to complete it.
 - November: I became curious if this was genuinely interesting math or just AI Slop. In late November I began work on machine coding the proof of Goldbach (VS Code Studio, Lean 4), in an attempt to see if the underlying fundamentals were AI slop or genuine. I also started a new approach to Riemann (inspired by conversations with Copilot), which is the Alt-Zeta project, when I realized that the completion of the extended triple interface might help in creating an enhanced primes detector function that would be informative to efforts at solving Riemann.
 - December 2025 was all coding and revisions, mainly struggles with compiling the finite base chunks, and then unexpected wiring issues in hooking up the finite base to the analytic engine. Progress became noticeably quicker when I created files to help it understand the limits of our codebase (Mathlib) and also started to use AGENTS.md to guide it using Codex in VS Code Studio. (Copilot in GitHub was of very limited use.) By early January 2026, Codex was operating more or less on its own, with minimal prompting.
 - January 3, 2026: Goldbach reached gold status for the first time
-- January 6: Twin Primes reaches gold status for the first time
+- January 6: Twin Primes reaches gold status for the first time; work on Alt-Zeta begins

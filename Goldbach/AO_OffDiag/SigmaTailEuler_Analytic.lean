@@ -1862,13 +1862,15 @@ theorem tsum_tail_inv_totient_sq_le (R : ℕ) (hR : 1 ≤ R) :
   -- Put it all together.
   exact le_trans hMain hBound
 
-theorem euler_tail_bound_tsum_ENNReal (R N : ℕ) (hR : 1 ≤ R) :
-  (∑' r : ℕ,
-      if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
-        ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
-      else 0)
-    ≤ ENNReal.ofReal ((90 : ℝ) / R) := by
-  -- drop conditions and use unconditional tail bound + Cstar_le_45
+theorem euler_tail_bound_tsum_ENNReal_of_Cstar_le
+    (R N : ℕ) (hR : 1 ≤ R) {C : ℝ} (hC : Cstar ≤ ENNReal.ofReal C) :
+    (∑' r : ℕ,
+        if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
+          ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
+        else 0)
+      ≤ ENNReal.ofReal (((2 : ℝ) * C) / R) := by
+  -- Drop the extra conditions and use the unconditional tail bound, then apply the supplied bound
+  -- on `Cstar`.
   have hdrop :
       (∑' r : ℕ,
           if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
@@ -1887,41 +1889,52 @@ theorem euler_tail_bound_tsum_ENNReal (R N : ℕ) (hR : 1 ≤ R) :
     · rfl
 
   have huncond := tsum_tail_inv_totient_sq_le (R := R) hR
-  have hC := Cstar_le_45
 
   have hmul :
       ENNReal.ofReal (2 / (R : ℝ)) * Cstar
-        ≤ ENNReal.ofReal (2 / (R : ℝ)) * ENNReal.ofReal (45 : ℝ) := by
+        ≤ ENNReal.ofReal (2 / (R : ℝ)) * ENNReal.ofReal C := by
     exact mul_le_mul_of_nonneg_left hC (by simp)
 
-  have : (∑' r : ℕ,
-            if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
-              ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
-            else 0)
-          ≤ ENNReal.ofReal (2 / (R : ℝ)) * ENNReal.ofReal (45 : ℝ) :=
+  have hmain :
+      (∑' r : ℕ,
+          if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
+            ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
+          else 0)
+        ≤ ENNReal.ofReal (2 / (R : ℝ)) * ENNReal.ofReal C :=
     (hdrop.trans huncond).trans hmul
 
-  -- (2/R) * 45 = 90/R
-  have h2R_nonneg : 0 ≤ (2 / (R : ℝ)) := by positivity
-  have h45_nonneg : 0 ≤ (45 : ℝ) := by positivity
-  have this' : (∑' r : ℕ,
-            if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
-              ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
-            else 0)
-          ≤ ENNReal.ofReal ((2 / (R : ℝ)) * (45 : ℝ)) := by
-    calc (∑' r : ℕ,
-            if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
-              ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
-            else 0)
-        ≤ ENNReal.ofReal (2 / (R : ℝ)) * ENNReal.ofReal (45 : ℝ) := this
-      _ = ENNReal.ofReal ((2 / (R : ℝ)) * 45) := by rw [ENNReal.ofReal_mul h2R_nonneg]
-  -- now simplify the real arithmetic: (2/R)*45 = 90/R
-  have harith : (2 / (R : ℝ)) * 45 = (90 : ℝ) / (R : ℝ) := by
-    have hR_pos : (0 : ℝ) < R := by exact_mod_cast Nat.pos_of_ne_zero (Nat.one_le_iff_ne_zero.mp hR)
-    field_simp [hR_pos.ne']
-    ring
-  rw [harith] at this'
-  exact this'
+  have hRpos : (0 : ℝ) < (R : ℝ) := by
+    exact_mod_cast Nat.pos_of_ne_zero (Nat.one_le_iff_ne_zero.mp hR)
+  have h2R_nonneg : 0 ≤ (2 / (R : ℝ)) := by
+    exact div_nonneg (by norm_num) (le_of_lt hRpos)
+
+  have harith : (2 / (R : ℝ)) * C = ((2 : ℝ) * C) / (R : ℝ) := by
+    simp [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
+
+  have hmul_ofReal :
+      ENNReal.ofReal (2 / (R : ℝ)) * ENNReal.ofReal C
+        = ENNReal.ofReal (((2 : ℝ) * C) / (R : ℝ)) := by
+    calc
+      ENNReal.ofReal (2 / (R : ℝ)) * ENNReal.ofReal C
+          = ENNReal.ofReal ((2 / (R : ℝ)) * C) := by
+              simpa using (ENNReal.ofReal_mul h2R_nonneg).symm
+      _ = ENNReal.ofReal (((2 : ℝ) * C) / (R : ℝ)) := by
+              simp [harith]
+
+  -- Convert the RHS from division by `(R : ℝ)` to division by `R` (via coercions).
+  simpa [hmul_ofReal] using hmain
+
+theorem euler_tail_bound_tsum_ENNReal (R N : ℕ) (hR : 1 ≤ R) :
+  (∑' r : ℕ,
+      if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
+        ENNReal.ofReal (1 / (Nat.totient r : ℝ) ^ 2)
+      else 0)
+    ≤ ENNReal.ofReal ((90 : ℝ) / R) := by
+  have h :=
+    euler_tail_bound_tsum_ENNReal_of_Cstar_le (R := R) (N := N) hR
+      (C := (45 : ℝ)) Cstar_le_45
+  have h2 : ((2 : ℝ) * (45 : ℝ)) = (90 : ℝ) := by norm_num
+  simpa [h2] using h
 
 /-- ℝ-valued Euler tail bound (your original goal statement).
 

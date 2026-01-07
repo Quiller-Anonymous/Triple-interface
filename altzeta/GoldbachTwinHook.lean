@@ -103,5 +103,26 @@ lemma goldbachCanonicalWindow_X0_le_twinX0 :
     Goldbach.ETIExport.produceETI, Goldbach.ETIExport.canonicalWindow, twinPaperParams,
     Twin.PaperParams.P, Twin.PaperParams.X0] using this
 
+/-!
+Preferred defaults
+------------------
+
+For robustness, prefer the Goldbach-exported canonical window (`X = 10^6`) over the toy
+`censusInputs` window used in `AltZeta/Instances.lean`.
+-/
+
+/-- Preferred `AltZeta.Inputs` for downstream use (robust canonical window). -/
+abbrev defaultInputs : Inputs :=
+  goldbachCanonicalInputs
+
+/-- Preferred witness point `x = X` for `defaultInputs`. -/
+abbrev defaultX : ℝ :=
+  goldbachCanonicalX
+
+/-- `defaultX` satisfies `ValidX` for `defaultInputs`. -/
+abbrev default_validX :
+    ValidX defaultInputs.E.W defaultX :=
+  goldbachCanonical_validX
+
 end Instances
 end AltZeta

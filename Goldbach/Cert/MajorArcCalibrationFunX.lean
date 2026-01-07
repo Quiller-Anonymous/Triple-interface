@@ -4,7 +4,8 @@ import Goldbach.Cert.MajorArcAxiomsFunX
 Calibration scaffolding for the FunX major-arc bound.
 
 Goal (hard step): eventually replace the pinned axiom
-`Goldbach.Cert.MajorArcAxiomsFunX.major_arc_eval_on_window_canon`
+`Goldbach.Cert.MajorArcAxiomsFunX.major_arc_eval_on_window_canon` (currently declared in
+`Goldbach/Cert/MajorArcCanonCert.lean`)
 by a derived theorem from orthodox major-arc inputs (e.g. a power-saving statement)
 plus a *numerical calibration* that turns the asymptotic bound into the canonical
 constant `δ_major_canon` on the pinned window.

@@ -3,7 +3,7 @@ import Goldbach.Windows
 import Goldbach.BG_Identity
 import Goldbach.BG_Calib
 import Goldbach.ParallelTenorFunX
-import Goldbach.Cert.MajorArcAxiomsFunX
+import Goldbach.Cert.MajorArcCanonCert
 import Goldbach.AO_MajorSwapBookkeeping
 
 /-!

@@ -9,7 +9,8 @@ FunX track to be expressible as orthodox, textbook-style analytic statements, an
 project-specific bookkeeping as proved lemmas.
 
 The *current* pipeline still consumes the pinned canonical bound
-`Goldbach.Cert.MajorArcAxiomsFunX.major_arc_eval_on_window_canon`. This file is preparatory: it
+`Goldbach.Cert.MajorArcAxiomsFunX.major_arc_eval_on_window_canon` (see
+`Goldbach/Cert/MajorArcCanonCert.lean`). This file is preparatory: it
 packages the more orthodox assumptions we aim to use to *derive* that pinned bound (after a
 separate numerical calibration step).
 

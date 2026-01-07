@@ -74,9 +74,10 @@ jobs:
         run: |
           set -euo pipefail
           # Keep this job finite-base-free (the finite base is built only on the nightly/dispatch path).
-          lake build Goldbach.CompleteTenorFunX_CanonBudget
-          lake build Goldbach.AO_OffDiag.EntryPointTenorFunX
-          lake build Goldbach.BG_CalibBridgeStub
+          # Only build OLean artifacts (avoid generating `.c`/IR; huge and not needed for proof checking).
+          lake build +Goldbach.CompleteTenorFunX_CanonBudget:olean
+          lake build +Goldbach.AO_OffDiag.EntryPointTenorFunX:olean
+          lake build +Goldbach.BG_CalibBridgeStub:olean
 
   discover-chunks:
     name: Discover finite-base chunks
@@ -161,6 +162,71 @@ jobs:
       - name: Fetch Mathlib cache
         run: lake exe cache get
 
+      - name: Compute chunk cache key (batch ${{ toJson(matrix.batch) }})
+        id: chunk_cache
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          batch='${{ toJson(matrix.batch) }}'
+          batch_id=$(python3 -c 'import json,sys; xs=json.loads(sys.argv[1]); print("-".join(xs))' "$batch")
+          inputs_hash=$(
+            python3 - <<'PY' "$batch"
+          import glob
+          import hashlib
+          import json
+          import os
+          import sys
+
+          batch = json.loads(sys.argv[1])
+          h = hashlib.sha256()
+
+          def add_file(path: str) -> None:
+            with open(path, "rb") as f:
+              h.update(path.encode("utf-8") + b"\0")
+              h.update(f.read())
+
+          # Invalidate when toolchain/deps change.
+          for path in ["lean-toolchain", "lakefile.lean", "lake-manifest.json"]:
+            if os.path.exists(path):
+              add_file(path)
+
+          # Invalidate when any chunk in this batch changes.
+          files: list[str] = []
+          for prefix in batch:
+            files.extend(glob.glob(f"Goldbach/FiniteBase/Chunks/Chunk{prefix}_*_verified.lean"))
+          for path in sorted(set(files)):
+            add_file(path)
+
+          print(h.hexdigest())
+          PY
+          )
+
+          echo "batch_id=$batch_id" >> "$GITHUB_OUTPUT"
+          echo "inputs_hash=$inputs_hash" >> "$GITHUB_OUTPUT"
+
+      # Cache only the compiled chunk OLeans for this batch (keeps within GitHub’s cache limits).
+      # This makes the nightly/dispatch chunk jobs incremental across workflow runs.
+      - name: Cache chunk OLeans (batch ${{ toJson(matrix.batch) }})
+        uses: actions/cache@v4
+        with:
+          path: .ci-cache/chunks/${{ steps.chunk_cache.outputs.batch_id }}
+          key: ${{ runner.os }}-goldbach-chunks-${{ steps.chunk_cache.outputs.batch_id }}-${{ steps.chunk_cache.outputs.inputs_hash }}
+          restore-keys: |
+            ${{ runner.os }}-goldbach-chunks-${{ steps.chunk_cache.outputs.batch_id }}-
+
+      - name: Restore cached OLeans into Lake build dir
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          src=".ci-cache/chunks/${{ steps.chunk_cache.outputs.batch_id }}"
+          dst=".lake/build/lib/lean/Goldbach/FiniteBase/Chunks"
+          if [ -d "$src" ]; then
+            mkdir -p "$dst"
+            cp -a "$src"/. "$dst"/
+          fi
+
       - name: Build chunks (batch ${{ toJson(matrix.batch) }})
         shell: bash
         run: |
@@ -174,7 +240,8 @@ jobs:
           while IFS= read -r prefix; do
             files=(Goldbach/FiniteBase/Chunks/Chunk${prefix}_*_verified.lean)
             for f in "${files[@]}"; do
-              mods+=("Goldbach.FiniteBase.Chunks.$(basename "$f" .lean)")
+              # Only build OLean artifacts (avoid generating `.c`/IR; huge and not needed for proof checking).
+              mods+=("+Goldbach.FiniteBase.Chunks.$(basename "$f" .lean):olean")
             done
           done <<< "$prefixes"
 
@@ -187,6 +254,32 @@ jobs:
           printf '  %s\n' "${mods[@]}"
 
           printf '%s\n' "${mods[@]}" | xargs -n 50 lake build
+
+      - name: Stage built OLeans for cache (batch ${{ toJson(matrix.batch) }})
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          batch='${{ toJson(matrix.batch) }}'
+          prefixes=$(python3 -c 'import json,sys; print("\n".join(json.loads(sys.argv[1])))' "$batch")
+
+          outdir=".ci-cache/chunks/${{ steps.chunk_cache.outputs.batch_id }}"
+          rm -rf "$outdir"
+          mkdir -p "$outdir"
+
+          srcdir=".lake/build/lib/lean/Goldbach/FiniteBase/Chunks"
+          while IFS= read -r prefix; do
+            for f in \
+              "$srcdir"/Chunk${prefix}_*_verified.olean \
+              "$srcdir"/Chunk${prefix}_*_verified.olean.hash \
+              "$srcdir"/Chunk${prefix}_*_verified.ilean \
+              "$srcdir"/Chunk${prefix}_*_verified.ilean.hash \
+              "$srcdir"/Chunk${prefix}_*_verified.trace; do
+              [ -e "$f" ] && cp -a "$f" "$outdir"/
+            done
+          done <<< "$prefixes"
 
   build:
     name: Build Goldbach (full, incl. finite base)
@@ -224,4 +317,5 @@ jobs:
         run: |
           set -euo pipefail
           # Full end-to-end build: canonical Tenor-aligned FunX track + checked finite base.
-          lake build Goldbach.GoldFunX
+          # Only build OLean artifacts (avoid generating `.c`/IR; huge and not needed for proof checking).
+          lake build +Goldbach.GoldFunX:olean

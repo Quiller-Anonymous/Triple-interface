@@ -69,10 +69,22 @@ by an explicit error bound `δ : ℕ → ℝ` depending only on `X`.
 This is the form we ultimately want to prove from orthodox textbook inputs (Siegel–Walfisz /
 major-arc evaluation), and then specialize to the canonical numerical cap `δ_major_canon`.
 -/
-def MajorArcBound (δ : ℕ → ℝ) : Prop :=
+def MajorArcBoundOnWindow (X0 H : ℕ) (δ : ℕ → ℝ) : Prop :=
   ∀ {X N : ℕ},
     X0 ≤ X → N ∈ EvenIn X H →
       |RΛ_smooth X N - RΛ_model X N| ≤ δ X
+
+/--
+Textbook-facing major-arc input (window-parameterized): power saving in `log X`.
+
+This is the “conventional math” shape we aim to keep: it does not pin `X0`, `H`, or any
+project-specific numeric caps; those are supplied later by specialization and/or calibration.
+-/
+def MajorArcPowerSavingOnWindow (X0 H : ℕ) : Prop :=
+  ∀ A : ℕ, ∃ C : ℝ, 0 ≤ C ∧ MajorArcBoundOnWindow X0 H (fun X => C / (Real.log (X : ℝ)) ^ A)
+
+def MajorArcBound (δ : ℕ → ℝ) : Prop :=
+  MajorArcBoundOnWindow X0 H δ
 
 /--
 Target statement (hard step): major-arc evaluation with an arbitrary log-saving exponent.
@@ -81,7 +93,7 @@ This is the textbook-looking shape: for each exponent `A` there is a constant `C
 error is bounded by `C(A) / (log X)^A` uniformly on the canonical window.
 -/
 def MajorArcPowerSaving : Prop :=
-  ∀ A : ℕ, ∃ C : ℝ, 0 ≤ C ∧ MajorArcBound (fun X => C / (Real.log (X : ℝ)) ^ A)
+  MajorArcPowerSavingOnWindow X0 H
 
 lemma majorArcBound_canon_of_calibration
     {A : ℕ} {C : ℝ}
@@ -91,7 +103,7 @@ lemma majorArcBound_canon_of_calibration
   intro X N hX hN
   exact le_trans (hmajor hX hN) (hcal hX)
 
-/--
+/-!
 Major-arc evaluation for the banked (smoothed) Goldbach correlation functional, on the canonical
 window, with the canonical numerical cap.
 
@@ -99,20 +111,8 @@ This is intended to correspond to the standard Siegel–Walfisz/major-arc output
 the smoothed von Mangoldt correlation is approximated by a singular-series constant times a smooth
 mass, uniformly on the window.
 -/
-axiom majorArc_calibration_canon :
-  ∃ (A : ℕ) (C : ℝ),
-    0 ≤ C ∧
-      MajorArcBound (fun X => C / (Real.log (X : ℝ)) ^ A) ∧
-      (∀ {X : ℕ}, X0 ≤ X → C / (Real.log (X : ℝ)) ^ A ≤ δ_major_canon)
-
-theorem major_arc_eval_on_window_canon :
-  ∀ {X N : ℕ},
-    X0 ≤ X → N ∈ EvenIn X H →
-      |RΛ_smooth X N - RΛ_model X N|
-        ≤ δ_major_canon := by
-  intro X N hX hN
-  rcases majorArc_calibration_canon with ⟨A, C, _hC, hBound, hCal⟩
-  exact le_trans (hBound hX hN) (hCal hX)
+-- NOTE: the pipeline currently uses a *pinned, numeric* major-arc cap on the canonical window.
+-- That project-specific certificate/axiom lives in `Goldbach/Cert/MajorArcCanonCert.lean`.
 
 /--
 Textbook-facing major-arc input (hard step target): power saving in `log X`.

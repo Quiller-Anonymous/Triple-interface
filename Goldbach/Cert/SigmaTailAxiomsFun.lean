@@ -30,10 +30,17 @@ for a positive truncation height `Q(X)`, the σ-tail is `O(1/Q(X))` with canonic
 This is intended as a single “textbook” analytic input; all reindexing/majorant bookkeeping is
 proved elsewhere.
 -/
-axiom sigmaTail_bound_on_window_canon
-  (Q : ℕ → ℕ) :
-  ∀ {X N : ℕ}, Goldbach.BankParams.X0 ≤ X → N ∈ EvenIn X Goldbach.BankParams.H → 1 ≤ Q X →
+def SigmaTailBoundOnWindow (X0 H : ℕ) (Q : ℕ → ℕ) (K_tail : ℝ) : Prop :=
+  ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H → 1 ≤ Q X →
     |Goldbach.AO_OffDiag.SigmaTailReindexFun.sigmaTail (Q X) N|
-      ≤ K_tail_canon / (Q X : ℝ)
+      ≤ K_tail / (Q X : ℝ)
+
+axiom sigmaTail_bound_on_window
+  (X0 H : ℕ) (Q : ℕ → ℕ) :
+  SigmaTailBoundOnWindow X0 H Q K_tail_canon
+
+theorem sigmaTail_bound_on_window_canon (Q : ℕ → ℕ) :
+    SigmaTailBoundOnWindow Goldbach.BankParams.X0 Goldbach.BankParams.H Q K_tail_canon :=
+  sigmaTail_bound_on_window (X0 := Goldbach.BankParams.X0) (H := Goldbach.BankParams.H) Q
 
 end Goldbach.Cert.SigmaTailAxiomsFun
