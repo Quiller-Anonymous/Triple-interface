@@ -18,7 +18,7 @@ Based on public domain paper at Zenodo, "Goldbach and the Triple Interface Metho
 ## Project status:
 1. Goldbach conjecture -- Current status: gold
 -- The default Lake target builds the full pipeline through the canonical (Tenor-aligned) parallel FunX track. The remaining assumptions are isolated as explicit axioms in `Goldbach/Cert/*` (see the transparency list below).
-2. Twin primes conjecture -- Current status: gold
+2. Twin primes conjecture -- Current status: fool's gold
 -- Analytic engine builds with its own explicit (paper-facing) axioms; it does **not** import or depend on Goldbach by default (see `Twin/AxiomAudit.lean`).
 -- Optional Goldbach-side hook: `Goldbach/TwinGold.lean` consumes a `Twin.HasTwinTI` instance from `Goldbach/TwinInstance.lean` (currently reusing the Twin checklist axioms, so it introduces no *additional* axioms) and then calls the Twin pipeline; see `Goldbach/AxiomAuditTwinGold.lean`.
 3. The alt-zeta construct (nuanced primes detector) -- Current status: tin

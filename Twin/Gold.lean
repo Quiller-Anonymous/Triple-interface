@@ -26,8 +26,15 @@ theorem twins_in_all_large_windows_of_sme
   (sme : Twin.MajorArc.SmoothMajorArcEstimate
     Twin.ChecklistTargets.A Twin.ChecklistTargets.B
     Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What) :
+  sme.X0 ≤ (Twin.Main.P.X0 : ℝ) →
     ∀ {X : ℕ}, Twin.Main.P.X0 ≤ X → Twin.ExistsTwinInWindow X Twin.Main.P.H :=
-  Twin.ChecklistGold.twins_in_all_large_windows_of_sme sme
+by
+  intro hsmeX0 X hX
+  have hsmeX0' : sme.X0 ≤ (Twin.ChecklistGold.P.X0 : ℝ) := by
+    simpa [Twin.ChecklistGold.P, Twin.Main.P] using hsmeX0
+  have hX' : Twin.ChecklistGold.P.X0 ≤ X := by
+    simpa [Twin.ChecklistGold.P, Twin.Main.P] using hX
+  exact Twin.ChecklistGold.twins_in_all_large_windows_of_sme sme hsmeX0' (X := X) hX'
 
 end
 

@@ -43,12 +43,9 @@ We follow the intended “analytic `majMass`” checklist route:
   `Twin.ChecklistAxioms.h_transfer` is proved from the analytic definitions of `emin/eds`.
 
   On the desmoothing side, the `/3` budget is decomposed into:
-  - Fourier inversion + smooth/sharp window comparison: `fullMassAt_eq_smoothLambdaTwinMassAt`
-    (so `dsFourierInvAt = 0`) and `dsFourierWindow_sum_bigIcc_raw`, where the latter is derived
-    from the tail/core split `dsFourierWindowTail_sum_bigIcc_raw` and `dsFourierWindowCore_sum_bigIcc_raw`,
-  - prime-power disposal split (left/right): `dsPrimePowerLeft_sum_bigIcc_raw` and
-    `dsPrimePowerRight_sum_bigIcc_raw` (derived from the more “budget-shaped”
-    `dsPrimePowerLeftBudget_sum_bigIcc_raw` and `dsPrimePowerRightBudget_sum_bigIcc_raw`),
+  - Fourier inversion + smooth/sharp window comparison: `dsFourierInv_sum_bigIcc_raw` (Fourier inversion budget)
+    and `dsFourierWindow_sum_bigIcc_raw` (the window-comparison budget),
+  - prime-power disposal: `dsPrimePower_sum_bigIcc_raw` (the window-summed prime-power budget),
   and the combined `/3` inequality is derived by finitary triangle inequalities.
 
 Paper anchor for `Twin.ChecklistAxioms.gate_onWindow` (equivalently, the derived `pinnedMajors_lower`):
@@ -70,7 +67,8 @@ open Twin.ChecklistAxioms
 def O
   (sme : Twin.MajorArc.SmoothMajorArcEstimate
     Twin.ChecklistTargets.A Twin.ChecklistTargets.B
-    Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What) :
+    Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What)
+  (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ)) :
   Twin.ChecklistTargets.ObligationsExplicit :=
 { sme := sme
 , emin := Twin.ChecklistAxioms.emin (sme := sme)
@@ -79,7 +77,19 @@ def O
 , l2_minor_onWindow := Twin.ChecklistAxioms.l2_minor_onWindow (sme := sme)
 , desmooth_onWindow := Twin.ChecklistAxioms.desmooth_onWindow
 , routing_onWindow := Twin.ChecklistAxioms.routing_onWindow (sme := sme)
-, pinnedMajors_lower := Twin.ChecklistAxioms.pinnedMajors_lower (sme := sme)
+, pinnedMajors_lower := by
+    intro X hX
+    have hsmeX0' : sme.X0 ≤ (Twin.ChecklistAxioms.P.X0 : ℝ) := by
+      -- `Twin.ChecklistTargets.P` is definitionally `Twin.PaperParams.P`.
+      simpa [P, Twin.ChecklistTargets.P, Twin.ChecklistAssumptions.P, Twin.Main.P, Twin.ChecklistAxioms.P,
+        Twin.PaperParams.P] using hsmeX0
+    have hX' : Twin.ChecklistAxioms.P.X0 ≤ X := by
+      simpa [P, Twin.ChecklistTargets.P, Twin.ChecklistAssumptions.P, Twin.Main.P, Twin.ChecklistAxioms.P,
+        Twin.PaperParams.P] using hX
+    simpa [SS, Twin.ChecklistTargets.SS, Twin.ChecklistAssumptions.SS, Twin.ChecklistAxioms.SS,
+      P, Twin.ChecklistTargets.P, Twin.ChecklistAssumptions.P, Twin.Main.P, Twin.ChecklistAxioms.P,
+      Twin.PaperParams.P] using
+      (Twin.ChecklistAxioms.pinnedMajors_lower (sme := sme) hsmeX0' (X := X) hX')
 , ss_pos := Twin.PaperParams.ss_pos
 }
 
@@ -91,11 +101,13 @@ theorem twins_in_all_large_windows_of_sme
   (sme : Twin.MajorArc.SmoothMajorArcEstimate
     Twin.ChecklistTargets.A Twin.ChecklistTargets.B
     Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What) :
+  sme.X0 ≤ (P.X0 : ℝ) →
     ∀ {X : ℕ}, P.X0 ≤ X → Twin.ExistsTwinInWindow X P.H :=
 by
+  intro hsmeX0
   intro X hX
   exact
-    Twin.ChecklistTargets.windows_largeX_all_windows (O := (O sme).toObligations)
+    Twin.ChecklistTargets.windows_largeX_all_windows (O := (O sme hsmeX0).toObligations)
       (X := X) (by simpa [P] using hX)
 
 end

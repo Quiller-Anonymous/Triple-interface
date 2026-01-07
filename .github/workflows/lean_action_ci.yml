@@ -18,12 +18,16 @@ on:
       - ".github/workflows/**"
       - "lean-toolchain"
   schedule:
-    # Nightly heavy build (finite-base chunks + full Goldbach pipeline).
+    # Nightly finite-base chunk build (chunks only; full pipeline is dispatch-only).
     - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
       build_finite_base:
         description: "Build finite-base verified chunks (very slow)"
+        required: false
+        default: "false"
+      build_full_pipeline:
+        description: "Also build full Goldbach pipeline including finite base (very slow)"
         required: false
         default: "false"
 
@@ -37,21 +41,25 @@ jobs:
   build-fast:
     name: Build Goldbach (fast targets)
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # The default runner limit is much higher; this job sometimes runs close to an hour and then
+    # gets killed during post-steps (cache/artifact finalization). Give it more headroom.
+    timeout-minutes: 180
+    # Avoid running this job during the heavy finite-base chunk run; it just burns time/CPU and can
+    # fail the workflow due to a timeout even if the chunk pipeline succeeds.
+    if: ${{ github.event_name != 'schedule' && !(github.event_name == 'workflow_dispatch' && github.event.inputs.build_finite_base == 'true') }}
     steps:
       - uses: actions/checkout@v4
 
-      # Cache Lake deps + build outputs.
-      # This is the main lever for “reasonable time” on repeated runs.
-      - name: Cache Lake
+      # Cache the Lean toolchain (small, stable).
+      # Avoid caching `.lake/packages` / `.lake/build`: they routinely exceed GitHub’s cache limits
+      # and the (failed) cache save/restore can dominate job time.
+      - name: Cache elan toolchain
         uses: actions/cache@v4
         with:
-          path: |
-            .lake/packages
-            .lake/build
-          key: ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}
+          path: ~/.elan
+          key: ${{ runner.os }}-elan-${{ hashFiles('lean-toolchain') }}
           restore-keys: |
-            ${{ runner.os }}-lake-
+            ${{ runner.os }}-elan-
 
       - name: Set up Lean
         uses: leanprover/lean-action@v1
@@ -73,7 +81,7 @@ jobs:
   discover-chunks:
     name: Discover finite-base chunks
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_finite_base == 'true') }}
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.build_finite_base == 'true' || github.event.inputs.build_full_pipeline == 'true')) }}
     outputs:
       prefix_batches: ${{ steps.prefixes.outputs.prefix_batches }}
       count: ${{ steps.prefixes.outputs.count }}
@@ -103,7 +111,10 @@ jobs:
           )
 
           prefix_batches=$(
-            PREFIXES_JSON="$prefixes_json" BATCH_SIZE="8" python3 - <<'PY'
+            # Tune these if chunk jobs are timing out:
+            # - smaller `BATCH_SIZE` => more matrix jobs, each job does less work
+            # - larger `max-parallel` => more concurrent jobs (subject to runner limits)
+            PREFIXES_JSON="$prefixes_json" BATCH_SIZE="4" python3 - <<'PY'
           import json, os
           prefixes = json.loads(os.environ["PREFIXES_JSON"])
           batch_size = int(os.environ.get("BATCH_SIZE", "8"))
@@ -117,56 +128,9 @@ jobs:
           echo "Found ${#files[@]} verified chunk files."
           echo "Prefix batches: $prefix_batches"
 
-  build-chunk-deps:
-    name: Build finite-base chunk dependencies
-    needs: discover-chunks
-    if: ${{ needs.discover-chunks.outputs.count != '0' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 120
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Cache Lake
-        uses: actions/cache@v4
-        with:
-          path: |
-            .lake/packages
-            .lake/build
-          key: ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}
-          restore-keys: |
-            ${{ runner.os }}-lake-
-
-      - name: Set up Lean
-        uses: leanprover/lean-action@v1
-
-      - name: Fetch dependencies
-        run: lake update
-
-      - name: Fetch Mathlib cache
-        run: lake exe cache get
-
-      - name: Build chunk dependency kit
-        run: |
-          set -euo pipefail
-          lake build Goldbach.FiniteBase.FiniteBaseChunkKit
-          lake build Goldbach.FiniteBase.Completeness.CompletenessKit
-
-      - name: Upload chunk dependency artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: finite-base-chunk-deps
-          path: |
-            .lake/build/lib/lean/Goldbach/Base/*.olean
-            .lake/build/lib/lean/Goldbach/Base/*.ilean
-            .lake/build/lib/lean/Goldbach/FiniteBase/**/*.olean
-            .lake/build/lib/lean/Goldbach/FiniteBase/**/*.ilean
-            .lake/build/lib/lean/Goldbach/Windows.olean
-            .lake/build/lib/lean/Goldbach/Windows.ilean
-          retention-days: 1
-
   build-chunks:
     name: Build finite-base chunks
-    needs: [discover-chunks, build-chunk-deps]
+    needs: discover-chunks
     if: ${{ needs.discover-chunks.outputs.count != '0' }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
@@ -175,22 +139,18 @@ jobs:
       matrix:
         batch: ${{ fromJson(needs.discover-chunks.outputs.prefix_batches) }}
       # Consider lowering this if you see long queue times or throttling.
-      max-parallel: 6
+      max-parallel: 12
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache Lake
+      - name: Cache elan toolchain
         uses: actions/cache@v4
         with:
-          path: |
-            .lake/packages
-            .lake/build
-          # Use a slightly different key per batch to reduce cache stampede.
-          key: ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}-batch-${{ join(matrix.batch, '-') }}
+          path: ~/.elan
+          key: ${{ runner.os }}-elan-${{ hashFiles('lean-toolchain') }}
           restore-keys: |
-            ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}-
-            ${{ runner.os }}-lake-
+            ${{ runner.os }}-elan-
 
       - name: Set up Lean
         uses: leanprover/lean-action@v1
@@ -200,22 +160,6 @@ jobs:
 
       - name: Fetch Mathlib cache
         run: lake exe cache get
-
-      - name: Download chunk dependency artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: finite-base-chunk-deps
-          path: .chunk_deps
-
-      - name: Install chunk dependency artifacts into `.lake/build`
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .lake/build/lib/lean/Goldbach/FiniteBase/Completeness
-          mkdir -p .lake/build/lib/lean/Goldbach/FiniteBase
-          mkdir -p .lake/build/lib/lean/Goldbach/Base
-          mkdir -p .lake/build/lib/lean/Goldbach
-          cp -a .chunk_deps/. .lake/build/lib/lean/Goldbach/
 
       - name: Build chunks (batch ${{ toJson(matrix.batch) }})
         shell: bash
@@ -244,19 +188,10 @@ jobs:
 
           printf '%s\n' "${mods[@]}" | xargs -n 50 lake build
 
-      - name: Upload chunk artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: finite-base-chunks-batch-${{ join(matrix.batch, '-') }}
-          path: |
-            .lake/build/lib/lean/Goldbach/FiniteBase/Chunks/Chunk*_verified.olean
-            .lake/build/lib/lean/Goldbach/FiniteBase/Chunks/Chunk*_verified.ilean
-          retention-days: 1
-
   build:
     name: Build Goldbach (full, incl. finite base)
     needs: [discover-chunks, build-chunks]
-    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_finite_base == 'true') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.build_full_pipeline == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:
@@ -268,15 +203,13 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Cache Lake
+      - name: Cache elan toolchain
         uses: actions/cache@v4
         with:
-          path: |
-            .lake/packages
-            .lake/build
-          key: ${{ runner.os }}-lake-${{ hashFiles('lean-toolchain', 'lake-manifest.json', 'lakefile.lean') }}
+          path: ~/.elan
+          key: ${{ runner.os }}-elan-${{ hashFiles('lean-toolchain') }}
           restore-keys: |
-            ${{ runner.os }}-lake-
+            ${{ runner.os }}-elan-
 
       - name: Set up Lean
         uses: leanprover/lean-action@v1
@@ -286,22 +219,6 @@ jobs:
 
       - name: Fetch Mathlib cache
         run: lake exe cache get
-
-      - name: Download chunk artifacts (if any)
-        if: ${{ needs.discover-chunks.outputs.count != '0' }}
-        uses: actions/download-artifact@v4
-        with:
-          pattern: finite-base-chunks-batch-*
-          path: .chunk_artifacts
-          merge-multiple: true
-
-      - name: Install chunk artifacts into `.lake/build`
-        if: ${{ needs.discover-chunks.outputs.count != '0' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p .lake/build/lib/lean/Goldbach/FiniteBase/Chunks
-          cp -a .chunk_artifacts/. .lake/build/lib/lean/Goldbach/FiniteBase/Chunks/
 
       - name: Build (Goldbach pipeline)
         run: |

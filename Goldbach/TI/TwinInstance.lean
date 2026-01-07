@@ -7,7 +7,7 @@ import Twin.Ledger
 import Twin.SingularSeries
 import Twin.ChecklistAxioms
 import Twin.ChecklistSme
-import Goldbach.TwinExports
+import Goldbach.TI.TwinExports
 
 /-!
 Goldbach/TwinInstance.lean
@@ -29,11 +29,11 @@ definitions/lemmas below with Goldbach-derived ones (being careful to avoid impo
 noncomputable section
 open scoped BigOperators
 
-namespace Goldbach.TwinInstance
+namespace Goldbach.TI.TwinInstance
 
 open Twin
 
-abbrev P : Twin.GoalAPI.Params := Twin.Main.P
+abbrev P : Twin.GoalAPI.Params := Goldbach.TI.TwinExports.P
 
 /-!
 Current implementation strategy
@@ -88,9 +88,8 @@ theorem ti_pinned :
 noncomputable instance : Twin.HasTwinTI P := by
   -- Route through the Goldbach-side export record so we can swap in Goldbach-derived
   -- TI outputs later without changing the adapter shape.
-  -- (Today this just repackages the Twin checklist axioms.)
-  let E : Goldbach.TwinExports.TIExports P := by
-    simpa [Goldbach.TwinExports.P, P] using (Goldbach.TwinExports.checklistExports)
+  let E : Goldbach.TI.TwinExports.TIExports P := by
+    simpa [Goldbach.TI.TwinExports.P, P] using (Goldbach.TI.TwinExports.GoldbachDerivedExports)
   exact E.toHasTwinTI
 
-end Goldbach.TwinInstance
+end Goldbach.TI.TwinInstance

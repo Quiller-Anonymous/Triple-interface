@@ -1,4 +1,4 @@
-import Goldbach.TwinInstance
+import Goldbach.TI.TwinInstance
 import Twin.TwinMain
 import Twin.AnalyticFromPaper
 import Twin.MajorArc.Pin
@@ -9,7 +9,7 @@ Goldbach/TwinGold.lean
 ======================
 
 An end-to-end “large window contains a twin” theorem obtained by feeding a
-`Twin.HasTwinTI` instance (provided by `Goldbach.TwinInstance`) into the Twin
+`Twin.HasTwinTI` instance (provided by `Goldbach.TI.TwinInstance`) into the Twin
 pipeline.
 
 This is the *cycle-safe* way to “hook Twin axioms into Goldbach”: `Goldbach` can import
@@ -40,7 +40,7 @@ by
   classical
   -- Pull TI outputs for the paper parameters.
   letI : Twin.HasTwinTI Twin.Main.P := by
-    -- The instance is provided by `Goldbach.TwinInstance`.
+    -- The instance is provided by `Goldbach.TI.TwinInstance`.
     infer_instance
 
   -- Build `ErrorData` from the TI minor/desmooth budgets.
