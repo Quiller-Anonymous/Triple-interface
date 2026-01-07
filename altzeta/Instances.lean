@@ -158,11 +158,11 @@ lemma census_barrier_holds : BarrierHoldsOnInputs censusInputs censusX := by
   have hlhs :
       M_of censusInputs
         = 2 - (1 / 10 + 1 / 8 + (1 / 4 : ℝ) * Real.exp (-1)) := by
-    have hdiv : ((1 : ℝ) / 2) / (4 : ℝ) = (1 : ℝ) / 8 := by norm_num
-    have hmax : max censusSchedule.H 1 = (4 : ℝ) := by simp [censusSchedule]
     -- Expand the ETI margin formula and simplify `C2 / max H 1` to `1/8`.
     simp [censusInputs, censusETI, censusLedger, censusSchedule, censusWindow,
-      M_of, ETI.margin, margin, hdiv, hmax]
+      M_of, ETI.margin, margin]
+    -- the remaining arithmetic identity is purely rational
+    norm_num
   have :
       censusCompletion.CGamma + Real.sqrt censusX * censusEnvelope.S_cert
         < M_of censusInputs := by
