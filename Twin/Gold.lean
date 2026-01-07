@@ -25,7 +25,11 @@ theorem twins_in_all_large_windows :
 theorem twins_in_all_large_windows_of_sme
   (sme : Twin.MajorArc.SmoothMajorArcEstimate
     Twin.ChecklistTargets.A Twin.ChecklistTargets.B
-    Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What) :
+    Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What)
+  [Twin.ChecklistAxioms.DsFourierAtSumBudget] [Twin.ChecklistAxioms.DsPrimePowerAtSumBudget]
+  [Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := sme)]
+  [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
+  [Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := sme)] :
   sme.X0 ≤ (Twin.Main.P.X0 : ℝ) →
     ∀ {X : ℕ}, Twin.Main.P.X0 ≤ X → Twin.ExistsTwinInWindow X Twin.Main.P.H :=
 by

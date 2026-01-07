@@ -20,15 +20,14 @@ structure Inputs where
   L   : Ledger
   G   : CompletionBound   -- CGamma
   Env : EnvelopeCert      -- S_cert
-  W   : Window := by infer_instance
-  hW  : W = E.W := rfl
-deriving Repr
+  W   : Window
+  hW  : W = E.W
 
 /-- Margin (shorthand). -/
 abbrev M_of (I : Inputs) : ℝ := I.E.margin I.L
 
 /-- The barrier inequality at a particular x. -/
-def BarrierHolds (I : Inputs) (x : ℝ) : Prop :=
+def BarrierHoldsOnInputs (I : Inputs) (x : ℝ) : Prop :=
   M_of I > I.G.CGamma + Real.sqrt x * I.Env.S_cert
 
 /-- Pure contradiction engine (no analysis): margin vs EF inequality at the same x. -/
@@ -42,7 +41,9 @@ lemma barrier_contradiction_same_x
     simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this
   have hx' : 0 < sqrt x := Real.sqrt_pos.mpr hx
   have hlhs : 0 < δ * sqrt x := mul_pos hδ hx'
-  exact (lt_irrefl (δ * sqrt x)).elim (lt_of_le_of_lt hEF this ▸ hlhs)
+  have hlt : δ * sqrt x < 0 := lt_of_le_of_lt hEF this
+  have : (0 : ℝ) < 0 := lt_trans hlhs hlt
+  exact lt_irrefl _ this
 
 /--
 **Baseline-conditional band zero-freeness (same x).**
@@ -61,7 +62,7 @@ Conclusion:
 theorem band_zero_free_same_x
   (I : Inputs) (K : AltZetaKernel) (band : SpectralBand)
   -- pick x in [X, 2X] with positive margin gap
-  (x : ℝ) (hxV : ValidX I.E.W x) (hB : BarrierHolds I x)
+  (x : ℝ) (hxV : ValidX I.E.W x) (hB : BarrierHoldsOnInputs I x)
   -- EF-as-inequality at this same x (baseline-conditional interface)
   (hEF :
       EFHypothesis

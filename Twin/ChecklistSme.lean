@@ -1,5 +1,6 @@
 import Twin.ChecklistModel
 import Twin.MajorArc.SWUniform
+import Twin.ChecklistAxioms
 
 namespace Twin.ChecklistSme
 
@@ -73,6 +74,77 @@ instance instSW : Twin.MajorArc.SiegelWalfisz A B Lambda Wwin What :=
 /-- Frozen-model `SmoothMajorArcEstimate`, built from the explicit constants above. -/
 def sme : Twin.MajorArc.SmoothMajorArcEstimate A B Lambda Wwin What :=
   Twin.MajorArc.SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Lambda) (W := Wwin) (W_hat := What)
+
+/-
+Conventional numeric input (postulated):
+
+This is the paper-facing parameter/saving inequality asserting that the pointwise SW-error
+envelope used in `Twin.ChecklistAxioms.pinnedMajors_SW_error_L1_raw` fits inside the `/6`
+budget for the pinned-major bookkeeping.
+
+It is split out as a separate axiom so it is clearly attached to the *frozen* major-arc model
+`sme` rather than being a global fact about `Twin.ChecklistAxioms`.
+-/
+axiom pinnedMajors_SW_error_envelope_budget :
+  Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := sme)
+
+instance : Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := sme) :=
+  pinnedMajors_SW_error_envelope_budget
+
+/-!
+Conventional arithmetic input (postulated):
+
+This is the pinned-major *main-term* evaluation at the truncated singular series scale,
+for the frozen model `sme`.  It is recorded as a typeclass in `Twin.ChecklistAxioms`
+so parameterized theorems make the dependency explicit.
+-/
+
+axiom pinnedMajors_mainTerm_eval :
+  Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := sme)
+
+instance : Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := sme) :=
+  pinnedMajors_mainTerm_eval
+
+/-!
+Conventional minor-arc input (postulated):
+
+This is the paper-facing minor-arc `L²` bound feeding the gate, recorded in the exact
+`Twin.ChecklistAxioms.MinorMassAtSqSumBudget` interface (the `/9` square-sum budget on
+`bigIcc(X)`).
+
+Paper anchor: the minor-arc `L²` estimate (large sieve / Type-II) in the gate argument.
+-/
+
+axiom minorMassAt_sq_sum_bigIcc_budget :
+  Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := sme)
+
+instance : Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := sme) :=
+  minorMassAt_sq_sum_bigIcc_budget
+
+/-!
+Conventional desmoothing input (postulated):
+
+We split the `/3` desmoothing budget for `dsMassAt = |fullMassAt - localizedTwinMass|`
+into two `/6` budgets in `Twin.ChecklistAxioms`:
+
+* `DsFourierAtSumBudget`: Fourier inversion + smooth/sharp window comparison.
+* `DsPrimePowerAtSumBudget`: prime-power disposal (ΛΛ versus prime-only log-indicator).
+
+Paper-facing anchor: the standard desmoothing + prime-power bookkeeping used when moving
+between smoothed Λ-sums and sharp prime indicators in a windowed correlation.
+-/
+
+axiom dsFourierAt_sum_bigIcc_budget :
+  Twin.ChecklistAxioms.DsFourierAtSumBudget
+
+instance : Twin.ChecklistAxioms.DsFourierAtSumBudget :=
+  dsFourierAt_sum_bigIcc_budget
+
+axiom dsPrimePowerAt_sum_bigIcc_budget :
+  Twin.ChecklistAxioms.DsPrimePowerAtSumBudget
+
+instance : Twin.ChecklistAxioms.DsPrimePowerAtSumBudget :=
+  dsPrimePowerAt_sum_bigIcc_budget
 
 end
 

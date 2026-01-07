@@ -82,8 +82,21 @@ theorem ti_pinned :
   -- `gate_onWindow` is derived from the (axiomatized) pinned-major evaluation + transfer.
   have hX' : Twin.ChecklistAxioms.P.X0 ≤ X := by
     simpa [P, Twin.Main.P, Twin.ChecklistAxioms.P] using hX
+  have h_sme_bound : ti_sme.X0 ≤ ↑Twin.ChecklistAxioms.P.X0 := by
+    -- `ti_sme.X0 = 3` while `Twin.ChecklistAxioms.P.X0 = Twin.PaperParams.X0 = 10000`.
+    have hsme : ti_sme.X0 = (3 : ℝ) := by
+      simp [ti_sme, Twin.ChecklistSme.sme, Twin.MajorArc.SmoothMajorArcEstimate.ofSW,
+        Twin.ChecklistSme.instSW, Twin.ChecklistSme.X0]
+    have hNat : (3 : ℕ) ≤ Twin.ChecklistAxioms.P.X0 := by
+      -- unfold the concrete paper parameters
+      simpa [Twin.ChecklistAxioms.P, Twin.PaperParams.P, Twin.PaperParams.X0] using
+        (show (3 : ℕ) ≤ Twin.PaperParams.X0 from by
+          norm_num [Twin.PaperParams.X0])
+    have hReal : (3 : ℝ) ≤ (Twin.ChecklistAxioms.P.X0 : ℝ) := by
+      exact_mod_cast hNat
+    simpa [hsme] using hReal
   simpa [ti_emin, ti_eds, P, Twin.Main.P, Twin.ChecklistAxioms.P] using
-    ((Twin.ChecklistAxioms.gate_onWindow (sme := ti_sme)).bound (X := X) hX')
+    ((Twin.ChecklistAxioms.gate_onWindow (sme := ti_sme) h_sme_bound).bound (X := X) hX')
 
 noncomputable instance : Twin.HasTwinTI P := by
   -- Route through the Goldbach-side export record so we can swap in Goldbach-derived

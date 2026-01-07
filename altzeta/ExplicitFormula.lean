@@ -16,16 +16,15 @@ namespace AltZeta
 evaluation map; the analytic properties are supplied by the external theory. -/
 structure AltZetaKernel where
   eval : ℂ → ℂ
-deriving Repr
 
 /-- A rectangular spectral band that traps candidate off-line zeros.  The line
 `σ = σCrit` sits strictly inside the band to encode the “off-line” condition. -/
 structure SpectralBand where
-  σCrit σMax : ℝ
+  σCrit : ℝ
+  σMax : ℝ
   hσ : σCrit < σMax
   height : ℝ
   hheight : 0 ≤ height
-deriving Repr
 
 /-- Data tying together the dyadic window, the barrier ledger, and the analytic
 kernel/band used on the explicit-formula side. -/
@@ -38,7 +37,6 @@ structure EFSetup where
   S : ℝ
   kernel : AltZetaKernel
   band : SpectralBand
-deriving Repr
 
 /-- A concrete witness that the Alt-Zeta kernel has a zero in the effective
 band (off the baseline line). -/
@@ -46,7 +44,7 @@ structure OffLineZeroWitness (setup : EFSetup) where
   s : ℂ
   hzero : setup.kernel.eval s = 0
   hRe : setup.band.σCrit < s.re ∧ s.re ≤ setup.band.σMax
-  hIm : Real.abs s.im ≤ setup.band.height
+  hIm : |s.im| ≤ setup.band.height
 
 /-- “There exists an off-line zero in the effective band” for the chosen setup. -/
 def OffLineZeroInBand (setup : EFSetup) : Prop :=

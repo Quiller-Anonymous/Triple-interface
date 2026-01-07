@@ -414,7 +414,8 @@ Minor-arc L² budget (decomposition)
 The previous bespoke axiom `minorMassAt_sq_sum_bigIcc_core_raw` bounded the square-sum of the
 window-level minor masses `|minorMassAt Y|^2` over `bigIcc(X) = [X-H, X+H]`.
 
-We now split this into two conventional components:
+We now split this into two conventional components and package the remaining analytic input
+as the typeclass `MinorMassAtSqSumBudget`:
 
 1. **Cauchy–Schwarz on the torus**: for each `Y`, the squared minor mass is controlled by the
    `L²`-energy of the minor-arc integrand on `[0,1]`.
@@ -630,34 +631,19 @@ theorem minorMassAt_sq_le_L2At_raw :
   simpa [minorMassAt, Twin.MajorArc.minorMass, Twin.MajorArc.minorMassReal, μ, f0,
     minorMassAt_L2At] using hsq'
 
-/-- Analytic minor-arc input: sum of `L²` energies over the enlarged index set `bigIcc(X)`
-stays within the canonical `/9` budget. -/
-axiom minorMassAt_L2At_sum_bigIcc_raw :
-  ∀ X : ℕ, P.X0 ≤ X →
-    (bigIcc (X := X)).sum (fun Y => minorMassAt_L2At (sme := sme) Y)
-      ≤ (P.eps^2 * SS^2) * (P.H + 1) / 9
-
 /-- Raw L² minor budget, stated on the window-level minor masses `minorMassAt`.
 
-Derived from `minorMassAt_sq_le_L2At_raw` plus `minorMassAt_L2At_sum_bigIcc_raw`. -/
-theorem minorMassAt_sq_sum_bigIcc_core_raw :
-  ∀ X, P.X0 ≤ X →
-    (bigIcc (X := X)).sum (fun Y => |minorMassAt (sme := sme) Y| ^ 2)
-      ≤ (P.eps^2 * SS^2) * (P.H + 1) / 9 := by
-  intro X hX
-  classical
-  have hpoint :
-      ∀ Y ∈ bigIcc (X := X),
-        |minorMassAt (sme := sme) Y| ^ 2 ≤ minorMassAt_L2At (sme := sme) Y := by
-    intro Y _hY
-    simpa using minorMassAt_sq_le_L2At_raw (sme := sme) Y
-  have hsum :
+For the checklist route we only use the *summed* square-mass inequality below; it is the
+canonical “paper-facing” minor-arc input at the `/9` scale.
+
+Paper anchor: the minor-arc `L²` estimate (large sieve / Type-II) feeding the gate. -/
+class MinorMassAtSqSumBudget
+  (sme : Twin.MajorArc.SmoothMajorArcEstimate A B Lambda Wwin What) : Prop where
+  /-- The summed square-mass inequality on the enlarged index set `bigIcc(X)`. -/
+  budget :
+    ∀ X, P.X0 ≤ X →
       (bigIcc (X := X)).sum (fun Y => |minorMassAt (sme := sme) Y| ^ 2)
-        ≤ (bigIcc (X := X)).sum (fun Y => minorMassAt_L2At (sme := sme) Y) := by
-    refine Finset.sum_le_sum ?_
-    intro Y hY
-    exact hpoint Y hY
-  exact le_trans hsum (minorMassAt_L2At_sum_bigIcc_raw (sme := sme) (X := X) hX)
+        ≤ (P.eps^2 * SS^2) * (P.H + 1) / 9
 
 private lemma minorMassAt_sq_sum_bigIcc_scaled_eq (X : ℕ) :
     (P.H + 1 : ℝ) ^ 2
@@ -694,17 +680,19 @@ private lemma minorMassAt_sq_sum_bigIcc_scaled_eq (X : ℕ) :
           intro Y hY
           simp [hterm Y]
 
-theorem minorMassAt_sq_sum_bigIcc_raw :
+theorem minorMassAt_sq_sum_bigIcc_raw
+  [MinorMassAtSqSumBudget (sme := sme)] :
   ∀ X, P.X0 ≤ X →
     (P.H + 1 : ℝ) ^ 2
       * (bigIcc (X := X)).sum (fun Y => (|minorMassAt (sme := sme) Y| / N) ^ 2)
         ≤ (P.eps^2 * SS^2) * (P.H + 1) / 9 := by
   intro X hX
   -- reduce to the core (more conventional) square-sum statement
-  have hcore := minorMassAt_sq_sum_bigIcc_core_raw (sme := sme) X hX
+  have hcore := (MinorMassAtSqSumBudget.budget (sme := sme) X hX)
   simpa [minorMassAt_sq_sum_bigIcc_scaled_eq (sme := sme) (X := X)] using hcore
 
-theorem l2_minor_onWindow_raw :
+theorem l2_minor_onWindow_raw
+  [MinorMassAtSqSumBudget (sme := sme)] :
   ∀ X, P.X0 ≤ X →
     Twin.Ledger.windowSum X P.H (fun n => (emin (sme := sme) n)^2)
       ≤ (P.eps^2 * SS^2) * (P.H + 1) / 9 := by
@@ -775,7 +763,7 @@ Paper anchor: standard orthogonality on `∫_{0}^{1} e(kα)dα` plus justified e
 
 This is **conventional analytic** (textbook Fourier inversion for a Schwartz window).
 For the checklist route we only use it through the *summed budget* axiom
-`dsFourierInv_sum_bigIcc_raw` below, rather than a pointwise identity.
+`dsMassAt_sum_bigIcc_raw` below, rather than a pointwise identity.
 -/
 
 /-|
@@ -1276,7 +1264,7 @@ private lemma dsPrimePowerAt_le_left_add_right (X : ℕ) :
   -- unwrap `dsPrimePowerAt`
   simpa [dsPrimePowerAt] using habs0
 
-private lemma dsMassAt_le_fourier_add_primePower (X : ℕ) :
+lemma dsMassAt_le_fourier_add_primePower (X : ℕ) :
     dsMassAt X ≤ dsFourierAt X + dsPrimePowerAt X := by
   classical
   -- `full - localized = (full - lambda) + (lambda - localized)`
@@ -1312,137 +1300,64 @@ private lemma dsMassAt_le_fourier_add_primePower (X : ℕ) :
 /-!
 #### Conventional axioms (to be proved later)
 
-We postulate the two summed budgets at `/6` each. Their sum yields the canonical `/3` bound.
+For the checklist route, we need a *window-summed* desmoothing budget at `/3` for
+`dsMassAt = |fullMassAt - localizedTwinMass|`.
 
-* `dsFourierInv_sum_bigIcc_raw`: Fourier inversion (integral → explicit smooth ΛΛ sum).
-* `dsFourierWindow_sum_bigIcc_raw`: smooth ΛΛ sum → sharp ΛΛ window sum.
-  Together these imply `dsFourier_sum_bigIcc_raw` via a triangle inequality.
-* `dsPrimePower_sum_bigIcc_raw`: prime-power disposal (ΛΛ vs prime-only log-indicator).
-  (Textbook prime-power counting: only `p^m` with `m≥2` contribute to the discrepancy.)
+We make this less bespoke by splitting the discrepancy using the fully formal lemma
+`dsMassAt ≤ dsFourierAt + dsPrimePowerAt`:
+
+* `dsFourierAt = |fullMassAt - lambdaTwinMassAt|` packages Fourier inversion + smooth/sharp
+  window comparison (harmonic analysis).
+* `dsPrimePowerAt = |lambdaTwinMassAt - localizedTwinMass|` is the prime-power disposal step
+  (ΛΛ versus prime-only log-indicator).
+
+Both are “conventional analytic” in the sense of being textbook steps; the only paper-specific
+inputs live elsewhere (pinned majors, minor arcs).  We postulate separate `/6` budgets for the
+two pieces, from which the `/3` budget follows.
 -/
 
-  /-!
-  Fourier inversion budget (conventional analytic input)
-  -----------------------------------------------------
-
-  For the checklist route we only ever use Fourier inversion through a *summed* budget for the
-  discrepancy `dsFourierInvAt`.  This is strictly weaker than a pointwise identity
-  `fullMassAt = smoothLambdaTwinMassAt`, and avoids pulling measure-theory / Fubini machinery into
-  the glue layer.
-
-  Paper anchor: standard orthogonality on `∫_{0}^{1} e(kα)dα` plus justified exchange of `∑∑` with `∫`
-  (Tonelli under absolute convergence from the Gaussian window).
-  -/
-
-axiom dsFourierInv_sum_bigIcc_raw :
-  ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
-    (bigIcc (X := X)).sum dsFourierInvAt
-      ≤ P.eps * SS * (P.H + 1) / 12
-
-  /-!
-  Window comparison budget (conventional analytic input)
-  -----------------------------------------------------
-
-  The smooth-vs-sharp window comparison is the step that replaces the infinite smooth ΛΛ sum
-  by the finite sharp-window ΛΛ sum.  Internally we keep the decomposition
-  `dsFourierWindowAt ≤ dsFourierWindowTailAt + dsFourierWindowCoreAt` and the pointwise core
-  envelope `dsFourierWindowCoreAt_le_budget`, but for the checklist route we only need the
-  *summed* window-comparison budget at `/12`.
-
-  This matches the current pattern for prime-power disposal: one conventional summed axiom,
-  with the purely formal decompositions retained as lemmas.
-  -/
-
-  axiom dsFourierWindow_sum_bigIcc_raw :
+class DsFourierAtSumBudget : Prop where
+  /-- `/6` budget for the Fourier/smoothing discrepancy, summed on `bigIcc(X)`. -/
+  budget :
     ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
-      (bigIcc (X := X)).sum dsFourierWindowAt
-        ≤ P.eps * SS * (P.H + 1) / 12
-
-theorem dsFourier_sum_bigIcc_raw :
-  ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
-    (bigIcc (X := X)).sum dsFourierAt
-      ≤ P.eps * SS * (P.H + 1) / 6 := by
-  intro X hX
-  classical
-  have hsum_le :
       (bigIcc (X := X)).sum dsFourierAt
-        ≤ (bigIcc (X := X)).sum (fun Y => dsFourierInvAt Y + dsFourierWindowAt Y) := by
-    refine Finset.sum_le_sum ?_
-    intro Y hY
-    exact dsFourierAt_le_inv_add_window (X := Y)
-  have hsum_add :
-      (bigIcc (X := X)).sum (fun Y => dsFourierInvAt Y + dsFourierWindowAt Y)
-        =
-      (bigIcc (X := X)).sum dsFourierInvAt
-        + (bigIcc (X := X)).sum dsFourierWindowAt := by
-    simpa [Finset.sum_add_distrib]
-  have hInv := dsFourierInv_sum_bigIcc_raw (X := X) hX
-  have hWin := dsFourierWindow_sum_bigIcc_raw (X := X) hX
-  have hbudget :
-      (bigIcc (X := X)).sum (fun Y => dsFourierInvAt Y + dsFourierWindowAt Y)
-        ≤ P.eps * SS * (P.H + 1) / 6 := by
-    calc
-      (bigIcc (X := X)).sum (fun Y => dsFourierInvAt Y + dsFourierWindowAt Y)
-          = (bigIcc (X := X)).sum dsFourierInvAt
-              + (bigIcc (X := X)).sum dsFourierWindowAt := hsum_add
-      _ ≤ P.eps * SS * (P.H + 1) / 12 + P.eps * SS * (P.H + 1) / 12 := by
-            exact add_le_add hInv hWin
-      _ = P.eps * SS * (P.H + 1) / 6 := by ring
-  exact le_trans hsum_le hbudget
+        ≤ P.eps * SS * (P.H + 1) / 6
 
-  /-!
-  Prime-power disposal budget (conventional analytic input)
-  --------------------------------------------------------
-
-  The current checklist route only needs a window-summed bound on the total prime-power
-  discrepancy `dsPrimePowerAt` (which is then combined with the Fourier/smoothing discrepancy
-  to obtain the `/3` desmoothing budget).
-
-  We keep the detailed left/right decomposition (`dsPrimePowerLeftAt`, `dsPrimePowerRightAt`)
-  and the pointwise inequality `dsPrimePowerAt_le_left_add_right` as fully formal bookkeeping,
-  but we treat the *summed* prime-power bound as a single conventional analytic input.
-  -/
-
-  axiom dsPrimePower_sum_bigIcc_raw :
+class DsPrimePowerAtSumBudget : Prop where
+  /-- `/6` budget for the prime-power disposal discrepancy, summed on `bigIcc(X)`. -/
+  budget :
     ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
       (bigIcc (X := X)).sum dsPrimePowerAt
         ≤ P.eps * SS * (P.H + 1) / 6
 
-theorem dsMassAt_sum_bigIcc_raw :
+theorem dsMassAt_sum_bigIcc_raw
+  [DsFourierAtSumBudget] [DsPrimePowerAtSumBudget] :
   ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
     (bigIcc (X := X)).sum dsMassAt
       ≤ P.eps * SS * (P.H + 1) / 3 := by
   intro X hX
   classical
-  -- sum the pointwise inequality `dsMassAt ≤ dsFourierAt + dsPrimePowerAt`
-  have hsum_le :
+  have hsplit :
       (bigIcc (X := X)).sum dsMassAt
         ≤ (bigIcc (X := X)).sum (fun Y => dsFourierAt Y + dsPrimePowerAt Y) := by
     refine Finset.sum_le_sum ?_
     intro Y hY
     exact dsMassAt_le_fourier_add_primePower (X := Y)
-  have hsum_add :
+  have hsum :
       (bigIcc (X := X)).sum (fun Y => dsFourierAt Y + dsPrimePowerAt Y)
         =
-      (bigIcc (X := X)).sum dsFourierAt
-        + (bigIcc (X := X)).sum dsPrimePowerAt := by
-    simpa [Finset.sum_add_distrib]
-  have hfourier := dsFourier_sum_bigIcc_raw (X := X) hX
-  have hpp := dsPrimePower_sum_bigIcc_raw (X := X) hX
-  -- combine `/6 + /6 = /3`
-  have hbudget :
-      (bigIcc (X := X)).sum (fun Y => dsFourierAt Y + dsPrimePowerAt Y)
+      (bigIcc (X := X)).sum dsFourierAt + (bigIcc (X := X)).sum dsPrimePowerAt := by
+    simp [Finset.sum_add_distrib]
+  have hF := DsFourierAtSumBudget.budget (X := X) hX
+  have hPP := DsPrimePowerAtSumBudget.budget (X := X) hX
+  have hTot :
+      (bigIcc (X := X)).sum dsFourierAt + (bigIcc (X := X)).sum dsPrimePowerAt
         ≤ P.eps * SS * (P.H + 1) / 3 := by
-    calc
-      (bigIcc (X := X)).sum (fun Y => dsFourierAt Y + dsPrimePowerAt Y)
-          = (bigIcc (X := X)).sum dsFourierAt
-              + (bigIcc (X := X)).sum dsPrimePowerAt := hsum_add
-      _ ≤ P.eps * SS * (P.H + 1) / 6 + P.eps * SS * (P.H + 1) / 6 := by
-            exact add_le_add hfourier hpp
-      _ = P.eps * SS * (P.H + 1) / 3 := by ring
-  exact le_trans hsum_le hbudget
+    linarith
+  exact le_trans hsplit (le_trans (le_of_eq hsum) hTot)
 
-theorem desmooth_onWindow_raw :
+theorem desmooth_onWindow_raw
+  [DsFourierAtSumBudget] [DsPrimePowerAtSumBudget] :
   ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
     Twin.Ledger.windowSum X P.H eds
       ≤ P.eps * SS * (P.H + 1) / 3 := by
@@ -1451,12 +1366,14 @@ theorem desmooth_onWindow_raw :
     windowSum_eds_le_big_sum_dsMassAt (X := X)
   exact le_trans h1 (dsMassAt_sum_bigIcc_raw (X := X) hX)
 
-theorem h_l2 : Twin.CLSL2.Bound P (emin (sme := sme)) := by
+theorem h_l2 [MinorMassAtSqSumBudget (sme := sme)] : Twin.CLSL2.Bound P (emin (sme := sme)) := by
   refine ⟨?_⟩
   intro X hX
   simpa [SS] using l2_minor_onWindow_raw (sme := sme) (X := X) hX
 
-theorem h_desmooth : Twin.AnalyticCore.DesmoothBound P eds := by
+theorem h_desmooth
+  [DsFourierAtSumBudget] [DsPrimePowerAtSumBudget] :
+  Twin.AnalyticCore.DesmoothBound P eds := by
   refine ⟨?_⟩
   intro X hX
   simpa [SS, mul_assoc, mul_comm, mul_left_comm] using desmooth_onWindow_raw (X := X) hX
@@ -1587,13 +1504,15 @@ theorem dsMass_le_windowSum_eds (X : ℕ) :
     exact hconst.trans hconst'
   simpa [this] using hsum
 
-theorem l2_minor_onWindow :
+theorem l2_minor_onWindow
+  [MinorMassAtSqSumBudget (sme := sme)] :
   ∀ X, P.X0 ≤ X →
     Twin.Ledger.windowSum X P.H (fun n => (emin (sme := sme) n)^2)
       ≤ (P.eps^2 * SS^2) * (P.H + 1) / 9 :=
   l2_minor_onWindow_raw (sme := sme)
 
-theorem desmooth_onWindow :
+theorem desmooth_onWindow
+  [DsFourierAtSumBudget] [DsPrimePowerAtSumBudget] :
   ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
     Twin.Ledger.windowSum X P.H eds
       ≤ P.eps * SS * (P.H + 1) / 3 :=
@@ -2512,17 +2431,21 @@ over major arcs; everything else is bookkeeping.
   inequality, rather than an integral statement.
   -/
 
-  /-- Compatibility hypothesis used to apply the SW bound on all windows `X ≥ P.X0`.
+  /-!
+  Compatibility hypothesis used to apply the SW bound on all windows `X ≥ P.X0`.
 
-  The `SmoothMajorArcEstimate` record comes with its own threshold `sme.X0 : ℝ`.  Rather than
+  The `SmoothMajorArcEstimate` record comes with its own threshold `sme.X0 : ℝ`. Rather than
   axiomatizing a global relation between `sme` and the paper parameters `P`, we thread the
   compatibility `sme.X0 ≤ (P.X0 : ℝ)` as an explicit hypothesis through the pinned-major
   SW-error lemmas.
 
   In practice (e.g. for `Twin.ChecklistSme.sme`), this is discharged by a concrete numeric
-  inequality, since `P.X0` is large and `sme.X0` is tiny. -/
+  inequality, since `P.X0` is large and `sme.X0` is tiny.
+  -/
 
-  private noncomputable def pinnedMajors_SW_error_envelope (X : ℕ) : ℝ :=
+  /-- Pointwise SW-error envelope on the major arcs (derived from the SW bound on `S - T`
+  and a uniform bound on the main term `T`). -/
+  noncomputable def pinnedMajors_SW_error_envelope (X : ℕ) : ℝ :=
     let Xr : ℝ := (X : ℝ)
     let err : ℝ := |sme.C| * (Xr / Real.rpow (Real.log Xr) A)
     err * (err + 2 * (|Xr| * Twin.ChecklistModel.κ))
@@ -2554,14 +2477,21 @@ over major arcs; everything else is bookkeeping.
       add_nonneg herr htail
     exact mul_nonneg herr hsum
 
-  /-- Paper-facing saving inequality: the SW error envelope is absorbed by the `/6` allowance. -/
-  axiom pinnedMajors_SW_error_envelope_budget_raw :
-    ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
-      pinnedMajors_SW_error_envelope (sme := sme) X ≤ (P.eps * SS) * ((P.H : ℝ) + 1) / 6
+  /-- Conventional numeric hypothesis: the SW-error envelope is absorbed by the `/6` allowance.
+
+  This is a **pure parameter/saving inequality** (no integrals). It should ultimately be
+  discharged from the frozen analytic model (e.g. `Twin.ChecklistSme.sme`) plus a lower bound
+  on the fixed truncated singular series `SS := truncSingularSeries(P.S)`.
+  -/
+  class PinnedMajorsSWErrorEnvelopeBudget : Prop where
+    budget :
+      ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
+        pinnedMajors_SW_error_envelope (sme := sme) X ≤ (P.eps * SS) * ((P.H : ℝ) + 1) / 6
 
   /-- Conventional L¹ control of the major-arc SW error at the integrand level.
-  Derived from `pinnedMajors_SW_error_envelope_budget_raw` plus the pointwise envelope bound. -/
-  theorem pinnedMajors_SW_error_L1_raw (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ)) :
+  Derived from `PinnedMajorsSWErrorEnvelopeBudget` plus the pointwise envelope bound. -/
+  theorem pinnedMajors_SW_error_L1_raw (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ))
+      [PinnedMajorsSWErrorEnvelopeBudget (sme := sme)] :
     ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
       (∫ α in Set.Icc (0 : ℝ) 1,
           |Twin.MajorArc.majorArcTwinIntegrand (sme := sme) (Λ := Lambda) (W := Wwin)
@@ -2700,12 +2630,13 @@ over major arcs; everything else is bookkeeping.
       -- `volume (Icc 0 1) = 1`
       simp [env]
     have hBudget : env ≤ (P.eps * SS) * ((P.H : ℝ) + 1) / 6 :=
-      pinnedMajors_SW_error_envelope_budget_raw (sme := sme) (X := X) hX
+      PinnedMajorsSWErrorEnvelopeBudget.budget (sme := sme) (X := X) hX
     -- finish
     exact le_trans (le_trans hI (le_of_eq hConst)) hBudget
 
 /-- SW approximation error on the major arcs (conventional; derived from `pinnedMajors_SW_error_L1_raw`). -/
-theorem pinnedMajors_SW_error_raw :
+theorem pinnedMajors_SW_error_raw
+    [PinnedMajorsSWErrorEnvelopeBudget (sme := sme)] :
   sme.X0 ≤ (P.X0 : ℝ) →
   ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
     |majMass (sme := sme) X - majMassMainTerm (sme := sme) X|
@@ -2788,41 +2719,28 @@ theorem pinnedMajors_SW_error_raw :
 /-!
 ### Main-term evaluation (decomposition)
 
-The paper’s pinned-major main term is naturally expressed as a finite Euler-product / powerset
-expansion over the fixed truncation set `P.S`.  We therefore split the remaining main-term
-evaluation input into:
+The paper’s pinned-major main term is naturally expressed via a finite Euler-product attached to
+the fixed truncation set `P.S`, i.e. `SS := Twin.truncSingularSeries P.S`.
 
-1. an axiom giving the evaluation against the **explicit powerset expansion**
-   `Twin.truncSingularSeriesExpansion P.S`,
-2. a short lemma rewriting that expansion back to `SS := Twin.truncSingularSeries P.S`
-   using the algebraic identity in `Twin/SingularSeries.lean`.
+For the checklist route we only need the *numeric* major-arc main-term evaluation at this scale.
+We record it directly in terms of `SS` (rather than an internal powerset expansion), so it is
+easy to treat as a conventional analytic axiom and later replace by a proof.
 -/
 
-/-- Arithmetic evaluation of the main-term major-arc model (conventional; aligned to the
-explicit powerset expansion of the truncated singular series). -/
-axiom pinnedMajors_mainTerm_eval_expansion_raw :
-  ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
-    |majMassMainTerm (sme := sme) X
-        - Twin.truncSingularSeriesExpansion P.S * ((P.H : ℝ) + 1)|
-      ≤ (P.eps * Twin.truncSingularSeriesExpansion P.S) * ((P.H : ℝ) + 1) / 6
-
 /-- Arithmetic evaluation of the main-term major-arc model (conventional; singular series
-truncation).  Derived from `pinnedMajors_mainTerm_eval_expansion_raw` via the algebraic
-identity `truncSingularSeries_eq_expansion`. -/
-theorem pinnedMajors_mainTerm_eval_raw :
-  ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
-    |majMassMainTerm (sme := sme) X - SS * ((P.H : ℝ) + 1)|
-      ≤ (P.eps * SS) * ((P.H : ℝ) + 1) / 6 := by
-  intro X hX
-  have hExp :=
-    pinnedMajors_mainTerm_eval_expansion_raw (sme := sme) (X := X) hX
-  have hSS : Twin.truncSingularSeriesExpansion P.S = SS := by
-    -- purely algebraic: ∏_{p∈S} (1 - 1/(p-1)^2) expands over `S.powerset`
-    simpa [SS] using (Twin.truncSingularSeries_eq_expansion (S := P.S)).symm
-  -- rewrite the expansion back to `SS`
-  simpa [hSS] using hExp
+truncation).
 
-theorem pinnedMajors_eval_raw :
+Paper anchor: §14.2 “Pinned major arcs, and closing the gate”.
+-/
+class PinnedMajorsMainTermEval : Prop where
+  eval :
+    ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
+      |majMassMainTerm (sme := sme) X - SS * ((P.H : ℝ) + 1)|
+        ≤ (P.eps * SS) * ((P.H : ℝ) + 1) / 6
+
+theorem pinnedMajors_eval_raw
+    [PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
+    [PinnedMajorsMainTermEval (sme := sme)] :
   sme.X0 ≤ (P.X0 : ℝ) →
   ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
     |majMass (sme := sme) X - SS * ((P.H : ℝ) + 1)|
@@ -2833,7 +2751,7 @@ theorem pinnedMajors_eval_raw :
   have hSW : |majMass (sme := sme) X - majMassMainTerm (sme := sme) X| ≤ tailHalf := by
     simpa [tailHalf] using pinnedMajors_SW_error_raw (sme := sme) hsmeX0 (X := X) hX
   have hMT : |majMassMainTerm (sme := sme) X - main| ≤ tailHalf := by
-    simpa [main, tailHalf] using pinnedMajors_mainTerm_eval_raw (sme := sme) (X := X) hX
+    simpa [main, tailHalf] using PinnedMajorsMainTermEval.eval (sme := sme) (X := X) hX
   have hSplit :
       majMass (sme := sme) X - main
         = (majMass (sme := sme) X - majMassMainTerm (sme := sme) X)
@@ -2870,7 +2788,9 @@ theorem pinnedMajors_eval_raw :
     exact le_trans h1 (le_of_eq hTail)
   simpa [main] using this
 
-theorem pinnedMajors_lower_raw :
+theorem pinnedMajors_lower_raw
+    [PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
+    [PinnedMajorsMainTermEval (sme := sme)] :
   sme.X0 ≤ (P.X0 : ℝ) →
   ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
     majMass (sme := sme) X
@@ -2903,7 +2823,9 @@ theorem pinnedMajors_lower_raw :
   simpa [main, tail, mul_assoc, mul_comm, mul_left_comm, sub_eq_add_neg, add_assoc, add_comm,
     add_left_comm] using hfinal
 
-theorem h_lower (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ)) :
+theorem h_lower (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ))
+    [PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
+    [PinnedMajorsMainTermEval (sme := sme)] :
     Twin.MajorArc.MajorArcLower P (majMass (sme := sme)) := by
   refine ⟨?_⟩
   intro X hX
@@ -2912,12 +2834,16 @@ theorem h_lower (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ)) :
   linarith
 
 /-- Derived gate-on-window inequality from the two paper-facing major-arc obligations. -/
-theorem gate_onWindow (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ)) :
+theorem gate_onWindow (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ))
+    [PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
+    [PinnedMajorsMainTermEval (sme := sme)] :
     Twin.AnalyticCore.GateOnWindow P (emin (sme := sme)) eds :=
   Twin.MajorArc.gate_onWindow_of_majorArc (P := P) (emin := emin (sme := sme)) (eds := eds)
     (majMass := majMass (sme := sme)) (h_lower (sme := sme) hsmeX0) (h_transfer (sme := sme))
 
-theorem pinnedMajors_lower (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ)) :
+theorem pinnedMajors_lower (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ))
+    [PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
+    [PinnedMajorsMainTermEval (sme := sme)] :
   ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
     majMass (sme := sme) X
       ≥ (1 - P.eps) * SS * ((P.H : ℝ) + 1)

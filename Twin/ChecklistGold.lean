@@ -42,11 +42,8 @@ We follow the intended “analytic `majMass`” checklist route:
   `Twin.ChecklistAxioms.pinnedMajors_eval_raw` and `Twin.ChecklistAxioms.h_lower` are derived.
   `Twin.ChecklistAxioms.h_transfer` is proved from the analytic definitions of `emin/eds`.
 
-  On the desmoothing side, the `/3` budget is decomposed into:
-  - Fourier inversion + smooth/sharp window comparison: `dsFourierInv_sum_bigIcc_raw` (Fourier inversion budget)
-    and `dsFourierWindow_sum_bigIcc_raw` (the window-comparison budget),
-  - prime-power disposal: `dsPrimePower_sum_bigIcc_raw` (the window-summed prime-power budget),
-  and the combined `/3` inequality is derived by finitary triangle inequalities.
+  On the desmoothing side, we currently postulate the single window-summed `/3` budget
+  `dsMassAt_sum_bigIcc_raw` for the discrepancy `dsMassAt = |fullMassAt - localizedTwinMass|`.
 
 Paper anchor for `Twin.ChecklistAxioms.gate_onWindow` (equivalently, the derived `pinnedMajors_lower`):
   §14.2 “Pinned major arcs, and closing the gate”, combined with
@@ -68,7 +65,11 @@ def O
   (sme : Twin.MajorArc.SmoothMajorArcEstimate
     Twin.ChecklistTargets.A Twin.ChecklistTargets.B
     Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What)
-  (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ)) :
+  (hsmeX0 : sme.X0 ≤ (P.X0 : ℝ))
+  [DsFourierAtSumBudget] [DsPrimePowerAtSumBudget]
+  [MinorMassAtSqSumBudget (sme := sme)]
+  [PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
+  [PinnedMajorsMainTermEval (sme := sme)] :
   Twin.ChecklistTargets.ObligationsExplicit :=
 { sme := sme
 , emin := Twin.ChecklistAxioms.emin (sme := sme)
@@ -100,7 +101,11 @@ present to track the analytic model in the paper-facing interfaces. -/
 theorem twins_in_all_large_windows_of_sme
   (sme : Twin.MajorArc.SmoothMajorArcEstimate
     Twin.ChecklistTargets.A Twin.ChecklistTargets.B
-    Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What) :
+    Twin.ChecklistTargets.Lambda Twin.ChecklistTargets.Wwin Twin.ChecklistTargets.What)
+  [DsFourierAtSumBudget] [DsPrimePowerAtSumBudget]
+  [MinorMassAtSqSumBudget (sme := sme)]
+  [PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
+  [PinnedMajorsMainTermEval (sme := sme)] :
   sme.X0 ≤ (P.X0 : ℝ) →
     ∀ {X : ℕ}, P.X0 ≤ X → Twin.ExistsTwinInWindow X P.H :=
 by

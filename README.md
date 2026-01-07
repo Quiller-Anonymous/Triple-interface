@@ -18,9 +18,9 @@ Based on public domain paper at Zenodo, "Goldbach and the Triple Interface Metho
 ## Project status:
 1. Goldbach conjecture -- Current status: gold
 -- The default Lake target builds the full pipeline through the canonical (Tenor-aligned) parallel FunX track. The remaining assumptions are isolated as explicit axioms in `Goldbach/Cert/*` (see the transparency list below).
-2. Twin primes conjecture -- Current status: fool's gold
--- Analytic engine builds with its own explicit (paper-facing) axioms; it does **not** import or depend on Goldbach by default (see `Twin/AxiomAudit.lean`).
--- Optional Goldbach-side hook: `Goldbach/TwinGold.lean` consumes a `Twin.HasTwinTI` instance from `Goldbach/TwinInstance.lean` (currently reusing the Twin checklist axioms, so it introduces no *additional* axioms) and then calls the Twin pipeline; see `Goldbach/AxiomAuditTwinGold.lean`.
+2. Twin primes conjecture -- Current status: gold
+-- The Twin checklist pipeline builds end-to-end with a short list of explicitly stated conventional analytic axioms, all isolated in `Twin/ChecklistSme.lean` (see the transparency list in “TWIN PRIMES” below and `Twin/AxiomAudit.lean`).
+-- Goldbach-side hook: `Goldbach/TwinGold.lean` runs the Twin pipeline using a `Twin.HasTwinTI` instance from `Goldbach/TI/TwinInstance.lean`. The Goldbach TI placeholder exports (`Goldbach/TI/TwinTIObjects.lean`) are currently *derived from the Twin checklist*, so this introduces no additional axioms beyond `Twin/ChecklistSme.lean`; see `Goldbach/AxiomAuditTwinGold.lean`.
 3. The alt-zeta construct (nuanced primes detector) -- Current status: tin
 4. The Riemann hypothesis -- Current status: mud
 
@@ -103,11 +103,59 @@ i.e. analytic witness on the window + checked finite base implies Goldbach for a
 
 # TWIN PRIMES
 
-TBC
+## Twin pipeline: axioms / hypotheses (transparency list)
+
+This section lists the explicit `axiom`s currently used by the Twin “gold status” theorem (`Twin.Gold.twins_in_all_large_windows`) and by the Goldbach-side hook (`Goldbach.TwinGold.twins_in_all_large_windows_default`). All are intended to be conventional analytic inputs (textbook / future-Mathlib style) and are recorded centrally in `Twin/ChecklistSme.lean`.
+
+**Axioms currently used by the Twin pipeline (explicit `axiom`s)**
+- `Twin/ChecklistSme.lean:59` `instSW_bound` (smoothed major-arc Siegel–Walfisz estimate in the polylogarithmic major-arc range, used to build the frozen-model `SmoothMajorArcEstimate`).
+- `Twin/ChecklistSme.lean:88` `pinnedMajors_SW_error_envelope_budget` (numeric envelope budget ensuring the SW approximation error integrates into the pinned-major bookkeeping allowance).
+- `Twin/ChecklistSme.lean:102` `pinnedMajors_mainTerm_eval` (arithmetic evaluation of the pinned-major main term at the truncated singular series scale).
+- `Twin/ChecklistSme.lean:118` `minorMassAt_sq_sum_bigIcc_budget` (minor-arc L² square-sum budget feeding the `/9` CLS window allowance).
+- `Twin/ChecklistSme.lean:137` `dsFourierAt_sum_bigIcc_budget` (Fourier/smoothing half of the desmoothing discrepancy, `/6` budget).
+- `Twin/ChecklistSme.lean:143` `dsPrimePowerAt_sum_bigIcc_budget` (prime-power disposal half of the desmoothing discrepancy, `/6` budget).
 
 # ALT-ZETA
 
-TBC
+The Alt-Zeta project is an experimental “nuanced primes detector” / RH-adjacent limb.
+It is intended to consume ETI-style arithmetic provenance (pin level, variance scale,
+AO short-shift uniformity) exported from the Goldbach/Twin world and combine it with
+explicit-formula style analytic control in a way that can be wired into later RH work.
+
+## Intended shape (current scaffold)
+
+- Core objects: dyadic window + schedule + ledger (`AltZeta/Core.lean`), and ETI(E1–E3)
+  packaging (`AltZeta/ETI.lean`).
+- Barrier statement: a pure “contradiction engine” that turns a margin inequality at
+  some `x ∈ [X,2X]` plus an explicit-formula inequality at that same `x` into
+  “no off-line zero exists in the effective band” (`AltZeta/Barrier.lean`).
+- Explicit-formula interface: abstract kernel + band + “off-line zero witness” and a
+  generic `EFHypothesis` interface (`AltZeta/ExplicitFormula.lean`).
+- Goldbach/Twin bridge: canonical ETI export on the Goldbach side
+  (`Goldbach/ETIExport.lean`) and a downstream “toolkit bridge point” tying together
+  Goldbach ETI + Goldbach census certificates + Twin paper parameters
+  (`AltZeta/GoldbachTwinHook.lean`).
+
+## Build / status
+
+- Current status: tin (not continuously built / not stable yet).
+- AltZeta is a separate Lake library (`lakefile.lean`) and is not imported by
+  `All.lean`, so the default target does not exercise it.
+- To check it explicitly, use `lake build AltZeta`. (At time of writing, there are
+  known compilation issues in the AltZeta subtree that are being worked through.)
+
+## AltZeta: axioms / hypotheses (transparency list)
+
+This section lists only explicit `axiom`s currently present in `AltZeta/*` (and does
+not attempt to enumerate planned analytic inputs that are not yet represented).
+
+**Axioms currently used by the AltZeta scaffold (explicit `axiom`s)**
+- `AltZeta/EFSignWeights.lean:48` `fejer_explicit_formula_delta` (the Fejér-weighted
+  explicit-formula inequality supplying the barrier-facing δ bound).
+- `AltZeta/Analytic/MellinBridge.lean:19` `mellin_indicator` (formal Mellin inversion
+  kernel term for the Heaviside/log bridge).
+- `AltZeta/Analytic/MellinBridge.lean:24` `mellin_indicator_eval` (evaluation of the
+  Mellin indicator into a `0/1` outcome).
 
 ------------
 

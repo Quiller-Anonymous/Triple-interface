@@ -117,13 +117,14 @@ lemma census_validX : ValidX censusWindow censusX := by
 /-- Numeric inequality: the demonstrator inputs achieve a positive
 margin gap at `x = X`. This acts as the barrier witness that later proofs can
 specialize to. -/
-lemma census_barrier_holds : BarrierHolds censusInputs censusX := by
+lemma census_barrier_holds : BarrierHoldsOnInputs censusInputs censusX := by
   have hlt_exp : Real.exp (-1 : ℝ) < 1 := by
     simpa using (Real.exp_lt_exp.mpr (by norm_num : (-1 : ℝ) < 0))
   have hlt_scaled :
       (1 / 4 : ℝ) * Real.exp (-1) < (1 / 4 : ℝ) := by
     have hpos : 0 < (1 / 4 : ℝ) := by norm_num
-    exact (mul_lt_mul_of_pos_left hlt_exp hpos)
+    have h := mul_lt_mul_of_pos_left hlt_exp hpos
+    simpa [mul_one] using h
   have hsum_lt :
       (1 / 10 + 1 / 8 + (1 / 4 : ℝ) * Real.exp (-1))
         < (1 / 10 + 1 / 8 + 1 / 4) := by
@@ -147,25 +148,30 @@ lemma census_barrier_holds : BarrierHolds censusInputs censusX := by
         < 2 - (1 / 10 + 1 / 8 + (1 / 4 : ℝ) * Real.exp (-1)) :=
     lt_trans htarget hcore
   -- Wrap the inequality into the `BarrierHolds` predicate.
-  have hmax : max censusSchedule.H 1 = (4 : ℝ) := by simp [censusSchedule]
-  have hsqrt : Real.sqrt censusX = 2 := by
-    have : Real.sqrt (4 : ℝ) = 2 := by norm_num
-    simpa [censusX] using this
+  have hsqrt4 : Real.sqrt (4 : ℝ) = 2 := by norm_num
   have hrhs :
       censusCompletion.CGamma + Real.sqrt censusX * censusEnvelope.S_cert
         = (9 : ℝ) / 20 := by
-    simp [censusCompletion, censusEnvelope, hsqrt]
+    -- Unfold everything to a numeric statement and close with `norm_num`.
+    norm_num [censusCompletion, censusEnvelope, censusX_def, hsqrt4,
+      Goldbach.Census.CGamma, Goldbach.Census.S_cert]
   have hlhs :
       M_of censusInputs
         = 2 - (1 / 10 + 1 / 8 + (1 / 4 : ℝ) * Real.exp (-1)) := by
+    have hdiv : ((1 : ℝ) / 2) / (4 : ℝ) = (1 : ℝ) / 8 := by norm_num
+    have hmax : max censusSchedule.H 1 = (4 : ℝ) := by simp [censusSchedule]
+    -- Expand the ETI margin formula and simplify `C2 / max H 1` to `1/8`.
     simp [censusInputs, censusETI, censusLedger, censusSchedule, censusWindow,
-          M_of, ETI.margin, margin, hmax]
+      M_of, ETI.margin, margin, hdiv, hmax]
   have :
       censusCompletion.CGamma + Real.sqrt censusX * censusEnvelope.S_cert
         < M_of censusInputs := by
-    simpa [hrhs, hlhs]
-      using hgap
-  simpa [BarrierHolds, censusInputs] using this
+    have hgap1 :
+        censusCompletion.CGamma + Real.sqrt censusX * censusEnvelope.S_cert
+          < 2 - (1 / 10 + 1 / 8 + (1 / 4 : ℝ) * Real.exp (-1)) :=
+      lt_of_eq_of_lt hrhs hgap
+    exact lt_of_lt_of_eq hgap1 hlhs.symm
+  simpa [BarrierHoldsOnInputs, censusInputs] using this
 
 /-- Assemble the explicit-formula setup at the witness point. -/
 def censusSetup (K : AltZetaKernel) (band : SpectralBand) : EFSetup :=
