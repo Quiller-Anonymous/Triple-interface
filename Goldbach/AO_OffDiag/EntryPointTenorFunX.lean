@@ -38,14 +38,14 @@ Derived `sigma_tail_block` inequality for `sigmaHonest` from:
 the definitional tail identity and a Tenor-style truncation bound for `sigmaTail` on the window.
 -/
 theorem sigma_tail_block_sigmaHonest
-  (Q : ℕ → ℕ) (K_tail : ℝ)
+  (Q : ℕ → ℕ) (F : ℕ → ℝ) (K_tail : ℝ)
   (sigmaTail_bound_on_window :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ EvenIn X BankParams.H →
       |SigmaTailReindexFun.sigmaTail (Q X) N|
-        ≤ (K_tail : ℝ) / (Q X : ℝ))
+        ≤ (K_tail : ℝ) / (Q X : ℝ) * F N)
   {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ EvenIn X BankParams.H) :
   |sigmaHonest Q X N - TailBlockFun.sigma_trunc (Q X) N|
-    ≤ (K_tail : ℝ) / (Q X : ℝ) := by
+    ≤ (K_tail : ℝ) / (Q X : ℝ) * F N := by
   have h1 :
       |sigmaHonest Q X N - TailBlockFun.sigma_trunc (Q X) N|
         = |SigmaTailReindexFun.sigmaTail (Q X) N| := by
@@ -60,33 +60,26 @@ noncomputable def offDiagModel
   (Q : ℕ → ℕ)
   (Q_pos_on_window :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) → 1 ≤ Q X)
+  (F : ℕ → ℝ)
   (K_tail : ℝ)
   (sigmaTail_bound_on_window :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ EvenIn X BankParams.H →
       |SigmaTailReindexFun.sigmaTail (Q X) N|
-        ≤ (K_tail : ℝ) / (Q X : ℝ))
+        ≤ (K_tail : ℝ) / (Q X : ℝ) * F N)
   (K_tail_nonneg : 0 ≤ K_tail) :
   TailBlockFunX.Model where
   Q := Q
   Q_pos_on_window := Q_pos_on_window
   sigma := sigmaHonest Q
-  F := fun _ => (1 : ℝ)
+  F := F
   K_tail := K_tail
   K_tail_nonneg := K_tail_nonneg
-  F_ub := (1 : ℝ)
-  F_ub_nonneg := by norm_num
-  F_bound_on_window := by
-    intro X N hX hN
-    simp
   sigma_tail_block := by
     intro X N hX hN
     have h :=
-      sigma_tail_block_sigmaHonest (Q := Q) (K_tail := K_tail)
+      sigma_tail_block_sigmaHonest (Q := Q) (F := F) (K_tail := K_tail)
         (sigmaTail_bound_on_window := sigmaTail_bound_on_window) hX hN
-    -- Match the model shape `(K_tail/(Q X)) * F N` with `F N = 1`.
-    simpa using (show
-      |sigmaHonest Q X N - TailBlockFun.sigma_trunc (Q X) N|
-        ≤ (K_tail : ℝ) / (Q X : ℝ) * (1 : ℝ) from by simpa [mul_one] using h)
+    simpa using h
 
 end EntryPointTenorFunX
 

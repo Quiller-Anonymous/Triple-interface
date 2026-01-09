@@ -28,6 +28,7 @@ lemma K_tail_canon_nonneg : 0 ≤ K_tail_canon := by
 /-- Conventional input: a tail bound for the σ-series reindexed tail on the canonical window. -/
 axiom sigmaTail_bound_on_window
   {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X) (hN : N ∈ EvenIn X Goldbach.BankParams.H) :
-    |Goldbach.AO_OffDiag.SigmaTailReindex.sigmaTail N| ≤ K_tail_canon / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ)
+    |Goldbach.AO_OffDiag.SigmaTailReindex.sigmaTail N|
+      ≤ K_tail_canon / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ) * Goldbach.AO_OffDiag.TailBlock.F_block N
 
 end Goldbach.Cert.SigmaTailAxioms

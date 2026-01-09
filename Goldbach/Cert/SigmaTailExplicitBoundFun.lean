@@ -19,8 +19,29 @@ open scoped BigOperators
 open Goldbach.AO_OffDiag
 open Goldbach.AO_OffDiag.SigmaTailReindexFun
 
+/-!
+### The explicit ENNReal majorant
+
+We name the explicit finite divisor-sum majorant so downstream code can state “calibration”
+obligations without duplicating the expression.
+-/
+
 private noncomputable def a (r : ℕ) : ENNReal :=
   ENNReal.ofReal (((Nat.totient r : ℝ) ^ 2)⁻¹)
+
+/--
+Explicit ENNReal majorant for the reindexed tail majorant.
+
+This is exactly the right-hand side used in `reindexMajorantENN_le_explicit` and
+`sigmaTail_abs_le_explicit`.
+-/
+noncomputable def explicitMajorantENN (Q N : ℕ) : ENNReal :=
+  ((Nat.divisors N).filter Squarefree).sum (fun d =>
+    ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ *
+      (if h : 1 ≤ Q / d then
+        ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ))
+      else
+        ENNReal.ofReal (91 : ℝ)))
 
 private lemma inner_sum_R0_le_91 (N : ℕ) :
     (∑' r : ℕ,
@@ -131,12 +152,7 @@ and the Euler-tail constant `90` (with a safe `91` fallback when `Q/d = 0`).
 theorem reindexMajorantENN_le_explicit (Q N : ℕ) :
     reindexMajorantENN Q N
       ≤
-    ((Nat.divisors N).filter Squarefree).sum (fun d =>
-      ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ *
-        (if h : 1 ≤ Q / d then
-          ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ))
-        else
-          ENNReal.ofReal (91 : ℝ))) := by
+    explicitMajorantENN Q N := by
   classical
   unfold reindexMajorantENN
   refine Finset.sum_le_sum ?_
@@ -155,74 +171,39 @@ uniform `K_tail / Q`.
 theorem sigmaTail_abs_le_explicit (Q N : ℕ) (hN0 : N ≠ 0) :
     |sigmaTail Q N|
       ≤
-    (((Nat.divisors N).filter Squarefree).sum (fun d =>
-        ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ *
-          (if h : 1 ≤ Q / d then
-            ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ))
-          else
-            ENNReal.ofReal (91 : ℝ)))).toReal := by
+    (explicitMajorantENN Q N).toReal := by
   have h1 : |sigmaTail Q N| ≤ (reindexMajorantENN Q N).toReal :=
     tail_reindex_bound (Q := Q) (N := N) hN0
   have h2 :
       reindexMajorantENN Q N
-        ≤
-      ((Nat.divisors N).filter Squarefree).sum (fun d =>
-        ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ *
-          (if h : 1 ≤ Q / d then
-            ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ))
-          else
-            ENNReal.ofReal (91 : ℝ))) :=
+        ≤ explicitMajorantENN Q N :=
     reindexMajorantENN_le_explicit (Q := Q) (N := N)
   -- RHS is a finite sum of finite ENNReal terms, hence not `⊤`.
   have hRHS_ne_top :
-      ((Nat.divisors N).filter Squarefree).sum (fun d =>
-        ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ *
-          (if h : 1 ≤ Q / d then
-            ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ))
-          else
-            ENNReal.ofReal (91 : ℝ))) ≠ (⊤ : ENNReal) := by
+      explicitMajorantENN Q N ≠ (⊤ : ENNReal) := by
     classical
-    -- direct finset induction
-    refine Finset.induction_on ((Nat.divisors N).filter Squarefree) ?_ ?_
-    · simp
-    · intro d s hd_not_mem hs_ne_top
-      have hd_term_ne_top :
-          (ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ *
+    -- `explicitMajorantENN` is a finite sum of products of `ofReal` terms, so it is finite.
+    have :
+        (∑ d ∈ (Nat.divisors N).filter Squarefree,
+            ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ *
               (if h : 1 ≤ Q / d then
                 ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ))
               else
                 ENNReal.ofReal (91 : ℝ))) ≠ (⊤ : ENNReal) := by
-        -- `ofReal` terms are never `⊤`
-        have hleft : ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ ≠ (⊤ : ENNReal) := by simp
-        by_cases h : 1 ≤ Q / d
-        ·
-          have hright : ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ)) ≠ (⊤ : ENNReal) := by simp
-          simpa [h] using (ENNReal.mul_ne_top hleft hright)
-        ·
-          have hright : ENNReal.ofReal (91 : ℝ) ≠ (⊤ : ENNReal) := by simp
-          simpa [h] using (ENNReal.mul_ne_top hleft hright)
-      -- sum_insert and use `ENNReal.add_ne_top`
-      have hadd : (ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ *
-            (if h : 1 ≤ Q / d then
-              ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ))
-            else
-              ENNReal.ofReal (91 : ℝ)))
-          + (∑ x ∈ s,
-                ENNReal.ofReal ((Nat.totient x : ℝ))⁻¹ *
-                  (if h : 1 ≤ Q / x then
-                    ENNReal.ofReal ((90 : ℝ) / ((Q / x : ℕ) : ℝ))
-                  else
-                    ENNReal.ofReal (91 : ℝ))) ≠ (⊤ : ENNReal) :=
-        (ENNReal.add_ne_top).2 ⟨hd_term_ne_top, hs_ne_top⟩
-      simpa [Finset.sum_insert, hd_not_mem] using hadd
+      -- membership-sum finiteness reduces to finiteness of each term
+      refine (ENNReal.sum_ne_top).2 ?_
+      intro d hd
+      -- each summand is a product of finite `ofReal` values
+      have hleft : ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ ≠ (⊤ : ENNReal) := by simp
+      by_cases h : 1 ≤ Q / d
+      · have hright : ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ)) ≠ (⊤ : ENNReal) := by simp
+        simpa [h] using (ENNReal.mul_ne_top hleft hright)
+      · have hright : ENNReal.ofReal (91 : ℝ) ≠ (⊤ : ENNReal) := by simp
+        simpa [h] using (ENNReal.mul_ne_top hleft hright)
+    simpa [explicitMajorantENN] using this
   have h2' : (reindexMajorantENN Q N).toReal
       ≤
-    (((Nat.divisors N).filter Squarefree).sum (fun d =>
-        ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ *
-          (if h : 1 ≤ Q / d then
-            ENNReal.ofReal ((90 : ℝ) / ((Q / d : ℕ) : ℝ))
-          else
-            ENNReal.ofReal (91 : ℝ)))).toReal := by
+    (explicitMajorantENN Q N).toReal := by
     exact ENNReal.toReal_mono hRHS_ne_top h2
   exact le_trans h1 h2'
 

@@ -3,6 +3,7 @@ import Goldbach.AO_OffDiag.TailBlock
 import Goldbach.AO_OffDiag.SigmaTailEuler
 import Goldbach.AO_OffDiag.SigmaTailReindex
 import Goldbach.AO_OffDiag.SigmaTailTenorAxioms
+import Goldbach.Cert.OffDiagBudgetAxioms
 
 namespace Goldbach
 namespace AO_OffDiag
@@ -31,28 +32,20 @@ keep the rest of the off-diagonal pipeline axiom-free.
 /-!
 ## Model choice
 
-The “tenor” statement we aim to encode is a **uniform truncation** bound:
+The Tenor-style truncation bound carries the conventional arithmetic factor `F_block(N)`:
 
-`|σ(N) - σ_{≤Q}(N)| ≤ C/Q` with `C` independent of `N`.
+`|σ(N) - σ_{≤Q}(N)| ≤ (K_tail/Q) * F_block(N)`.
 
-So, for the current mainline pipeline, we set the auxiliary majorant factor `F` to be constant `1`
-and carry only the (conventional/analytic) constant `K_tail = 1.02`.
+To obtain a uniform numerical budget `≤ 3e-4` on the canonical window, we also need a
+project-specific on-window budget inequality (see `Goldbach/Cert/OffDiagBudgetAxioms.lean`).
 -/
 
 noncomputable def offDiagModel : TailBlock.Model where
   sigma := sigmaHonest
-  F := fun _ => (1 : ℝ)
+  F := TailBlock.F_block
 
   K_tail := (1.02 : ℝ)
   K_tail_nonneg := by norm_num
-
-  -- We keep `F_ub = 1` because `F` itself is the constant `1`.
-  F_ub := (1 : ℝ)
-  F_ub_nonneg := by norm_num
-
-  F_bound_on_window := by
-    intro X N hX hN
-    simp
 
   sigma_tail_block := by
     intro X N hX hN
@@ -60,26 +53,34 @@ noncomputable def offDiagModel : TailBlock.Model where
     have hdiff :
         sigmaHonest N - TailBlock.sigma_trunc_Q0 N = SigmaTailReindex.sigmaTail N := by
       simp [sigmaHonest, sub_eq_add_neg, add_assoc, add_comm]
-    have htail : |SigmaTailReindex.sigmaTail N| ≤ (1.02 : ℝ) / (TailBlock.Q0 : ℝ) :=
+    have htail :
+        |SigmaTailReindex.sigmaTail N|
+          ≤ (1.02 : ℝ) / (TailBlock.Q0 : ℝ) * TailBlock.F_block N :=
       sigmaTail_bound_on_window (X := X) (N := N) hX hN
-    have : |sigmaHonest N - TailBlock.sigma_trunc_Q0 N| ≤ (1.02 : ℝ) / (TailBlock.Q0 : ℝ) := by
+    have :
+        |sigmaHonest N - TailBlock.sigma_trunc_Q0 N|
+          ≤ (1.02 : ℝ) / (TailBlock.Q0 : ℝ) * TailBlock.F_block N := by
       simpa [hdiff] using htail
-    -- Match the model shape `(K_tail/Q0) * F N` with `F N = 1`.
-    simpa [TailBlock.Q0] using (show |sigmaHonest N - TailBlock.sigma_trunc_Q0 N|
-      ≤ (1.02 : ℝ) / (TailBlock.Q0 : ℝ) * (1 : ℝ) from by simpa [mul_one] using this)
+    simpa [TailBlock.Q0] using this
 
-lemma offDiag_budget_ok :
-  offDiagModel.K_tail / (Q0 : ℝ) * offDiagModel.F_ub ≤ (3e-4 : ℝ) := by
-  -- Pure arithmetic after unfolding the chosen constants.
-  simp [offDiagModel, TailBlock.Q0]
-  norm_num
+lemma offDiag_budget_ok {X N : ℕ}
+    (hX : BankParams.X0 ≤ X) (hN : N ∈ Windows.EvenIn X BankParams.H) :
+    (offDiagModel.K_tail : ℝ) / (Q0 : ℝ) * offDiagModel.F N ≤ (3e-4 : ℝ) := by
+  -- placeholder budget axiom (see `Goldbach/Cert/OffDiagBudgetAxioms.lean`)
+  have h :=
+    Goldbach.Cert.OffDiagBudgetAxioms.budget_ok_canon (X := X) (N := N) hX hN
+  simpa [offDiagModel, Goldbach.Cert.OffDiagBudgetAxioms.eps_canon, TailBlock.Q0] using h
 
 theorem tail_bound_on_window {X N : ℕ}
   (hX : BankParams.X0 ≤ X) (hN : N ∈ Windows.EvenIn X BankParams.H) :
   |sigmaHonest N - sigma_trunc_Q0 N| ≤ (3e-4 : ℝ) := by
   -- Consumer lemma: structural bound + numeric budget.
   simpa [offDiagModel] using
-    TailBlock.tail_bound_on_window (M := offDiagModel) (eps := (3e-4 : ℝ)) offDiag_budget_ok hX hN
+    TailBlock.tail_bound_on_window (M := offDiagModel) (eps := (3e-4 : ℝ))
+      (hbudget := by
+        intro X N hX hN
+        simpa [offDiagModel] using offDiag_budget_ok (X := X) (N := N) hX hN)
+      hX hN
 
 end AO_OffDiag
 end Goldbach

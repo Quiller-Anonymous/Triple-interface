@@ -18,7 +18,6 @@ import Mathlib.Data.Nat.Squarefree
   REFACTOR NOTE (2025-12):
   The `Model` is now purely structural:
     • it carries a tail constant `K_tail`,
-    • it carries a window bound constant `F_ub`,
     • the final numeric budget is proved separately.
 -/
 
@@ -236,49 +235,26 @@ structure Model where
   /-- Tail constant: analytic estimate produces `(K_tail/Q0) * F(N)`. -/
   K_tail : ℝ
   K_tail_nonneg : 0 ≤ K_tail
-  /-- A window bound constant for `F`, used only to derive a concrete numeric bound downstream. -/
-  F_ub : ℝ
-  F_ub_nonneg : 0 ≤ F_ub
-  /-- Uniform bound for `F` on the canonical window. -/
-  F_bound_on_window :
-    ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
-      F N ≤ F_ub
   /-- Tail comparison between `sigma` and the truncation. -/
   sigma_tail_block :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
       |sigma N - sigma_trunc_Q0 N| ≤ (K_tail : ℝ) / (Q0 : ℝ) * F N
 
-/-- Derived (still-structural) tail bound using the model's `F_ub`. -/
-theorem tail_bound_on_window_structural
-  (M : Model)
-  {X N : ℕ}
-  (hX : BankParams.X0 ≤ X)
-  (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
-  |M.sigma N - sigma_trunc_Q0 N| ≤ (M.K_tail : ℝ) / (Q0 : ℝ) * (M.F_ub : ℝ) := by
-  have h1 := M.sigma_tail_block (X:=X) (N:=N) hX hN
-  have hF := M.F_bound_on_window (X:=X) (N:=N) hX hN
-  have hQpos : (0 : ℝ) < (Q0 : ℝ) := by norm_num [Q0]
-  have hcoef_nonneg : 0 ≤ (M.K_tail : ℝ) / (Q0 : ℝ) :=
-    div_nonneg M.K_tail_nonneg (le_of_lt hQpos)
-  have h2 :
-      (M.K_tail : ℝ) / (Q0 : ℝ) * M.F N
-        ≤ (M.K_tail : ℝ) / (Q0 : ℝ) * (M.F_ub : ℝ) := by
-    exact mul_le_mul_of_nonneg_left hF hcoef_nonneg
-  exact h1.trans h2
-
 /--
-Numeric consumer lemma: if you have proved the arithmetic squeeze
-`(K_tail/Q0) * F_ub ≤ eps`, then you get the uniform tail bound `≤ eps`.
+Consumer lemma: if you have proved the pointwise budget squeeze
+`(K_tail/Q0) * F(N) ≤ eps` on the window, then you get the uniform tail bound `≤ eps`.
 -/
 theorem tail_bound_on_window
   (M : Model)
   (eps : ℝ)
-  (hbudget : (M.K_tail : ℝ) / (Q0 : ℝ) * (M.F_ub : ℝ) ≤ eps)
+  (hbudget :
+    ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ Goldbach.Windows.EvenIn X BankParams.H →
+      (M.K_tail : ℝ) / (Q0 : ℝ) * (M.F N) ≤ eps)
   {X N : ℕ}
   (hX : BankParams.X0 ≤ X)
   (hN : N ∈ Goldbach.Windows.EvenIn X BankParams.H) :
   |M.sigma N - sigma_trunc_Q0 N| ≤ eps := by
-  exact (tail_bound_on_window_structural (M := M) hX hN).trans hbudget
+  exact (M.sigma_tail_block (X := X) (N := N) hX hN).trans (hbudget hX hN)
 
 /-
   === Pure math lemmas (non-analytic) ===

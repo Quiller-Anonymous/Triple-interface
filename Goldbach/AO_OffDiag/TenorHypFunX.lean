@@ -24,6 +24,8 @@ open EntryPointTenorFunX
 structure OffDiagHyp where
   /-- Truncation height as a function of the scale. -/
   Q : ℕ → ℕ
+  /-- Majorant factor in the σ-tail bound. -/
+  F : ℕ → ℝ
   /-- Tail constant (analytic). -/
   K_tail : ℝ
   K_tail_nonneg : 0 ≤ K_tail
@@ -39,17 +41,19 @@ structure OffDiagHyp where
   sigmaTail_bound_on_window :
     ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
       |SigmaTailReindexFun.sigmaTail (Q X) N|
-        ≤ (K_tail : ℝ) / (Q X : ℝ)
+        ≤ (K_tail : ℝ) / (Q X : ℝ) * F N
 
-  /-- Numeric budget inequality on the window scales. -/
+  /-- Numeric budget inequality on the window. -/
   budget_ok :
-    ∀ {X : ℕ}, BankParams.X0 ≤ X → (K_tail : ℝ) / (Q X : ℝ) ≤ eps
+    ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ (Goldbach.Windows.EvenIn X BankParams.H) →
+      (K_tail : ℝ) / (Q X : ℝ) * F N ≤ eps
 
 /-- The induced `TailBlockFunX.Model` using the definitional `sigmaHonest`. -/
 noncomputable def model (H : OffDiagHyp) : TailBlockFunX.Model :=
   EntryPointTenorFunX.offDiagModel
     (Q := H.Q)
     (Q_pos_on_window := H.Q_pos_on_window)
+    (F := H.F)
     (K_tail := H.K_tail)
     (sigmaTail_bound_on_window := by
       intro X N hX hN
@@ -67,10 +71,9 @@ theorem tail_bound_on_window
   exact TailBlockFunX.tail_bound_on_window
     (M := model H) (eps := H.eps)
     (hbudget := by
-      intro X hX
-      -- `F_ub = 1` in the model, so the budget is `K_tail / Q ≤ eps`.
-      simpa [model, EntryPointTenorFunX.offDiagModel, mul_one] using
-        H.budget_ok (X := X) hX)
+      intro X N hX hN
+      simpa [model, EntryPointTenorFunX.offDiagModel] using
+        H.budget_ok (X := X) (N := N) hX hN)
     hX hN
 
 /-- Off-diagonal AO error term bound on the canonical window, in the bundled hypothesis form. -/
@@ -83,9 +86,9 @@ theorem E_off_bound
   exact Goldbach.AO_OffDiagFunX.E_off_bound
     (M := model H) (eps := H.eps) (eps_nonneg := H.eps_nonneg)
     (hbudget := by
-      intro X hX
-      simpa [model, EntryPointTenorFunX.offDiagModel, mul_one] using
-        H.budget_ok (X := X) hX)
+      intro X N hX hN
+      simpa [model, EntryPointTenorFunX.offDiagModel] using
+        H.budget_ok (X := X) (N := N) hX hN)
     hX hN
 
 end TenorHypFunX

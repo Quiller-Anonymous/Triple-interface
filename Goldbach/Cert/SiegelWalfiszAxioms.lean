@@ -23,7 +23,12 @@ namespace Goldbach.Cert.SiegelWalfisz
 
 noncomputable section
 
-private def ΛVM (n : ℕ) : ℝ :=
+/-!
+We expose `ΛVM` (von Mangoldt weight) as a named definition so downstream files can
+state and prove “partial summation” lemmas without duplicating the summand used by `psi`.
+-/
+
+noncomputable def ΛVM (n : ℕ) : ℝ :=
   (ArithmeticFunction.vonMangoldt n : ℝ)
 
 /-- Chebyshev `ψ(x; q, a)` with von Mangoldt weight, as a finite sum over `n ≤ x`. -/

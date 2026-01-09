@@ -31,7 +31,8 @@ theorem sigmaTailBoundOnWindow_of_reindexMajorant
     {Q : ℕ → ℕ} {K_tail : ℝ}
     (hmajorant :
       ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H → 1 ≤ Q X →
-        (reindexMajorantENN (Q X) N).toReal ≤ K_tail / (Q X : ℝ)) :
+        (reindexMajorantENN (Q X) N).toReal
+          ≤ K_tail / (Q X : ℝ) * Goldbach.AO_OffDiag.TailBlockFun.F_block N) :
     SigmaTailBoundOnWindow X0 H Q K_tail := by
   intro X N hX hN hQ
 
@@ -57,7 +58,8 @@ theorem sigmaTailBoundOnWindow_canon_of_reindexMajorant
     {Q : ℕ → ℕ} {K_tail : ℝ}
     (hmajorant :
       ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H → 1 ≤ Q X →
-        (reindexMajorantENN (Q X) N).toReal ≤ K_tail / (Q X : ℝ)) :
+        (reindexMajorantENN (Q X) N).toReal
+          ≤ K_tail / (Q X : ℝ) * Goldbach.AO_OffDiag.TailBlockFun.F_block N) :
     SigmaTailBoundOnWindow X0 H Q K_tail :=
   sigmaTailBoundOnWindow_of_reindexMajorant (X0 := X0) (H := H)
     (by norm_num [Goldbach.BankParams.X0]) hmajorant

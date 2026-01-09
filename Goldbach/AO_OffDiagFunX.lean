@@ -32,8 +32,8 @@ theorem E_off_bound
     (eps : ℝ)
     (eps_nonneg : 0 ≤ eps)
     (hbudget :
-      ∀ {X : ℕ}, BankParams.X0 ≤ X →
-        (M.K_tail : ℝ) / (M.Q X : ℝ) * (M.F_ub : ℝ) ≤ eps)
+      ∀ {X N : ℕ}, BankParams.X0 ≤ X → N ∈ Windows.EvenIn X BankParams.H →
+        (M.K_tail : ℝ) / (M.Q X : ℝ) * (M.F N) ≤ eps)
     {X N : ℕ}
     (hX : BankParams.X0 ≤ X)
     (hN : N ∈ Windows.EvenIn X BankParams.H) :
@@ -44,8 +44,8 @@ theorem E_off_bound
       |M.sigma X N - Goldbach.AO_OffDiag.TailBlockFun.sigma_trunc (M.Q X) N| ≤ eps :=
     Goldbach.AO_OffDiag.TailBlockFunX.tail_bound_on_window (M := M) (eps := eps)
       (hbudget := by
-        intro X hX
-        exact hbudget (X := X) hX)
+        intro X N hX hN
+        exact hbudget (X := X) (N := N) hX hN)
       hX hN
   calc
     |E_off M X N|

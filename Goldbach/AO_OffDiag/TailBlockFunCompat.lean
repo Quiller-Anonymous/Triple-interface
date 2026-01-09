@@ -22,11 +22,6 @@ noncomputable def model_to_fun (M : TailBlock.Model) : TailBlockFun.Model where
   F := M.F
   K_tail := M.K_tail
   K_tail_nonneg := M.K_tail_nonneg
-  F_ub := M.F_ub
-  F_ub_nonneg := M.F_ub_nonneg
-  F_bound_on_window := by
-    intro X N hX hN
-    exact M.F_bound_on_window (X := X) (N := N) hX hN
   sigma_tail_block := by
     intro X N hX hN
     simpa [TailBlockFun.constQ, sigma_trunc_constQ0] using M.sigma_tail_block (X := X) (N := N) hX hN

@@ -49,7 +49,34 @@ theorem sigmaTailBoundOnWindow_canon_of_calibration
   have h0 := h.bound (X := X) (N := N) hX hN hQ
   have h1 : h.K_tail / (Q X : ℝ) ≤ K_tail_canon / (Q X : ℝ) :=
     div_le_div_of_nonneg_right h.cal hQ0
-  exact le_trans h0 h1
+  have hF_nonneg : 0 ≤ Goldbach.AO_OffDiag.TailBlockFun.F_block N := by
+    classical
+    unfold Goldbach.AO_OffDiag.TailBlockFun.F_block
+    refine Finset.prod_nonneg ?_
+    intro p _hp
+    -- The Euler factors are nonnegative for all `p : ℕ` (including `p=0,1`).
+    cases p with
+    | zero =>
+        norm_num
+    | succ p =>
+        cases p with
+        | zero =>
+            norm_num
+        | succ p =>
+            have hden_nonneg : 0 ≤ (Nat.succ (Nat.succ p) : ℝ) - 1 := by
+              have hnat : (1 : ℕ) ≤ Nat.succ (Nat.succ p) :=
+                Nat.succ_le_succ (Nat.zero_le (Nat.succ p))
+              have : (1 : ℝ) ≤ (Nat.succ (Nat.succ p) : ℝ) := by
+                exact_mod_cast hnat
+              exact sub_nonneg.mpr this
+            have hterm_nonneg :
+                0 ≤ (1 : ℝ) / ((Nat.succ (Nat.succ p) : ℝ) - 1) :=
+              div_nonneg (by norm_num) hden_nonneg
+            nlinarith
+  have h2 :
+      h.K_tail / (Q X : ℝ) * Goldbach.AO_OffDiag.TailBlockFun.F_block N
+        ≤ K_tail_canon / (Q X : ℝ) * Goldbach.AO_OffDiag.TailBlockFun.F_block N :=
+    mul_le_mul_of_nonneg_right h1 hF_nonneg
+  exact le_trans h0 h2
 
 end Goldbach.Cert.SigmaTailCalibrationFun
-

@@ -24,7 +24,8 @@ open TailBlock
 /-- Conventional input: a tail bound for the σ-series reindexed tail on the canonical window. -/
 theorem sigmaTail_bound_on_window
   {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ EvenIn X BankParams.H) :
-    |SigmaTailReindex.sigmaTail N| ≤ Goldbach.Cert.SigmaTailAxioms.K_tail_canon / (TailBlock.Q0 : ℝ) :=
+    |SigmaTailReindex.sigmaTail N|
+      ≤ Goldbach.Cert.SigmaTailAxioms.K_tail_canon / (TailBlock.Q0 : ℝ) * TailBlock.F_block N :=
   Goldbach.Cert.SigmaTailAxioms.sigmaTail_bound_on_window (X := X) (N := N) hX hN
 
 end AO_OffDiag
