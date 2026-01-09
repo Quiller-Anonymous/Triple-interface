@@ -43,33 +43,23 @@ lemma e_eq_fourier_one (x : ℝ) :
 
 lemma integral_fourier_eq_zero {n : ℤ} (hn : n ≠ 0) :
     (∫ t : UC, (fourier (T := (1 : ℝ)) n t : ℂ) ∂μ) = 0 := by
-  -- Use orthogonality of the Fourier monomials in `L²(AddCircle 1)`.
-  have hn' : (-n : ℤ) ≠ 0 := neg_ne_zero.mpr hn
+  -- Use orthogonality of the Fourier monomials in `L²(AddCircle 1)` (paired with `fourier 0 = 1`).
   have horth := (orthonormal_fourier (T := (1 : ℝ)))
+  have h0n : (0 : ℤ) ≠ n := by
+    simpa [eq_comm] using hn
   have hinner :
-      ⟪fourierLp (T := (1 : ℝ)) (p := (2 : ℝ≥0∞)) (-n),
-          fourierLp (T := (1 : ℝ)) (p := (2 : ℝ≥0∞)) (0 : ℤ)⟫_ℂ = 0 := by
-    simpa [hn'] using horth (-n) (0 : ℤ)
+      inner (fourierLp (T := (1 : ℝ)) 2 (0 : ℤ)) (fourierLp (T := (1 : ℝ)) 2 n) = 0 := by
+    simpa [h0n] using horth (0 : ℤ) n
 
-  -- Unfold `fourierLp` to `toLp` and rewrite the `L²` inner product as an integral.
   have hinner' :
-      ⟪toLp (E := ℂ) (p := (2 : ℝ≥0∞)) μ ℂ (fourier (T := (1 : ℝ)) (-n)),
-          toLp (E := ℂ) (p := (2 : ℝ≥0∞)) μ ℂ (fourier (T := (1 : ℝ)) (0 : ℤ))⟫_ℂ = 0 := by
-    simpa [fourierLp, μ] using hinner
-  -- `ContinuousMap.inner_toLp` gives the integral formula for this inner product.
-  rw [ContinuousMap.inner_toLp μ (fourier (T := (1 : ℝ)) (-n)) (fourier (T := (1 : ℝ)) (0 : ℤ))] at hinner'
+      inner
+          (toLp (E := ℂ) (p := (2 : ℝ≥0∞)) μ ℂ (fourier (T := (1 : ℝ)) (0 : ℤ)))
+          (toLp (E := ℂ) (p := (2 : ℝ≥0∞)) μ ℂ (fourier (T := (1 : ℝ)) n)) = 0 := by
+    simpa [AddCircle.fourierLp, μ] using hinner
 
-  have hconj : ∀ t : UC,
-      Complex.conj (fourier (T := (1 : ℝ)) (-n) t) = fourier (T := (1 : ℝ)) n t := by
-    intro t
-    have hneg :
-        fourier (T := (1 : ℝ)) (-n) t = Complex.conj (fourier (T := (1 : ℝ)) n t) := by
-      simpa using (fourier_neg (T := (1 : ℝ)) (n := n) (x := t))
-    -- take conjugates
-    simpa using congrArg Complex.conj hneg
-
-  -- Simplify `fourier 0 = 1` and the conjugation identity.
-  simpa [fourier_zero, hconj, μ] using hinner'
+  -- Rewrite the `L²` inner product as an integral and simplify.
+  rw [ContinuousMap.inner_toLp μ (fourier (T := (1 : ℝ)) (0 : ℤ)) (fourier (T := (1 : ℝ)) n)] at hinner'
+  simpa [fourier_zero, μ] using hinner'
 
 lemma integral_fourier (n : ℤ) :
     (∫ t : UC, (fourier (T := (1 : ℝ)) n t : ℂ) ∂μ) = if n = 0 then 1 else 0 := by
