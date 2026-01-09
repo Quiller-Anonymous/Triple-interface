@@ -211,6 +211,11 @@ The following “orthodox” sub-results are now present as proved theorems (no 
   - `Goldbach/Cert/MajorArcStep6SquareApprox.lean`:
     `Goldbach.Cert.MajorArcStep6SquareApprox.norm_expSum_sq_sub_muMainTerm_sq_le_of_PsiBound`
     (algebraic upgrade from Step 5 to control `‖S(α)^2 - M(α)^2‖` in terms of `‖S(α)-M(α)‖`).
+- **Step 7 (Fourier orthogonality on `AddCircle 1`):**
+  - `Goldbach/Cert/MajorArcStep7FourierOrthogonality.lean`:
+    `Goldbach.Cert.MajorArcStep7FourierOrthogonality.integral_fourier_eq_zero`
+    (Haar integral of a nontrivial Fourier character is `0`, used to enforce additive constraints via
+    Fourier inversion / orthogonality).
 
 This is the right “next layer” of algebra/analytic bookkeeping to eventually derive a full
 `MajorArcPowerSaving` theorem from `siegelWalfisz_psi`; it does not yet produce the windowed

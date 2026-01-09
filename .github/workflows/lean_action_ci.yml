@@ -1,25 +1,7 @@
 name: Lean CI
 
 on:
-  push:
-    # Optional but HIGH impact: avoid running CI when only non-build files change.
-    # Tune this list to your repo.
-    paths:
-      - "**/*.lean"
-      - "lakefile.lean"
-      - "lake-manifest.json"
-      - ".github/workflows/**"
-      - "lean-toolchain"
-  pull_request:
-    paths:
-      - "**/*.lean"
-      - "lakefile.lean"
-      - "lake-manifest.json"
-      - ".github/workflows/**"
-      - "lean-toolchain"
-  schedule:
-    # Nightly finite-base chunk build (chunks only; full pipeline is dispatch-only).
-    - cron: "0 6 * * *"
+  # Depot-only mode: avoid consuming GitHub Actions minutes by running automatically.
   workflow_dispatch:
     inputs:
       build_finite_base:

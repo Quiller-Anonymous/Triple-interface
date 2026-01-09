@@ -1,4 +1,5 @@
 # Lake/Lean build artefacts
+.lake/
 .lake/build/
 .lake/packages/
 *.olean
@@ -9,6 +10,9 @@
 *.hash
 *.dynlib
 *.dylib
+
+# CI-local staging (never commit)
+.ci-cache/
 
 
 
