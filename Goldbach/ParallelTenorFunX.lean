@@ -21,8 +21,9 @@ abbrev H : ℕ := BankParams.H
 abbrev S : ℝ := (1.0 : ℝ)
 abbrev ε : ℝ := (0.01 : ℝ)
 
-/-- The natural closure constant for this instantiation: `c₀ := cAO(caps Hoff) = σ₀ − δAO(caps Hoff)`. -/
-noncomputable def c0 (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp) : ℝ :=
+/-- The natural closure constant for this instantiation: `c₀ := cAO(caps Hoff) = σmin − δAO(caps Hoff)`. -/
+noncomputable def c0 [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
+    (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp) : ℝ :=
   Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff)
 
 noncomputable abbrev M (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp) (X N : ℕ) : ℝ :=
@@ -181,6 +182,7 @@ theorem bank_cert_bound_funX [InnerSwapOnWindow]
 
 noncomputable def globalClosure_funX [InnerSwapOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
+    [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     (hεlt : ε < c0 Hoff)
     [Goldbach.BG_Calib.WeightsBridgeHyp]
     (hBudget :
@@ -216,6 +218,7 @@ noncomputable def globalClosure_funX [InnerSwapOnWindow]
 
 noncomputable def witness_funX [InnerSwapOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
+    [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     (hεlt : ε < c0 Hoff)
     [Goldbach.BG_Calib.WeightsBridgeHyp]
     (hBudget :

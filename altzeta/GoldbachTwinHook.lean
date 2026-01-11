@@ -11,6 +11,8 @@ namespace Instances
 
 open Real
 
+variable [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
+
 /-!
 AltZeta/GoldbachTwinHook.lean
 =============================

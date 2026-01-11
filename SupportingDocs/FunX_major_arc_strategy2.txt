@@ -10,10 +10,16 @@ In the FunX (variable-Q) Goldbach track, the pipeline needs an “inner swap on 
 
 for `X0 ≤ X` and `N ∈ EvenIn X H`.
 
-This is currently supplied by:
+This is currently supplied (pipeline-facing) by:
 
   `Goldbach/AO_MajorSwapTenorAxiomsFunX.lean`:
-    `axiom goldbach_major_arc_eval_on_window_canon`.
+    `theorem goldbach_major_arc_eval_on_window_canon`.
+
+This theorem is *not* an axiom: it is a consequence of the project-specific calibration datum
+`Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean`:
+  `axiom canonCalibration : Goldbach.Cert.MajorArcCalibrationFunX.CanonicalCalibration`,
+via the specialization lemma
+`Goldbach/Cert/MajorArcCalibrationFunX.lean` `major_arc_eval_on_window_canon_of_calibration`.
 
 We also introduced an orthodox (PNT-in-AP / Siegel–Walfisz) scaffold:
 
@@ -22,7 +28,7 @@ We also introduced an orthodox (PNT-in-AP / Siegel–Walfisz) scaffold:
 
 Strategy 1 is to *derive* the project’s major-arc bound from `siegelWalfisz_psi` plus a long chain
 of conventional Fourier/character manipulations (and then remove
-`goldbach_major_arc_eval_on_window_canon`).
+the remaining calibration/certificate boundary).
 
 Strategy 2 is the pragmatic fallback when strategy 1 is too large to formalize in the current
 refactor: we replace the project-specific major-arc axiom by a more orthodox, general “smoothed
@@ -75,8 +81,8 @@ How strategy 2 integrates with the current codebase
 1) Keep `Goldbach/Cert/SiegelWalfiszAxioms.lean` as the *eventual* orthodox input, but do not
    require it for the pipeline to run.
 
-2) Replace `Goldbach/AO_MajorSwapTenorAxiomsFunX.lean`’s current axiom by the more orthodox axiom
-   above (or move it to a new file `Goldbach/Cert/MajorArcAxioms.lean`).
+2) Keep the pinned-window boundary isolated as a single calibration datum:
+   `Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean` `canonCalibration`.
 
 3) Prove the *project-specific* `InnerSwapOnWindow` instance by:
    - unfolding `RΛ_bank := conv_ref` and `RΛ_model := conv_ref_const`, and
@@ -124,4 +130,3 @@ Pointers to current code that already supports strategy 2
 - `Goldbach/AO_MajorSwapTenorAxiomsFunX.lean`:
   currently provides the `InnerSwapOnWindow` instance for the FunX track; this is exactly the
   location to swap in the strategy-2 axiom statement while keeping downstream wiring unchanged.
-

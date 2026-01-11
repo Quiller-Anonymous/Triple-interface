@@ -2,63 +2,43 @@
 
 ## The Issue
 
-When analyzing the σ-tail bound:
-```
-|sigmaTail (Q X) N| ≤ K_tail_canon / (Q X)
-```
+When analyzing σ-tail bounds, it’s easy to misread where the numeric constants are coming from.
+In particular, the number `90` shows up in the repo and can look like a “main term” constant if you
+read it out of context.
 
-With `K_tail_canon = 1.02`, it’s easy to get confused by the appearance of the number `90`
-in the current proofs. This note clarifies what `90` means and what the *real* blocker is.
+Historically, there was also discussion of a tiny pinned uniform constant for the σ-tail. That
+route has been abandoned: the canonical FunX pipeline uses a conservative proved bound instead.
 
 ## What the `90` actually is
 
-The lemma `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean` proves an **upper bound**:
+The lemma `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean` proves a **purely auxiliary** upper
+bound:
 
 - `∑_{r>R} 1/φ(r)² ≤ 90/R`.
 
-This is not an exact evaluation, and it is not a lower bound. It is just a (currently crude)
-global constant that makes the inequality easy to close.
+This is not an evaluation, and it is not a lower bound. It is a global constant that makes the
+inequality easy to close.
 
-So statements like “the `d = 1` term contributes exactly `90/Q`” are incorrect: `90/Q` is only an
-upper bound produced by this lemma.
+So statements like “the `d = 1` term contributes exactly `90/Q`” are incorrect: `90/R` is only an
+upper bound produced by that lemma.
 
-## Possible Resolutions
+## How this `90` is used in the current pipeline
 
-### The real blocker: uniformity in `N`
+In the canonical FunX σ-tail route, the `90/R` bound is pushed through reindexing/majorization and
+then converted into a crude real bound of the form
 
-What we currently have (proved, axiom-free) is an explicit **finite-sum majorant** for
-`|sigmaTail Q N|`:
+```
+|sigmaTail Q N| ≤ (180 / Q) * N^2
+```
 
-- `Goldbach/Cert/SigmaTailExplicitBoundFun.lean` proves an explicit bound in terms of a divisor sum
-  over squarefree divisors `d ∣ N`.
+under mild side conditions (notably `N ≤ Q` and `N ≠ 0`).
 
-This is valuable, but it does **not** yet imply the project’s uniform axiom
-`|sigmaTail (Q X) N| ≤ 1.02 / (Q X)` because:
+This is implemented in `Goldbach/Cert/SigmaTailRealBoundFun.lean`, and then used in the canonical
+off-diagonal hypothesis wiring in `Goldbach/AO_OffDiag/TenorHypFunX_Canon.lean` with a growing
+truncation schedule `Q(X) = max Q0 (X^3)` and a proved numeric budget lemma.
 
-- the explicit majorant depends on the arithmetic of `N`, and
-- bounding that majorant uniformly for all `N` by a single small constant is not something the
-  current proof path establishes.
+## Takeaway
 
-In other words: the gap is not “a missing normalization factor”; the gap is that we have an
-absolute-value majorant, while the intended axiom is a uniform-in-`N` truncation statement for the
-**signed** tail.
-
-## Action Items
-
-1. Decide whether the intended σ-tail statement is truly uniform in `N` (as the current axiom is).
-2. If yes: switch proof strategy toward an Euler-product truncation bound for the signed σ-tail
-   (not an absolute-value majorant).
-3. If no: weaken/reformulate the axiom to match what the current majorant machinery can support.
-
-## Current Status
-
-`Goldbach/Cert/SigmaTailProof.lean` is now a short checkpoint file exposing the proved explicit
-majorant with a stable name (no sorries/axioms).
-
-## Recommendation
-
-Treat the σ-tail constant as **not yet justified** under the current proof path, and proceed by:
-
-- keeping the axiom (for now) as a conventional analytic assumption, and
-- using the explicit majorant as a diagnostic tool while developing a genuinely uniform bound for
-  the signed tail.
+- `90/R` is an auxiliary Euler-tail bound constant, not a “σ constant”.
+- The canonical pipeline does not rely on any tiny pinned σ-tail constant; it uses a conservative
+  proved bound.

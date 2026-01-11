@@ -16,7 +16,13 @@ Legend for **Status**:
 
 - **Statement needed**: for `X ≥ X0`, `N ∈ EvenIn X H`,
   `|RΛ_smooth X N - RΛ_model X N| ≤ δ_major_canon`.
-- **Currently**: an axiom `Goldbach/Cert/MajorArcCanonCert.lean` `major_arc_eval_on_window_canon`.
+- **Currently**: exposed in the canonical FunX track as the hypothesis
+  `Goldbach.ParallelTenorFunX.InnerSwapOnWindow`. An optional pinned/certificate boundary still
+  exists:
+  `Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean` supplies
+  `canonCalibration : Goldbach.Cert.MajorArcCalibrationFunX.CanonicalCalibration`, and this can be
+  used (via the calibration API) to *supply* `InnerSwapOnWindow` if one accepts a pinned/cert-style
+  axiom boundary.
 - **Status**: cert-needed.
 
 ### A2. The pinned cap `δ_major_canon`
@@ -39,8 +45,10 @@ Legend for **Status**:
 ### A4. Conventional major-arc “power saving” constants
 
 - **Interface**: `Goldbach/Cert/MajorArcAxiomsFunX.lean` `MajorArcPowerSavingOnWindow`.
-- **Status**: conventional axiom interface exists, but not usable for a pinned cap without explicit
-  `(A, C)` data.
+- **Status**: interface exists, but not usable for a pinned cap without explicit `(A, C)` data.
+  The *axiom boundary* for a future “power saving” theorem has been moved out of the main
+  `Goldbach.GoldFunX` import graph to keep the build axiom-free:
+  `Goldbach/Cert/MajorArcPowerSavingSpec.lean`.
 - **What must be figured out**: choose `A_major` and an explicit numeric `C_major` that is justified
   (paper or certificate), then prove the calibration inequality
   `C_major/(log X)^A_major ≤ δ_major_canon` for all `X ≥ X0` (worst-case at `X0`).
@@ -49,31 +57,32 @@ Legend for **Status**:
 
 ### B1. Uniform truncation bound on the window (Fun track)
 
-- **Statement needed**: for `X ≥ X0`, `N ∈ EvenIn X H`, `1 ≤ Q X`,
-  `|SigmaTailReindexFun.sigmaTail (Q X) N| ≤ K_tail_canon / (Q X)`.
-- **Currently**: an axiom `Goldbach/Cert/SigmaTailAxiomsFun.lean` `sigmaTail_bound_on_window`.
-- **Status**: lean-ready for the *reduction* and for an explicit majorant, but the uniform constant is unknown.
-  - Axiom-free reindexing bound exists:
-    `Goldbach/AO_OffDiag/SigmaTailReindexFun.lean` `tail_reindex_bound`.
+- **Canonical status**: proved and wired (not a blocker).
   - Axiom-free explicit finite-sum majorant exists:
     `Goldbach/Cert/SigmaTailExplicitBoundFun.lean` `sigmaTail_abs_le_explicit`.
-  - Note: the current explicit majorant depends on `N` (divisor sum), so it does not by itself imply a
-    uniform-in-`N` constant like `1.02` without additional structure/cancellation.
+  - Axiom-free crude real bound exists:
+    `Goldbach/Cert/SigmaTailRealBoundFun.lean` `sigmaTail_abs_le_180_div_Q_mul_N_sq`.
+  - Canonical growing truncation schedule + proved budget lemma:
+    `Goldbach/Cert/OffDiagBudgetAxiomsFun.lean` (`Qfun_canon`, `budget_ok_canon`), wired via
+    `Goldbach/AO_OffDiag/TenorHypFunX_Canon.lean`.
+  - `Goldbach/Cert/SigmaTailAxiomsFun.lean` remains as a *specification layer* for a more
+    conventional Tenor-shaped statement, but it is not in the dependency chain for
+    `Goldbach.goldbach_funX_canon` (check via `Goldbach/AxiomAuditGold.lean`).
+- **Status**: proved (canonical); optional tightening remains.
 
 ### B2. The pinned tail constant `K_tail_canon`
 
-- **Definition**: `Goldbach/Cert/SigmaTailAxiomsFun.lean` `K_tail_canon := 1.02`.
-- **Status**: unknown (needs a real derivation).
-- **Hard requirement**: show the majorant bound yields `K_tail ≤ 1.02` (or revise the pinned
-  constant and downstream budgets).
+- **Canonical value used**: `K_tail = 180` (see `Goldbach/Cert/OffDiagBudgetAxiomsFun.lean`).
+- **Status**: proved-to-suffice for the canonical window (via the budget proof).
 
 ### B3. Where the proof is expected to come from
 
 - `Goldbach/AO_OffDiag/SigmaTailReindexFun.lean` already proves
   `|sigmaTail Q N| ≤ (reindexMajorantENN Q N).toReal`.
-- Remaining work: bound `reindexMajorantENN Q N` by `K/Q` *uniformly in `N`*.
-- `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean` currently has very crude global bounds
-  (e.g. `Cstar ≤ 45`) that are likely too weak; tightening this is the main “constants” task.
+- Canonical closure route: bound the explicit majorant by `≤ (180/Q) * N^2` under `N ≤ Q`, then
+  choose a growing `Q(X)` so the windowed numeric budget closes.
+- Optional tightening route: improve the `N^2` factor/constant to something closer to Tenor-style
+  `F_block(N)` bounds, if later needed.
 
 ## C) Other pinned numeric parameters (not axioms, but track for integrity)
 
@@ -85,7 +94,7 @@ inequalities), but they are still “project constants” whose provenance shoul
 - `Goldbach/BankParams.lean:9` `X0 := 10^6` — **Status**: chosen (canonical window lower bound)
 - `Goldbach/BankParams.lean:10` `H := 10^4` — **Status**: chosen (canonical window half-width)
 - `Goldbach/BG_Calib.lean:523` `δAO_canon := 6/1000` — **Status**: chosen (proved arithmetic usage)
-- `Goldbach/BG_Calib.lean:525` `Mswap_canon := 18/10000` — **Status**: chosen (major-arc/inner-swap cap; still needs analytic justification to discharge the pinned major-arc axiom)
+- `Goldbach/BG_Calib.lean:525` `Mswap_canon := 18/10000` — **Status**: chosen (major-arc/inner-swap cap; still needs analytic justification to discharge the major-arc/inner-swap hypothesis)
 - `Goldbach/BG_Calib.lean:527` `Cpp_canon := 80` — **Status**: chosen (used in bridge budget; the underlying prime-power bound is handled elsewhere)
 - `Goldbach/BG_Calib.lean:529` `ρ_canon := 1/25` — **Status**: chosen (contamination weight cap)
 - `Goldbach/BG_Calib.lean:532` `δTI_canon` — **Status**: proved (closed-form tent tail constant)

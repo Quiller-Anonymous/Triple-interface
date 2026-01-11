@@ -8,11 +8,17 @@ This file is part of the “hard step” refactor plan: we want the major-arc as
 FunX track to be expressible as orthodox, textbook-style analytic statements, and to keep all
 project-specific bookkeeping as proved lemmas.
 
-The *current* pipeline still consumes the pinned canonical bound
-`Goldbach.Cert.MajorArcAxiomsFunX.major_arc_eval_on_window_canon` (see
-`Goldbach/Cert/MajorArcCanonCert.lean`). This file is preparatory: it
-packages the more orthodox assumptions we aim to use to *derive* that pinned bound (after a
-separate numerical calibration step).
+The *current* pipeline still consumes a pinned canonical bound, but it is now funneled through the
+calibration interface: `Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean` supplies a single
+project-specific datum `canonCalibration`, and
+`Goldbach/Cert/MajorArcCalibrationFunX.lean` specializes it to the pinned cap `δ_major_canon`.
+Downstream, the FunX track uses
+`Goldbach/AO_MajorSwapTenorAxiomsFunX.lean` `goldbach_major_arc_eval_on_window_canon`, proved from
+that calibration datum.
+
+This file is preparatory: it packages the more orthodox assumptions we aim to use to *derive* the
+needed power-saving bound (and then a numerical calibration), eventually eliminating the remaining
+project-specific boundary.
 
 No project-specific numerical constants are introduced here.
 -/

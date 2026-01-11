@@ -3,7 +3,7 @@ import Goldbach.CoreTypes
 import Goldbach.AnalyticPointwiseFunCompat
 import Goldbach.FinalFun
 import Goldbach.ParallelTenorFunX
-import Goldbach.AO_SigmaPos   -- provides the canonical `SigmaUpperOnWindow` instance
+import Goldbach.AO_SigmaPos
 import Goldbach.AO_OffDiag.TenorHypFunX_Canon
 import Goldbach.BG_CalibBridgeStub
 
@@ -20,6 +20,7 @@ witness produced by `ParallelTenorFunX` to a constant-`H` `PointwiseWitnessFun`.
 -/
 theorem goldbach_from_tenorFunX_fun
     [Goldbach.AO_SigmaPos.SigmaUpperOnWindow]
+    [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     [Goldbach.ParallelTenorFunX.InnerSwapOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
     (hεlt : (0.01 : ℝ) <
@@ -50,12 +51,14 @@ theorem goldbach_from_tenorFunX_fun
   exact goldbach_final_fun (w := wFun) (hBase := hBase') (N := n) hn h4
 
 /--
-Convenience wrapper using the canonical σ-upper certificate. It exposes only the
-remaining external hypotheses (`OffDiagHyp`, the budget split, `WeightsBridgeHyp`,
-and the finite base) while relying on the default `SigmaUpperOnWindow` instance
-from `AO_SigmaPos`.
+ Convenience wrapper using typeclass inference for the σ-bounds.
+
+ `AO_SigmaPos.SigmaUpperOnWindow` / `AO_SigmaPos.SigmaLowerOnWindow` are treated as external
+ certificates (or conventional-math inputs), so this wrapper is only a small ergonomic shim.
 -/
 theorem goldbach_from_tenorFunX_fun_canon
+    [Goldbach.AO_SigmaPos.SigmaUpperOnWindow]
+    [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
     (hεlt : (0.01 : ℝ) <
       Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff))
@@ -87,6 +90,7 @@ attempt to prove the numeric global budget `hBudget`; it simply fixes `Hoff`.
 
 theorem goldbach_from_tenorFunX_fun_autoHoff
     [Goldbach.AO_SigmaPos.SigmaUpperOnWindow]
+    [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     [Goldbach.ParallelTenorFunX.InnerSwapOnWindow]
     (hεlt : (0.01 : ℝ) <
       Goldbach.AO_Major.cAO

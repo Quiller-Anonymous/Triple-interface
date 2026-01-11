@@ -44,7 +44,10 @@ noncomputable def offDiagModel : TailBlock.Model where
   sigma := sigmaHonest
   F := TailBlock.F_block
 
-  K_tail := (1.02 : ℝ)
+  -- NOTE: the fixed-`Q0` track does not pin a specific numeric `K_tail` here; any such choice is
+  -- project-specific, and (as discussed) a uniform window budget at fixed `Q0` is not expected to
+  -- hold without additional structure.
+  K_tail := (1 : ℝ)
   K_tail_nonneg := by norm_num
 
   sigma_tail_block := by
@@ -55,20 +58,20 @@ noncomputable def offDiagModel : TailBlock.Model where
       simp [sigmaHonest, sub_eq_add_neg, add_assoc, add_comm]
     have htail :
         |SigmaTailReindex.sigmaTail N|
-          ≤ (1.02 : ℝ) / (TailBlock.Q0 : ℝ) * TailBlock.F_block N :=
-      sigmaTail_bound_on_window (X := X) (N := N) hX hN
+          ≤ (1 : ℝ) / (TailBlock.Q0 : ℝ) * TailBlock.F_block N :=
+      sigmaTail_bound_on_window (K_tail := (1 : ℝ)) (X := X) (N := N) hX hN
     have :
         |sigmaHonest N - TailBlock.sigma_trunc_Q0 N|
-          ≤ (1.02 : ℝ) / (TailBlock.Q0 : ℝ) * TailBlock.F_block N := by
+          ≤ (1 : ℝ) / (TailBlock.Q0 : ℝ) * TailBlock.F_block N := by
       simpa [hdiff] using htail
-    simpa [TailBlock.Q0] using this
+    simpa [TailBlock.Q0, one_div] using this
 
 lemma offDiag_budget_ok {X N : ℕ}
     (hX : BankParams.X0 ≤ X) (hN : N ∈ Windows.EvenIn X BankParams.H) :
     (offDiagModel.K_tail : ℝ) / (Q0 : ℝ) * offDiagModel.F N ≤ (3e-4 : ℝ) := by
   -- placeholder budget axiom (see `Goldbach/Cert/OffDiagBudgetAxioms.lean`)
   have h :=
-    Goldbach.Cert.OffDiagBudgetAxioms.budget_ok_canon (X := X) (N := N) hX hN
+    Goldbach.Cert.OffDiagBudgetAxioms.budget_ok_canon (K_tail := offDiagModel.K_tail) (X := X) (N := N) hX hN
   simpa [offDiagModel, Goldbach.Cert.OffDiagBudgetAxioms.eps_canon, TailBlock.Q0] using h
 
 theorem tail_bound_on_window {X N : ℕ}

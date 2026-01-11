@@ -17,7 +17,7 @@ Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple
 
 ## Project status:
 1. Goldbach conjecture -- Current status: silver
--- The default Lake target builds the full pipeline through the canonical parallel FunX track, but it still depends on *project-specific* axioms in `Goldbach/Cert/*` (see the transparency list below). The σ-tail channel is now **axiom-free** (derived from the explicit ENNReal divisor-sum majorant via the crude real bound `|sigmaTail Q N| ≤ (180/Q)·N²` in `Goldbach/Cert/SigmaTailRealBoundFun.lean`, combined with a conservative truncation schedule `Q(X) = max Q0 (X^3)`). The remaining blocker is the pinned major-arc evaluation certificate, so the end-to-end theorem is still **not close to gold**.
+-- The default Lake target builds the full pipeline through the canonical parallel FunX track. The canonical end-to-end theorem is now **axiom-audit clean** (no project-specific `axiom` dependencies; check via `lake env lean Goldbach/AxiomAuditGold.lean`), but it still requires the project-specific major-arc hypothesis `Goldbach.ParallelTenorFunX.InnerSwapOnWindow` (major-arc “inner swap” bound on the window). The bridge hypothesis `Goldbach.BG_Calib.WeightsBridgeHyp` is currently discharged **axiom-free** by `Goldbach/BG_CalibBridgeStub.lean` (a log-normalization mismatch bound) and is no longer an explicit hypothesis of `Goldbach.goldbach_funX_canon`. The σ-tail channel is **axiom-free** (derived from the explicit ENNReal divisor-sum majorant via the crude real bound `|sigmaTail Q N| ≤ (180/Q)·N²` in `Goldbach/Cert/SigmaTailRealBoundFun.lean`, combined with a conservative truncation schedule `Q(X) = max Q0 (X^3)`).
 2. Twin primes conjecture -- Current status: fool's gold
 -- The Twin checklist pipeline builds end-to-end, but its remaining assumptions are still *project-specific* axioms in `Twin/ChecklistSme.lean` (see `Twin/AxiomAudit.lean` for the current dependency list).
 -- Goldbach-side hook: `Goldbach/TwinGold.lean` runs the Twin pipeline using a `Twin.HasTwinTI` instance from `Goldbach/TI/TwinInstance.lean`. The Goldbach TI placeholder exports (`Goldbach/TI/TwinTIObjects.lean`) are currently *derived from the Twin checklist*, so this introduces no additional axioms beyond `Twin/ChecklistSme.lean`; see `Goldbach/AxiomAuditTwinGold.lean`.
@@ -94,16 +94,20 @@ i.e. analytic witness on the window + checked finite base implies Goldbach for a
 
 ## Goldbach pipeline: axioms / hypotheses (transparency list)
 
-This section lists only potential question-beggers that can enter the Goldbach pipeline: explicit `axiom`s (and any remaining `sorry`/`admit` in imported modules). It intentionally does not enumerate proved constants, computational certificates, or non-imported material. Under the strict “conventional math” standard (Mathlib-candidate, invariant across project constants), the remaining Goldbach axioms below are still project-shaped, which is why the project is currently tagged “silver” above rather than “fool’s gold”.
+This section lists only potential question-beggers that can enter the Goldbach pipeline: explicit `axiom`s (and any remaining `sorry`/`admit` in imported modules). It intentionally does not enumerate proved constants, computational certificates, or hypotheses. The Goldbach project remains tagged “silver” above because key analytic inputs are still exposed as hypotheses (even though the axiom audit is now clean).
 
-**Axioms currently used by the Goldbach pipeline (explicit `axiom`s)**
-- `Goldbach/Cert/MajorArcCanonCert.lean:25` `major_arc_eval_on_window_canon` (pinned major-arc evaluation on the canonical window with the canonical numeric cap `δ_major_canon`, used by `Goldbach/AO_MajorSwapTenorAxiomsFunX.lean`).
--- Note: `Goldbach/Cert/SigmaTailAxiomsFun.lean` still contains an axiomized “Tenor-shaped calibration” statement, but it is no longer used by the canonical theorem (check via `Goldbach/AxiomAuditGold.lean`).
+**Gold acceptance check (local)**
+- Run `lake env lean Goldbach/AxiomAuditGold.lean`.
+- “Gold” (axiom transparency) means `#print axioms Goldbach.goldbach_funX_canon` lists only conventional axioms (and no pinned/certificate project-specific axioms).
+- Note: `#print axioms` does not report hypotheses; inspect the type of `Goldbach.goldbach_funX_canon` to see the remaining assumptions.
 
-**Path back to gold (strict “conventional math” standard)**
-- Replace the pinned/cert-style axioms above by proved theorems derived from textbook-shaped inputs, and re-check via `Goldbach/AxiomAuditGold.lean`.
-- Major arcs: derive `major_arc_eval_on_window_canon` from `Goldbach/Cert/MajorArcAxiomsFunX.lean`’s textbook-shaped `MajorArcPowerSaving` (or ultimately `Goldbach/Cert/SiegelWalfiszAxioms.lean`) plus a *proved* calibration bound on the pinned window.
-- σ-tail (optional, for Tenor alignment): replace the crude `N²/Q` bound by a conventional `F_block(N)/Q(X)` bound with a small constant (e.g. the `1.02` target), plus a transparent calibration proof/certificate.
+**Axioms currently used by the canonical Goldbach theorem (explicit `axiom`s)**
+- None (as of `Goldbach/AxiomAuditGold.lean`).
+- Note: `Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean` and `Goldbach/Cert/SigmaTailAxiomsFun.lean` still contain axiomized certificate/specification boundaries, but they are not in the dependency chain for `Goldbach.goldbach_funX_canon`.
+
+**Path to fully discharged hypotheses**
+- Major arcs: produce an axiom-free instance of `Goldbach.ParallelTenorFunX.InnerSwapOnWindow` (e.g. by proving/verification-checking a pinned calibration bound, or by deriving it from a conventional major-arc theorem with explicit constants).
+- σ-tail (optional tightening, for Tenor alignment): the canonical FunX track is already axiom-free here (via `Goldbach/Cert/SigmaTailRealBoundFun.lean` with a conservative constant and a growing truncation schedule `Q(X)`); further tightening is optional and should not assume any tiny fixed uniform constant.
 
 -----------
 

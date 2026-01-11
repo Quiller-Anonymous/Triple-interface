@@ -58,23 +58,37 @@ theorem canon_normalization
   simp only [MPDF, win, dif_pos, mul_div_assoc']
   exact (mul_div_cancel₀ _ hne).symm
 
-/-- Calibrated AO constant, parameterized by caps: `cAO K := σ₀ − δAO K`. -/
-noncomputable def cAO (K : Caps) : ℝ := sigma0 - δAO K
+/-!
+AO ledger constant.
+
+The lower bound on the σ-model on the canonical window is treated as an explicit input
+(`AO_SigmaPos.SigmaLowerOnWindow`), and `cAO` packages the resulting “σ minus envelope” constant.
+-/
+
+/-- Calibrated AO constant: `cAO(K) := σmin − δAO(K)`. -/
+noncomputable def cAO (K : Caps) [AO_SigmaPos.SigmaLowerOnWindow] : ℝ :=
+  AO_SigmaPos.SigmaLowerOnWindow.σmin - δAO K
 
 /-- From `|errAO| ≤ δAO K` we get `-δAO K ≤ errAO`. -/
 lemma errAO_lower_of_bound {X N : ℕ} {K : Caps}
   (h : |errAO X N| ≤ δAO K) : -(δAO K) ≤ errAO X N :=
   (abs_le.mp h).1
 
-/-- Ledger lower bound from σ-positivity + error envelope. -/
+/-- Ledger lower bound from a σ-lower bound + error envelope. -/
 lemma ledger_lower_from_sigma_and_error
-  (C : Channels) (K : Caps) [Decomposition C] [Bounds C K]
+  (C : Channels) (K : Caps) [Decomposition C] [Bounds C K] [AO_SigmaPos.SigmaLowerOnWindow]
   {X N : ℕ} (hX : (10^6 : ℕ) ≤ X) (hN : N ∈ EvenIn X (10^4))
-  (hσ : Goldbach.AO_Core.sigma N ≥ sigma0) (herr : |errAO X N| ≤ δAO K) :
-  Goldbach.AO_Core.Mcanon N ≥ sigma0 - δAO K := by
+  (herr : |errAO X N| ≤ δAO K) :
+  Goldbach.AO_Core.Mcanon N ≥ cAO K := by
   have hexp := ao_expansion (X:=X) (N:=N) hX hN
   have hW : weight_mass X = (1 : ℝ) := by simp [Goldbach.AO_Major.weight_mass]
   have herr_lo : -(δAO K) ≤ errAO X N := errAO_lower_of_bound herr
+  have hσ : AO_SigmaPos.SigmaLowerOnWindow.σmin ≤ Goldbach.AO_Core.sigma N := by
+    -- `SigmaLowerOnWindow` is stated on the canonical window `(X0,H) = (10^6,10^4)`.
+    have hX' : Goldbach.BankParams.X0 ≤ X := by simpa [Goldbach.BankParams.X0] using hX
+    have hN' : N ∈ EvenIn X Goldbach.BankParams.H := by simpa [Goldbach.BankParams.H] using hN
+    simpa [AO_SigmaPos.sigma] using
+      (AO_SigmaPos.SigmaLowerOnWindow.sigma_even_lb_on_window (X := X) (N := N) hX' hN')
   calc
     Goldbach.AO_Core.Mcanon N
         = Goldbach.AO_Core.sigma N * weight_mass X + errAO X N := by simpa using hexp
@@ -82,7 +96,8 @@ lemma ledger_lower_from_sigma_and_error
     _   = Goldbach.AO_Core.sigma N + errAO X N                := by simp
     _   ≥ Goldbach.AO_Core.sigma N + (-(δAO K))                := add_le_add_left herr_lo _
     _   = Goldbach.AO_Core.sigma N - δAO K                    := by simp [sub_eq_add_neg, add_assoc]
-    _   ≥ sigma0 - δAO K                                      := sub_le_sub_right hσ _
+    _   ≥ AO_SigmaPos.SigmaLowerOnWindow.σmin - δAO K          := sub_le_sub_right hσ _
+    _   = cAO K := by simp [cAO, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
 
 /-- If `Mcanon N ≥ c` on a window, then `MPDF X N ≥ c/(log X)^2`. -/
 lemma pdf_lower_from_ledger_lower
@@ -100,30 +115,16 @@ lemma pdf_lower_from_ledger_lower
   simp only [MPDF, win, dif_pos]
   exact hdiv
 
-/-- **Ledger AO lower bound** on the window, parameterized by channels/caps. -/
+-- The windowed AO ledger lower bound is obtained by combining:
+-- - the σ-lower input (`SigmaLowerOnWindow`), and
+-- - the envelope bound `|errAO| ≤ δAO(K)`.
 theorem ao_ledger_lower
-  (C : Channels) (K : Caps) [Decomposition C] [Bounds C K] :
+  (C : Channels) (K : Caps) [Decomposition C] [Bounds C K] [AO_SigmaPos.SigmaLowerOnWindow] :
   ∀ {X N}, (10^6 : ℕ) ≤ X → N ∈ EvenIn X (10^4) →
     Goldbach.AO_Core.Mcanon N ≥ cAO K := by
   intro X N hX hN
-  have hσ : Goldbach.AO_Core.sigma N ≥ sigma0 := by
-    simpa using (AO_SigmaPos.sigma_even_lb_on_window (X:=X) (N:=N) hX hN)
   have herr : |errAO X N| ≤ δAO K :=
     Goldbach.AO_AssembleEnvelope.errAO_bound (C:=C) (K:=K) hX hN
-  have hledger :=
-    ledger_lower_from_sigma_and_error (C:=C) (K:=K) (X:=X) (N:=N) hX hN hσ herr
-  simpa [cAO] using hledger
-
-/-- Bridge-ready AO major bound on the window (ledger scale), parameterized. -/
-theorem major_lb_window
-  (C : Channels) (K : Caps) [Decomposition C] [Bounds C K]
-  (hc0 : (0.05 : ℝ) ≤ cAO K) :
-  ∀ {X N}, (10^6 : ℕ) ≤ X → N ∈ EvenIn X (10^4) →
-    Goldbach.AO_Core.Mcanon N ≥ (0.05 : ℝ) * (1.0 : ℝ) := by
-  intro X N hX hN
-  have h := ao_ledger_lower (C:=C) (K:=K) (X:=X) (N:=N) hX hN
-  have hone : (1.0 : ℝ) = 1 := by norm_num
-  have : (0.05 : ℝ) * (1.0 : ℝ) ≤ cAO K := by simpa [hone] using hc0
-  exact le_trans this h
+  exact ledger_lower_from_sigma_and_error (C := C) (K := K) (X := X) (N := N) hX hN herr
 
 end Goldbach.AO_Major

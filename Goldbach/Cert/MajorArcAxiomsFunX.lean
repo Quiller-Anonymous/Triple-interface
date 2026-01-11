@@ -45,6 +45,16 @@ noncomputable def RΛ_smooth (X N : ℕ) : ℝ :=
            then Goldbach.BG_Identity.K_full (↑n - (↑N - ↑n) : ℤ)
            else 0)
 
+/-
+Normalization warning.
+
+`RΛ_smooth` includes the global factor `(1/800) * (log N)^{-2}` coming from the BG payload.
+The σ-model `Goldbach.AO_SigmaModel.sigma` is defined independently (and may omit decaying-in-`N`
+normalizations). When closing the pipeline, any mismatch between the payload normalization and the
+chosen σ-model must be handled explicitly (e.g. by adjusting the model term or by accounting for
+the normalization in the admissible error budget).
+-/
+
 noncomputable abbrev RΛ_model (X N : ℕ) : ℝ :=
   Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X
 
@@ -104,45 +114,15 @@ lemma majorArcBound_canon_of_calibration
   exact le_trans (hmajor hX hN) (hcal hX)
 
 /-!
-Major-arc evaluation for the banked (smoothed) Goldbach correlation functional, on the canonical
-window, with the canonical numerical cap.
+Major-arc evaluation interfaces.
 
-This is intended to correspond to the standard Siegel–Walfisz/major-arc output in the literature:
-the smoothed von Mangoldt correlation is approximated by a singular-series constant times a smooth
-mass, uniformly on the window.
+This file defines the *objects* (`RΛ_smooth`, `RΛ_model`, `δ_major_canon`) and the textbook-shaped
+proposition `MajorArcPowerSavingOnWindow`.
+
+To keep the main build axiom-free, any *axiom boundary* for major arcs (e.g. a conventional
+power-saving theorem treated as an external input) lives in a separate file:
+`Goldbach/Cert/MajorArcPowerSavingSpec.lean`.
 -/
--- NOTE: the pipeline currently uses a *pinned, numeric* major-arc cap on the canonical window.
--- That project-specific certificate/axiom lives in `Goldbach/Cert/MajorArcCanonCert.lean`.
-
-/--
-Textbook-facing major-arc input (hard step target): power saving in `log X`.
-
-This is the single “orthodox” major-arc assumption we aim to keep long-term: it does *not* name
-project-specific numerical constants. The pinned canonical cap `δ_major_canon` is meant to be a
-downstream calibration corollary of this statement (once a concrete `C(A)` is fixed or bounded).
--/
-axiom majorArc_powerSaving : MajorArcPowerSaving
-
-/--
-Major-arc evaluation in a more orthodox “saving with exponent” form.
-
-This is meant as the *textbook-facing* shape: for every exponent `A` there is a constant `C(A)`
-such that the normalized smoothed correlation is approximated by the singular-series model with
-error `O_A(1 / (log X)^A)` uniformly on the canonical window.
-
-This axiom is currently unused by the pipeline; it exists to make the intended refinement path
-clear (eventually: prove this from `SiegelWalfisz_psi`-type input, then derive a numerical
-specialization like `major_arc_eval_on_window_canon` via calibration bounds).
--/
-theorem major_arc_eval_on_window :
-  ∀ A : ℕ, ∃ C : ℝ, 0 ≤ C ∧
-    ∀ {X N : ℕ},
-      X0 ≤ X → N ∈ EvenIn X H →
-        |RΛ_smooth X N - RΛ_model X N| ≤ C / (Real.log (X : ℝ)) ^ A := by
-  simpa [MajorArcPowerSaving, MajorArcBound] using majorArc_powerSaving
-
-lemma majorArcPowerSaving_of_axiom : MajorArcPowerSaving :=
-  majorArc_powerSaving
 
 lemma majorArcBound_of_powerSaving (A : ℕ) (h : MajorArcPowerSaving) :
     ∃ C : ℝ, 0 ≤ C ∧ MajorArcBound (fun X => C / (Real.log (X : ℝ)) ^ A) :=

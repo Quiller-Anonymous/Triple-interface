@@ -12,12 +12,19 @@ left as an `axiom`.
 ## 0. Current blockers (objective)
 
 As of `Goldbach/AxiomAuditGold.lean`, the canonical theorem `Goldbach.goldbach_funX_canon` depends
-on exactly two non-core axioms:
+on **no** non-core axioms (its axiom audit is clean).
 
-1) `Goldbach/Cert/MajorArcCanonCert.lean` — `major_arc_eval_on_window_canon`
-2) `Goldbach/Cert/SigmaTailAxiomsFun.lean` — `sigmaTail_bound_on_window`
+However, it still requires a project-specific **hypothesis**:
 
-Everything else in the end-to-end build is already proved (plus core classical axioms).
+1) `Goldbach.ParallelTenorFunX.InnerSwapOnWindow` (the pinned-window “inner swap” / major-arc bound)
+
+An optional pinned/certificate boundary still exists as an axiomized datum:
+`Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean` — `canonCalibration`, which can be used to
+*supply* `InnerSwapOnWindow` (but is not imported by the canonical endpoint).
+
+The σ-tail channel is already axiom-free in the canonical FunX pipeline (via the explicit majorant
+route and a conservative `Q(X)` schedule); the only remaining “gold” blocker is major-arc
+calibration.
 
 ## 1. What “figuring out the constants” means
 
@@ -31,17 +38,16 @@ Concretely:
 
 - Major arcs: replace “error ≤ δ_major_canon” (pinned) by “error ≤ C/(log X)^A” (conventional),
   then prove a numeric inequality `C/(log X)^A ≤ δ_major_canon` on the pinned window scales.
-- σ-tail: replace “tail ≤ 1.02/Q” (pinned constant) by a derived bound of the form
-  “tail ≤ K/Q” where `K` is **computed/justified** (not postulated), and only then set
-  `K_tail_canon := 1.02` (or update it if the derivation forces a larger value).
+- σ-tail (optional tightening): if we ever need a sharper Tenor-shaped bound, it should be derived
+  with an explicitly justified constant `K_tail` (not a tiny pinned number assumed on all windows).
 
 ## 2. Major arc constants (δ_major_canon / Mswap_canon)
 
 ### 2.1. What we need (pipeline-facing goal)
 
-We need to prove the pinned statement currently axiomatized as:
+We need to prove the pinned statement currently supplied via the calibration datum:
 
-`major_arc_eval_on_window_canon`:
+`canonCalibration : CanonicalCalibration`, which yields
 `|RΛ_smooth X N - RΛ_model X N| ≤ δ_major_canon` for `X ≥ X0` and `N ∈ EvenIn X H`.
 
 Here `δ_major_canon` is definitional (see `Goldbach/Cert/MajorArcAxiomsFunX.lean`), ultimately
@@ -81,51 +87,26 @@ That is the integrity-critical step: we cannot “calibrate” against an existe
 Deliverable: a new file (planned) `Goldbach/Cert/MajorArcCanonProof.lean` proving the pinned bound
 as a theorem from (i) a conventional major-arc statement + (ii) a proved calibration lemma.
 
-## 3. σ-tail constants (K_tail_canon = 1.02)
+## 3. σ-tail status (canonical pipeline)
 
-### 3.1. What we need (pipeline-facing goal)
+### 3.1. Status (canonical pipeline)
 
-We need a uniform tail bound of the form:
+The canonical FunX pipeline already uses an axiom-free σ-tail route:
 
-`|SigmaTailReindexFun.sigmaTail (Q X) N| ≤ K_tail_canon / (Q X)`
+- proved explicit majorant (`Goldbach/Cert/SigmaTailExplicitBoundFun.lean`),
+- crude real bound derived from it (`Goldbach/Cert/SigmaTailRealBoundFun.lean`),
+- growing truncation schedule `Q(X) = max Q0 (X^3)` and proved window budget lemma
+  (`Goldbach/Cert/OffDiagBudgetAxiomsFun.lean`),
+- wiring into the off-diagonal hypothesis (`Goldbach/AO_OffDiag/TenorHypFunX_Canon.lean`).
 
-uniformly for `X ≥ X0`, `N ∈ EvenIn X H`, with the current pinned constant
-`K_tail_canon := 1.02` (`Goldbach/Cert/SigmaTailAxiomsFun.lean`).
+So σ-tail is no longer a blocker for “gold” in the canonical theorem.
 
-### 3.2. What the code already proves
+### 3.2. Optional future tightening (not required)
 
-`Goldbach/AO_OffDiag/SigmaTailReindexFun.lean` already proves a reindexing reduction:
-
-`|sigmaTail Q N| ≤ (reindexMajorantENN Q N).toReal`.
-
-So the remaining work is *purely*: bound the majorant by `K/Q` with an explicit `K`.
-
-### 3.3. The constant-finding task
-
-We need an explicit upper bound on the Euler-product-style majorant, strong enough that:
-
-- the resulting `K` is small enough to keep the off-diagonal budget viable (for canon: roughly
-  `K ≤ 9` if `Q0 = 30000` and `eps = 3e-4`), and
-- ideally matches the currently pinned `1.02` (or else we revise the pinned constant and budgets
-  honestly).
-
-The file `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean` contains an **extremely crude** bound
-(`Cstar ≤ 45`) used to get `90/R` bounds; this is not compatible with small `K` and must be
-tightened or replaced by a sharper argument/certificate.
-
-### 3.4. Practical workflow
-
-1) Identify the exact majorant expression we need to bound (in Lean, not on paper).
-2) Strengthen the analytic bound:
-   - replace “`Cstar ≤ exp(3) < 45`” by a bound obtained from a finite prime product up to `B`,
-     times a rigorously bounded tail (log/exp comparison), to get a much smaller numeric constant.
-3) Propagate that sharper constant through the reindexing inequalities to produce an explicit `K`.
-4) Decide:
-   - if `K ≤ 1.02`: keep `K_tail_canon = 1.02` and prove the axiom statement as a theorem;
-   - if `K > 1.02`: update `K_tail_canon` and then re-check the downstream numeric budgets.
-
-Deliverable: a new file (planned) `Goldbach/Cert/SigmaTailCanonProof.lean` proving the tail bound
-as a theorem with an explicit computed constant.
+If Tenor alignment eventually needs a more conventional bound of the form
+`(K_tail/Q(X)) * F_block(N)` with smaller constants, the existing explicit-majorant infrastructure
+is the right starting point. This is not currently in the dependency chain for the canonical
+Goldbach theorem.
 
 ## 4. Stop conditions / integrity checks
 
@@ -135,4 +116,3 @@ as a theorem with an explicit computed constant.
 - Every pinned numeric inequality should be backed by either:
   - a Lean proof from monotonicity + arithmetic bounds, or
   - a checkable certificate whose verification is a Lean theorem (not an `axiom`).
-

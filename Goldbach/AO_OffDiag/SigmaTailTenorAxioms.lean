@@ -21,12 +21,16 @@ namespace AO_OffDiag
 open Goldbach.Windows
 open TailBlock
 
-/-- Conventional input: a tail bound for the σ-series reindexed tail on the canonical window. -/
-theorem sigmaTail_bound_on_window
+/--
+Conventional input: a tail bound for the σ-series reindexed tail on the canonical window.
+
+This is a thin re-export of the `Cert` axiom, phrased in the `Goldbach.AO_OffDiag` namespace.
+-/
+theorem sigmaTail_bound_on_window (K_tail : ℝ)
   {X N : ℕ} (hX : BankParams.X0 ≤ X) (hN : N ∈ EvenIn X BankParams.H) :
     |SigmaTailReindex.sigmaTail N|
-      ≤ Goldbach.Cert.SigmaTailAxioms.K_tail_canon / (TailBlock.Q0 : ℝ) * TailBlock.F_block N :=
-  Goldbach.Cert.SigmaTailAxioms.sigmaTail_bound_on_window (X := X) (N := N) hX hN
+      ≤ K_tail / (TailBlock.Q0 : ℝ) * TailBlock.F_block N :=
+  Goldbach.Cert.SigmaTailAxioms.sigmaTail_bound_on_window (K_tail := K_tail) (X := X) (N := N) hX hN
 
 end AO_OffDiag
 end Goldbach

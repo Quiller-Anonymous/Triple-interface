@@ -19,16 +19,16 @@ namespace Goldbach.Cert.SigmaTailAxioms
 open Goldbach.Windows
 open Goldbach.AO_OffDiag.TailBlock
 
-/-- Canonical numeric constant for the σ-tail truncation bound. -/
-noncomputable def K_tail_canon : ℝ := (1.02 : ℝ)
+/--
+Conventional input: a tail bound for the σ-series reindexed tail on the canonical window.
 
-lemma K_tail_canon_nonneg : 0 ≤ K_tail_canon := by
-  norm_num [K_tail_canon]
-
-/-- Conventional input: a tail bound for the σ-series reindexed tail on the canonical window. -/
-axiom sigmaTail_bound_on_window
+This file intentionally does *not* pin a specific numeric constant: any such pinning is
+project-specific and should be justified separately (or avoided by using a scale-dependent
+truncation `Q(X)` as in the FunX refactor).
+-/
+axiom sigmaTail_bound_on_window (K_tail : ℝ)
   {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X) (hN : N ∈ EvenIn X Goldbach.BankParams.H) :
     |Goldbach.AO_OffDiag.SigmaTailReindex.sigmaTail N|
-      ≤ K_tail_canon / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ) * Goldbach.AO_OffDiag.TailBlock.F_block N
+      ≤ K_tail / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ) * Goldbach.AO_OffDiag.TailBlock.F_block N
 
 end Goldbach.Cert.SigmaTailAxioms

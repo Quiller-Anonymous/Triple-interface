@@ -3,7 +3,8 @@ import Goldbach.Windows
 import Goldbach.BG_Identity
 import Goldbach.BG_Calib
 import Goldbach.ParallelTenorFunX
-import Goldbach.Cert.MajorArcCanonCert
+import Goldbach.Cert.MajorArcCanonCalibrationFromPinned
+import Goldbach.Cert.MajorArcCalibrationFunX
 import Goldbach.AO_MajorSwapBookkeeping
 
 /-!
@@ -54,9 +55,11 @@ theorem goldbach_major_arc_eval_on_window_canon :
       |RΛ_bank X N - RΛ_model X N|
         ≤ Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon := by
   intro X N hX hN
-  -- Reduce to the “textbook-facing” major-arc axiom (`strategy 2`).
+  -- Reduce to the pinned cap through the calibration interface.
   have h :=
-    Goldbach.Cert.MajorArcAxiomsFunX.major_arc_eval_on_window_canon (X := X) (N := N) hX hN
+    Goldbach.Cert.MajorArcCalibrationFunX.major_arc_eval_on_window_canon_of_calibration
+      (h := Goldbach.Cert.MajorArcCanonCalibrationFromPinned.canonCalibration)
+      (X := X) (N := N) hX hN
   -- Rewrite `RΛ_smooth` back to `conv_ref`.
   have href : Goldbach.Cert.MajorArcAxiomsFunX.RΛ_smooth X N = Goldbach.BG_Identity.conv_ref X N := by
     simpa using (Goldbach.Cert.MajorArcAxiomsFunX.conv_ref_eq_RΛ_smooth (X := X) (N := N)).symm

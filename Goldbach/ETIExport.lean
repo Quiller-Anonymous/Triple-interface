@@ -61,26 +61,24 @@ def canonicalSchedule : Schedule :=
 
 /--
   Canonical arithmetic proofs borrowed from the AO/TFA side:
-  * pin level `c₀ = 0.05`
+  * pin level `c₀ := σmin` from `AO_SigmaPos.SigmaLowerOnWindow`
   * variance scale `ε_H = 0.01`
   * AO short-shift uniformity `C_AO_SSU = 2`
 
-  The numeric values match the current Tenor canon and can be replaced with
-  stronger bounds once the analytic pipeline exports them.
+  All values here are placeholders except `c₀`, which is taken from the σ-lower certificate.
 -/
 def canonicalProofs :
+    [Goldbach.AO_SigmaPos.SigmaLowerOnWindow] →
     Proofs canonicalWindow canonicalSchedule :=
-{ c0 := Goldbach.AO_SigmaPos.c0
-, hc0 := by
-    -- AO_SigmaPos.c0 = 0.05
-    simpa [Goldbach.AO_SigmaPos.c0] using (by norm_num : (0 : ℝ) < 0.05)
+{ c0 := Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin
+, hc0 := Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin_pos
 , εH := (0.01 : ℝ)
 , hε := by norm_num
 , C_AO_SSU := (2 : ℝ)
 , hAOSSU := by norm_num }
 
 /-- The ready-to-use canonical ETI package exported to AltZeta. -/
-def canonicalETI : ETI :=
+def canonicalETI [Goldbach.AO_SigmaPos.SigmaLowerOnWindow] : ETI :=
   produceETI canonicalWindow canonicalSchedule canonicalProofs
 
 end ETIExport

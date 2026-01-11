@@ -173,15 +173,19 @@ lemma errAO_bound (Hoff : OffDiagHyp)
     _ = δAO Hoff := by simpa [hδ]
 
 /-- Lower bound for the staged parallel-track main term on the canonical window. -/
-lemma McanoN_lb_cAO (Hoff : OffDiagHyp)
+lemma McanoN_lb_cAO (Hoff : OffDiagHyp) [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X)
     (hN : N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H) :
     Mcanon Hoff X N ≥ Goldbach.AO_Major.cAO (caps Hoff) := by
   have hX' : (10 ^ 6 : ℕ) ≤ X := by simpa [Goldbach.BankParams.X0] using hX
   have hN' : N ∈ Goldbach.Windows.EvenIn X (10 ^ 4) := by
     simpa [Goldbach.BankParams.H] using hN
-  have hσ : Goldbach.AO_SigmaPos.sigma N ≥ Goldbach.AO_SigmaPos.sigma0 := by
-    simpa using (Goldbach.AO_SigmaPos.sigma_even_lb_on_window (X := X) (N := N) hX' hN')
+  classical
+  have hσ :
+      Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin ≤ Goldbach.AO_SigmaPos.sigma N := by
+    -- Use the windowed σ-lower input.
+    simpa [Goldbach.AO_SigmaPos.sigma] using
+      (Goldbach.AO_SigmaPos.SigmaLowerOnWindow.sigma_even_lb_on_window (X := X) (N := N) hX hN)
 
   have herr : |errAO Hoff X N| ≤ δAO Hoff := errAO_bound (Hoff := Hoff) (X := X) (N := N) hX hN
   have herr_lo : -(δAO Hoff) ≤ errAO Hoff X N := (abs_le.mp herr).1
@@ -195,16 +199,16 @@ lemma McanoN_lb_cAO (Hoff : OffDiagHyp)
             -- `errAO = Mcanon - M_raw`
             ring_nf
             simp [errAO, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
-    _   ≥ Goldbach.AO_SigmaPos.sigma0 + (-(δAO Hoff)) := by
-            have hs0 : Goldbach.AO_SigmaPos.sigma0 ≤ Goldbach.AO_Stages.M_raw X N := by
-              -- `M_raw X N = sigma N` and `sigma N ≥ sigma0`.
+    _   ≥ Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin + (-(δAO Hoff)) := by
+            have hs0 :
+                Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin ≤ Goldbach.AO_Stages.M_raw X N := by
               simpa [hraw] using hσ
             have hsum :
-                Goldbach.AO_SigmaPos.sigma0 + (-(δAO Hoff))
+                Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin + (-(δAO Hoff))
                   ≤ Goldbach.AO_Stages.M_raw X N + errAO Hoff X N :=
               add_le_add hs0 herr_lo
             simpa [add_assoc, add_left_comm, add_comm] using hsum
-    _   = Goldbach.AO_SigmaPos.sigma0 - δAO Hoff := by ring
+    _   = Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin - δAO Hoff := by ring
     _   = Goldbach.AO_Major.cAO (caps Hoff) := by
             simp [Goldbach.AO_Major.cAO, δAO]
 

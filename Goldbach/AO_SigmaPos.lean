@@ -10,12 +10,22 @@ open Goldbach
 open Goldbach.BankParams
 open Goldbach.Windows
 
--- Re-export the model names expected by downstream files:
-abbrev c0 : ℝ := Goldbach.AO_SigmaModel.c0
-noncomputable abbrev sigma0 : ℝ := Goldbach.AO_SigmaModel.sigma0
-noncomputable abbrev sigma : ℕ → ℝ := Goldbach.AO_SigmaModel.sigma
+/-!
+σ-model bounds on the canonical window.
 
-lemma sigma0_pos : 0 < sigma0 := Goldbach.AO_SigmaModel.sigma0_pos
+`Goldbach.AO_SigmaModel.sigma` is an `N`-dependent model term (the repo’s chosen σ-model).
+
+Important normalization note:
+- The *payload* objects (`conv_ref`, `RΛ_smooth`, etc.) may include additional global scale factors
+  (e.g. a `(log N)^{-2}` normalization).
+- The σ-model in `AO_SigmaModel` is kept free of any decaying-in-`N` normalizations that would make
+  a uniform positive lower bound on all windows impossible.
+
+Accordingly, any quantitative bounds on this σ-model are treated as inputs (or derived in separate
+modules); this file only packages the *interface* expected by downstream bookkeeping.
+-/
+
+noncomputable abbrev sigma : ℕ → ℝ := Goldbach.AO_SigmaModel.sigma
 
 /-- Crude upper bound on `sigma` on the canonical window. -/
 class SigmaUpperOnWindow where
@@ -24,22 +34,18 @@ class SigmaUpperOnWindow where
   sigma_even_ub_on_window :
     ∀ {X N}, X0 ≤ X → N ∈ EvenIn X H → |sigma N| ≤ Cσ
 
-/-- A safe constant upper bound: `Cσ = 0.06`. -/
-instance : SigmaUpperOnWindow where
-  Cσ := 0.06
-  Cσ_nonneg := by norm_num
-  sigma_even_ub_on_window := by
-    intro X N hX hN
-    -- sigma is constant sigma0
-    simp [sigma, Goldbach.AO_SigmaModel.sigma, Goldbach.AO_SigmaModel.sigma0,
-          Goldbach.AO_SigmaModel.c0, Goldbach.AO_SigmaModel.sigma_caps,
-          Goldbach.AO_AssembleEnvelope.δAO]
-    norm_num
+/-!
+Lower bound interface.
 
-/-- On the canonical window, `σ(N) ≥ σ₀` (trivial since σ is constant σ₀). -/
-lemma sigma_even_lb_on_window :
-  ∀ {X N : ℕ}, (10^6 : ℕ) ≤ X → N ∈ EvenIn X (10^4) → sigma N ≥ sigma0 := by
-  intro X N _hX _hN
-  simp [sigma, Goldbach.AO_SigmaModel.sigma]
+Downstream closure lemmas only need a uniform lower bound on the σ-model on the canonical window.
+This is treated as an explicit input (conventional math / certificate), since it depends on how
+`AO_SigmaModel.sigma` is instantiated.
+-/
+
+class SigmaLowerOnWindow where
+  σmin : ℝ
+  σmin_pos : 0 < σmin
+  sigma_even_lb_on_window :
+    ∀ {X N}, X0 ≤ X → N ∈ EvenIn X H → σmin ≤ sigma N
 
 end Goldbach.AO_SigmaPos

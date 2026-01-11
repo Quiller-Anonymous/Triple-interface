@@ -4,10 +4,9 @@ import Goldbach.Cert.SigmaTailExplicitBoundFun
 /-!
 σ-tail checkpoint (honest).
 
-The Goldbach pipeline currently postulates a *uniform* truncation bound for the signed σ-tail
-(`Goldbach/Cert/SigmaTailAxiomsFun.lean`):
-
-`|sigmaTail (Q X) N| ≤ K_tail_canon / (Q X)` with `K_tail_canon = 1.02`.
+The repo contains a *specification layer* for a Tenor-shaped σ-tail statement
+(`Goldbach/Cert/SigmaTailAxiomsFun.lean`), but the canonical FunX Goldbach pipeline does **not**
+depend on any σ-tail axiom: it uses the explicit-majorant route plus a conservative real bound.
 
 What we have proved so far is different (but still useful):
 
@@ -41,4 +40,3 @@ theorem sigmaTail_abs_le_explicit_majorant (Q N : ℕ) (hN0 : N ≠ 0) :
   Goldbach.Cert.SigmaTailExplicitBoundFun.sigmaTail_abs_le_explicit (Q := Q) (N := N) hN0
 
 end Goldbach.Cert.SigmaTailProof
-

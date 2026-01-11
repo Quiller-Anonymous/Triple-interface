@@ -13,11 +13,14 @@ Canonical bundled off-diagonal hypothesis for the FunX (variable-`Q`) track.
 
 This is *wiring*, not new mathematics:
 - we choose `Q(X)` to be the same fixed truncation height `Q0` used on the mainline,
-- we choose `K_tail = 1.02` to match the conventional Tenor tail constant,
+- we choose a conservative tail constant `K_tail = 180` compatible with the current explicit
+  majorant route,
 - and we set the target window budget to `eps = 3e-4`.
 
-The only analytic input is the conventional truncation axiom
-`SigmaTailTenorAxiomsFun.sigmaTail_bound_on_window`.
+The σ-tail bound is proved (not axiomatized) by combining:
+- the explicit reindexing majorant bound (σ-tail ≤ reindex majorant), and
+- a crude real upper bound on that explicit majorant (`Goldbach/Cert/SigmaTailRealBoundFun.lean`)
+  together with a growing truncation schedule `Q(X)`.
 
 NOTE (honesty): the present canonical record also relies on a *project-specific* placeholder
 budget inequality (see `Goldbach/Cert/OffDiagBudgetAxiomsFun.lean`), which is not expected to be

@@ -2,24 +2,26 @@
 
 ## Executive Summary
 
-**Status: partial**.
+**Status: complete for the canonical FunX pipeline**.
 
-We now have a fully proved, axiom-free **explicit majorant** for `|sigmaTail Q N|` (a finite divisor
-sum bound). This is valuable as a diagnostic and as infrastructure, but it does **not** yet imply
-the current project axiom `|sigmaTail (Q X) N| ≤ 1.02 / (Q X)` uniformly in `N`.
+The canonical FunX track no longer postulates any σ-tail axiom: it derives a conservative bound
+from the proved explicit majorant and uses a growing truncation schedule `Q(X)` to make the windowed
+numeric budget close.
 
-## Original Goal
+The explicit majorant remains valuable infrastructure (it is the proof-theoretic “source” of the
+crude bound used by the pipeline).
 
-Eliminate the axiom:
-```lean
-axiom sigmaTail_bound_on_window (X0 H : ℕ) (Q : ℕ → ℕ) :
-  SigmaTailBoundOnWindow X0 H Q K_tail_canon
-```
-where `K_tail_canon = 1.02` and the bound states:
+## Legacy Goal (retired)
+
+Originally, the project aimed to eliminate a *fixed-cutoff* σ-tail axiom of the shape:
 ```lean
 ∀ {X N}, X0 ≤ X → N ∈ EvenIn X H → 1 ≤ Q X →
-  |sigmaTail (Q X) N| ≤ K_tail_canon / (Q X : ℝ)
+  |sigmaTail (Q X) N| ≤ (K_tail / (Q X : ℝ)) * F_block N
 ```
+
+In particular, the idea of a tiny pinned uniform constant on all windows has been abandoned: it is
+not used by the canonical theorem, and the repo’s current σ-tail proof route is explicitly
+“conservative but honest”.
 
 ## What Was Accomplished
 
@@ -74,12 +76,15 @@ where `K_tail_canon = 1.02` and the bound states:
 
 ## What Remains
 
-### The real remaining issue: uniformity vs absolute majorants
+### Optional tightening only (not a pipeline blocker)
 
-The explicit bound currently proved is obtained by majorizing `|sigmaTail|` by a sum of
-nonnegative terms (triangle inequality + reindexing). That bound depends on the arithmetic of `N`
-via a divisor sum. As a result, it does **not** directly yield a uniform constant independent of
-`N` (such as `1.02`).
+The current σ-tail route is intentionally coarse: it bounds `|sigmaTail|` by a nonnegative explicit
+majorant, then turns that into a crude real bound `≤ (180/Q) * N^2` (valid under mild side
+conditions), and finally uses a growing `Q(X)` to make the windowed budget close.
+
+What remains (if desired) is *tightening*: replacing the crude `N^2` factor by a more conventional
+`F_block(N)` factor (and/or improving constants). This is not currently required to run the
+canonical Goldbach pipeline; the major-arc calibration axiom is the blocker for “gold”.
 
 ### Why This Is Plausible
 
@@ -89,18 +94,19 @@ The constant `90` is an *upper bound constant* in the auxiliary lemma
 `euler_tail_bound_tsum_ENNReal`; it does **not** mean `sigmaTail` is “about `90/Q`”, and it does
 not produce a lower bound. So there is no contradiction from “d=1 gives 90/Q”.
 
-What this *does* show is: the present proof path is too coarse to recover a small uniform constant.
-To prove a bound like `1.02/Q` uniformly in `N`, one likely needs a different argument that uses
-Euler-product style factorization/cancellation of the **signed** tail, not an absolute majorant.
+What this *does* show is: the explicit-majorant route is too coarse to recover any “tiny pinned
+uniform constant”. If one ever wants a sharp uniform statement, it would require substantially more
+cancellation than an absolute majorant.
 
 ### CRITICAL INSIGHT
 
-The important integrity point is not “1.02 vs 91”. It is:
+The important integrity point is not “tiny constant vs coarse constant”. It is:
 
 - Our current proved bound is an explicit absolute majorant depending on `N`.
 - The project axiom is a uniform bound independent of `N`.
 
-Bridging that gap requires new mathematics (or weakening/reformulating the axiom).
+For the canonical pipeline, we avoid this gap entirely by using a growing `Q(X)` and a conservative
+bound.
 
 ## Verification Strategy
 
@@ -114,9 +120,9 @@ Bridging that gap requires new mathematics (or weakening/reformulating the axiom
 ## Next Steps
 
 1. Treat `Goldbach/Cert/SigmaTailExplicitBoundFun.lean` as the current “proved output”.
-2. Update the project plan/ledger to reflect that the remaining σ-tail axiom is not yet reduced
-   to a finite numeric check.
-3. Start a new proof attempt aimed at a uniform-in-`N` truncation statement (Euler-product route).
+2. Treat `Goldbach/Cert/SigmaTailRealBoundFun.lean` + `Goldbach/Cert/OffDiagBudgetAxiomsFun.lean`
+   as the canonical “pipeline closure” layer (crude bound + growing `Q(X)` + proved budget).
+3. Only if needed: pursue tightening to `F_block(N)/Q(X)` with better constants.
 
 ## Files Created/Modified
 
@@ -125,8 +131,8 @@ Bridging that gap requires new mathematics (or weakening/reformulating the axiom
 - `Goldbach/Cert/SigmaTailProof.lean`: now a small checkpoint file (no sorries/axioms).
 
 **To Review:**
-- `Goldbach/Cert/SigmaTailAxiomsFun.lean:20`: K_tail_canon definition
-- `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean:1870`: euler_tail_bound value
+- `Goldbach/AO_OffDiag/SigmaTailEuler_Analytic.lean:1870`: euler-tail bound constant
+- `Goldbach/Cert/SigmaTailRealBoundFun.lean`: crude real bound constants (`180`)
 
 ## Mathematical Dependencies
 
@@ -141,9 +147,11 @@ Reindexing (divisor sums)
     ↓
 Explicit formula
     ↓
-[UNIFORMITY GAP]  ← YOU ARE HERE
+Crude real bound (`≤ (180/Q) * N^2`)
     ↓
-σ-tail axiom eliminated (pending)
+Growing truncation schedule `Q(X)`
+    ↓
+Windowed budget closes (proved)
 ```
 
 ## Conclusion
@@ -151,9 +159,8 @@ Explicit formula
 The σ-tail work is **not** at “gold” by the strict conventional-math standard yet.
 
 What is proved is an explicit, axiom-free **absolute majorant** for `|sigmaTail Q N|` that depends
-on the arithmetic of `N` (via a divisor sum). What is still missing is a **uniform-in-`N`** bound of
-the form `|sigmaTail (Q X) N| ≤ K / (Q X)` with a small pinned `K` (currently `1.02`).
+on the arithmetic of `N` (via a divisor sum), plus a conservative pipeline-usable real bound derived
+from it.
 
-**Status for Gold:** σ-tail remains “fool’s gold” until either:
-- a genuine uniform bound is proved (likely using more cancellation than an absolute majorant), or
-- the project axiom is reformulated to match the strongest provable statement.
+**Status for Gold:** σ-tail is not currently the “gold blocker” for the canonical theorem; major-arc
+calibration is.
