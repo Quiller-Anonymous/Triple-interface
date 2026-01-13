@@ -29,23 +29,22 @@ open Goldbach.Windows
 
 /-- Canonical epsilon: ε = 1 / log X0. -/
 noncomputable def eps_canon : ℝ :=
-  1 / Real.log (BankParams.X0 : ℝ)
-
-lemma logX0_pos : 0 < Real.log (BankParams.X0 : ℝ) := by
-  -- X0 is definitionaly 1_000_000 in BankParams, so 1 < X0 is decidable
-  have hx : (1 : ℝ) < (BankParams.X0 : ℝ) := by
-    exact_mod_cast (by decide : 1 < BankParams.X0)
-  exact Real.log_pos hx
+  (1 : ℝ) / 20
 
 lemma eps_pos : 0 < eps_canon := by
-  simpa [eps_canon] using inv_pos.mpr logX0_pos
+  norm_num [eps_canon]
 
 /-- Kernel transform tail constant: for your tent/smoothing,
     a conservative `C_K = 3` works for the 1/T tail. -/
 noncomputable def C_K_canon : ℝ := 3
 
-/-- Truncation height. Taking `T = 10^6` is plenty for the 1.8e−3 target. -/
-noncomputable def T_canon : ℝ := (1_000_000 : ℝ)
+/-
+Truncation height.
+
+This is purely a bookkeeping knob: increasing `T_canon` strengthens the proved bound
+`|E_mellin| ≤ δ_mellin_canon` without changing any downstream APIs.
+-/
+noncomputable def T_canon : ℝ := (1_000_000_000_000 : ℝ)
 
 /-- The canonical Mellin tail budget:
       δ_mellin = (2 / ε^2) * (C_K / T). -/

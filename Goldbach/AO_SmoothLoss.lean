@@ -18,8 +18,7 @@ noncomputable def E_smooth (_X _N : ℕ) : ℝ := 0
     Since `E_smooth = 0`, the bound follows from `δsmooth_canon ≥ 0`. -/
 theorem E_smooth_bound
   {X N : ℕ} (hX : BG_Bank.X0 ≤ X) (hN : N ∈ EvenIn X BG_Bank.H) :
-  |E_smooth X N| ≤ 0.0008 := by
-  have hδ : (0 : ℝ) ≤ (0.0008 : ℝ) := by norm_num
-  simpa [E_smooth] using hδ
+  |E_smooth X N| ≤ (0 : ℝ) := by
+  simpa [E_smooth]
 
 end Goldbach.AO_SmoothLoss

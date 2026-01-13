@@ -37,11 +37,11 @@ theorem RL_bound_canon_of_innerSwapOnWindow
       X0 ≤ X → N ∈ EvenIn X H →
         |Goldbach.Cert.MajorArcAxiomsFunX.RΛ_smooth X N
             - Goldbach.Cert.MajorArcAxiomsFunX.RΛ_model X N|
-          ≤ Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon := by
+          ≤ Goldbach.ParallelTenorFunX.δ_major X := by
   intro X N hX hN
   have hswap :
       |Goldbach.BG_Identity.conv_ref X N - Goldbach.BG_Identity.conv_ref_const X N|
-        ≤ Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon :=
+        ≤ Goldbach.ParallelTenorFunX.δ_major X :=
     Goldbach.ParallelTenorFunX.InnerSwapOnWindow.bound (X := X) (N := N) hX hN
   have href :
       Goldbach.BG_Identity.conv_ref X N = Goldbach.Cert.MajorArcAxiomsFunX.RΛ_smooth X N := by
@@ -55,15 +55,16 @@ theorem RL_bound_canon_of_innerSwapOnWindow
 Constructor: the parallel-track inner swap hypothesis is exactly the pinned major-arc bound on the
 textbook objects `RΛ_smooth` and `RΛ_model`.
 -/
-def innerSwapOnWindow_of_RL_bound_canon
+def innerSwapOnWindow_of_RL_bound
+    {A : ℕ} {C : ℝ} (hC : 0 ≤ C)
     (h :
       ∀ {X N : ℕ},
         X0 ≤ X → N ∈ EvenIn X H →
           |Goldbach.Cert.MajorArcAxiomsFunX.RΛ_smooth X N
               - Goldbach.Cert.MajorArcAxiomsFunX.RΛ_model X N|
-            ≤ Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon) :
+            ≤ C / (Real.log (X : ℝ)) ^ A) :
     Goldbach.ParallelTenorFunX.InnerSwapOnWindow := by
-  refine ⟨?_⟩
+  refine ⟨A, C, hC, ?_⟩
   intro X N hX hN
   have hRL := h (X := X) (N := N) hX hN
   have href :
@@ -78,14 +79,12 @@ def innerSwapOnWindow_of_RL_bound_canon
 ## Step 3: derive the pipeline hypothesis from a canonical major-arc calibration
 -/
 
-theorem innerSwapOnWindow_of_canonCalibration
+noncomputable def innerSwapOnWindow_of_canonCalibration
     (h : Goldbach.Cert.MajorArcCalibrationFunX.CanonicalCalibration) :
     Goldbach.ParallelTenorFunX.InnerSwapOnWindow := by
-  refine innerSwapOnWindow_of_RL_bound_canon ?_
+  refine innerSwapOnWindow_of_RL_bound (A := h.A) (C := h.C) h.C_nonneg ?_
   intro X N hX hN
-  exact
-    Goldbach.Cert.MajorArcCalibrationFunX.major_arc_eval_on_window_canon_of_calibration
-      (h := h) (X := X) (N := N) hX hN
+  exact h.bound hX hN
 
 /--
 Textbook route (one more layer): if you can supply an explicit single-exponent power-saving bound
@@ -94,17 +93,12 @@ Textbook route (one more layer): if you can supply an explicit single-exponent p
 
 This isolates the remaining “pinned work” to a single numeric inequality at the cutoff `X0`.
 -/
-theorem innerSwapOnWindow_of_powerSavingBound
+noncomputable def innerSwapOnWindow_of_powerSavingBound
     (h : Goldbach.Cert.MajorArcCalibrationFunX.PowerSavingBound)
-    (hX0 :
-      h.C / (Real.log (Goldbach.BankParams.X0 : ℝ)) ^ h.A
-        ≤ Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon) :
-    Goldbach.ParallelTenorFunX.InnerSwapOnWindow := by
-  have hcal :
-      Goldbach.Cert.MajorArcCalibrationFunX.CanonicalCalibration :=
-    Goldbach.Cert.MajorArcCalibrationFunX.mkCanonicalCalibration
-      (A := h.A) (C := h.C) h.C_nonneg h.bound hX0
-  exact innerSwapOnWindow_of_canonCalibration hcal
+    : Goldbach.ParallelTenorFunX.InnerSwapOnWindow := by
+  refine innerSwapOnWindow_of_RL_bound (A := h.A) (C := h.C) h.C_nonneg ?_
+  intro X N hX hN
+  exact h.bound hX hN
 
 end
 

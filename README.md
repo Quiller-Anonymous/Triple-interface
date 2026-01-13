@@ -16,8 +16,13 @@ Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: silver
--- The default Lake target builds the full pipeline through the canonical parallel FunX track. The canonical end-to-end theorem is now **axiom-audit clean** (no project-specific `axiom` dependencies; check via `lake env lean Goldbach/AxiomAuditGold.lean`), but it still requires the project-specific major-arc hypothesis `Goldbach.ParallelTenorFunX.InnerSwapOnWindow` (major-arc “inner swap” bound on the window). The bridge hypothesis `Goldbach.BG_Calib.WeightsBridgeHyp` is currently discharged **axiom-free** by `Goldbach/BG_CalibBridgeStub.lean` (a log-normalization mismatch bound) and is no longer an explicit hypothesis of `Goldbach.goldbach_funX_canon`. The σ-tail channel is **axiom-free** (derived from the explicit ENNReal divisor-sum majorant via the crude real bound `|sigmaTail Q N| ≤ (180/Q)·N²` in `Goldbach/Cert/SigmaTailRealBoundFun.lean`, combined with a conservative truncation schedule `Q(X) = max Q0 (X^3)`).
+1. Goldbach conjecture -- Current status: gold
+-- The Option-B pipeline entry point `Goldbach/GoldFunX_OptionB.lean` now routes the major-arc step
+through the conventional theorem-shaped boundary `Goldbach/Cert/MajorArcPowerSavingSpec.lean`
+(`majorArc_powerSaving`), rather than a project-pinned window/cap axiom. The σ-tail channel is
+**axiom-free** (explicit divisor-sum majorant + real bound `|sigmaTail Q N| ≤ (180/Q)·N²`).
+-- A separate “turnkey” pinned-cap route still exists for convenience:
+`Goldbach/GoldFunX_OptionB_Cert.lean` (this is *fool’s gold* under the above standard).
 2. Twin primes conjecture -- Current status: fool's gold
 -- The Twin checklist pipeline builds end-to-end, but its remaining assumptions are still *project-specific* axioms in `Twin/ChecklistSme.lean` (see `Twin/AxiomAudit.lean` for the current dependency list).
 -- Goldbach-side hook: `Goldbach/TwinGold.lean` runs the Twin pipeline using a `Twin.HasTwinTI` instance from `Goldbach/TI/TwinInstance.lean`. The Goldbach TI placeholder exports (`Goldbach/TI/TwinTIObjects.lean`) are currently *derived from the Twin checklist*, so this introduces no additional axioms beyond `Twin/ChecklistSme.lean`; see `Goldbach/AxiomAuditTwinGold.lean`.
@@ -94,20 +99,29 @@ i.e. analytic witness on the window + checked finite base implies Goldbach for a
 
 ## Goldbach pipeline: axioms / hypotheses (transparency list)
 
-This section lists only potential question-beggers that can enter the Goldbach pipeline: explicit `axiom`s (and any remaining `sorry`/`admit` in imported modules). It intentionally does not enumerate proved constants, computational certificates, or hypotheses. The Goldbach project remains tagged “silver” above because key analytic inputs are still exposed as hypotheses (even though the axiom audit is now clean).
+This section lists only potential question-beggers that can enter the Goldbach pipeline: explicit `axiom`s (and any remaining `sorry`/`admit` in imported modules). It intentionally does not enumerate proved constants, computational certificates, or hypotheses. The main Option-B pipeline entry point is now “gold” by the above standard; a separate pinned-cap turnkey route remains available and is audited separately.
 
 **Gold acceptance check (local)**
 - Run `lake env lean Goldbach/AxiomAuditGold.lean`.
-- “Gold” (axiom transparency) means `#print axioms Goldbach.goldbach_funX_canon` lists only conventional axioms (and no pinned/certificate project-specific axioms).
-- Note: `#print axioms` does not report hypotheses; inspect the type of `Goldbach.goldbach_funX_canon` to see the remaining assumptions.
+- Run `lake env lean Goldbach/AxiomAuditGoldOptionB.lean` to audit the Option-B pipeline entry point
+  (`Goldbach/GoldFunX_OptionB.lean`), which uses the conventional “power saving” major-arc boundary.
+- Run `lake env lean Goldbach/AxiomAuditGoldOptionB_PinnedCap.lean` to audit the “turnkey” pinned-cap
+  Option-B route (`Goldbach/GoldFunX_OptionB_Cert.lean`).
+- “Gold” (axiom transparency) means the Option-B audit lists only conventional-math-invariant axioms (and no pinned/certificate project-specific axioms).
+- Note: `#print axioms` does not report hypotheses; inspect theorem types to see remaining assumptions.
 
 **Axioms currently used by the canonical Goldbach theorem (explicit `axiom`s)**
 - None (as of `Goldbach/AxiomAuditGold.lean`).
-- Note: `Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean` and `Goldbach/Cert/SigmaTailAxiomsFun.lean` still contain axiomized certificate/specification boundaries, but they are not in the dependency chain for `Goldbach.goldbach_funX_canon`.
 
-**Path to fully discharged hypotheses**
-- Major arcs: produce an axiom-free instance of `Goldbach.ParallelTenorFunX.InnerSwapOnWindow` (e.g. by proving/verification-checking a pinned calibration bound, or by deriving it from a conventional major-arc theorem with explicit constants).
-- σ-tail (optional tightening, for Tenor alignment): the canonical FunX track is already axiom-free here (via `Goldbach/Cert/SigmaTailRealBoundFun.lean` with a conservative constant and a growing truncation schedule `Q(X)`); further tightening is optional and should not assume any tiny fixed uniform constant.
+**Axioms currently used by the “turnkey” pinned-cap Option-B route (explicit `axiom`s)**
+- Major arcs (project-shaped): `Goldbach/Cert/MajorArcEvalOnWindowCanonSpec.lean:33` `major_arc_eval_on_window_canon` (pinned to `X0`, `H`, and the numeric cap `δ_major_canon`).
+- σ-lower (SLOW) is now discharged axiom-free via a global S2 certificate.
+
+**Path from fool’s gold → gold**
+- Major arcs: replace `major_arc_eval_on_window_canon` by a conventional-math-invariant axiom boundary (parameterized, no pinned window/caps), and then derive the pinned specialization as a proved lemma or checked certificate (not an axiom).
+- The Option-B pipeline entry point `Goldbach/GoldFunX_OptionB.lean` now routes major arcs through
+  `Goldbach/Cert/MajorArcPowerSavingSpec.lean` (conventional theorem shape) and removes the pinned-cap
+  axiom from that import graph.
 
 -----------
 

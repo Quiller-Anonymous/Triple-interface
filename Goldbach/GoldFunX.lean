@@ -10,6 +10,7 @@ import Goldbach.CompleteTenorFunX_CanonBudget
 import Goldbach.Cert.InnerSwapTextbookRoute
 import Goldbach.FiniteBase.CombineAll
 import Goldbach.BG_CalibBridgeStub
+import Goldbach.CanonParams
 
 namespace Goldbach
 
@@ -34,21 +35,21 @@ theorem goldbach_funX_canon_of_canonCalibration
     [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     [Goldbach.BG_Calib.WeightsBridgeHyp]
     (h : Goldbach.Cert.MajorArcCalibrationFunX.CanonicalCalibration)
-    (hεlt : (0.01 : ℝ) < Goldbach.ParallelFunXCanon.c0)
+    (hεlt : Goldbach.CanonParams.ε < Goldbach.ParallelFunXCanon.c0)
     (hBudget :
       ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ Goldbach.Windows.EvenIn X (10_000 : ℕ) →
         Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
           + @Goldbach.ParallelTenorFunX.δAO_gap_bound
               (Goldbach.Cert.InnerSwapTextbookRoute.innerSwapOnWindow_of_canonCalibration h)
-              Goldbach.ParallelFunXCanon.Hoff ≤ (0.01 : ℝ)) :
+              Goldbach.ParallelFunXCanon.Hoff X ≤ Goldbach.CanonParams.ε) :
     ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
   haveI : Goldbach.ParallelFunXCanon.BudgetHyp :=
     { innerSwap := Goldbach.Cert.InnerSwapTextbookRoute.innerSwapOnWindow_of_canonCalibration h
     , eps_lt_c0 := hεlt
     , budget := by
         intro X N hX hN
-        exact hBudget hX hN }
+        simpa [Goldbach.CanonParams.ε] using hBudget hX hN }
   exact goldbach_funX_canon
 
 end Goldbach

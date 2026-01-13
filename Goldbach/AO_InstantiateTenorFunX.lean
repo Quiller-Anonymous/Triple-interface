@@ -50,7 +50,7 @@ noncomputable def errAO (Hoff : OffDiagHyp) (X N : ℕ) : ℝ :=
 noncomputable def caps (Hoff : OffDiagHyp) : Caps :=
 { δ_kernel := ((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed
 , δ_mellin := Goldbach.AO_MellinTrunc.δ_mellin_canon
-, δ_smooth := (0.0008 : ℝ)
+, δ_smooth := (0 : ℝ)
 , δ_off    := Hoff.eps
 , δ_kernel_nonneg := by
     have htail_val : Goldbach.BG_Identity.C_tail_closed = (99 : ℝ) / 1020100 := by
@@ -102,7 +102,7 @@ instance (Hoff : OffDiagHyp) : Bounds (channels Hoff) (caps Hoff) := by
     simpa [channels, caps] using hmellin
   · intro X N hX hN
     have hsmooth :
-        |Goldbach.AO_SmoothLoss.E_smooth X N| ≤ (0.0008 : ℝ) := by
+        |Goldbach.AO_SmoothLoss.E_smooth X N| ≤ (0 : ℝ) := by
       have hX' : Goldbach.BG_Bank.X0 ≤ X := by simpa [Goldbach.BG_Bank.X0] using hX
       have hN' : N ∈ Goldbach.Windows.EvenIn X Goldbach.BG_Bank.H := by
         simpa [Goldbach.BG_Bank.H] using hN

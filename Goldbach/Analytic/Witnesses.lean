@@ -38,10 +38,9 @@ noncomputable def witnessCanonical
       ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ Goldbach.Windows.EvenIn X (10_000 : ℕ) →
         Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
-          + Goldbach.ParallelTenorFunX.δAO_gap_bound (Hoff := HoffCanon) ≤ (0.01 : ℝ)) :
+          + Goldbach.ParallelTenorFunX.δAO_gap_bound (Hoff := HoffCanon) X ≤ (0.01 : ℝ)) :
     Goldbach.Analytic.PointwiseWitness :=
   Goldbach.ParallelTenorFunX.witness_funX
     (Hoff := HoffCanon) (hεlt := hεlt) (hBudget := hBudget)
 
 end Goldbach.Analytic
-

@@ -6,6 +6,7 @@ import Goldbach.ParallelTenorFunX
 import Goldbach.AO_SigmaPos
 import Goldbach.AO_OffDiag.TenorHypFunX_Canon
 import Goldbach.BG_CalibBridgeStub
+import Goldbach.CanonParams
 
 open Goldbach
 
@@ -23,14 +24,14 @@ theorem goldbach_from_tenorFunX_fun
     [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     [Goldbach.ParallelTenorFunX.InnerSwapOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
-    (hεlt : (0.01 : ℝ) <
+    (hεlt : Goldbach.CanonParams.ε <
       Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff))
     [Goldbach.BG_Calib.WeightsBridgeHyp]
     (hBudget :
       ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ Goldbach.Windows.EvenIn X (10_000 : ℕ) →
-        Goldbach.BG_Calib.δbridge_canon
+          Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
-          + Goldbach.ParallelTenorFunX.δAO_gap_bound (Hoff := Hoff) ≤ (0.01 : ℝ))
+          + Goldbach.ParallelTenorFunX.δAO_gap_bound (Hoff := Hoff) X ≤ Goldbach.CanonParams.ε)
     (hBase : FiniteBaseUpTo 1_000_000) :
     ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
   let wFixed : Goldbach.Analytic.PointwiseWitness :=
@@ -60,15 +61,15 @@ theorem goldbach_from_tenorFunX_fun_canon
     [Goldbach.AO_SigmaPos.SigmaUpperOnWindow]
     [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
-    (hεlt : (0.01 : ℝ) <
+    (hεlt : Goldbach.CanonParams.ε <
       Goldbach.AO_Major.cAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff))
     [Goldbach.ParallelTenorFunX.InnerSwapOnWindow]
     [Goldbach.BG_Calib.WeightsBridgeHyp]
     (hBudget :
       ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ Goldbach.Windows.EvenIn X (10_000 : ℕ) →
-        Goldbach.BG_Calib.δbridge_canon
+          Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
-          + Goldbach.ParallelTenorFunX.δAO_gap_bound (Hoff := Hoff) ≤ (0.01 : ℝ))
+          + Goldbach.ParallelTenorFunX.δAO_gap_bound (Hoff := Hoff) X ≤ Goldbach.CanonParams.ε)
     (hBase : FiniteBaseUpTo 1_000_000) :
     ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
   -- hand off to the general theorem, letting typeclass inference supply the sigma instance
@@ -92,7 +93,7 @@ theorem goldbach_from_tenorFunX_fun_autoHoff
     [Goldbach.AO_SigmaPos.SigmaUpperOnWindow]
     [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     [Goldbach.ParallelTenorFunX.InnerSwapOnWindow]
-    (hεlt : (0.01 : ℝ) <
+    (hεlt : Goldbach.CanonParams.ε <
       Goldbach.AO_Major.cAO
         (Goldbach.AO_InstantiateTenorFunX.caps Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff))
     [Goldbach.BG_Calib.WeightsBridgeHyp]
@@ -101,7 +102,7 @@ theorem goldbach_from_tenorFunX_fun_autoHoff
         Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
           + Goldbach.ParallelTenorFunX.δAO_gap_bound
-              (Hoff := Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff) ≤ (0.01 : ℝ))
+              (Hoff := Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff) X ≤ Goldbach.CanonParams.ε)
     (hBase : FiniteBaseUpTo 1_000_000) :
     ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
   exact goldbach_from_tenorFunX_fun

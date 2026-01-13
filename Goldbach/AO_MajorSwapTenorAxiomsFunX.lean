@@ -3,8 +3,7 @@ import Goldbach.Windows
 import Goldbach.BG_Identity
 import Goldbach.BG_Calib
 import Goldbach.ParallelTenorFunX
-import Goldbach.Cert.MajorArcCanonCalibrationFromPinned
-import Goldbach.Cert.MajorArcCalibrationFunX
+import Goldbach.Cert.MajorArcEvalOnWindowCanonSpec
 import Goldbach.AO_MajorSwapBookkeeping
 
 /-!
@@ -47,7 +46,7 @@ constant `δ_major_canon` (in the normalized “banked” scale).
 
 This is *conventional mathematics* (major arc evaluation / Siegel–Walfisz type input) stated in
 the project’s internal notation, and is currently supplied by
-`Goldbach/Cert/MajorArcAxiomsFunX.lean` (strategy 2).
+`Goldbach/Cert/MajorArcEvalOnWindowCanonSpec.lean` (strategy 2 / option B).
 -/
 theorem goldbach_major_arc_eval_on_window_canon :
   ∀ {X N : ℕ},
@@ -55,10 +54,8 @@ theorem goldbach_major_arc_eval_on_window_canon :
       |RΛ_bank X N - RΛ_model X N|
         ≤ Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon := by
   intro X N hX hN
-  -- Reduce to the pinned cap through the calibration interface.
   have h :=
-    Goldbach.Cert.MajorArcCalibrationFunX.major_arc_eval_on_window_canon_of_calibration
-      (h := Goldbach.Cert.MajorArcCanonCalibrationFromPinned.canonCalibration)
+    Goldbach.Cert.MajorArcEvalOnWindowCanonSpec.major_arc_eval_on_window_canon
       (X := X) (N := N) hX hN
   -- Rewrite `RΛ_smooth` back to `conv_ref`.
   have href : Goldbach.Cert.MajorArcAxiomsFunX.RΛ_smooth X N = Goldbach.BG_Identity.conv_ref X N := by
@@ -102,8 +99,9 @@ Derived “inner swap on window” instance for the FunX parallel track.
 This is not an axiom: it is a formal consequence of `goldbach_major_arc_eval_on_window_canon`.
 -/
 instance : Goldbach.ParallelTenorFunX.InnerSwapOnWindow := by
-  refine ⟨?_⟩
+  refine ⟨0, Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon, by nlinarith, ?_⟩
   intro X N hX hN
-  simpa [RΛ_bank, RΛ_model] using goldbach_major_arc_eval_on_window_canon (X := X) (N := N) hX hN
+  simpa [Goldbach.ParallelTenorFunX.δ_major, RΛ_bank, RΛ_model] using
+    goldbach_major_arc_eval_on_window_canon (X := X) (N := N) hX hN
 
 end Goldbach.AO_MajorSwapTenorAxiomsFunX

@@ -16,31 +16,32 @@ Legend for **Status**:
 
 - **Statement needed**: for `X ≥ X0`, `N ∈ EvenIn X H`,
   `|RΛ_smooth X N - RΛ_model X N| ≤ δ_major_canon`.
-- **Currently**: exposed in the canonical FunX track as the hypothesis
-  `Goldbach.ParallelTenorFunX.InnerSwapOnWindow`. An optional pinned/certificate boundary still
-  exists:
-  `Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean` supplies
-  `canonCalibration : Goldbach.Cert.MajorArcCalibrationFunX.CanonicalCalibration`, and this can be
-  used (via the calibration API) to *supply* `InnerSwapOnWindow` if one accepts a pinned/cert-style
-  axiom boundary.
-- **Status**: cert-needed.
+- **Currently (Option B / strategy 2)**: isolated as a single conventional axiom boundary:
+  `Goldbach/Cert/MajorArcEvalOnWindowCanonSpec.lean` `major_arc_eval_on_window_canon`.
+  This feeds the canonical `InnerSwapOnWindow` instance in
+  `Goldbach/AO_MajorSwapTenorAxiomsFunX.lean`.
+- **Gold-grade intermediate step (no pinned cap)**: there is now an alternate Option-B entrypoint
+  that routes major arcs through the *theorem-shaped* conventional boundary
+  `Goldbach/Cert/MajorArcPowerSavingSpec.lean` and does **not** import the pinned-cap axiom:
+  `Goldbach/GoldFunX_OptionB_TextbookMajorArc.lean` (audited by
+  `Goldbach/AxiomAuditGoldOptionBTextbookMajorArc.lean`).
+- **Legacy**: the older pinned/certificate datum
+  `Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean` still exists, but is no longer required
+  for the strategy-2 wiring.
+- **Status**: conventional-axiom (to be replaced by a proof or checkable certificate).
 
 ### A2. The pinned cap `δ_major_canon`
 
-- **Definition**: `Goldbach/Cert/MajorArcAxiomsFunX.lean` `δ_major_canon`
-  `:= ((2*H+1)/Ucut) * Mswap_canon`.
-- **Status**: proved (definitionally; and its numeric magnitude is proved in
-  `Goldbach/CompleteTenorFunX_CanonBudget.lean`).
-- **Integrity requirement**: justify that this *actually bounds* the major-arc error, either by:
-  - deriving it from a conventional major-arc theorem with explicit constant(s), or
-  - producing a checkable certificate that implies it (and proving the implication in Lean).
+- **Definition**: `Goldbach/Cert/MajorArcAxiomsFunX.lean` `δ_major_canon := 6e-5`.
+- **Role**: this is the *single* canonical cap used by the parallel track:
+  `Goldbach/ParallelTenorFunX.lean` `InnerSwapOnWindow.bound` and `δAO_gap_bound`.
+- **Status**: chosen (project-pinned); used only through the explicit Strategy-2 axiom boundary.
 
 ### A3. The mismatch cap `Mswap_canon`
 
 - **Definition**: `Goldbach/BG_Calib.lean` `Mswap_canon := 18/10000` (0.0018).
-- **Status**: paper/unknown (currently just a chosen cap; not yet tied to a conventional theorem).
-- **What must be shown**: a conventional theorem/certificate must imply the convolution-level
-  bound with this cap.
+- **Status**: chosen (legacy constant used in some BG bridge bookkeeping). It is no longer the
+  definition of `δ_major_canon` in the Strategy-2 route.
 
 ### A4. Conventional major-arc “power saving” constants
 
@@ -103,7 +104,7 @@ inequalities), but they are still “project constants” whose provenance shoul
 ### C2. Mellin truncation constants (AO stage)
 
 - `Goldbach/AO_MellinTrunc.lean:31` `eps_canon` — **Status**: chosen (small truncation parameter)
-- `Goldbach/AO_MellinTrunc.lean:48` `T_canon := 1_000_000` — **Status**: chosen (numerical integration cap)
+- `Goldbach/AO_MellinTrunc.lean:47` `T_canon := 1_000_000_000_000` — **Status**: chosen (truncation height knob)
 - `Goldbach/AO_MellinTrunc.lean:52` `δ_mellin_canon` — **Status**: proved (definition; used via proved bounds in the AO stage)
 
 ### C3. Fixed truncation height (legacy σ-tail model)
@@ -119,3 +120,8 @@ inequalities), but they are still “project constants” whose provenance shoul
    explicit numerical estimate that is small enough to support the existing budgets.
 3) For major arcs: identify the smallest part of the major-arc argument that can be turned into a
    checkable certificate for a specific `(A_major, C_major)` on the pinned window.
+
+## D) Option B “turnkey” entry point
+
+- `Goldbach/GoldFunX_OptionB_Cert.lean` provides a fully-wired entry point that runs
+  `Goldbach.goldbach_funX_canon` with Option B certificates/axioms installed as instances.

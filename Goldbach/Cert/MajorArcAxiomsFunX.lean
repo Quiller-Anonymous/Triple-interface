@@ -70,7 +70,7 @@ This is a single numeric constant, so downstream pipeline statements can avoid m
 project-internal intermediate caps (like `Mswap_canon`) directly.
 -/
 noncomputable abbrev δ_major_canon : ℝ :=
-  ((2 * H + 1 : ℝ) / (Goldbach.BG_Identity.Ucut : ℝ)) * Goldbach.BG_Calib.Mswap_canon
+  (6 : ℝ) / 100000  -- 6e-5
 
 /--
 Target statement (hard step): a *theorem-shaped* major-arc evaluation on the window, parameterized

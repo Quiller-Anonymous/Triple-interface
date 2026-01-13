@@ -14,6 +14,9 @@ Downstream pipeline code should depend only on the definitional interfaces in
 
 namespace Goldbach.Cert.MajorArcPowerSavingSpec
 
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
 open Goldbach.Cert.MajorArcAxiomsFunX
 
 noncomputable section
@@ -39,4 +42,3 @@ lemma majorArcPowerSaving_of_axiom : MajorArcPowerSaving :=
 end
 
 end Goldbach.Cert.MajorArcPowerSavingSpec
-

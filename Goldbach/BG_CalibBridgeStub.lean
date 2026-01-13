@@ -5,10 +5,11 @@
 -- package a concrete certificate (when available) into the `WeightsBridgeHyp`
 -- class used by `BG_Calib`.
 
-import Goldbach.BG_Calib
-import Goldbach.Rep
-import Goldbach.Windows
-import Mathlib.Tactic
+ import Goldbach.BG_Calib
+ import Goldbach.Rep
+ import Goldbach.Windows
+import Mathlib.Analysis.Complex.ExponentialBounds
+ import Mathlib.Tactic
 
 namespace Goldbach.BG_Calib.BridgeCert
 
@@ -271,18 +272,134 @@ theorem bridge_bound_window
       le_trans hratio hone
     simpa [r] using this
 
-  have hratio_abs : |r ^ 2 - 1| ≤ 3 := by
-    have hr_nonneg : 0 ≤ r := by
-      have : (0 : ℝ) ≤ Real.log (N : ℝ) := le_of_lt hlogNpos
-      exact div_nonneg this (le_of_lt hlogXpos)
-    have hr_sq_le : r ^ 2 ≤ 4 := by
-      -- `r ≤ 2` and `0 ≤ r` gives `r^2 ≤ 4`.
-      nlinarith [hr_le2, hr_nonneg]
-    have hr_sq_ge : 1 ≤ r ^ 2 := by
-      nlinarith [hr_ge1]
+  have hratio_abs : |r ^ 2 - 1| ≤ (3 : ℝ) / 1000 := by
+    -- Use the window restriction `N ≤ X + H` (with `H = X0/100`) to bound the log-ratio tightly.
+    have hHX : (100 * H : ℕ) ≤ X := by
+      -- `100 * H = X0` and `X0 ≤ X`.
+      have hEq : (100 * H : ℕ) = X0 := by
+        norm_num [H, X0, Goldbach.BankParams.H, Goldbach.BankParams.X0]
+      simpa [hEq] using hX
+    have hH_le_X_div_100 : (H : ℝ) ≤ (X : ℝ) / (100 : ℝ) := by
+      have hHXr : (100 : ℝ) * (H : ℝ) ≤ (X : ℝ) := by exact_mod_cast hHX
+      nlinarith
+    have hXH_le : (X : ℝ) + (H : ℝ) ≤ ((101 : ℝ) / 100) * (X : ℝ) := by
+      nlinarith [hH_le_X_div_100]
+    have hN_le_real : (N : ℝ) ≤ (X : ℝ) + (H : ℝ) := by
+      exact_mod_cast hNle
+    have hN_le_scale : (N : ℝ) ≤ ((101 : ℝ) / 100) * (X : ℝ) :=
+      le_trans hN_le_real hXH_le
+
+    have hlogN_le :
+        Real.log (N : ℝ) ≤ Real.log (((101 : ℝ) / 100) * (X : ℝ)) :=
+      Real.log_le_log hNpos hN_le_scale
+    have hlog_mul :
+        Real.log (((101 : ℝ) / 100) * (X : ℝ))
+          = Real.log ((101 : ℝ) / 100) + Real.log (X : ℝ) := by
+      have hX0' : (X : ℝ) ≠ 0 := ne_of_gt hXpos
+      have hfac0 : ((101 : ℝ) / 100) ≠ 0 := by norm_num
+      simpa [mul_comm, add_comm, add_left_comm, add_assoc] using Real.log_mul hfac0 hX0'
+    have hlog_diff :
+        Real.log (N : ℝ) - Real.log (X : ℝ) ≤ Real.log ((101 : ℝ) / 100) := by
+      -- `log N ≤ log((101/100)X) = log(101/100) + log X`.
+      linarith [hlogN_le, hlog_mul]
+    have hlog_scale_le : Real.log ((101 : ℝ) / 100) ≤ (1 : ℝ) / 100 := by
+      have hpos : (0 : ℝ) < (101 : ℝ) / 100 := by norm_num
+      have hlog : Real.log ((101 : ℝ) / 100) ≤ ((101 : ℝ) / 100) - 1 :=
+        Real.log_le_sub_one_of_pos (x := (101 : ℝ) / 100) hpos
+      have hEq : ((101 : ℝ) / 100) - 1 = (1 : ℝ) / 100 := by
+        norm_num
+      simpa [hEq] using hlog
+    have hlog_diff_le : Real.log (N : ℝ) - Real.log (X : ℝ) ≤ (1 : ℝ) / 100 :=
+      le_trans hlog_diff hlog_scale_le
+
+    -- Lower bound `log X ≥ 10` from `X ≥ X0 = 10^6` (using `2^19 ≤ 10^6` and a decimal bound on `log 2`).
+    have hlogX_ge10 : (10 : ℝ) ≤ Real.log (X : ℝ) := by
+      have hX0pos : (0 : ℝ) < (X0 : ℝ) := by
+        norm_num [X0, Goldbach.BankParams.X0]
+      have hX0_le_X : (X0 : ℝ) ≤ (X : ℝ) := by exact_mod_cast hX
+      have hlogX0_le : Real.log (X0 : ℝ) ≤ Real.log (X : ℝ) :=
+        Real.log_le_log hX0pos hX0_le_X
+      have hpow : (2 : ℕ) ^ 19 ≤ X0 := by
+        -- `2^19 = 524288 ≤ 10^6 = X0`.
+        decide
+      have hpow' : ((2 : ℝ) ^ 19) ≤ (X0 : ℝ) := by exact_mod_cast hpow
+      have hlog_pow_le : Real.log ((2 : ℝ) ^ 19) ≤ Real.log (X0 : ℝ) :=
+        Real.log_le_log (by norm_num : (0 : ℝ) < (2 : ℝ) ^ 19) hpow'
+      have hlog2 : (0.6931471803 : ℝ) < Real.log 2 := Real.log_two_gt_d9
+      have hlog_pow_gt :
+          (10 : ℝ) < Real.log ((2 : ℝ) ^ 19) := by
+        -- `log(2^19) = 19*log 2 > 19*0.693... > 10`.
+        have hmul1 : (19 : ℝ) * (0.6931471803 : ℝ) < (19 : ℝ) * Real.log 2 := by
+          have : (0 : ℝ) < (19 : ℝ) := by norm_num
+          exact (mul_lt_mul_of_pos_left hlog2 this)
+        have hmul0 : (10 : ℝ) < (19 : ℝ) * (0.6931471803 : ℝ) := by
+          norm_num
+        have hmul2 : (10 : ℝ) < (19 : ℝ) * Real.log 2 := lt_trans hmul0 hmul1
+        simpa [Real.log_pow] using hmul2
+      have h10_le_logX0 : (10 : ℝ) ≤ Real.log (X0 : ℝ) :=
+        le_trans hlog_pow_gt.le hlog_pow_le
+      exact le_trans (le_trans h10_le_logX0 hlogX0_le) (le_rfl)
+
+    have hlogX_pos' : (0 : ℝ) < Real.log (X : ℝ) := lt_of_lt_of_le (by norm_num) hlogX_ge10
+    have hlogX_ne' : Real.log (X : ℝ) ≠ 0 := ne_of_gt hlogX_pos'
+
+    have hdiff_div :
+        (Real.log (N : ℝ) - Real.log (X : ℝ)) / Real.log (X : ℝ) ≤ (1 : ℝ) / 1000 := by
+      have h1 : (Real.log (N : ℝ) - Real.log (X : ℝ)) / Real.log (X : ℝ)
+          ≤ ((1 : ℝ) / 100) / Real.log (X : ℝ) :=
+        div_le_div_of_nonneg_right hlog_diff_le (le_of_lt hlogX_pos')
+      have h2 : ((1 : ℝ) / 100) / Real.log (X : ℝ) ≤ (1 : ℝ) / 1000 := by
+        -- `1 / log X ≤ 1 / 10`.
+        have hInv : (1 : ℝ) / Real.log (X : ℝ) ≤ (1 : ℝ) / (10 : ℝ) := by
+          simpa [one_div] using (one_div_le_one_div_of_le (by norm_num : (0 : ℝ) < (10 : ℝ)) hlogX_ge10)
+        -- multiply by `1/100`.
+        have hconst : (0 : ℝ) ≤ (1 : ℝ) / 100 := by norm_num
+        have := mul_le_mul_of_nonneg_left hInv hconst
+        have hEq : (10 : ℝ)⁻¹ * (100 : ℝ)⁻¹ = (1000 : ℝ)⁻¹ := by
+          norm_num
+        -- `mul_le_mul_of_nonneg_left` produces an inequality with `10⁻¹ * 100⁻¹` on the RHS.
+        have : (100 : ℝ)⁻¹ * (Real.log (X : ℝ))⁻¹ ≤ (10 : ℝ)⁻¹ * (100 : ℝ)⁻¹ := by
+          simpa [one_div, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using this
+        simpa [hEq] using this
+      exact le_trans h1 h2
+
+    have hr_sub_one_le : r - 1 ≤ (1 : ℝ) / 1000 := by
+      -- `r - 1 = (log N - log X) / log X`
+      have : r - 1 = (Real.log (N : ℝ) - Real.log (X : ℝ)) / Real.log (X : ℝ) := by
+        -- rewrite `1` as `logX/logX` and use `sub_div`
+        have h1 : (1 : ℝ) = Real.log (X : ℝ) / Real.log (X : ℝ) := by
+          simp [div_self, hlogX_ne']
+        calc
+          r - 1 = Real.log (N : ℝ) / Real.log (X : ℝ) - 1 := by simp [r]
+          _ = Real.log (N : ℝ) / Real.log (X : ℝ) - Real.log (X : ℝ) / Real.log (X : ℝ) := by
+                simpa [h1]
+          _ = (Real.log (N : ℝ) - Real.log (X : ℝ)) / Real.log (X : ℝ) := by
+                simpa using
+                  (sub_div (Real.log (N : ℝ)) (Real.log (X : ℝ)) (Real.log (X : ℝ))).symm
+      simpa [this] using hdiff_div
+
+    -- Now bound `|r^2 - 1|` using `(r^2 - 1) = (r - 1) * (r + 1)` and the crude `r ≤ 2`.
+    have hr_nonneg : 0 ≤ r := le_trans (by norm_num) hr_ge1
+    have hr_sq_ge : 1 ≤ r ^ 2 := by nlinarith [hr_ge1]
     have hnonneg : 0 ≤ r ^ 2 - 1 := by linarith [hr_sq_ge]
     have habs : |r ^ 2 - 1| = r ^ 2 - 1 := abs_of_nonneg hnonneg
-    have : r ^ 2 - 1 ≤ 3 := by linarith [hr_sq_le]
+    have hr_sub_one_nonneg : 0 ≤ r - 1 := by linarith [hr_ge1]
+    have hr_add_one_le : r + 1 ≤ 3 := by linarith [hr_le2]
+    have hmul :
+        (r - 1) * (r + 1) ≤ ((1 : ℝ) / 1000) * 3 := by
+      have h0 : (0 : ℝ) ≤ r + 1 := by linarith [hr_nonneg]
+      have h1 : (0 : ℝ) ≤ (1 : ℝ) / 1000 := by norm_num
+      exact mul_le_mul hr_sub_one_le hr_add_one_le h0 h1
+    have hfactor : r ^ 2 - 1 = (r - 1) * (r + 1) := by ring
+    have : r ^ 2 - 1 ≤ (3 : ℝ) / 1000 := by
+      have h' : r ^ 2 - 1 ≤ ((1 : ℝ) / 1000) * 3 := by
+        simpa [hfactor] using hmul
+      have hconst : ((1 : ℝ) / 1000) * 3 = (3 : ℝ) / 1000 := by
+        ring
+      have hconst' : (3 : ℝ) / 1000 = ((1 : ℝ) / 1000) * 3 := by
+        simpa [hconst] using hconst.symm
+      -- Avoid commutativity issues in simp by rewriting to the LHS shape.
+      simpa [hconst'] using h'
     simpa [habs] using this
 
   have hRmul :
@@ -305,21 +422,20 @@ theorem bridge_bound_window
 
   have hmain :
       |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
-        ≤ 3 * Goldbach.BG_Bank.payload_cap X N := by
+        ≤ ((3 : ℝ) / 1000) * Goldbach.BG_Bank.payload_cap X N := by
     calc
       |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
           = |(r ^ 2 - 1) * Goldbach.BG_Identity.conv_full X N| := by
               simp [hdiff]
       _ = |r ^ 2 - 1| * |Goldbach.BG_Identity.conv_full X N| := by
               simp [abs_mul, mul_comm, mul_left_comm, mul_assoc]
-      _ ≤ 3 * Goldbach.BG_Bank.payload_cap X N := by
+      _ ≤ ((3 : ℝ) / 1000) * Goldbach.BG_Bank.payload_cap X N := by
               have hcap : |Goldbach.BG_Identity.conv_full X N| ≤ Goldbach.BG_Bank.payload_cap X N := hconv
-              have h1 : |r ^ 2 - 1| ≤ (3 : ℝ) := hratio_abs
-              have h0 : 0 ≤ (Goldbach.BG_Bank.payload_cap X N) := Goldbach.BG_Bank.payload_nonneg X N
+              have h1 : |r ^ 2 - 1| ≤ (3 : ℝ) / 1000 := hratio_abs
               have h2 : 0 ≤ |r ^ 2 - 1| := abs_nonneg _
               have h3 : 0 ≤ |Goldbach.BG_Identity.conv_full X N| := abs_nonneg _
               -- monotone in both factors
-              have := mul_le_mul h1 hcap h3 (by norm_num : (0 : ℝ) ≤ 3)
+              have := mul_le_mul h1 hcap h3 (by norm_num : (0 : ℝ) ≤ (3 : ℝ) / 1000)
               -- rewrite the RHS
               simpa [mul_assoc, mul_left_comm, mul_comm] using this
 
@@ -328,12 +444,12 @@ theorem bridge_bound_window
       Goldbach.BG_Bank.payload_cap X N ≤ (1252 : ℝ) / 10 ^ 6 :=
     Goldbach.BG_Bank.payload_cap_window_num (X := X) (N := N) hX hN
   have hbudget :
-      (3 : ℝ) * ((1252 : ℝ) / 10 ^ 6) ≤ δbridge_canon := by
-    norm_num [δbridge_canon, Mswap_canon, Cpp_canon, ρ_canon, Goldbach.BG_Identity.Ucut, H, X0]
+      ((3 : ℝ) / 1000) * ((1252 : ℝ) / 10 ^ 6) ≤ δbridge_canon := by
+    norm_num [δbridge_canon]
   have hmain' :
       |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
-        ≤ (3 : ℝ) * ((1252 : ℝ) / 10 ^ 6) := by
-    have h0 : 0 ≤ (3 : ℝ) := by norm_num
+        ≤ ((3 : ℝ) / 1000) * ((1252 : ℝ) / 10 ^ 6) := by
+    have h0 : 0 ≤ ((3 : ℝ) / 1000) := by norm_num
     have := mul_le_mul_of_nonneg_left hcap_num h0
     exact le_trans hmain (by simpa [mul_assoc] using this)
   exact le_trans hmain' hbudget

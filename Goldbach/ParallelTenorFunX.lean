@@ -4,6 +4,7 @@ import Goldbach.BG_Calib
 import Goldbach.BG_Identity
 import Goldbach.AnalyticPointwise
 import Goldbach.Cert.MajorArcAxiomsFunX
+import Goldbach.CanonParams
 
 namespace Goldbach.ParallelTenorFunX
 
@@ -18,8 +19,8 @@ open Goldbach.AO_SigmaPos
 abbrev X0 : ℕ := BankParams.X0
 abbrev H : ℕ := BankParams.H
 
-abbrev S : ℝ := (1.0 : ℝ)
-abbrev ε : ℝ := (0.01 : ℝ)
+abbrev S : ℝ := Goldbach.CanonParams.S
+abbrev ε : ℝ := Goldbach.CanonParams.ε
 
 /-- The natural closure constant for this instantiation: `c₀ := cAO(caps Hoff) = σmin − δAO(caps Hoff)`. -/
 noncomputable def c0 [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
@@ -35,23 +36,33 @@ Inner (major-arc) swap input for the parallel FunX track.
 This is the missing analytic link between the prime-weighted `conv_ref` and the constant
 reference `conv_ref_const` on the canonical window.
 -/
-class InnerSwapOnWindow : Prop where
+class InnerSwapOnWindow where
+  /-- Log-saving exponent for the major-arc (inner swap) bound. -/
+  A : ℕ
+  /-- Log-saving constant for the major-arc (inner swap) bound. -/
+  C : ℝ
+  /-- Nonnegativity of the constant. -/
+  C_nonneg : 0 ≤ C
   bound :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
       |Goldbach.BG_Identity.conv_ref X N - Goldbach.BG_Identity.conv_ref_const X N|
-        ≤ Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon
+        ≤ C / (Real.log (X : ℝ)) ^ A
+
+/-- The induced (window-uniform) major-arc cap from the `InnerSwapOnWindow` hypothesis. -/
+noncomputable def δ_major [InnerSwapOnWindow] (X : ℕ) : ℝ :=
+  InnerSwapOnWindow.C / (Real.log (X : ℝ)) ^ InnerSwapOnWindow.A
 
 /-- Total AO gap bound used by the parallel track: inner swap + AO envelope. -/
 noncomputable def δAO_gap_bound [InnerSwapOnWindow]
-    (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp) : ℝ :=
+    (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp) (X : ℕ) : ℝ :=
   Goldbach.AO_AssembleEnvelope.δAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff)
-    + Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon
+    + δ_major X
 
 lemma conv_ref_Mcanon_gap_le_δAO_gap_bound [InnerSwapOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp) :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
       |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
-        ≤ δAO_gap_bound (Hoff := Hoff) := by
+        ≤ δAO_gap_bound (Hoff := Hoff) X := by
   intro X N hX hN
   -- Bound the constant-reference gap using the parallel-track AO remainder bound.
   have hconst :
@@ -74,8 +85,9 @@ lemma conv_ref_Mcanon_gap_le_δAO_gap_bound [InnerSwapOnWindow]
   -- Inner swap gap (major arc input).
   have hswap :
       |Goldbach.BG_Identity.conv_ref X N - Goldbach.BG_Identity.conv_ref_const X N|
-        ≤ Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon :=
-    InnerSwapOnWindow.bound (X := X) (N := N) hX hN
+        ≤ δ_major X :=
+    by
+      simpa [δ_major] using InnerSwapOnWindow.bound (X := X) (N := N) hX hN
 
   -- Triangle inequality through `conv_ref_const`.
   have hsplit :
@@ -93,11 +105,11 @@ lemma conv_ref_Mcanon_gap_le_δAO_gap_bound [InnerSwapOnWindow]
     _ ≤ |Goldbach.BG_Identity.conv_ref X N - Goldbach.BG_Identity.conv_ref_const X N|
           + |Goldbach.BG_Identity.conv_ref_const X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| := by
           exact abs_add_le _ _
-    _ ≤ Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon
+    _ ≤ δ_major X
           + Goldbach.AO_AssembleEnvelope.δAO (Goldbach.AO_InstantiateTenorFunX.caps Hoff) := by
           exact add_le_add hswap hAO0
-    _ = δAO_gap_bound (Hoff := Hoff) := by
-          simp [δAO_gap_bound, add_comm, add_left_comm, add_assoc]
+    _ = δAO_gap_bound (Hoff := Hoff) X := by
+          simp [δAO_gap_bound, δ_major, add_comm, add_left_comm, add_assoc]
 
 theorem bank_cert_bound_funX [InnerSwapOnWindow]
     (Hoff : Goldbach.AO_OffDiag.TenorHypFunX.OffDiagHyp)
@@ -106,7 +118,7 @@ theorem bank_cert_bound_funX [InnerSwapOnWindow]
       ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
         Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
-          + δAO_gap_bound (Hoff := Hoff) ≤ ε) :
+          + δAO_gap_bound (Hoff := Hoff) X ≤ ε) :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
       |Goldbach.BG_Identity.R_bank X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N| ≤ ε := by
   intro X N hX hN
@@ -124,7 +136,7 @@ theorem bank_cert_bound_funX [InnerSwapOnWindow]
 
   have hAO :
       |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
-        ≤ δAO_gap_bound (Hoff := Hoff) :=
+        ≤ δAO_gap_bound (Hoff := Hoff) X :=
     conv_ref_Mcanon_gap_le_δAO_gap_bound (Hoff := Hoff) (X := X) (N := N) hX hN
 
   have htri :
@@ -154,7 +166,7 @@ theorem bank_cert_bound_funX [InnerSwapOnWindow]
     |Goldbach.BG_Identity.R_bank X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
         ≤ Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
-          + δAO_gap_bound (Hoff := Hoff) := by
+          + δAO_gap_bound (Hoff := Hoff) X := by
           have h12 :
               |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
                   + |Goldbach.BG_Identity.conv_full X N - Goldbach.BG_Identity.conv_ref X N|
@@ -167,7 +179,7 @@ theorem bank_cert_bound_funX [InnerSwapOnWindow]
                   + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
                 ≤ (Goldbach.BG_Calib.δbridge_canon
                       + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed))
-                  + δAO_gap_bound (Hoff := Hoff) :=
+                  + δAO_gap_bound (Hoff := Hoff) X :=
             add_le_add h12 hAO
           have hRHS :
               |Goldbach.BG_Identity.R_bank X N - Goldbach.BG_Identity.conv_full X N|
@@ -175,7 +187,7 @@ theorem bank_cert_bound_funX [InnerSwapOnWindow]
                   + |Goldbach.BG_Identity.conv_ref X N - Goldbach.AO_InstantiateTenorFunX.Mcanon Hoff X N|
                 ≤ Goldbach.BG_Calib.δbridge_canon
                   + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
-                  + δAO_gap_bound (Hoff := Hoff) := by
+                  + δAO_gap_bound (Hoff := Hoff) X := by
             simpa [add_assoc] using h123
           exact le_trans htri hRHS
     _ ≤ ε := hBudget (X := X) (N := N) hX hN
@@ -189,7 +201,7 @@ noncomputable def globalClosure_funX [InnerSwapOnWindow]
       ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
         Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
-          + δAO_gap_bound (Hoff := Hoff) ≤ ε) :
+          + δAO_gap_bound (Hoff := Hoff) X ≤ ε) :
     Goldbach.Bridge.GlobalClosurePointwise X0 H S (c0 Hoff) ε := by
   intro X hX
   have hεpos : (0 : ℝ) < ε := by norm_num [ε]
@@ -225,7 +237,7 @@ noncomputable def witness_funX [InnerSwapOnWindow]
       ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
         Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
-          + δAO_gap_bound (Hoff := Hoff) ≤ ε) :
+          + δAO_gap_bound (Hoff := Hoff) X ≤ ε) :
     Goldbach.Analytic.PointwiseWitness :=
   have hεpos : (0 : ℝ) < ε := by norm_num [ε]
   have hc0pos : (0 : ℝ) < c0 Hoff := lt_trans hεpos hεlt
