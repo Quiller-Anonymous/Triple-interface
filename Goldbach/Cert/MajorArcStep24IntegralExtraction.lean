@@ -127,10 +127,15 @@ def SepQ0 (X : ℕ) (Δ : ℝ) : Prop :=
 /-- Convenience lemma: for `Δ = 1`, it suffices to have `2 * Q0 < X` (as a Nat inequality). -/
 lemma sepQ0_one_of_two_mul_Q0_lt {X : ℕ} (hX : 2 * AO_OffDiag.TailBlock.Q0 < X) : SepQ0 X (1 : ℝ) := by
   refine ⟨by norm_num, ?_⟩
-  have hX' : ((2 * Q0 : ℕ) : ℝ) < (X : ℝ) := by
-    exact_mod_cast hX
-  -- `2 * 1 * Q0 = 2 * Q0`
-  simpa [mul_assoc, mul_left_comm, mul_comm] using hX'
+  have hX' : (60000 : ℝ) < (X : ℝ) := by
+    -- `2 * Q0 = 60000` and `exact_mod_cast` converts the Nat inequality to `ℝ`.
+    simpa [AO_OffDiag.TailBlock.Q0] using (show ((2 * AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) < (X : ℝ) from
+      (by exact_mod_cast hX))
+  have hLHS : (2 * (1 : ℝ) * (Q0 : ℝ)) = (60000 : ℝ) := by
+    -- Unfold the local abbreviation `Q0` and evaluate the numerals.
+    norm_num [Q0, AO_OffDiag.TailBlock.Q0, mul_assoc, mul_left_comm, mul_comm]
+  -- Rewrite the goal to `60000 < X`.
+  nlinarith [hX', hLHS]
 
 private lemma sepQ0_implies_lt (X : ℕ) {Δ : ℝ} (hsep : SepQ0 X Δ)
     {q q' : ℕ} (hq : q ≤ Q0) (hq' : q' ≤ Q0) :

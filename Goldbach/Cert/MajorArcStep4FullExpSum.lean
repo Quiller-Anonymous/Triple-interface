@@ -243,7 +243,7 @@ private lemma sum_Rbad_abs_aTerm_eq
     rw [if_pos hcop]
     simpa [hsum, haTerm0]
 
-private lemma norm_badResiduePart_le_sum_bad_vonMangoldt
+lemma norm_badResiduePart_le_sum_bad_vonMangoldt
     {q a : ℕ} (hq : 1 ≤ q)
     {L U : ℕ} {β : ℝ} :
     let Rbad : Finset ℕ := (Finset.range q).filter (fun r => ¬ Nat.Coprime r q)
@@ -335,7 +335,7 @@ private lemma norm_badResiduePart_le_sum_bad_vonMangoldt
           intro n hn
           simpa using (sum_Rbad_abs_aTerm_eq (q := q) hq n)
 
-private lemma sum_Ico_bad_vonMangoldt_le
+lemma sum_Ico_bad_vonMangoldt_le
     {q : ℕ} (hq : 1 ≤ q)
     {L U : ℕ} (hLU : L ≤ U) :
     (∑ n ∈ Finset.Ico L (U + 1),

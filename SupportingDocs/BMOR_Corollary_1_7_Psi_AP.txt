@@ -1,0 +1,14 @@
+BMOR (Bennett–Martin–O’Bryant–Rechnitzer, 2018) — explicit PNT in AP for ψ
+
+Citation (as given by our consulted mathematician):
+  Bennett–Martin–O’Bryant–Rechnitzer (2018), Corollary 1.7.
+
+Statement (ψ in arithmetic progressions, explicit and unconditional):
+  For integers q,a with 1 ≤ q ≤ 10^5 and gcd(a,q)=1, and for all real x ≥ 10^6,
+    | ψ(x; q, a) - x / φ(q) | < 0.011 * x / log x.
+
+Notes for this repo:
+  - Our major-arc truncation uses Q0 = 30000, so q ≤ Q0 is covered since 30000 ≤ 10^5.
+  - The project’s ψ is the Chebyshev ψ-function with von Mangoldt weights:
+      ψ(x; q, a) = ∑_{n ≤ x, n ≡ a (mod q)} Λ(n).
+  - The RHS is division by log x (not multiplication).
