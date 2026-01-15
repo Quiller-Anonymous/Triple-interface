@@ -492,7 +492,7 @@ theorem norm_fullExpSum_sub_muMainTerm_le_of_PsiBound
       ≤
       (q : ℝ) *
         ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-          * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|))))
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|))))
         +
       (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ) := by
   classical
@@ -600,7 +600,7 @@ theorem norm_fullExpSum_sub_muMainTerm_le_of_PsiBound
     _ ≤
         (q : ℝ) *
           ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-            * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|))))
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|))))
           +
         (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ) := by
         exact add_le_add hcop_bound hbad_bound

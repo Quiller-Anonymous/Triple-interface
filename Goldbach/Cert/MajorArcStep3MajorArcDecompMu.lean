@@ -39,7 +39,7 @@ theorem norm_sum_coprimeResidues_sub_muMainTerm_le_of_PsiBound
       ≤
       (q : ℝ) *
         ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-          * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)))) := by
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)))) := by
   classical
   intro Rcop V Sres
   -- Start from the Step-2b bound, specialized to the `let`-bound objects of this statement.
@@ -49,7 +49,7 @@ theorem norm_sum_coprimeResidues_sub_muMainTerm_le_of_PsiBound
         ≤
         (q : ℝ) *
           ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-            * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)))) := by
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)))) := by
     simpa using
       (Goldbach.Cert.MajorArcStep2MajorArcDecomp.norm_sum_coprimeResidues_sub_mainTerm_le_of_PsiBound
         (q := q) (a := a) (A := A) (hpsi := hpsi)

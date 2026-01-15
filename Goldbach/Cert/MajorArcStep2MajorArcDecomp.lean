@@ -271,7 +271,7 @@ theorem norm_sum_coprimeResidues_sub_mainTerm_le_of_PsiBound
       ≤
       (q : ℝ) *
         ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-          * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)))) := by
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)))) := by
   classical
   intro Rcop V Sres
   set c : ℂ := (Nat.totient q : ℂ)⁻¹ with hc_def
@@ -339,7 +339,7 @@ theorem norm_sum_coprimeResidues_sub_mainTerm_le_of_PsiBound
         ‖Sres r - c * V‖
           ≤
           (hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-            * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|))) := by
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|))) := by
     intro r hr
     have hcop : Nat.Coprime r q := (Finset.mem_filter.mp hr).2
     -- Apply the Step-2 lemma (note: `Sres` is definitionally the required `aTerm` sum).
@@ -357,7 +357,7 @@ theorem norm_sum_coprimeResidues_sub_mainTerm_le_of_PsiBound
         ≤
       (Rcop.card : ℝ) *
         ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-          * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)))) := by
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)))) := by
     have := Finset.sum_le_sum (fun r hr => hbound_each r hr)
     -- rewrite the RHS as `card * c`
     simpa using this
@@ -378,7 +378,7 @@ theorem norm_sum_coprimeResidues_sub_mainTerm_le_of_PsiBound
         ≤
       (Rcop.card : ℝ) *
         ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-          * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)))) := by
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)))) := by
     -- rewrite, then apply triangle + per-term norm simplification + uniform bound
     calc
       ‖(∑ r ∈ Rcop, e ((a : ℝ) * (r : ℝ) / q) * Sres r)
@@ -392,13 +392,13 @@ theorem norm_sum_coprimeResidues_sub_mainTerm_le_of_PsiBound
               exact hterm_norm r hr
       _ ≤ (Rcop.card : ℝ) *
             ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-              * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)))) := hsum_bound
+              * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)))) := hsum_bound
 
   -- Replace `Rcop.card` by `q`.
   have hnonneg :
       0 ≤
         ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-          * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)))) := by
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)))) := by
     -- everything is manifestly nonnegative
     have hlog_pos : 0 < Real.log ((L - 1 : ℕ) : ℝ) := by
       have h2 : (2 : ℕ) ≤ (L - 1 : ℕ) := le_trans (by decide : (2 : ℕ) ≤ 3) hL3
@@ -411,12 +411,12 @@ theorem norm_sum_coprimeResidues_sub_mainTerm_le_of_PsiBound
     have hfrac_nonneg : 0 ≤ hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A :=
       div_nonneg hmul_nonneg (le_of_lt hpow_pos)
     have hfac_nonneg :
-        0 ≤ (2 : ℝ) * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)) := by
-      have : 0 ≤ (1 : ℝ) + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|) := by
-        have : 0 ≤ ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|) := by
-          have : 0 ≤ (1 : ℝ) + 4 * Real.pi * |β| := by nlinarith [Real.pi_pos, abs_nonneg β]
-          exact mul_nonneg (by positivity) this
-        linarith
+        0 ≤ (2 : ℝ) * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)) := by
+      have hpi : 0 ≤ (4 * Real.pi * |β|) := by
+        have h4 : 0 ≤ (4 : ℝ) := by norm_num
+        exact mul_nonneg (mul_nonneg h4 (le_of_lt Real.pi_pos)) (abs_nonneg β)
+      have : 0 ≤ (2 : ℝ) + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|) := by
+        exact add_nonneg (by norm_num) (mul_nonneg (by positivity) hpi)
       nlinarith [this]
     exact mul_nonneg hfrac_nonneg hfac_nonneg
 
@@ -425,11 +425,11 @@ theorem norm_sum_coprimeResidues_sub_mainTerm_le_of_PsiBound
           - ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (∑ r ∈ Rcop, e ((a : ℝ) * (r : ℝ) / q)) * V‖
         ≤ (Rcop.card : ℝ) *
             ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-              * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)))) := by
+              * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)))) := by
             simpa [hc_def, mul_assoc, mul_left_comm, mul_comm] using hmain
     _ ≤ (q : ℝ) *
           ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-            * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)))) := by
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)))) := by
           exact mul_le_mul_of_nonneg_right hcard_le hnonneg
 
 end

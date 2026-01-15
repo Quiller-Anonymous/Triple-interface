@@ -103,7 +103,7 @@ theorem norm_bankSum_mul_sub_muMainTerm_mul_le_of_BMOR
     let E₁ : ℝ :=
       (q : ℝ) *
           ((Cψ * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
-            * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β₁|))))
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β₁|))))
         +
         (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
         +
@@ -111,7 +111,7 @@ theorem norm_bankSum_mul_sub_muMainTerm_mul_le_of_BMOR
     let E₂ : ℝ :=
       (q : ℝ) *
           ((Cψ * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
-            * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β₂|))))
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β₂|))))
         +
         (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
         +
@@ -128,6 +128,116 @@ theorem norm_bankSum_mul_sub_muMainTerm_mul_le_of_BMOR
     simpa [V₂, S₂, M₂, E₂] using
       (Goldbach.Cert.MajorArcStep20BankExpSumApproxBMOR.norm_bankSum_sub_muMainTerm_le_of_BMOR
         (q := q) (a := a) (L := L) (U := U) hLU hL hXmin hq ha hqQ0 (β := β₂) hβ₂)
+
+  exact norm_mul_sub_mul_le_of_norm_sub_le (S₁ := S₁) (S₂ := S₂) (M₁ := M₁) (M₂ := M₂)
+    (E₁ := E₁) (E₂ := E₂) hS₁ hS₂
+
+/--
+Variant of `norm_bankSum_mul_sub_muMainTerm_mul_le_of_BMOR` with no `Xmin ≤ L-1` cutoff.
+
+This uses the coarse fallback bound from Step 20 (constant `210`), so it is intended only as a
+certificate-friendly “no low-end cutoff” option.
+-/
+theorem norm_bankSum_mul_sub_muMainTerm_mul_le_of_BMOR210
+    {q a : ℕ}
+    {L U : ℕ} (hLU : L ≤ U) (hL : 0 < L) (hL2 : 2 ≤ (L - 1))
+    (hq : 1 ≤ q) (ha : Nat.Coprime a q) (hqQ0 : q ≤ Goldbach.AO_OffDiag.TailBlock.Q0)
+    {β₁ β₂ : ℝ} (hβ₁ : |2 * Real.pi * β₁| ≤ 1) (hβ₂ : |2 * Real.pi * β₂| ≤ 1) :
+    let V₁ : ℂ := ∑ n ∈ Finset.Ico L (U + 1), gExp β₁ n
+    let V₂ : ℂ := ∑ n ∈ Finset.Ico L (U + 1), gExp β₂ n
+    let S₁ : ℂ :=
+      ∑ n ∈ Finset.Ico L (U + 1),
+        (Goldbach.BG_Bank.Λ n : ℂ) * gExp (β₁ + ((a : ℝ) / (q : ℝ))) n
+    let S₂ : ℂ :=
+      ∑ n ∈ Finset.Ico L (U + 1),
+        (Goldbach.BG_Bank.Λ n : ℂ) * gExp (β₂ + ((a : ℝ) / (q : ℝ))) n
+    let M₁ : ℂ := ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V₁
+    let M₂ : ℂ := ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V₂
+    let E₁ : ℝ :=
+      (q : ℝ) *
+          (((210 : ℝ) * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β₁|))))
+        +
+        (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
+        +
+        (Finset.Ico L (U + 1)).card * (2 * Real.log ((U : ℝ) + 2))
+    let E₂ : ℝ :=
+      (q : ℝ) *
+          (((210 : ℝ) * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β₂|))))
+        +
+        (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
+        +
+        (Finset.Ico L (U + 1)).card * (2 * Real.log ((U : ℝ) + 2))
+    ‖S₁ * S₂ - M₁ * M₂‖ ≤ E₁ * E₂ + E₁ * ‖M₂‖ + ‖M₁‖ * E₂ := by
+  classical
+  intro V₁ V₂ S₁ S₂ M₁ M₂ E₁ E₂
+
+  have hS₁ : ‖S₁ - M₁‖ ≤ E₁ := by
+    simpa [V₁, S₁, M₁, E₁] using
+      (Goldbach.Cert.MajorArcStep20BankExpSumApproxBMOR.norm_bankSum_sub_muMainTerm_le_of_BMOR210
+        (q := q) (a := a) (L := L) (U := U) hLU hL hL2 hq ha hqQ0 (β := β₁) hβ₁)
+  have hS₂ : ‖S₂ - M₂‖ ≤ E₂ := by
+    simpa [V₂, S₂, M₂, E₂] using
+      (Goldbach.Cert.MajorArcStep20BankExpSumApproxBMOR.norm_bankSum_sub_muMainTerm_le_of_BMOR210
+        (q := q) (a := a) (L := L) (U := U) hLU hL hL2 hq ha hqQ0 (β := β₂) hβ₂)
+
+  exact norm_mul_sub_mul_le_of_norm_sub_le (S₁ := S₁) (S₂ := S₂) (M₁ := M₁) (M₂ := M₂)
+    (E₁ := E₁) (E₂ := E₂) hS₁ hS₂
+
+/-!
+### Variant with different coprime numerators
+
+The proof of Step 21 is purely “apply Step 20 twice + a product-error lemma”, and does not require
+the two exponential sums to share the same numerator `a` (only the same modulus `q`).
+
+This variant is convenient when rewriting `α ± β` around *different* rationals with the same
+denominator `q` (e.g. after a coprime-preserving rational approximation of `β` and `1-β`).
+-/
+
+theorem norm_bankSum_mul_sub_muMainTerm_mul_le_of_BMOR210'
+    {q a₁ a₂ : ℕ}
+    {L U : ℕ} (hLU : L ≤ U) (hL : 0 < L) (hL2 : 2 ≤ (L - 1))
+    (hq : 1 ≤ q) (ha₁ : Nat.Coprime a₁ q) (ha₂ : Nat.Coprime a₂ q) (hqQ0 : q ≤ Goldbach.AO_OffDiag.TailBlock.Q0)
+    {β₁ β₂ : ℝ} (hβ₁ : |2 * Real.pi * β₁| ≤ 1) (hβ₂ : |2 * Real.pi * β₂| ≤ 1) :
+    let V₁ : ℂ := ∑ n ∈ Finset.Ico L (U + 1), gExp β₁ n
+    let V₂ : ℂ := ∑ n ∈ Finset.Ico L (U + 1), gExp β₂ n
+    let S₁ : ℂ :=
+      ∑ n ∈ Finset.Ico L (U + 1),
+        (Goldbach.BG_Bank.Λ n : ℂ) * gExp (β₁ + ((a₁ : ℝ) / (q : ℝ))) n
+    let S₂ : ℂ :=
+      ∑ n ∈ Finset.Ico L (U + 1),
+        (Goldbach.BG_Bank.Λ n : ℂ) * gExp (β₂ + ((a₂ : ℝ) / (q : ℝ))) n
+    let M₁ : ℂ := ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V₁
+    let M₂ : ℂ := ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V₂
+    let E₁ : ℝ :=
+      (q : ℝ) *
+          (((210 : ℝ) * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β₁|))))
+        +
+        (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
+        +
+        (Finset.Ico L (U + 1)).card * (2 * Real.log ((U : ℝ) + 2))
+    let E₂ : ℝ :=
+      (q : ℝ) *
+          (((210 : ℝ) * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β₂|))))
+        +
+        (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
+        +
+        (Finset.Ico L (U + 1)).card * (2 * Real.log ((U : ℝ) + 2))
+    ‖S₁ * S₂ - M₁ * M₂‖ ≤ E₁ * E₂ + E₁ * ‖M₂‖ + ‖M₁‖ * E₂ := by
+  classical
+  intro V₁ V₂ S₁ S₂ M₁ M₂ E₁ E₂
+
+  have hS₁ : ‖S₁ - M₁‖ ≤ E₁ := by
+    simpa [V₁, S₁, M₁, E₁] using
+      (Goldbach.Cert.MajorArcStep20BankExpSumApproxBMOR.norm_bankSum_sub_muMainTerm_le_of_BMOR210
+        (q := q) (a := a₁) (L := L) (U := U) hLU hL hL2 hq ha₁ hqQ0 (β := β₁) hβ₁)
+  have hS₂ : ‖S₂ - M₂‖ ≤ E₂ := by
+    simpa [V₂, S₂, M₂, E₂] using
+      (Goldbach.Cert.MajorArcStep20BankExpSumApproxBMOR.norm_bankSum_sub_muMainTerm_le_of_BMOR210
+        (q := q) (a := a₂) (L := L) (U := U) hLU hL hL2 hq ha₂ hqQ0 (β := β₂) hβ₂)
 
   exact norm_mul_sub_mul_le_of_norm_sub_le (S₁ := S₁) (S₂ := S₂) (M₁ := M₁) (M₂ := M₂)
     (E₁ := E₁) (E₂ := E₂) hS₁ hS₂

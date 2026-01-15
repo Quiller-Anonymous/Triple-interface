@@ -69,7 +69,7 @@ theorem norm_sum_aTerm_gExp_Ico_sub_mainTerm_le_of_PsiBound
             * (∑ n ∈ Finset.Ico L (U + 1), gExp β n)‖
       ≤
       (hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-        * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|))) := by
+        * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|))) := by
   classical
   -- Modify the weight so it vanishes at `L-1`.
   let g0 : ℕ → ℂ :=
@@ -104,67 +104,91 @@ theorem norm_sum_aTerm_gExp_Ico_sub_mainTerm_le_of_PsiBound
     exact hg0_eq_on_Ico hn
 
   -- Bound the variation term for `g0` over `Ico (L-1) U`.
-  have hdiff_bound :
-      ∀ {n : ℕ}, n ∈ Finset.Ico (L - 1) U →
-        ‖g0 (n + 1) - g0 n‖ ≤ (1 : ℝ) + (4 * Real.pi * |β|) := by
-    intro n hn
-    by_cases hcase : n = L - 1
-    · subst hcase
-      -- boundary jump: `g0(L) - g0(L-1) = gExp(L) - 0`
-      have hLm1_lt_L : (L - 1) < L := Nat.pred_lt (Nat.ne_of_gt hL)
-      have hneL : (L : ℕ) ≠ L - 1 := ne_of_gt hLm1_lt_L
-      have hsub : L - 1 + 1 = L := Nat.sub_add_cancel (Nat.succ_le_of_lt hL)
-      have hnorm : ‖gExp β L‖ = 1 := norm_gExp (β := β) (n := L)
-      have hnonneg : 0 ≤ 4 * Real.pi * |β| := by
-        have h4 : 0 ≤ (4 : ℝ) := by norm_num
-        exact mul_nonneg (mul_nonneg h4 (le_of_lt Real.pi_pos)) (abs_nonneg β)
-      -- `‖g0 (L-1+1) - g0 (L-1)‖ = ‖gExp β L‖ = 1`.
-      -- Then `1 ≤ 1 + 4π|β|`.
-      have : ‖g0 (L - 1 + 1) - g0 (L - 1)‖ ≤ (1 : ℝ) + (4 * Real.pi * |β|) := by
-        have : (1 : ℝ) ≤ (1 : ℝ) + (4 * Real.pi * |β|) := by linarith
-        simpa [g0, hneL, hg0, hsub, hnorm] using this
-      simpa [hsub] using this
-    · -- interior: both endpoints are `gExp`, so use the `e` Lipschitz bound.
+  have hsum_diff :
+      (∑ n ∈ Finset.Ico (L - 1) U, ‖g0 (n + 1) - g0 n‖)
+        ≤ (1 : ℝ) + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|) := by
+    -- Split off the single boundary jump at `n = L-1`; on the interior we get the Lipschitz bound
+    -- `‖e(β(n+1)) - e(βn)‖ ≤ 4π|β|`.
+    have hLm1_lt_L : (L - 1) < L := Nat.pred_lt (Nat.ne_of_gt hL)
+    have hLm1_lt_U : L - 1 < U := lt_of_lt_of_le hLm1_lt_L hLU
+    have hsub : L - 1 + 1 = L := Nat.sub_add_cancel (Nat.succ_le_of_lt hL)
+    have hIco : insert (L - 1) (Finset.Ico L U) = Finset.Ico (L - 1) U := by
+      simpa [hsub] using
+        (Finset.insert_Ico_succ_left_eq_Ico (a := L - 1) (b := U) hLm1_lt_U)
+    have hnot : (L - 1) ∉ Finset.Ico L U := by
+      have : ¬ L ≤ L - 1 := Nat.not_le_of_gt hLm1_lt_L
+      simp [Finset.mem_Ico, this]
+    have hneL : (L : ℕ) ≠ L - 1 := ne_of_gt hLm1_lt_L
+
+    have hboundary : ‖g0 (L - 1 + 1) - g0 (L - 1)‖ = 1 := by
+      -- `g0(L-1)=0`, `g0(L)=gExp(L)`, and `‖gExp(L)‖ = 1`.
+      simp [g0, hneL, hg0, hsub, norm_gExp]
+
+    have hdiff_interior :
+        ∀ {n : ℕ}, n ∈ Finset.Ico L U → ‖g0 (n + 1) - g0 n‖ ≤ 4 * Real.pi * |β| := by
+      intro n hn
+      have hnL : L ≤ n := (Finset.mem_Ico.mp hn).1
+      have hne0 : n ≠ L - 1 := by
+        exact ne_of_gt (lt_of_lt_of_le hLm1_lt_L hnL)
       have hne1 : (n + 1 : ℕ) ≠ L - 1 := by
-        have hn_ge : (L - 1) ≤ n := (Finset.mem_Ico.mp hn).1
+        have hn_ge : (L - 1) ≤ n := le_trans (Nat.le_of_lt hLm1_lt_L) hnL
         have : (L - 1) < n + 1 := lt_of_le_of_lt hn_ge (Nat.lt_succ_self n)
         exact ne_of_gt this
-      have hne0 : n ≠ L - 1 := hcase
       have hcore :
-          ‖g0 (n + 1) - g0 n‖
-            =
-          ‖gExp β (n + 1) - gExp β n‖ := by
-        simp [g0, hne1, hne0]
+          ‖g0 (n + 1) - g0 n‖ = ‖gExp β (n + 1) - gExp β n‖ := by
+        simp [g0, hne0, hne1]
       have hLip :
           ‖gExp β (n + 1) - gExp β n‖ ≤ 4 * Real.pi * |β| :=
         norm_gExp_succ_sub_gExp_le (β := β) n hβ
-      -- finalize with `4π|β| ≤ 1 + 4π|β|`.
-      exact le_trans (by simpa [hcore] using hLip) (by nlinarith)
+      simpa [hcore] using hLip
 
-  have hsum_diff :
-      (∑ n ∈ Finset.Ico (L - 1) U, ‖g0 (n + 1) - g0 n‖)
-        ≤ ((U - (L - 1) : ℕ) : ℝ) * ((1 : ℝ) + (4 * Real.pi * |β|)) := by
-    -- sum the pointwise bound, then evaluate the constant sum as `card * c`
-    have hle :
-        (∑ n ∈ Finset.Ico (L - 1) U, ‖g0 (n + 1) - g0 n‖)
-          ≤ ∑ n ∈ Finset.Ico (L - 1) U, ((1 : ℝ) + (4 * Real.pi * |β|)) := by
-      refine Finset.sum_le_sum ?_
-      intro n hn
-      exact hdiff_bound (n := n) hn
-    -- `∑_{Ico} c = card(Ico)*c`
-    have hcardNat : (Finset.Ico (L - 1) U).card = U - (L - 1) := by
-      simp
-    have hcard :
-        ((Finset.Ico (L - 1) U).card : ℝ) = ((U - (L - 1) : ℕ) : ℝ) := by
-      exact_mod_cast hcardNat
+    have hsum_interior :
+        (∑ n ∈ Finset.Ico L U, ‖g0 (n + 1) - g0 n‖)
+          ≤ ((U - L : ℕ) : ℝ) * (4 * Real.pi * |β|) := by
+      have hle :
+          (∑ n ∈ Finset.Ico L U, ‖g0 (n + 1) - g0 n‖)
+            ≤ ∑ n ∈ Finset.Ico L U, (4 * Real.pi * |β|) := by
+        refine Finset.sum_le_sum ?_
+        intro n hn
+        exact hdiff_interior (n := n) hn
+      have hcardNat : (Finset.Ico L U).card = U - L := by simp
+      have hcard :
+          ((Finset.Ico L U).card : ℝ) = ((U - L : ℕ) : ℝ) := by
+        exact_mod_cast hcardNat
+      calc
+        (∑ n ∈ Finset.Ico L U, ‖g0 (n + 1) - g0 n‖)
+            ≤ ∑ n ∈ Finset.Ico L U, (4 * Real.pi * |β|) := hle
+        _ = ((Finset.Ico L U).card : ℝ) * (4 * Real.pi * |β|) := by
+              simp
+        _ = ((U - L : ℕ) : ℝ) * (4 * Real.pi * |β|) := by
+              simp
+
+    have hnonneg : 0 ≤ 4 * Real.pi * |β| := by
+      have h4 : 0 ≤ (4 : ℝ) := by norm_num
+      exact mul_nonneg (mul_nonneg h4 (le_of_lt Real.pi_pos)) (abs_nonneg β)
+
+    have hsub_le : (U - L) ≤ (U - (L - 1)) := by
+      exact Nat.sub_le_sub_left (Nat.pred_le L) U
+    have hsub_le' : ((U - L : ℕ) : ℝ) ≤ ((U - (L - 1) : ℕ) : ℝ) := by
+      exact_mod_cast hsub_le
+
+    have hsum_interior' :
+        (∑ n ∈ Finset.Ico L U, ‖g0 (n + 1) - g0 n‖)
+          ≤ ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|) := by
+      exact le_trans hsum_interior (by
+        exact mul_le_mul_of_nonneg_right hsub_le' hnonneg)
+
     calc
       (∑ n ∈ Finset.Ico (L - 1) U, ‖g0 (n + 1) - g0 n‖)
-          ≤ ∑ n ∈ Finset.Ico (L - 1) U, ((1 : ℝ) + (4 * Real.pi * |β|)) := hle
-      _ = ((Finset.Ico (L - 1) U).card : ℝ) * ((1 : ℝ) + (4 * Real.pi * |β|)) := by
-            -- `simp` on a constant sum sometimes expands the `card * (1 + t)` factor; normalize it.
-            simp [mul_add]
-      _ = ((U - (L - 1) : ℕ) : ℝ) * ((1 : ℝ) + (4 * Real.pi * |β|)) := by
-            simp
+          = (∑ n ∈ insert (L - 1) (Finset.Ico L U), ‖g0 (n + 1) - g0 n‖) := by
+              simp [hIco]
+      _ = ‖g0 (L - 1 + 1) - g0 (L - 1)‖
+            + (∑ n ∈ Finset.Ico L U, ‖g0 (n + 1) - g0 n‖) := by
+              simp [Finset.sum_insert, hnot]
+      _ ≤ (1 : ℝ) + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|) := by
+              -- Use `hboundary` and `hsum_interior'`.
+              have := add_le_add (le_of_eq hboundary) hsum_interior'
+              simpa [hboundary] using this
 
   have hU_ne : (U : ℕ) ≠ L - 1 := by
     have hLm1_lt_L : (L - 1) < L := Nat.pred_lt (Nat.ne_of_gt hL)
@@ -197,15 +221,14 @@ theorem norm_sum_aTerm_gExp_Ico_sub_mainTerm_le_of_PsiBound
           * (2 * (‖g0 U‖ + (∑ n ∈ Finset.Ico (L - 1) U, ‖g0 (n + 1) - g0 n‖))) := hSW'
     _ ≤
         (hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-          * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|))) := by
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|))) := by
         have hinner :
             (2 * (‖g0 U‖ + (∑ n ∈ Finset.Ico (L - 1) U, ‖g0 (n + 1) - g0 n‖)))
-              ≤ 2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|)) := by
+              ≤ 2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|)) := by
           have : ‖g0 U‖ + (∑ n ∈ Finset.Ico (L - 1) U, ‖g0 (n + 1) - g0 n‖)
-                  ≤ 1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|) := by
-            -- use `‖g0 U‖ = 1` and `hsum_diff`
+                  ≤ 2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|) := by
             have := add_le_add (le_of_eq hnorm_g0U) hsum_diff
-            simpa using this
+            nlinarith
           nlinarith
         exact mul_le_mul_of_nonneg_left hinner (by
           -- the outer factor is nonnegative

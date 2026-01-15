@@ -121,7 +121,7 @@ theorem norm_bankSum_mul_sub_muMainTerm_mul_le_of_PsiBound
     let E₁ : ℝ :=
       (q : ℝ) *
           ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-            * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β₁|))))
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β₁|))))
         +
         (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
         +
@@ -129,7 +129,7 @@ theorem norm_bankSum_mul_sub_muMainTerm_mul_le_of_PsiBound
     let E₂ : ℝ :=
       (q : ℝ) *
           ((hpsi.C * (U : ℝ) / (Real.log ((L - 1 : ℕ) : ℝ)) ^ A)
-            * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β₂|))))
+            * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β₂|))))
         +
         (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
         +
@@ -156,4 +156,3 @@ end
 
 end MajorArcStep21QuadraticIntegrandControl
 end Goldbach.Cert
-

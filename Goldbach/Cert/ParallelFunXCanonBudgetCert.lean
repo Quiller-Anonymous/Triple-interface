@@ -1,5 +1,6 @@
 import Goldbach.CompleteTenorFunX_CanonBudget
 import Goldbach.Cert.InnerSwapOnWindowCanonSpec
+import Goldbach.Cert.MajorArcEvalOnWindowCanonSpec
 import Goldbach.Cert.SigmaUpperOnWindowCanon
 import Goldbach.Cert.SigmaLowerOnWindowCanonSpec
 

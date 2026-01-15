@@ -1,4 +1,5 @@
 import Goldbach.Cert.MajorArcAxiomsFunX
+import Goldbach.Cert.TurnkeyMajorArcCanonSpec
 
 /-!
 Major arcs: canonical on-window evaluation axiom (Strategy 2 / Option B).
@@ -30,12 +31,15 @@ Conventional (textbook) major-arc input, specialized to the project’s canonica
 This is the Strategy-2 replacement for the pinned calibration datum in
 `Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean`.
 -/
-axiom major_arc_eval_on_window_canon :
+theorem major_arc_eval_on_window_canon :
   ∀ {X N : ℕ},
     X0 ≤ X → N ∈ EvenIn X H →
-      |RΛ_smooth X N - RΛ_model X N| ≤ δ_major_canon
+      |RΛ_smooth X N - RΛ_model X N| ≤ δ_major_canon := by
+  intro X N hX hN
+  simpa using
+    (Goldbach.Cert.TurnkeyMajorArcCanonSpec.turnkeyMajorArcCanon.major_arc_eval_on_window_canon
+      (X := X) (N := N) hX hN)
 
 end
 
 end Goldbach.Cert.MajorArcEvalOnWindowCanonSpec
-

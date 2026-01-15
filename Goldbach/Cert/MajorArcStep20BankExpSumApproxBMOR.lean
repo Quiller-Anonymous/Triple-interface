@@ -39,7 +39,7 @@ theorem norm_bankSum_sub_muMainTerm_le_of_BMOR
       ≤
       (q : ℝ) *
         ((Cψ * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
-          * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|))))
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|))))
         +
       (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
         +
@@ -132,7 +132,7 @@ theorem norm_bankSum_sub_muMainTerm_le_of_BMOR
         ≤
       (q : ℝ) *
         ((Cψ * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
-          * (2 * (1 + ((U - (L - 1) : ℕ) : ℝ) * (1 + 4 * Real.pi * |β|))))
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|))))
         +
       (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
         +
@@ -142,6 +142,125 @@ theorem norm_bankSum_sub_muMainTerm_le_of_BMOR
     exact le_trans hTri (by simpa [add_assoc, add_left_comm, add_comm] using this)
 
   -- Replace `SB` by the statement's bank sum and finish.
+  simpa [SB] using hmain
+
+/--
+Variant of `norm_bankSum_sub_muMainTerm_le_of_BMOR` with no `Xmin ≤ L-1` cutoff.
+
+This uses the coarse fallback bound from Step 5 (constant `210`), so it is intended only as a
+certificate-friendly “no low-end cutoff” option.
+-/
+theorem norm_bankSum_sub_muMainTerm_le_of_BMOR210
+    {q a : ℕ}
+    {L U : ℕ} (hLU : L ≤ U) (hL : 0 < L) (hL2 : 2 ≤ (L - 1))
+    (hq : 1 ≤ q) (ha : Nat.Coprime a q) (hqQ0 : q ≤ Goldbach.AO_OffDiag.TailBlock.Q0)
+    {β : ℝ} (hβ : |2 * Real.pi * β| ≤ 1) :
+    let V : ℂ := ∑ n ∈ Finset.Ico L (U + 1), gExp β n
+    ‖(∑ n ∈ Finset.Ico L (U + 1),
+          (Goldbach.BG_Bank.Λ n : ℂ) * gExp (β + ((a : ℝ) / (q : ℝ))) n)
+        - ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V‖
+      ≤
+      (q : ℝ) *
+        (((210 : ℝ) * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|))))
+        +
+      (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
+        +
+      (Finset.Ico L (U + 1)).card * (2 * Real.log ((U : ℝ) + 2)) := by
+  classical
+  intro V
+  have hVM :=
+    Goldbach.Cert.MajorArcStep5ExpSumApproxBMOR.norm_expSum_sub_muMainTerm_le_of_BMOR210
+      (q := q) (a := a) (L := L) (U := U) hLU hL hL2 hq ha hqQ0 (β := β) hβ
+  have hDiff :=
+    (Goldbach.Cert.MajorArcStep19PrimePowerDisposal.norm_sum_ΛVM_sub_bankΛ_gExp_le
+      (L := L) (U := U) (β := (β + ((a : ℝ) / (q : ℝ)))))
+  set SB : ℂ :=
+    ∑ n ∈ Finset.Ico L (U + 1), (Goldbach.BG_Bank.Λ n : ℂ) * gExp (β + (a : ℝ) / (q : ℝ)) n
+  set SVM : ℂ :=
+    ∑ n ∈ Finset.Ico L (U + 1),
+      (Goldbach.Cert.SiegelWalfisz.ΛVM n : ℂ) * gExp (β + (a : ℝ) / (q : ℝ)) n
+  set C : ℂ :=
+    ∑ n ∈ Finset.Ico L (U + 1),
+      ((Goldbach.Cert.SiegelWalfisz.ΛVM n : ℂ) - (Goldbach.BG_Bank.Λ n : ℂ))
+        * gExp (β + (a : ℝ) / (q : ℝ)) n
+
+  have hrewrite : SVM = SB + C := by
+    subst SB SVM C
+    have hterm :
+        ∀ n : ℕ,
+          (ΛVM n : ℂ) * gExp (β + (a : ℝ) / (q : ℝ)) n
+            =
+          (Goldbach.BG_Bank.Λ n : ℂ) * gExp (β + (a : ℝ) / (q : ℝ)) n
+            +
+          ((ΛVM n : ℂ) - (Goldbach.BG_Bank.Λ n : ℂ)) * gExp (β + (a : ℝ) / (q : ℝ)) n := by
+      intro n
+      have hsplit :
+          (ΛVM n : ℂ)
+            =
+          (Goldbach.BG_Bank.Λ n : ℂ) + ((ΛVM n : ℂ) - (Goldbach.BG_Bank.Λ n : ℂ)) := by
+        simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+      calc
+        (ΛVM n : ℂ) * gExp (β + (a : ℝ) / (q : ℝ)) n
+            =
+          ((Goldbach.BG_Bank.Λ n : ℂ) + ((ΛVM n : ℂ) - (Goldbach.BG_Bank.Λ n : ℂ)))
+            * gExp (β + (a : ℝ) / (q : ℝ)) n := by
+              exact
+                congrArg (fun z : ℂ => z * gExp (β + (a : ℝ) / (q : ℝ)) n) hsplit
+        _ =
+          (Goldbach.BG_Bank.Λ n : ℂ) * gExp (β + (a : ℝ) / (q : ℝ)) n
+            +
+          ((ΛVM n : ℂ) - (Goldbach.BG_Bank.Λ n : ℂ)) * gExp (β + (a : ℝ) / (q : ℝ)) n := by
+              simpa using
+                (add_mul
+                  (Goldbach.BG_Bank.Λ n : ℂ)
+                  ((ΛVM n : ℂ) - (Goldbach.BG_Bank.Λ n : ℂ))
+                  (gExp (β + (a : ℝ) / (q : ℝ)) n))
+    have hsum :
+        (∑ n ∈ Finset.Ico L (U + 1), (ΛVM n : ℂ) * gExp (β + (a : ℝ) / (q : ℝ)) n)
+          =
+        ∑ n ∈ Finset.Ico L (U + 1),
+          ((Goldbach.BG_Bank.Λ n : ℂ) * gExp (β + (a : ℝ) / (q : ℝ)) n
+            +
+            ((ΛVM n : ℂ) - (Goldbach.BG_Bank.Λ n : ℂ)) * gExp (β + (a : ℝ) / (q : ℝ)) n) := by
+      refine Finset.sum_congr rfl ?_
+      intro n hn
+      simpa using hterm n
+    rw [hsum]
+    simp [Finset.sum_add_distrib, add_assoc, add_left_comm, add_comm]
+
+  have hC_norm :
+      ‖C‖ ≤ (Finset.Ico L (U + 1)).card * (2 * Real.log ((U : ℝ) + 2)) := by
+    simpa [C] using hDiff
+
+  have hTri :
+      ‖SB - ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V‖
+        ≤
+      ‖SVM - ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V‖ + ‖C‖ := by
+    have hSB : SB = SVM - C := by
+      have := congrArg (fun t : ℂ => t - C) hrewrite
+      simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using this.symm
+    have hSub :
+        SB - ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V
+          =
+        (SVM - ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V) - C := by
+      simp [hSB, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+    rw [hSub]
+    exact norm_sub_le _ _
+
+  have hmain :
+      ‖SB - ((1 / (Nat.totient q : ℝ) : ℝ) : ℂ) * (μ q : ℂ) * V‖
+        ≤
+      (q : ℝ) *
+        (((210 : ℝ) * (U : ℝ) / Real.log ((L - 1 : ℕ) : ℝ))
+          * (2 * (2 + ((U - (L - 1) : ℕ) : ℝ) * (4 * Real.pi * |β|))))
+        +
+      (((q + 1) * (Nat.log 2 U + 1) : ℕ) : ℝ) * Real.log (q : ℝ)
+        +
+      (Finset.Ico L (U + 1)).card * (2 * Real.log ((U : ℝ) + 2)) := by
+    have := add_le_add hVM hC_norm
+    exact le_trans hTri (by simpa [add_assoc, add_left_comm, add_comm] using this)
+
   simpa [SB] using hmain
 
 end
