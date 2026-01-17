@@ -1,4 +1,4 @@
-import Goldbach.Cert.MajorArcModules.TurnkeyCanon
+import Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec
 
 /-!
 Turnkey major-arc interface axiom (Strategy 2 / certificate-facing boundary).
@@ -23,7 +23,8 @@ This is the single “turnkey major-arc” boundary.
 Long-term goal: replace this axiom by a proved/certificate-checked construction producing an
 inhabitant of `TurnkeyMajorArcCanon`.
 -/
-axiom turnkeyMajorArcCanon : TurnkeyMajorArcCanon
+theorem turnkeyMajorArcCanon : TurnkeyMajorArcCanon :=
+  Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec.turnkeyMajorArcCanon
 
 end
 

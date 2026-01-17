@@ -28,6 +28,8 @@ open Goldbach
 open Goldbach.BankParams
 open Goldbach.Windows
 
+noncomputable section
+
 /-- The banked inner Goldbach correlation functional (Tenor-style `R_Λ(X,N)`), in project notation. -/
 noncomputable abbrev RΛ_bank (X N : ℕ) : ℝ :=
   Goldbach.BG_Identity.conv_ref X N
@@ -99,9 +101,16 @@ Derived “inner swap on window” instance for the FunX parallel track.
 This is not an axiom: it is a formal consequence of `goldbach_major_arc_eval_on_window_canon`.
 -/
 instance : Goldbach.ParallelTenorFunX.InnerSwapOnWindow := by
-  refine ⟨0, Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon, by nlinarith, ?_⟩
+  refine
+    ⟨0, Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon,
+      by
+        -- `δ_major_canon = 6e-5`.
+        norm_num [Goldbach.Cert.MajorArcAxiomsFunX.δ_major_canon],
+      ?_⟩
   intro X N hX hN
   simpa [Goldbach.ParallelTenorFunX.δ_major, RΛ_bank, RΛ_model] using
     goldbach_major_arc_eval_on_window_canon (X := X) (N := N) hX hN
+
+end
 
 end Goldbach.AO_MajorSwapTenorAxiomsFunX

@@ -1,17 +1,30 @@
 # Turnkey major arc audit (Steps 1–2)
 
-This note records the **current remaining obligations** to eliminate the final major-arc axiom
-`Goldbach/Cert/TurnkeyMajorArcCanonSpec.lean` and replace it by a certificate-checked proof.
+This note records the **current remaining obligations** to eliminate the remaining major-arc
+assumptions and end with a certificate-checked proof.
 
 ## What “done” means
 
-Replace:
+`Goldbach/Cert/TurnkeyMajorArcCanonSpec.lean` now constructs `turnkeyMajorArcCanon`
+from the `Q0` certificate route. The remaining analytic assumptions are isolated as axioms in:
 
-- `Goldbach/Cert/TurnkeyMajorArcCanonSpec.lean:26` (`axiom turnkeyMajorArcCanon`)
+- `Goldbach/Cert/MajorArcModules/Q0TwoBoundsSpec.lean` (`q0Minor_energy`, `q0Major_bound`).
 
-by an axiom-free definition/theorem producing:
+You can confirm this directly with:
 
-- `Goldbach.Cert.MajorArcModules.TurnkeyCanon.TurnkeyMajorArcCanon`.
+`lake env lean --stdin`:
+
+```lean
+import Goldbach.Cert.MajorArcEvalOnWindowCanonSpec
+import Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec
+
+#print axioms Goldbach.Cert.MajorArcEvalOnWindowCanonSpec.major_arc_eval_on_window_canon
+```
+
+which currently reports (in addition to standard classical/propext/trust axioms) the two
+project-specific axioms:
+`Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec.q0Major_bound` and
+`Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec.q0Minor_energy`.
 
 ## Fixed reduction route (Step 2)
 
@@ -43,6 +56,11 @@ These are packaged as a single interface in:
 
 - `Goldbach/Cert/MajorArcModules/TurnkeyRouteQ0.lean:58` (`TwoBounds`).
 
+For `ε₁`, `Goldbach/Cert/MajorArcModules/Q0MinorBound.lean` now supports two certificate-friendly
+routes:
+- pointwise bounds on `expSum` on `(majorArcSetQ0)ᶜ` (legacy, very strong), and
+- an `ℓ²`/TT* “energy” bound over the finite `N`-window (often a better match for large-sieve/AO-style engines).
+
 ## Certificate boundary (numbers only)
 
 The “generated artifact” side is intended to stay purely in `ℚ`:
@@ -59,4 +77,3 @@ No `Real.log` should appear in generated data; the only stable `Real.log` facts 
 - The BMOR ψ-bound itself is still recorded as a conventional axiom in
   `Goldbach/Cert/ExplicitPNTinAP_BMOR.lean`. This audit is only about eliminating the *project*
   major-arc boundary axiom (`turnkeyMajorArcCanon`).
-

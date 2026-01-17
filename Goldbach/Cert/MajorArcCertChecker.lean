@@ -62,12 +62,15 @@ structure Cert where
 
 /-- All checks in a certificate hold. -/
 def Cert.Valid (cert : Cert) : Prop :=
-  ∀ c ∈ cert.checks, c.Holds
+  cert.checks.Forall (fun c => c.Holds)
 
 instance (cert : Cert) : Decidable cert.Valid := by
-  classical
-  -- `∀ c ∈ list, ...` is decidable because `Holds` is decidable.
+  -- `List.Forall` is decidable because `Holds` is decidable.
+  unfold Cert.Valid
   infer_instance
+
+@[simp] lemma Cert.valid_nil : ({ checks := ([] : List CheckLE) } : Cert).Valid := by
+  simp [Cert.Valid]
 
 /-!
 ## Verification API
@@ -87,8 +90,7 @@ theorem cert_valid : cert.Valid := by native_decide
 
 /-- The empty certificate is valid. -/
 theorem empty_valid : ({ checks := ([] : List CheckLE) } : Cert).Valid := by
-  intro c hc
-  simp at hc
+  simpa using (Cert.valid_nil)
 
 end
 
