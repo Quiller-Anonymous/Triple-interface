@@ -34,7 +34,12 @@ the `of_gate` package does not inspect it.
 theorem twins_in_all_large_windows
   (sme : Twin.MajorArc.SmoothMajorArcEstimate
     Twin.ChecklistSme.A Twin.ChecklistSme.B
-    Twin.ChecklistSme.Lambda Twin.ChecklistSme.Wwin Twin.ChecklistSme.What) :
+    Twin.ChecklistSme.Lambda Twin.ChecklistSme.Wwin Twin.ChecklistSme.What)
+  [Twin.ChecklistSme.InstSWBound]
+  [Twin.ChecklistAxioms.DsFourierAtSumBudget] [Twin.ChecklistAxioms.DsPrimePowerAtSumBudget]
+  [Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := Goldbach.TI.TwinInstance.ti_sme)]
+  [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := Goldbach.TI.TwinInstance.ti_sme)]
+  [Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := Goldbach.TI.TwinInstance.ti_sme)] :
     ∀ {X : ℕ}, Twin.Main.P.X0 ≤ X → Twin.ExistsTwinInWindow X Twin.Main.P.H :=
 by
   classical
@@ -79,7 +84,12 @@ by
     Twin.Main.windows_largeX_of_errorData (E := E) (sme := sme) (spec := spec) (pkg := pkg)
       Twin.PaperParams.ss_pos (X := X) hX
 
-theorem twins_in_all_large_windows_default :
+theorem twins_in_all_large_windows_default
+    [Twin.ChecklistSme.InstSWBound]
+    [Twin.ChecklistAxioms.DsFourierAtSumBudget] [Twin.ChecklistAxioms.DsPrimePowerAtSumBudget]
+    [Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := Goldbach.TI.TwinInstance.ti_sme)]
+    [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := Goldbach.TI.TwinInstance.ti_sme)]
+    [Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := Goldbach.TI.TwinInstance.ti_sme)] :
     ∀ {X : ℕ}, Twin.Main.P.X0 ≤ X → Twin.ExistsTwinInWindow X Twin.Main.P.H :=
   twins_in_all_large_windows (sme := Twin.ChecklistSme.sme)
 

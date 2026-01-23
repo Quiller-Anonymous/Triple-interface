@@ -8,7 +8,7 @@ Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple
 ## Status legend:
 - Platinum standard: builds; unconditional proof; no `axiom`/`sorry`/`admit` dependencies (beyond core classical axioms).
 - Gold standard: builds; end-to-end proof depending only on explicitly listed **conventional math axioms**. - **Conventional math axiom** means a textbook/Mathlib-candidate statement that is parameterized and invariant across project constants/encodings (i.e. it does not bake in our pinned windows, numeric caps, bespoke certificates, etc.).
-- Fool's gold standard: builds end-to-end proof, but some remaining dependencies are *project-specific* axioms/sorries/admits (not conventional-math-invariant). If the project includes a finite-base/certificate component, that component is completed and checked; otherwise this clause is N/A.
+- Fool's gold standard: builds end-to-end proof, but some remaining dependencies are *project-specific* axioms/sorries/admits (not conventional math or project-invariant formulas). If the project includes a finite-base/certificate component, that component is completed and checked; otherwise this clause is N/A.
 - Silver standard: builds; end-to-end conditional proof where a required project component (finite base, numeric certificates, calibration bounds, etc.) is still incomplete or not wired in.
 - Iron standard: builds; partial/leaf theorems exist but there is no stable end-to-end pipeline yet (assumptions may be idiosyncratic; certificates/components typically incomplete).
 - Lead standard: machine checked (it builds, whatever it is).
@@ -23,10 +23,11 @@ through the conventional theorem-shaped boundary `Goldbach/Cert/MajorArcPowerSav
 **axiom-free** (explicit divisor-sum majorant + real bound `|sigmaTail Q N| ≤ (180/Q)·N²`).
 -- A separate “turnkey” pinned-cap route still exists for convenience:
 `Goldbach/GoldFunX_OptionB_Cert.lean` (this is *fool’s gold* under the above standard).
-2. Twin primes conjecture -- Current status: fool's gold
--- The Twin checklist pipeline builds end-to-end, but its remaining assumptions are still *project-specific* axioms in `Twin/ChecklistSme.lean` (see `Twin/AxiomAudit.lean` for the current dependency list).
--- Goldbach-side hook: `Goldbach/TwinGold.lean` runs the Twin pipeline using a `Twin.HasTwinTI` instance from `Goldbach/TI/TwinInstance.lean`. The Goldbach TI placeholder exports (`Goldbach/TI/TwinTIObjects.lean`) are currently *derived from the Twin checklist*, so this introduces no additional axioms beyond `Twin/ChecklistSme.lean`; see `Goldbach/AxiomAuditTwinGold.lean`.
-3. The alt-zeta construct (nuanced primes detector) -- Current status: tin
+2. Twin primes conjecture -- Current status: gold
+-- Gold entrypoint: `Twin/Gold.lean` (`Twin.Gold.twins_in_all_large_windows`) is axiom-free (bespoke) and takes the remaining analytic inputs as explicit hypotheses/typeclasses (see `Twin/ChecklistAxioms.lean`).
+-- Convenience fool’s-gold instantiation: `Twin/ChecklistSmeFoolsGold.lean` postulates those hypotheses for the frozen model and yields `Twin/ChecklistGoldDefault.lean`.
+-- Goldbach-side hook: `Goldbach/TwinGold.lean` runs the Twin pipeline via a conditional `Twin.HasTwinTI` instance (`Goldbach/TI/TwinInstance.lean`), currently still derived from the same checklist hypotheses; see `Goldbach/AxiomAuditTwinGold.lean`.
+3. The alt-zeta construct (nuanced primes detector) -- Current status: gold (B2 interface)
 4. The Riemann hypothesis -- Current status: mud
 
 NOTE (Jan 9 2026): Note that when I say "it builds", I mean it builds locally (VS Code Studio on Macbrook Pro, 28GB Ram, bought in 2025), NOT on Github. Reason: the finite base chunks outpace the resources available on the repo, and I'm not going to spend a small fortune to convince it to do the job to completion.
@@ -40,7 +41,7 @@ See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are presen
 ## Entry points
 
 All.lean (default Lake target) imports:
-Goldbach.GoldFunX
+Goldbach.GoldFunX_OptionB_Gold
 Goldbach.TwinGold (optional Goldbach↔Twin wiring)
 Twin.Final and Twin.Gold (twin-primes companion project)
 
@@ -129,15 +130,20 @@ This section lists only potential question-beggers that can enter the Goldbach p
 
 ## Twin pipeline: axioms / hypotheses (transparency list)
 
-This section lists the explicit `axiom`s currently used by the Twin checklist theorem (`Twin.Gold.twins_in_all_large_windows`) and by the Goldbach-side hook (`Goldbach.TwinGold.twins_in_all_large_windows_default`). Under the strict “conventional math” standard (Mathlib-candidate, invariant across project constants), several of these are still project-shaped numeric/budget axioms, which is why the project is currently tagged “fool’s gold” above.
+This section lists (1) the hypothesis surface of the gold entrypoints, and (2) any explicit
+`axiom` declarations that exist only for convenience “fool’s gold” instantiations.
 
-**Axioms currently used by the Twin pipeline (explicit `axiom`s)**
-- `Twin/ChecklistSme.lean:59` `instSW_bound` (smoothed major-arc Siegel–Walfisz estimate in the polylogarithmic major-arc range, used to build the frozen-model `SmoothMajorArcEstimate`).
-- `Twin/ChecklistSme.lean:88` `pinnedMajors_SW_error_envelope_budget` (numeric envelope budget ensuring the SW approximation error integrates into the pinned-major bookkeeping allowance).
-- `Twin/ChecklistSme.lean:102` `pinnedMajors_mainTerm_eval` (arithmetic evaluation of the pinned-major main term at the truncated singular series scale).
-- `Twin/ChecklistSme.lean:118` `minorMassAt_sq_sum_bigIcc_budget` (minor-arc L² square-sum budget feeding the `/9` CLS window allowance).
-- `Twin/ChecklistSme.lean:137` `dsFourierAt_sum_bigIcc_budget` (Fourier/smoothing half of the desmoothing discrepancy, `/6` budget).
-- `Twin/ChecklistSme.lean:143` `dsPrimePowerAt_sum_bigIcc_budget` (prime-power disposal half of the desmoothing discrepancy, `/6` budget).
+**Gold entrypoints (axiom-free; hypothesis-based)**
+- `Twin/Gold.lean` exposes `Twin.Gold.twins_in_all_large_windows`. It takes a `SmoothMajorArcEstimate` argument and assumes instances of the checklist budgets in `Twin/ChecklistAxioms.lean` (`DsFourierAtSumBudget`, `DsPrimePowerAtSumBudget`, `MinorMassAtSqSumBudget`, `PinnedMajorsSWErrorEnvelopeBudget`, `PinnedMajorsMainTermEval`).
+- `Goldbach/TwinGold.lean` exposes `Goldbach.TwinGold.twins_in_all_large_windows_default`, which runs the Twin pipeline using a `Twin.HasTwinTI` instance exported by `Goldbach/TI/TwinInstance.lean` (also conditional on the same hypotheses).
+
+**Explicit `axiom`s (used only by the fool’s-gold default instantiation)**
+- `Twin/ChecklistSmeFoolsGold.lean:30` `instSW_bound` (smoothed major-arc Siegel–Walfisz estimate in the polylogarithmic major-arc range, used to build the frozen-model `SmoothMajorArcEstimate`).
+- `Twin/ChecklistSmeFoolsGold.lean:40` `pinnedMajors_SW_error_envelope_budget` (budget ensuring the SW approximation error integrates into the pinned-major bookkeeping allowance).
+- `Twin/ChecklistSmeFoolsGold.lean:46` `pinnedMajors_mainTerm_eval` (evaluation of the pinned-major main term at the truncated singular series scale).
+- `Twin/ChecklistSmeFoolsGold.lean:52` `minorMassAt_sq_sum_bigIcc_budget` (minor-arc L² square-sum budget feeding the `/9` CLS window allowance).
+- `Twin/ChecklistSmeFoolsGold.lean:58` `dsFourierAt_sum_bigIcc_budget` (Fourier/smoothing half of the desmoothing discrepancy budget).
+- `Twin/ChecklistSmeFoolsGold.lean:64` `dsPrimePowerAt_sum_bigIcc_budget` (prime-power disposal half of the desmoothing discrepancy budget).
 
 # ALT-ZETA
 
@@ -170,11 +176,21 @@ explicitly as subgoals. Status uses the project legend at the top of this README
   - A2. Margin efficiency per unit analytic input — mud
 - **B) Prime-counting & distribution quality** — status: iron
   - B1. Short-interval primes in AP (NTT-style moduli) — mud
-  - B2. Windowed Chebyshev/ψ error bound — fool's gold
-    - Scaffold exists in `AltZeta/PrimeCounter.lean`, `AltZeta/B2Hypotheses.lean`,
-      `AltZeta/B2CompactTail.lean`, `AltZeta/B2RealParams.lean`, `AltZeta/B2RealBound.lean`.
-    - Remaining analytic payload is a single project-specific axiom in `AltZeta/B2RealTruncAxioms.lean`
-      (see `AltZeta/B2AxiomAudit.lean` for the current dependency list).
+  - B2. Windowed Chebyshev/ψ error bound — gold
+    - Gold entrypoint: `AltZeta/B2Gold.lean` (`AltZeta.B2.b2_bound_on_window'`) is axiom-free and
+      takes conventional hypothesis bundles (`TruncEFSpec`, `TailControl`).
+    - Fool’s-gold canonical instantiation: `AltZeta/B2RealBound.lean` depends on the pinned checklist
+      axioms in `AltZeta/B2RealTruncAxioms.lean` (audit: `AltZeta/B2AxiomAudit.lean`).
+    - Bridge: `AltZeta/B2RealToConventional.lean` packages those pinned axioms as a `TruncEFSpec`
+      (`spec0`) and derives the canonical bound by instantiating the gold entrypoint.
+    - Honest baseline interface: `AltZeta/B2ZetaControl.lean` defines `ZetaControl W K` (an envelope
+      plus a proof that it bounds the **same** smoothed statistic `PsiK K x`).
+    - Outpowering plumbing: `AltZeta/B2Outpowers.lean` (`outpowersOnWindow`) takes an AltZeta B2
+      bound, a `ZetaControl`, and a pointwise envelope improvement `E_AZ < Eζ`.
+    - Unconditional baseline envelope (diagnostic): `AltZeta/B2BMORBaseline.lean` defines the
+      BMOR-style `Eζ(x) := Cψ·x/log x` on the canonical window and proves the canonical AltZeta
+      envelope `ETrunc0(x)` is strictly smaller on `[10^6,2·10^6]` (this is an envelope comparison,
+      not yet a ζ-only bound for the same smoothed `Ψ_K` statistic).
 - **C) Classifier-style prime detection** — status: mud
   - C1. Score/threshold, AUC/PPV, certifiable recall — mud
 - **D) Computational budget fairness (proof/eval/search budgets)** — status: lead
@@ -187,16 +203,22 @@ explicitly as subgoals. Status uses the project legend at the top of this README
 
 ## Build / status
 
-- Current status: tin (not continuously built / not stable yet).
 - AltZeta is a separate Lake library (`lakefile.lean`) and is not imported by
   `All.lean`, so the default target does not exercise it.
-- To check it explicitly, use `lake build AltZeta`. (At time of writing, there are
-  known compilation issues in the AltZeta subtree that are being worked through.)
+- To check it explicitly, use `lake build AltZeta`.
+- Gold acceptance check (local): `lake env lean AltZeta/B2GoldAxiomAudit.lean`.
+- Canonical B2 axiom audit (local): `lake env lean AltZeta/B2AxiomAudit.lean`.
 
 ## AltZeta: axioms / hypotheses (transparency list)
 
-This section lists only explicit `axiom`s currently present in `AltZeta/*` (and does
-not attempt to enumerate planned analytic inputs that are not yet represented).
+This section lists (1) the hypothesis surface of the gold entrypoint(s), and (2) explicit
+`axiom`s currently present in `AltZeta/*` (for convenience / unfinished analytic limbs).
+
+**Gold entrypoints (axiom-free; hypothesis-based)**
+- `AltZeta/B2Gold.lean` exposes `AltZeta.B2.b2_bound_on_window'`, taking a `TruncEFSpec W K N`
+  (conventional explicit-formula/truncation package) and a `TailControl W K N` (tail certificate).
+- `AltZeta/B2Outpowers.lean` exposes `AltZeta.B2.outpowersOnWindow`, taking the same AltZeta B2
+  inputs plus a ζ-only baseline `ZetaControl W K` (a bound for the same smoothed statistic).
 
 **Axioms currently used by the AltZeta scaffold (explicit `axiom`s)**
 - `AltZeta/EFSignWeights.lean:48` `fejer_explicit_formula_delta` (the Fejér-weighted
@@ -205,8 +227,12 @@ not attempt to enumerate planned analytic inputs that are not yet represented).
   kernel term for the Heaviside/log bridge).
 - `AltZeta/Analytic/MellinBridge.lean:24` `mellin_indicator_eval` (evaluation of the
   Mellin indicator into a `0/1` outcome).
-- `AltZeta/B2RealTruncAxioms.lean:35` `trunc0_bound_axiom` (canonical B2 truncation-side
-  bound: `|Ψ_K^N(x) - x| ≤ CΓ + √x · S_cert` on the canonical window).
+- `AltZeta/B2RealTruncAxioms.lean:44` `trunc0_explicit_formula_decomp_axiom` (decomposes
+  `Ψ_K^N(x) - x` into completion + spectral terms on the canonical window).
+- `AltZeta/B2RealTruncAxioms.lean:49` `trunc0_completion_bound_axiom` (completion-side
+  bound `|completion(x)| ≤ CΓ` on the canonical window).
+- `AltZeta/B2RealTruncAxioms.lean:53` `trunc0_spectral_bound_axiom` (spectral/zero-side
+  envelope `|spectral(x)| ≤ √x · S_cert` on the canonical window).
 
 ------------
 

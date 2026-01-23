@@ -13,8 +13,11 @@ import Goldbach.ETIExport
 -- import Goldbach.FinalTenor
 -- import Goldbach.CompleteTenor
 
--- Canonical Goldbach track (Tenor-aligned parallel FunX).
-import Goldbach.GoldFunX_OptionB_Cert
+-- Canonical Goldbach track (Tenor-aligned parallel FunX), *gold-grade boundary*.
+import Goldbach.GoldFunX_OptionB_Gold
+
+-- Optional: pinned-cap turnkey route (fool's gold; import explicitly if desired).
+-- import Goldbach.GoldFunX_OptionB_Cert
 
 -- Offline/turnkey major-arc staging area (kept modular, but built in CI).
 import Goldbach.Cert.MajorArcModules.All

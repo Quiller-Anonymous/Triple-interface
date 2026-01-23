@@ -40,7 +40,7 @@ open Goldbach.Cert.MajorArcModules.Q0MajorTailCert
 noncomputable section
 
 def data : Data :=
-  {{ M := ({p.M} : ℚ)
+  {{ M2 := ({p.M} : ℚ)
     εl := ({p.epsl_num} : ℚ) / ({p.epsl_den} : ℚ) }}
 
 theorem data_valid : data.Valid := by
@@ -61,4 +61,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

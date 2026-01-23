@@ -19,9 +19,16 @@ import Goldbach.Cert.MajorArcModules.ArcSetBounds
 import Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit
 import Goldbach.Cert.MajorArcModules.KernelTailCapBounds
 import Goldbach.Cert.MajorArcModules.Q0MajorTailSpec
+import Goldbach.Cert.MajorArcModules.Q0MajorTailAliasSuppressionEngine
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarConstMode
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarAlgebraResource
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCertScaffold
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCertData
 import Goldbach.Cert.MajorArcModules.Q0MajorTailCert
 import Goldbach.Cert.MajorArcModules.Q0MajorTailCertData
 import Goldbach.Cert.MajorArcModules.Q0MajorTailFromCert
+import Goldbach.Cert.MajorArcModules.Q0TwoBoundsConventionalAxioms
+import Goldbach.Cert.MajorArcModules.Q0MajorWindowBounds
 import Goldbach.Cert.MajorArcModules.MainTermQ0
 import Goldbach.Cert.MajorArcModules.CorrModel
 import Goldbach.Cert.MajorArcModules.CorrIntegralQ0Reduction
@@ -34,6 +41,10 @@ import Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
 import Goldbach.Cert.MajorArcModules.Q0MajorBound
 import Goldbach.Cert.MajorArcModules.Q0MajorBoundFromSplit
 import Goldbach.Cert.MajorArcModules.Q0MajorRoute
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallExtractionResource
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallStep21PointwiseBound
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 import Goldbach.Cert.MajorArcModules.TurnkeyCanon
 import Goldbach.Cert.MajorArcModules.TurnkeyFromCorrIntegral
 import Goldbach.Cert.MajorArcModules.TurnkeyFromQ0
@@ -50,4 +61,9 @@ Convenience import for the offline/turnkey “MajorArcModules” staging area.
 
 This file is **not** meant to be imported by the main Goldbach pipeline; it is an offline
 workspace for building a future major-arc certificate without disrupting the live build.
+
+This import bundle is **gold-grade**: it avoids project-pinned axioms. The current pinned-cap
+turnkey route (fool’s gold) is exposed separately via:
+
+`Goldbach/Cert/MajorArcModules/AllFoolsGold.lean`.
 -/

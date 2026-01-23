@@ -1,10 +1,16 @@
 import Goldbach.Cert.MajorArcModules.Q0CertData
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
 import Goldbach.Cert.MajorArcModules.Q0MinorBound
 import Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
 import Goldbach.Cert.MajorArcModules.Q0MajorRoute
 import Goldbach.Cert.MajorArcModules.Q0MajorBound
 import Goldbach.Cert.MajorArcModules.Q0MajorTailFromCert
 import Goldbach.Cert.MajorArcModules.Q0MajorIntegrableProof
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCertScaffold
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
+import Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms
 import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 /-!
@@ -40,6 +46,10 @@ open Goldbach.Cert.MajorArcModules.Q0MajorRoute
 open Goldbach.Cert.MajorArcModules.Q0MajorTailSpec
 open Goldbach.Cert.MajorArcModules.Q0MajorTailFromCert
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStar
+open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCertScaffold
+open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert
+open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
+open Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 open Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 open Goldbach.Cert.MajorArcModules.TurnkeyCanon
 
@@ -48,6 +58,8 @@ noncomputable section
 abbrev C : Q0Cert := Goldbach.Cert.MajorArcModules.Q0CertData.cert
 
 lemma C_valid : C.cert.Valid := Goldbach.Cert.MajorArcModules.Q0CertData.cert_valid
+
+noncomputable abbrev εs : ℝ := (Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData.data.εs : ℝ)
 
 /-!
 ## ε₁ (Q0-complement): TT*/energy-style bound
@@ -61,8 +73,9 @@ This is stated with explicit constants `C2,C3` coming from a small generated `�
 (`Q0MinorLedgerCertData`), so the only remaining non-generated content is the analytic inequality
 itself.
 -/
-axiom q0Minor_ledger_engine :
-  Q0MinorEnergyLedgerEngine Δ_canon C2 C3
+lemma q0Minor_ledger_engine :
+    Q0MinorEnergyLedgerEngine Δ_canon C2 C3 :=
+  Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms.ssu_minor_energy_ledger_engine
 
 lemma q0Minor_energy : Q0MinorEnergyBound Δ_canon (((C.ε₁ : ℝ) ^ 2)) := by
   -- `C.ε₁ = 4` in the current generated artifact, so `((C.ε₁)^2) = 16`.
@@ -102,9 +115,30 @@ remaining analytic content is split into a small set of clean assumptions.
 lemma q0Major_integrable : Q0MajorIntegrable Δ_canon :=
   Goldbach.Cert.MajorArcModules.Q0MajorIntegrableProof.q0Major_integrable (Δ := Δ_canon)
 
-axiom q0Major_small_bound : Q0MajorSmallBound Δ_canon (2 : ℝ)
+private noncomputable abbrev Us : ℝ := (Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData.data.U : ℝ)
 
-axiom q0InnerMajor_large_beta_ttstar : Q0InnerMajorLargeBetaTTStarBound Δ_canon M2
+lemma q0Major_small_upperBound : Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundSpec.Q0MajorSmallUpperBound Δ_canon Us :=
+  Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms.major_arc_small_beta_upperBound
+
+lemma q0Major_small_bound : Q0MajorSmallBound Δ_canon εs := by
+  -- Upgrade the analytic upper bound `≤ U` to the budgeted `εs` using the certificate check `U ≤ εs`.
+  exact Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert.smallBound_of_upperBound
+    (Δ := Δ_canon) (hU := q0Major_small_upperBound)
+
+lemma q0InnerMajor_full_ttstar_kSupport_upper :
+    Q0InnerMajorFullTTStarKSupportUpperBound Δ_canon
+      Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert.U :=
+  Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms.innerMajorQ0_full_ttstar_kSupport_bound
+
+lemma q0InnerMajor_full_ttstar_kSupport :
+    Q0InnerMajorFullTTStarKSupportBound Δ_canon M2 :=
+  kSupportBound_of_upperBound (Δ := Δ_canon) q0InnerMajor_full_ttstar_kSupport_upper
+
+lemma q0InnerMajor_full_ttstar : Q0InnerMajorFullTTStarBound Δ_canon M2 :=
+  q0InnerMajor_full_ttstar_kSupport.to_fullTTStarBound
+
+lemma q0InnerMajor_large_beta_ttstar : Q0InnerMajorLargeBetaTTStarBound Δ_canon M2 :=
+  q0InnerMajor_full_ttstar.to_tailTTStarBound
 
 lemma q0InnerMajor_large_beta_energy : Q0InnerMajorLargeBetaEnergyBound Δ_canon M2 :=
   q0InnerMajor_large_beta_ttstar.to_energyBound
@@ -113,12 +147,13 @@ lemma q0Major_large_bound : Q0MajorLargeBound Δ_canon εl :=
   q0MajorLargeBound_of_innerMajorQ0_ttstar (Δ := Δ_canon) q0InnerMajor_large_beta_ttstar
 
 lemma q0Major_bound : Q0MajorDeviationBound Δ_canon (C.ε₂ : ℝ) := by
-  have hdev : Q0MajorDeviationBound Δ_canon ((2 : ℝ) + εl) :=
-    q0MajorDeviationBound_of_components (Δ := Δ_canon) (εs := (2 : ℝ)) (εl := εl)
+  have hdev : Q0MajorDeviationBound Δ_canon (εs + εl) :=
+    q0MajorDeviationBound_of_components (Δ := Δ_canon) (εs := εs) (εl := εl)
       q0Major_integrable q0Major_small_bound q0Major_large_bound
-  -- `εl = 2` in the generated artifact, and `C.ε₂ = 4`, so `2 + εl = C.ε₂`.
-  have hε : (2 : ℝ) + εl = (C.ε₂ : ℝ) := by
+  -- `εs = 2`, `εl = 2` in the current artifacts, and `C.ε₂ = 4`, so `εs + εl = C.ε₂`.
+  have hε : εs + εl = (C.ε₂ : ℝ) := by
     dsimp [εl, M2, Goldbach.Cert.MajorArcModules.Q0MajorTailCertData.data]
+    dsimp [εs, Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData.data]
     dsimp [C, Goldbach.Cert.MajorArcModules.Q0CertData.cert]
     norm_num
   simpa [hε] using hdev

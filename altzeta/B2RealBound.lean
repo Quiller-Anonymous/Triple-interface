@@ -1,4 +1,5 @@
 import AltZeta.B2RealTrunc
+import AltZeta.B2RealToConventional
 
 /-!
 AltZeta/B2RealBound.lean
@@ -27,9 +28,7 @@ truncation envelope `ETrunc0`.
 -/
 theorem b2_bound0_on_window :
     ∀ x, ValidX W0 x → |PsiK K0 x - x| ≤ ETrunc0 x := by
-  intro x hx
-  have h := bound_full_on_window (W := W0) (K := K0) (N := N0) trunc0 tail0 x hx
-  simpa [EFull0_eq_ETrunc0 (x := x)] using h
+  exact b2_bound0_on_window_via_gold
 
 end B2
 end AltZeta

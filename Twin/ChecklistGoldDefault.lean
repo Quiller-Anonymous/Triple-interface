@@ -1,5 +1,5 @@
 import Twin.ChecklistGold
-import Twin.ChecklistSme
+import Twin.ChecklistSmeFoolsGold
 
 /-!
 Twin/ChecklistGoldDefault.lean
@@ -9,7 +9,8 @@ Specialize the parameterized checklist theorem `Twin.ChecklistGold.twins_in_all_
 to the repo-default frozen-model `sme := Twin.ChecklistSme.sme`.
 
 This file is the only place where the conventional SW major-arc axiom
-`Twin.ChecklistSme.instSW_bound` is pulled into the “gold status” surface.
+`Twin/ChecklistSmeFoolsGold.lean` is imported to provide a convenience (“fool's gold”)
+instantiation of the checklist hypotheses for the frozen model.
 -/
 
 namespace Twin.ChecklistGold
@@ -38,7 +39,7 @@ lemma sme_X0_le_PX0 : (Twin.ChecklistSme.sme.X0) ≤ (P.X0 : ℝ) := by
 def O' : Twin.ChecklistTargets.Obligations :=
   ((O Twin.ChecklistSme.sme sme_X0_le_PX0).toObligations)
 
-/-- Gold-status theorem (conditional on the conventional analytic axioms). -/
+/-- Checklist default theorem (conditional on the axiom bundle in `Twin/ChecklistSmeFoolsGold.lean`). -/
 theorem twins_in_all_large_windows :
     ∀ {X : ℕ}, P.X0 ≤ X → Twin.ExistsTwinInWindow X P.H :=
   twins_in_all_large_windows_of_sme Twin.ChecklistSme.sme sme_X0_le_PX0

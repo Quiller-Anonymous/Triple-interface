@@ -65,13 +65,20 @@ noncomputable def TIExports.toHasTwinTI {P : Twin.GoalAPI.Params} (E : TIExports
 This is the intended long-run wiring: the Twin pipeline consumes a `Twin.HasTwinTI` instance,
 while the Goldbach side exports a small bundle of TI outputs.
 
-At the moment, the exported functions and bounds are still axiomatized in
-`Goldbach/TI/TwinTIObjects.lean`. This keeps all Twin-facing assumptions on the Goldbach side
-so that Twin can remain stable while the TI layer is developed.
+At the moment, the exported functions and bounds are still *derived from* the Twin checklist
+hypotheses (see `Twin/ChecklistAxioms.lean`), via `Goldbach/TI/TwinTIObjects.lean`.
+This keeps all Twin-facing assumptions on the Goldbach side so that Twin can remain stable
+while the TI layer is developed.
 -/
 
 /-- The Goldbach/TI engine exports packaged in the `TIExports` record. -/
-noncomputable def GoldbachDerivedExports : TIExports P :=
+noncomputable def GoldbachDerivedExports
+    [Twin.ChecklistSme.InstSWBound]
+    [Twin.ChecklistAxioms.DsFourierAtSumBudget] [Twin.ChecklistAxioms.DsPrimePowerAtSumBudget]
+    [Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := Goldbach.TI.TwinTI.ti_sme)]
+    [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := Goldbach.TI.TwinTI.ti_sme)]
+    [Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := Goldbach.TI.TwinTI.ti_sme)] :
+    TIExports P :=
   { emin := Goldbach.TI.TwinTI.ti_emin
     eds := Goldbach.TI.TwinTI.ti_eds
     l2_minor := by

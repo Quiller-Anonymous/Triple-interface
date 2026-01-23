@@ -31,6 +31,11 @@ theorem q0MajorLargeBound_of_innerMajorQ0_ttstar
     Q0MajorLargeBound Δ εl :=
   q0MajorLargeBound_of_innerMajorQ0_energy (Δ := Δ) (hInner := hInner.to_energyBound)
 
+theorem q0MajorLargeBound_of_innerMajorQ0_full_ttstar
+    {Δ : ℝ} (hInner : Q0InnerMajorFullTTStarBound Δ M2) :
+    Q0MajorLargeBound Δ εl :=
+  q0MajorLargeBound_of_innerMajorQ0_ttstar (Δ := Δ) (hInner := hInner.to_tailTTStarBound)
+
 end
 
 end Goldbach.Cert.MajorArcModules.Q0MajorTailFromCert

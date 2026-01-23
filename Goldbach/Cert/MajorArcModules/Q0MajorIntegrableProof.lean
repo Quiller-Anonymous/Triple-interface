@@ -1,5 +1,6 @@
 import Goldbach.Cert.MajorArcModules.Q0MajorRoute
 import Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit
+import Goldbach.Cert.MajorArcModules.BetaInterval
 import Goldbach.Cert.MajorArcStep24IntegralExtraction
 import Mathlib.MeasureTheory.Integral.Prod
 import Mathlib.MeasureTheory.Integral.IntegrableOn
@@ -32,6 +33,8 @@ open Goldbach.Cert.MajorArcStep12ShiftedExpSums
 open Goldbach.Cert.MajorArcStep17MajorMinorSplit
 open Goldbach.Cert.MajorArcStep7FourierOrthogonality
 open Goldbach.Cert.MajorArcStep24IntegralExtraction
+
+open Goldbach.Cert.MajorArcModules.BetaInterval
 
 noncomputable section
 
@@ -368,6 +371,83 @@ theorem q0Major_integrable (Δ : ℝ) : Q0MajorIntegrable Δ := by
       (f := fun β : ℝ =>
         Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC) * innerMajorQ0 X N Δ β)
       hab).2 hInt
+
+end
+
+end Goldbach.Cert.MajorArcModules.Q0MajorIntegrableProof
+
+namespace Goldbach.Cert.MajorArcModules.Q0MajorIntegrableProof
+
+open scoped Interval
+
+open Complex MeasureTheory
+
+open Goldbach.Cert.MajorArcModules.BetaInterval
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+open Goldbach.Cert.MajorArcModules.IntegralPipeline
+
+noncomputable section
+
+/-!
+Reusable measurability / `MemLp` facts for TT*/Parseval certificate work.
+
+The TT* interfaces (`Q0MajorTailTTStar`) assume `MemLp (β ↦ innerMajorQ0 ...) 2` on
+`Iβ = (-1/2, 1/2]`.  The proofs in this file already establish the needed measurability and a
+uniform pointwise bound; we package them here as non-private lemmas.
+-/
+
+theorem aestronglyMeasurable_innerMajorQ0_Iβ (X N : ℕ) (Δ : ℝ) :
+    AEStronglyMeasurable (fun β : ℝ => innerMajorQ0 X N Δ β) (volume.restrict Iβ) := by
+  -- This is exactly the private lemma in this file; `Iβ` is the shared β-interval from
+  -- `MajorArcModules/BetaInterval`.
+  simpa [Iβ, aβ, bβ] using
+    (aestronglyMeasurable_innerMajorQ0 (X := X) (N := N) (Δ := Δ) :
+      AEStronglyMeasurable (fun β : ℝ => innerMajorQ0 X N Δ β)
+        (volume.restrict (Set.Ioc (-( (2 : ℝ)⁻¹) : ℝ) ((2 : ℝ)⁻¹ : ℝ))))
+
+theorem norm_innerMajorQ0_le (X N : ℕ) (Δ : ℝ) (β : ℝ) (hN2 : 2 ≤ N) :
+    ‖innerMajorQ0 X N Δ β‖ ≤ (((N + 1 : ℕ) : ℝ) * Real.log (N : ℝ)) ^ 2 := by
+  -- This is the private lemma `innerMajorQ0_bound`.
+  simpa using (innerMajorQ0_bound (X := X) (N := N) (Δ := Δ) (β := β) hN2)
+
+theorem memLp_innerMajorQ0_Iβ (X N : ℕ) (Δ : ℝ) (hN2 : 2 ≤ N) :
+    MemLp (fun β : ℝ => innerMajorQ0 X N Δ β) (ENNReal.ofReal (2 : ℝ)) (volume.restrict Iβ) := by
+  classical
+  have hmeas :
+      AEStronglyMeasurable (fun β : ℝ => innerMajorQ0 X N Δ β) (volume.restrict Iβ) :=
+    aestronglyMeasurable_innerMajorQ0_Iβ (X := X) (N := N) (Δ := Δ)
+  have hbound :
+      ∀ᵐ β : ℝ ∂volume.restrict Iβ,
+        ‖innerMajorQ0 X N Δ β‖ ≤ (((N + 1 : ℕ) : ℝ) * Real.log (N : ℝ)) ^ 2 := by
+    refine Filter.Eventually.of_forall ?_
+    intro β
+    exact norm_innerMajorQ0_le (X := X) (N := N) (Δ := Δ) (β := β) hN2
+  -- Bounded + AE-strongly measurable on a finite-measure space implies `MemLp`.
+  classical
+  -- Provide the instance explicitly to keep elaboration stable.
+  letI : IsFiniteMeasure (volume.restrict Iβ) := by infer_instance
+  exact MeasureTheory.MemLp.of_bound (μ := volume.restrict Iβ) (p := ENNReal.ofReal (2 : ℝ))
+    hmeas _ hbound
+
+private lemma two_le_of_mem_EvenIn {X N : ℕ} (hX0 : X0 ≤ X) (hN : N ∈ EvenIn X H) : 2 ≤ N := by
+  classical
+  have hIn : N ∈ Goldbach.Windows.IccShift X H := (Finset.mem_filter.mp hN).1
+  rcases Finset.mem_image.mp hIn with ⟨k, _hk, rfl⟩
+  have h2X0 : 2 ≤ X0 := by
+    -- `X0 = 10^6`.
+    simpa [Goldbach.BankParams.X0] using (by decide : 2 ≤ 10 ^ (6 : ℕ))
+  have h2X : 2 ≤ X := le_trans h2X0 hX0
+  exact le_trans h2X (Nat.le_add_right X k)
+
+theorem memLp_innerMajorQ0_Iβ_of_mem_EvenIn {X N : ℕ} (Δ : ℝ) (hX0 : X0 ≤ X)
+    (hN : N ∈ EvenIn X H) :
+    MemLp (fun β : ℝ => innerMajorQ0 X N Δ β) (ENNReal.ofReal (2 : ℝ)) (volume.restrict Iβ) := by
+  have hN2 : 2 ≤ N := two_le_of_mem_EvenIn (X := X) (N := N) hX0 hN
+  exact memLp_innerMajorQ0_Iβ (X := X) (N := N) (Δ := Δ) hN2
 
 end
 
