@@ -269,6 +269,188 @@ lemma majorArcConstMode_le
   -- Assemble the main inequality.
   simpa [hconst] using hsum
 
+/-!
+### A sharper constant-mode bound (keeps the factor `φ(q)/q`)
+
+This avoids the extra `φ(q) ≤ q` step. It is still fully deterministic and keeps the dependence on
+`Q0` in a single explicit finite sum.
+-/
+
+lemma majorArcConstMode_le_two_div_X_mul_sum_totient_div
+    {X : ℕ} {Δ : ℝ} (hΔ : 0 ≤ Δ) (hX : 0 < X) :
+    majorArcConstMode X Δ
+      ≤
+    ((2 * Δ) / (X : ℝ))
+      * (∑ q ∈ Finset.Icc (1 : ℕ) Q0, (Nat.totient q : ℝ) / (q : ℝ)) := by
+  classical
+  let μ0 : Measure ℝ := volume.restrict (Set.Ioc (0 : ℝ) (1 : ℝ))
+  have hab : (0 : ℝ) ≤ (1 : ℝ) := by norm_num
+
+  have hmeas :
+      MeasurableSet (majorArcSetQ0 X Δ) :=
+    majorArcSetQ0_measurableSet (X := X) (Δ := Δ)
+
+  have hconst :
+      majorArcConstMode X Δ = μ0.real (majorArcSetQ0 X Δ) := by
+    unfold majorArcConstMode majorArcWeight
+    have hI :
+        (∫ α in (0 : ℝ)..(1 : ℝ),
+            (majorArcSetQ0 X Δ).indicator (fun _ : ℝ => (1 : ℝ)) α ∂volume)
+          =
+        ∫ α : ℝ, (majorArcSetQ0 X Δ).indicator 1 α ∂μ0 := by
+      simpa [μ0] using
+        (intervalIntegral.integral_of_le (μ := volume)
+          (a := (0 : ℝ)) (b := (1 : ℝ))
+          (f := fun α : ℝ => (majorArcSetQ0 X Δ).indicator (fun _ : ℝ => (1 : ℝ)) α) hab)
+    calc
+      majorArcConstMode X Δ
+          = ∫ α : ℝ, (majorArcSetQ0 X Δ).indicator 1 α ∂μ0 := by
+              simpa [hI]
+      _ = μ0.real (majorArcSetQ0 X Δ) := by
+              simpa using
+                (MeasureTheory.integral_indicator_one (μ := μ0) (s := majorArcSetQ0 X Δ) hmeas)
+
+  have hμ0_union :
+      μ0.real (majorArcSetQ0 X Δ)
+        ≤
+      ∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+        ∑ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q,
+          μ0.real (arcSetTextbook X q a Δ) := by
+    have houter :
+        μ0.real (⋃ q ∈ Finset.Icc (1 : ℕ) Q0,
+            ⋃ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q, arcSetTextbook X q a Δ)
+          ≤
+        ∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+          μ0.real (⋃ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q, arcSetTextbook X q a Δ) :=
+      MeasureTheory.measureReal_biUnion_finset_le (μ := μ0)
+        (s := Finset.Icc (1 : ℕ) Q0)
+        (f := fun q : ℕ => ⋃ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q, arcSetTextbook X q a Δ)
+    have hinner (q : ℕ) :
+        μ0.real (⋃ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q, arcSetTextbook X q a Δ)
+          ≤
+        ∑ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q, μ0.real (arcSetTextbook X q a Δ) :=
+      MeasureTheory.measureReal_biUnion_finset_le (μ := μ0)
+        (s := Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q)
+        (f := fun a : ℕ => arcSetTextbook X q a Δ)
+    have hsum' :
+        (∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+            μ0.real (⋃ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q, arcSetTextbook X q a Δ))
+          ≤
+        ∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+          ∑ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q, μ0.real (arcSetTextbook X q a Δ) := by
+      refine Finset.sum_le_sum ?_
+      intro q hq
+      exact hinner q
+    exact
+      (by
+        simpa [majorArcSetQ0] using (le_trans houter hsum'))
+
+  have hArc :
+      ∀ {q a : ℕ}, q ∈ Finset.Icc (1 : ℕ) Q0 → a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q →
+        μ0.real (arcSetTextbook X q a Δ) ≤ 2 * (Δ / ((q : ℝ) * (X : ℝ))) := by
+    intro q a hq ha
+    have hq1 : (1 : ℕ) ≤ q := (Finset.mem_Icc.mp hq).1
+    have hs : MeasurableSet (arcSetTextbook X q a Δ) :=
+      measurableSet_arcSetTextbook (X := X) (q := q) (a := a) (Δ := Δ)
+    have hμ0_eq :
+        μ0.real (arcSetTextbook X q a Δ)
+          = volume.real ((arcSetTextbook X q a Δ) ∩ Set.Ioc (0 : ℝ) (1 : ℝ)) := by
+      simp [μ0, measureReal_restrict_apply hs, Set.inter_assoc, Set.inter_left_comm, Set.inter_comm]
+    have hmono :
+        volume.real ((arcSetTextbook X q a Δ) ∩ Set.Ioc (0 : ℝ) (1 : ℝ))
+          ≤ volume.real (arcSetTextbook X q a Δ) := by
+      refine measureReal_mono (Set.inter_subset_left) ?_
+      have : volume (arcSetTextbook X q a Δ) < ⊤ := by
+        have hIcc := arcSetTextbook_eq_Icc (X := X) (q := q) (a := a) (Δ := Δ)
+        simpa [hIcc] using (measure_Icc_lt_top (μ := volume)
+          (a := (a : ℝ) / (q : ℝ) - Δ / ((q : ℝ) * (X : ℝ)))
+          (b := (a : ℝ) / (q : ℝ) + Δ / ((q : ℝ) * (X : ℝ))))
+      exact this.ne
+    have hlen : volume.real (arcSetTextbook X q a Δ) = 2 * (Δ / ((q : ℝ) * (X : ℝ))) := by
+      simpa [Measure.real] using toReal_volume_arcSetTextbook (X := X) (q := q) (a := a) (Δ := Δ) hΔ hq1 hX
+    calc
+      μ0.real (arcSetTextbook X q a Δ)
+          = volume.real ((arcSetTextbook X q a Δ) ∩ Set.Ioc (0 : ℝ) (1 : ℝ)) := hμ0_eq
+      _ ≤ volume.real (arcSetTextbook X q a Δ) := hmono
+      _ = 2 * (Δ / ((q : ℝ) * (X : ℝ))) := hlen
+
+  have h1 :
+      μ0.real (majorArcSetQ0 X Δ)
+        ≤
+      ∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+        ∑ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q,
+          (2 * (Δ / ((q : ℝ) * (X : ℝ)))) := by
+    refine le_trans hμ0_union ?_
+    refine Finset.sum_le_sum ?_
+    intro q hq
+    refine Finset.sum_le_sum ?_
+    intro a ha
+    exact hArc (q := q) (a := a) hq ha
+
+  have h2 :
+      (∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+        ∑ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q,
+          (2 * (Δ / ((q : ℝ) * (X : ℝ)))))
+        =
+      ((2 * Δ) / (X : ℝ)) *
+        (∑ q ∈ Finset.Icc (1 : ℕ) Q0, (Nat.totient q : ℝ) / (q : ℝ)) := by
+    -- rewrite the inner sum using `card_Rcop_eq_totient` and factor out constants.
+    have hXpos : (0 : ℝ) < (X : ℝ) := by exact_mod_cast hX
+    have hXne : (X : ℝ) ≠ 0 := ne_of_gt hXpos
+    -- `2 * (Δ / (q*X)) = (2*Δ/X) * (1/q)`
+    calc
+      (∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+        ∑ a ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q,
+          (2 * (Δ / ((q : ℝ) * (X : ℝ)))))
+          =
+        ∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+          ((Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop q).card : ℝ)
+            * (2 * (Δ / ((q : ℝ) * (X : ℝ)))) := by
+              refine Finset.sum_congr rfl ?_
+              intro q hq
+              simp [Finset.sum_const, mul_assoc]
+      _ =
+        ∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+          (Nat.totient q : ℝ) * (2 * (Δ / ((q : ℝ) * (X : ℝ)))) := by
+              refine Finset.sum_congr rfl ?_
+              intro q hq
+              -- `card(Rcop q) = totient q`
+              simp [Goldbach.Cert.MajorArcStep23RamanujanSum.card_Rcop_eq_totient]
+      _ =
+        ((2 * Δ) / (X : ℝ)) *
+          (∑ q ∈ Finset.Icc (1 : ℕ) Q0, (Nat.totient q : ℝ) / (q : ℝ)) := by
+              -- factor `(2*Δ/X)` out and rewrite `*(1/q)` as `/q`
+              have hterm :
+                  ∀ q ∈ Finset.Icc (1 : ℕ) Q0,
+                    (Nat.totient q : ℝ) * (2 * (Δ / ((q : ℝ) * (X : ℝ))))
+                      =
+                    ((2 * Δ) / (X : ℝ)) * ((Nat.totient q : ℝ) / (q : ℝ)) := by
+                intro q _hq
+                -- purely algebraic rearrangement
+                field_simp [hXne]
+              calc
+                (∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+                    (Nat.totient q : ℝ) * (2 * (Δ / ((q : ℝ) * (X : ℝ)))))
+                    =
+                  ∑ q ∈ Finset.Icc (1 : ℕ) Q0,
+                    ((2 * Δ) / (X : ℝ)) * ((Nat.totient q : ℝ) / (q : ℝ)) := by
+                      refine Finset.sum_congr rfl ?_
+                      intro q hq
+                      exact hterm q hq
+                _ =
+                  ((2 * Δ) / (X : ℝ)) *
+                    (∑ q ∈ Finset.Icc (1 : ℕ) Q0, (Nat.totient q : ℝ) / (q : ℝ)) := by
+                      simp [Finset.mul_sum, mul_assoc, mul_left_comm, mul_comm]
+
+  have hsum :
+      μ0.real (majorArcSetQ0 X Δ)
+        ≤
+      ((2 * Δ) / (X : ℝ))
+        * (∑ q ∈ Finset.Icc (1 : ℕ) Q0, (Nat.totient q : ℝ) / (q : ℝ)) := by
+    simpa [h2] using le_trans h1 (le_of_eq h2)
+
+  simpa [hconst] using hsum
+
 end
 
 end Goldbach.Cert.MajorArcModules.Q0MajorTailMeanZero

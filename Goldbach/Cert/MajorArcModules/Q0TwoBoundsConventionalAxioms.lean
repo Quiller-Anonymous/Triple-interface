@@ -76,6 +76,29 @@ TT*/Parseval expansion, before taking absolute values.
 
 axiom ramanujanOrthogonality : RamanujanOrthogonality
 
+/-!
+## Conventional pointwise bound for Ramanujan sums
+
+This is often used as a “deterministic” substitute for full dispersion/orthogonality when bounding
+mean-square quantities: it lets one sum by divisors via `gcd(q,n)`.
+-/
+
+axiom ramanujanGcdBound : RamanujanGcdBound
+
+/-!
+## Conventional dispersion (band-limited “after squaring” suppression of cross terms)
+
+This is the project-neutral inequality schema used for the Step-5 TT*/Toeplitz β-tail work:
+after squaring/averaging in the frequency variable, the `q ≠ q'` cross terms behave as if
+orthogonal up to a constant `Cdisp`.
+
+We record it here as an existence statement of the corresponding interface, so downstream files
+can pick a constant (or a checker can emit one) without pinning it in this conventional layer.
+-/
+
+axiom ramanujanBandDispersion_exists :
+  ∃ Cdisp : ℝ, 0 ≤ Cdisp ∧ RamanujanBandDispersion Cdisp
+
 end
 
 end Goldbach.Cert.MajorArcModules.Q0TwoBoundsConventionalAxioms

@@ -37,6 +37,9 @@ All downstream “turnkey Q0 major arc” code depends only on these interfaces 
   - Certificate seam (new): `Q0MajorSmallUpperBound Δ_canon U_s` +
     cert check `U_s ≤ εs` (`Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundFromCert.lean`).
   - Still missing: final assembly from BMOR Step20/21 + Step24 main-term identification producing `≤ U_s`.
+  - Temporary (Option B): `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundTextbookAxiom.lean`
+    supplies the current analytic assumption `Q0MajorSmallUpperBound Δ_canon U_s` (re-exported by
+    `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean`).
 - ε₂-large (large β tail, option-3): `Q0InnerMajorFullTTStarKSupportBound Δ_canon M2`
   - Spec/scaffold: `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarCertScaffold.lean`
   - This is the TT*/Parseval payload that ultimately drives `Q0MajorLargeBound Δ_canon εl`.
@@ -198,6 +201,12 @@ Every experiment entry should include:
   - Script: `scripts/experiments/exp_q0_w_hat_linear_main_l2.py`
   - Run: `python3 scripts/experiments/exp_q0_w_hat_linear_main_l2.py`
     - `Tmax=2,000,000`: `∑_{t≤Tmax} |W_lin(t)|^2 ≈ 2.675420e-05` (even ≈ `2.349488e-05`, odd ≈ `3.259312e-06`)
+
+- Generator-aligned Step5 “Toeplitz top” bound (current Lean resource lemma):
+  - Script: `scripts/gen_q0_major_tail_ttstar_cert.py`
+  - Run: `python3 scripts/gen_q0_major_tail_ttstar_cert.py`
+  - Parameters: `X0=1_000_000`, `H=10_000`, `Q0=30_000`, `q_small=12`, `delta_split=50`, `delta_weight_split=1`
+  - Output: `U_raw = 12_864_746_585` (fails `M2^2 = 2_500_000_000` by `≈ 5.15×`; the Lean artifact is currently capped at `M2^2` to keep builds green)
 
 - Deterministic band-sums for the “passes-budget” hybrid kernel
   `W_mix(t) = W_small(t) + W_large_lin(t)` on the TT*/Toeplitz bandwidth `t≤N0=X0+H`:

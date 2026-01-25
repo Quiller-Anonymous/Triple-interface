@@ -81,6 +81,16 @@ lemma norm_majorArcWeightFourier_zero_le
   refine le_trans (norm_majorArcWeightFourier_zero_le_constMode (X := X) (Δ := Δ)) ?_
   exact majorArcConstMode_le (X := X) (Δ := Δ) hΔ hX
 
+lemma norm_majorArcWeightFourier_zero_le_two_div_X_mul_sum_totient_div
+    {X : ℕ} {Δ : ℝ} (hΔ : 0 ≤ Δ) (hX : 0 < X) :
+    ‖majorArcWeightFourier X Δ 0‖
+      ≤
+    ((2 * Δ) / (X : ℝ))
+      * (∑ q ∈ Finset.Icc (1 : ℕ) (Goldbach.AO_OffDiag.TailBlock.Q0),
+          (Nat.totient q : ℝ) / (q : ℝ)) := by
+  refine le_trans (norm_majorArcWeightFourier_zero_le_constMode (X := X) (Δ := Δ)) ?_
+  exact majorArcConstMode_le_two_div_X_mul_sum_totient_div (X := X) (Δ := Δ) hΔ hX
+
 end
 
 end Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarConstMode

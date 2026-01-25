@@ -38,6 +38,66 @@ See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are presen
 --------------------
 # GOLDBACH PIPELINE
 
+## Narrative overview (machine check)
+
+This repository is a Lean 4 development that formalizes the *interfaces and end-to-end glue* needed
+to turn a pointwise closure statement on even windows into actual Goldbach representations. The
+finite base is fully proved up to `1_000_000` (see `Goldbach/FiniteBase/CombineAll.lean`), and the
+final wrapper `Goldbach.goldbach_final` (in `Goldbach/Final.lean`) reduces all remaining large-`N`
+cases to a packaged analytic witness.
+
+The analytic core is not presented as a single monolithic Lean proof of every estimate in the
+manuscript. Instead, the code isolates a small number of explicit hypotheses at the pipeline entry
+points (most notably a single on-window “budget inequality” that aggregates the quantitative
+inputs), so the dependency boundary is auditable. In particular:
+
+- The **canonical Goldbach entry point** `Goldbach.goldbach_funX_canon` (in `Goldbach/GoldFunX.lean`)
+  is *axiom-free* under the repo’s “gold standard” transparency check (see
+  `Goldbach/AxiomAuditGold.lean`).
+- The **Option‑B entry point with a conventional major‑arc boundary** (the “textbook major‑arc
+  boundary” route) has exactly one non‑core explicit axiom:
+  `Goldbach.Cert.MajorArcPowerSavingSpec.majorArc_powerSaving` (see
+  `Goldbach/AxiomAuditGoldOptionBTextbookMajorArc.lean`).
+- A separate **turnkey pinned‑cap route** exists for convenience (`Goldbach/GoldFunX_OptionB_Cert.lean`).
+  This route is intentionally *not* “gold” under the above standard: it pins project constants and
+  currently still imports project‑pinned major‑arc / TT* / minor‑energy assumptions (audited by
+  `Goldbach/AxiomAuditGoldOptionB_PinnedCap.lean`). This is the workbench where major‑arc certificate
+  work is developed without refactoring the live pipeline.
+
+## Formal verification map (Lean modules)
+
+Each paper component corresponds to a Lean module *or* to a Lean interface that records the
+intended theorem-shape.
+
+- Finite base / reduction to analytics
+  - Finite base up to `1_000_000`: `Goldbach/FiniteBase/CombineAll.lean`
+  - Final reduction “analytic witness + finite base ⇒ Goldbach”: `Goldbach/Final.lean`
+    (`Goldbach.goldbach_final`)
+  - Conditional wrapper at canonical cutoff: `Goldbach/Complete.lean` (`Goldbach.goldbach_from_hyp`)
+- AO envelope (error bookkeeping)
+  - Four‑channel decomposition and assembled bound: `Goldbach/AO_AssembleEnvelope.lean` (interfaces
+    `Decomposition`, `Bounds`, lemma `errAO_bound`)
+  - Canonical instantiation of AO constants for the Tenor FunX track: `Goldbach/AO_InstantiateTenorFunX.lean`
+  - AO stages plumbing into the parallel track: `Goldbach/AO_Stages.lean`, `Goldbach/ParallelTenorFunX.lean`
+- Type–I leakage (current build choice)
+  - Type–I leakage is currently trivialized (`errTI = 0`) and proved as such: `Goldbach/TypeI_Leak.lean`
+- Major arcs (two distinct boundaries)
+  - Conventional theorem‑shaped boundary (textbook power saving)
+    - Interface objects (`RΛ_smooth`, `RΛ_model`, `MajorArcPowerSaving`):
+      `Goldbach/Cert/MajorArcAxiomsFunX.lean`
+    - Single axiom providing the boundary: `Goldbach/Cert/MajorArcPowerSavingSpec.lean`
+      (`majorArc_powerSaving`)
+  - Turnkey pinned‑cap boundary (workbench for certificates; not gold)
+    - Turnkey aggregator: `Goldbach/Cert/TurnkeyMajorArcCanonSpec.lean`
+    - Pinned Q0 workbench surface: `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean`
+      (ε₁/ε₂‑small/ε₂‑large pinned assumptions)
+- End‑to‑end canonical pipeline entry
+  - Main “gold” entry point (axiom‑free): `Goldbach/GoldFunX.lean` (`Goldbach.goldbach_funX_canon`)
+  - Option‑B entry point using the conventional major‑arc boundary: `Goldbach/GoldFunX_OptionB_Gold.lean`
+    (audited by `Goldbach/AxiomAuditGoldOptionBTextbookMajorArc.lean`)
+  - Turnkey pinned‑cap convenience entry point (audited separately): `Goldbach/GoldFunX_OptionB_Cert.lean`
+    (audited by `Goldbach/AxiomAuditGoldOptionB_PinnedCap.lean`)
+
 ## Entry points
 
 All.lean (default Lake target) imports:
@@ -115,14 +175,19 @@ This section lists only potential question-beggers that can enter the Goldbach p
 - None (as of `Goldbach/AxiomAuditGold.lean`).
 
 **Axioms currently used by the “turnkey” pinned-cap Option-B route (explicit `axiom`s)**
-- Major arcs (project-shaped): `Goldbach/Cert/MajorArcEvalOnWindowCanonSpec.lean:33` `major_arc_eval_on_window_canon` (pinned to `X0`, `H`, and the numeric cap `δ_major_canon`).
-- σ-lower (SLOW) is now discharged axiom-free via a global S2 certificate.
+- ε₂-small major arcs (project-pinned): `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundTextbookAxiom.lean:35`
+  `major_arc_small_beta_upperBound` (upper bound on the small-β major-arc deviation).
+- ε₂-large TT*/Toeplitz upper bound (project-pinned): `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarUpperBoundFromToeplitzAxiom.lean:52`
+  `toeplitzExprTopTight_le_U_target` (pinned Step‑5 Toeplitz expression ≤ generated `U_target`).
+- ε₁ minor-energy ledger engine (project-pinned): `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean:55`
+  `ssu_minor_energy_ledger_engine`.
 
 **Path from fool’s gold → gold**
-- Major arcs: replace `major_arc_eval_on_window_canon` by a conventional-math-invariant axiom boundary (parameterized, no pinned window/caps), and then derive the pinned specialization as a proved lemma or checked certificate (not an axiom).
-- The Option-B pipeline entry point `Goldbach/GoldFunX_OptionB.lean` now routes major arcs through
-  `Goldbach/Cert/MajorArcPowerSavingSpec.lean` (conventional theorem shape) and removes the pinned-cap
-  axiom from that import graph.
+- Major arcs: discharge the pinned Q0 workbench assumptions above (ε₂-small, ε₂-large, ε₁) by proved
+  theorems and/or checkable certificates, then export a conventional theorem-shaped boundary (e.g.
+  `MajorArcPowerSaving`) for downstream pipelines.
+- The Option‑B pipeline entry point `Goldbach/GoldFunX_OptionB.lean` already routes major arcs through
+  `Goldbach/Cert/MajorArcPowerSavingSpec.lean` (conventional theorem shape) and is audited separately.
 
 -----------
 
@@ -187,6 +252,10 @@ explicitly as subgoals. Status uses the project legend at the top of this README
       plus a proof that it bounds the **same** smoothed statistic `PsiK K x`).
     - Outpowering plumbing: `AltZeta/B2Outpowers.lean` (`outpowersOnWindow`) takes an AltZeta B2
       bound, a `ZetaControl`, and a pointwise envelope improvement `E_AZ < Eζ`.
+    - Canonical BMOR outpowering (conditional): `AltZeta/B2BMOROutpowers0.lean`
+      (`outpowersBMOR0_on_window`) combines (i) the canonical AltZeta B2 bound, (ii) the proved
+      envelope improvement `ETrunc0 < Eζ_BMOR`, and (iii) a *required* baseline hypothesis
+      `|PsiK K0 x - x| ≤ Eζ_BMOR(x)` (the remaining missing bridge).
     - Unconditional baseline envelope (diagnostic): `AltZeta/B2BMORBaseline.lean` defines the
       BMOR-style `Eζ(x) := Cψ·x/log x` on the canonical window and proves the canonical AltZeta
       envelope `ETrunc0(x)` is strictly smaller on `[10^6,2·10^6]` (this is an envelope comparison,
@@ -236,12 +305,12 @@ This section lists (1) the hypothesis surface of the gold entrypoint(s), and (2)
 
 ------------
 
-# History
+# History/Diary
 - September 2025: I used ChatGPT, then MathGPT by Pulsr, to explore ideas related to the Goldbach conjecture. Mostly false starts and deferred proofs that go nowhere. 
 - Near the end of the month, I asked it to imagine a sci-fi future where the problem was solved. It gave me three areas of future mathematics where a revolutionary discovery would be sufficient to solve the problem. I asked it to imagine a solution that instead involved incremental changes in all three instead of a revolutionary change in one. That was the "triple interface". It gave me a roadmap that it seemed to be confident in.
--- Through this process, I used a dialectical method to mediate against sycophantic delusion. I also sanity checked proofs using other LLMs in case the results were just delusions unique to ChatGPT.
-- By mid-October I had a complete draft of the proof in Latex, so I began exploring other applications of the same triple-interface method to similar ideas (primes-related). We began drafts of the Twin Primes conjecture and the Riemann hypothesis.
-- A reasonable draft of Twin Primes was completed in October. No real progress was made on Riemann. It produced blather, in part because I had no insight into what was required to complete it.
-- November: I became curious if this was genuinely interesting math or just AI Slop. In late November I began work on machine coding the proof of Goldbach (VS Code Studio, Lean 4), in an attempt to see if the underlying fundamentals were AI slop or genuine. I also started a new approach to Riemann (inspired by conversations with Copilot), which is the Alt-Zeta project, when I realized that the completion of the extended triple interface might help in creating an enhanced primes detector function that would be informative to efforts at solving Riemann.
-- December 2025 was all coding and revisions, mainly struggles with compiling the finite base chunks, and then unexpected wiring issues in hooking up the finite base to the analytic engine. Mid-December, Codex was functionally useless, and Copilot on Github was of limited help. Progress became noticeably quicker when I created files to help it understand the limits of our codebase (Mathlib) and also started to use AGENTS.md to guide it using Codex in VS Code Studio. The project had more or less grown beyond MathGPT by this point.
-- By early January 2026, Codex was operating more or less on its own, with minimal prompting; something has clearly changed. Most work was now in decomposing bespoke axioms into conventions, lemmas, and constants. January 3, 2026: Goldbach reached gold status for the first time; January 6: Twin Primes reaches gold status for the first time; work on Alt-Zeta begins. Then the haggling started; discovered problems with the sigma tail and major arc.
+-- Through this process, I used a dialectical method to mediate against sycophantic delusion. I also sanity checked proofs using other LLMs in case the results were just delusions unique to ChatGPT. 
+- By mid-October I had a complete draft of the proof in Latex, so I began exploring other applications of the same triple-interface method to similar ideas (primes-related). I began drafts of the Twin Primes conjecture and the Riemann hypothesis.
+- A reasonable draft of Twin Primes was completed in October. No real progress was made on Riemann -- it produced blather, in part because I had no insight into what was required to complete it.
+- November: I became curious if this was genuinely interesting math or just AI Slop. In late November I began work on machine coding the proof of Goldbach (VS Code Studio, Lean 4), in an attempt to see if the underlying fundamentals were slop or genuine. I also started a new approach to Riemann (inspired by conversations with Copilot): I realized that the completion of the extended triple interface might help in creating an enhanced primes detector function that would be informative to efforts at solving Riemann. This became the "alt-Zeta" project.
+- December 2025 was all coding and revisions, mainly struggles with compiling the finite base chunks on an underpowered laptop, and then unexpected wiring issues in hooking up the finite base to the analytic engine. Mid-December, Codex was functionally useless, and Copilot on Github was of very limited help. Progress became noticeably quicker when I created files to help it understand the limits of our codebase (Mathlib) and also started to use AGENTS.md to guide it using Codex in VS Code Studio. The project had more or less grown beyond MathGPT by this point.
+- By early January 2026, Codex was operating more or less on its own with minimal prompting; something has clearly changed. Most work was now in decomposing bespoke axioms into conventions, lemmas, and constants. January 3, 2026: Goldbach reached gold status for the first time, and on January 6, Twin Primes reaches gold status for the first time; work on Alt-Zeta begins. Then the haggling started; discovered problems with the sigma tail and major arc. Most of the month has been a battle over budgets and constants, trying to find a path to platinum (unconditional proof, no axioms) for Goldbach.

@@ -128,7 +128,7 @@ lemma q0Major_small_bound : Q0MajorSmallBound Δ_canon εs := by
 lemma q0InnerMajor_full_ttstar_kSupport_upper :
     Q0InnerMajorFullTTStarKSupportUpperBound Δ_canon
       Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert.U :=
-  Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms.innerMajorQ0_full_ttstar_kSupport_bound
+  Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms.innerMajorQ0_full_ttstar_kSupport_upperBound
 
 lemma q0InnerMajor_full_ttstar_kSupport :
     Q0InnerMajorFullTTStarKSupportBound Δ_canon M2 :=

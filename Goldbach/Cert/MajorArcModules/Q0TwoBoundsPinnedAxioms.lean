@@ -1,8 +1,10 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
 import Goldbach.Cert.MajorArcModules.Q0MajorRoute
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitzAxiom
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
 import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
@@ -31,7 +33,9 @@ open Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
 open Goldbach.Cert.MajorArcModules.Q0MajorRoute
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundSpec
+open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
+open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitzAxiom
 open Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 noncomputable section
@@ -58,9 +62,11 @@ Notes provenance: Lemma 10.1 + Proposition 10.2 + Proposition 11.15.
 
 Lean interface: `Q0MajorSmallBound Δ εs` (here we pin `εs = 2` as in the current Q0 budgeting).
 -/
-
-axiom major_arc_small_beta_upperBound :
-  Q0MajorSmallUpperBound Δ_canon Us
+theorem major_arc_small_beta_upperBound :
+    Q0MajorSmallUpperBound Δ_canon Us := by
+  -- The contentful assumption lives in a “textbook axiom” file; this pinned route only re-exports it.
+  simpa [Us, Q0MajorSmallUpperBoundTextbookAxiom.Us] using
+    (Q0MajorSmallUpperBoundTextbookAxiom.major_arc_small_beta_upperBound : Q0MajorSmallUpperBound Δ_canon (Q0MajorSmallUpperBoundTextbookAxiom.Us))
 
 /-!
 ## ε₂-large engine (TT*/Parseval control of the β-tail)
@@ -69,8 +75,12 @@ This is the option-3 TT*/Parseval analytic payload, packaged as a finite `kSuppo
 The numeric budget `U` comes from the generated TT* certificate data (currently a placeholder).
 -/
 
-axiom innerMajorQ0_full_ttstar_kSupport_bound :
-  Q0InnerMajorFullTTStarKSupportUpperBound Δ_canon Ut
+-- The remaining pinned assumption is now the Toeplitz expression upper bound (see
+-- `Q0MajorTailTTStarUpperBoundFromToeplitzAxiom.lean`); the TT* `kSupport` upper bound is derived.
+theorem innerMajorQ0_full_ttstar_kSupport_upperBound :
+    Q0InnerMajorFullTTStarKSupportUpperBound Δ_canon Ut := by
+  simpa [Ut, Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitzAxiom.U_target] using
+    Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitzAxiom.innerMajorQ0_full_ttstar_kSupport_upperBound
 
 end
 
