@@ -27,7 +27,7 @@ theorem windows_largeX_all_windows
   (h_desmooth : Twin.AnalyticCore.DesmoothBound P eds)
   (h_lower : Twin.MajorArc.MajorArcLower P majMass)
   (h_transfer : Twin.MajorArc.MajorArcTransfer P emin eds majMass)
-  (ss_pos : 0 < Twin.truncSingularSeries P.S := Twin.PaperParams.ss_pos) :
+  (ss_pos : 0 < Twin.fullTruncSingularSeries P.S := Twin.PaperParams.ss_full_pos) :
   ∀ {X : ℕ}, P.X0 ≤ X → Twin.ExistsTwinInWindow X P.H :=
 by
   classical

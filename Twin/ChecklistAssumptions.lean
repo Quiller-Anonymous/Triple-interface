@@ -9,7 +9,7 @@ noncomputable section
 open Twin
 
 abbrev P : Twin.GoalAPI.Params := Twin.Main.P
-abbrev SS : ℝ := Twin.truncSingularSeries P.S
+abbrev SS : ℝ := Twin.fullTruncSingularSeries P.S
 
 abbrev A : ℝ := Twin.ChecklistModel.A
 abbrev B : ℝ := Twin.ChecklistModel.B
@@ -30,7 +30,7 @@ theorem windows_largeX_all_windows
   (h_desmooth : Twin.AnalyticCore.DesmoothBound P eds)
   (h_lower : Twin.MajorArc.MajorArcLower P majMass)
   (h_transfer : Twin.MajorArc.MajorArcTransfer P emin eds majMass)
-  (ss_pos : 0 < SS := Twin.PaperParams.ss_pos) :
+  (ss_pos : 0 < SS := Twin.PaperParams.ss_full_pos) :
   ∀ {X : ℕ}, P.X0 ≤ X → Twin.ExistsTwinInWindow X P.H :=
   Twin.ChecklistAnalyticGlue.windows_largeX_all_windows
     (sme := sme)
@@ -47,4 +47,3 @@ theorem windows_largeX_all_windows
 end
 
 end Twin.ChecklistAssumptions
-

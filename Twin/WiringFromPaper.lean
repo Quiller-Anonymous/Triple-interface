@@ -73,7 +73,7 @@ noncomputable def witness_of_errorData
   (spec : GateSpec P)
   (pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds)
     (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   Twin.Analytic.TwinWitness :=
   Twin.TwinFinalize.witness_from_bricks (P := P)
     (b := bricks_of_errorData (E := E) sme spec pkg)
@@ -90,7 +90,7 @@ noncomputable def witness_of_errorData_ofSW
   (pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   Twin.Analytic.TwinWitness :=
   witness_of_errorData (E := E)
     (sme := (SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
@@ -104,7 +104,7 @@ theorem windows_largeX_of_errorData
   (spec : GateSpec P)
   (pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds)
     (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
 by
   intro X hX
@@ -126,7 +126,7 @@ theorem windows_largeX_of_errorData_ofSW
   (pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   windows_largeX_of_errorData (E := E)
     (sme := (SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
@@ -140,7 +140,7 @@ theorem windows_largeX_of_checklist
   (spec : GateSpec P)
   (C : Twin.MajorArc.PaperMajorArcChecklist (P := P) (emin := E.emin) (eds := E.eds)
     (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   windows_largeX_of_errorData (E := E) (sme := sme) (spec := spec)
     (pkg := C.toMajorArcPackage) ss_pos
@@ -154,7 +154,7 @@ theorem windows_largeX_of_checklist_ofSW
   (C : Twin.MajorArc.PaperMajorArcChecklist (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   windows_largeX_of_checklist (E := E)
     (sme := (SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
@@ -168,7 +168,7 @@ theorem windows_largeX_of_appendixA
   (spec : GateSpec P)
   (I : Twin.MajorArc.AppendixAInputs (P := P) (emin := E.emin) (eds := E.eds)
     (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   windows_largeX_of_checklist (E := E) (sme := sme) (spec := spec)
     (C := I.toPaperMajorArcChecklist) ss_pos
@@ -182,7 +182,7 @@ theorem windows_largeX_of_appendixA_ofSW
   (I : Twin.MajorArc.AppendixAInputs (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   windows_largeX_of_appendixA (E := E)
     (sme := (SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))

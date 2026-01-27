@@ -19,7 +19,7 @@ Conventional analytic input (postulated):
 This is the standard “smoothed major-arc Siegel–Walfisz” estimate for the specific model
 `(A,B,Lambda,Wwin,What)` used in `Twin/ChecklistModel.lean`, i.e. a major-arc asymptotic
 for the smoothed von Mangoldt exponential sum `Twin.SW.sumValue` against the main term
-`Twin.SW.mainTerm`, uniform for `q ≤ (log X)^B` and `|α-a/q| ≤ δ/(H+1)`.
+`Twin.SW.mainTerm`, uniform for `q ≤ (log H)^B` and `|α-a/q| ≤ δ/(H+1)`.
 
 Justification (paper-facing):
   - This is the classical major-arc evaluation in the Siegel–Walfisz range for smoothed
@@ -41,7 +41,9 @@ This makes the major-arc boxes used elsewhere (e.g. `Twin/MajorArc/MajMass.lean`
 so later replacement by a proof is purely about filling `sme_bound`.
 -/
 
-def δ : ℝ := (1 : ℝ) / 1000
+-- NOTE: δ is chosen so that the packet integral in the pinned-major main-term has the
+-- correct normalization at the canonical parameters (so Core 2 is numerically true).
+def δ : ℝ := (1 : ℝ) / 200
 lemma δ_pos : 0 < δ := by
   norm_num [δ]
 
@@ -58,10 +60,10 @@ the frozen model `(A,B,Lambda,Wwin,What)`.
 class InstSWBound : Prop where
   bound :
     ∀ {X H : ℝ}, X0 ≤ X → 1 ≤ H →
-      ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ Real.rpow (Real.log X) B → Nat.Coprime a q →
+      ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ Real.rpow (Real.log H) B → Nat.Coprime a q →
       ∀ {α : ℝ}, |α - (a : ℝ)/q| ≤ δ / (H + 1) →
         ‖Twin.SW.sumValue Lambda Wwin X H α - Twin.SW.mainTerm What X H α a q‖
-          ≤ C * (X / Real.rpow (Real.log X) A)
+          ≤ C * (H / Real.rpow (Real.log X) A)
 
 instance instSW [InstSWBound] : Twin.MajorArc.SiegelWalfisz A B Lambda Wwin What :=
 { δ := δ

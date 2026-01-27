@@ -37,18 +37,18 @@ structure TIExports (P : Twin.GoalAPI.Params) where
   l2_minor :
     ∀ {X}, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H (fun n => (emin n) ^ 2)
-        ≤ P.eps ^ 2 * (Twin.truncSingularSeries P.S) ^ 2 * ((P.H : ℝ) + 1) / 9
+        ≤ P.eps ^ 2 * (Twin.fullTruncSingularSeries P.S) ^ 2 * ((P.H : ℝ) + 1) / 9
   desmooth :
     ∀ {X}, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H eds
-        ≤ P.eps * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1) / 3
+        ≤ P.eps * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1) / 3
   pinned :
     ∀ {X}, P.X0 ≤ X →
-      (1 - P.eps) * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1)
+      (1 - P.eps) * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1)
         ≤ Twin.Bridge.localizedTwinMass X P.H
           + Twin.Ledger.windowSum X P.H emin
           + Twin.Ledger.windowSum X P.H eds
-          + (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
+          + (P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
 
 /-- Convert packaged exports into the typeclass interface `Twin.HasTwinTI`. -/
 noncomputable def TIExports.toHasTwinTI {P : Twin.GoalAPI.Params} (E : TIExports P) :

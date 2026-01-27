@@ -43,9 +43,10 @@ theorem ti_desmooth
     [Twin.ChecklistAxioms.DsPrimePowerAtSumBudget] :
     ∀ {X : ℕ}, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H ti_eds
-        ≤ P.eps * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1) / 3 := by
+        ≤ P.eps * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1) / 3 := by
   intro X hX
-  simpa [ti_eds] using (Twin.ChecklistAxioms.desmooth_onWindow_raw (X := X) hX)
+  simpa [ti_eds, Twin.fullTruncSingularSeries, Goldbach.TI.TwinExports.P] using
+    (Twin.ChecklistAxioms.desmooth_onWindow_raw (X := X) hX)
 
 section
 
@@ -70,23 +71,23 @@ theorem ti_l2_minor
     [Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := ti_sme)] :
     ∀ {X : ℕ}, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H (fun n => (ti_emin n) ^ 2)
-        ≤ P.eps ^ 2 * (Twin.truncSingularSeries P.S) ^ 2 * ((P.H : ℝ) + 1) / 9 := by
+        ≤ P.eps ^ 2 * (Twin.fullTruncSingularSeries P.S) ^ 2 * ((P.H : ℝ) + 1) / 9 := by
   intro X hX
-  simpa [ti_emin] using
+  simpa [ti_emin, Twin.fullTruncSingularSeries, Goldbach.TI.TwinExports.P] using
     (Twin.ChecklistAxioms.l2_minor_onWindow_raw (sme := ti_sme) (X := X) hX)
 
 theorem ti_pinned
     [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := ti_sme)]
     [Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := ti_sme)] :
     ∀ {X : ℕ}, P.X0 ≤ X →
-      (1 - P.eps) * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1)
+      (1 - P.eps) * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1)
         ≤ Twin.Bridge.localizedTwinMass X P.H
           + Twin.Ledger.windowSum X P.H ti_emin
           + Twin.Ledger.windowSum X P.H ti_eds
-          + (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3 := by
+          + (P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3 := by
   intro X hX
   have hX' : Twin.ChecklistAxioms.P.X0 ≤ X := by
-    simpa [P, Twin.Main.P, Twin.ChecklistAxioms.P] using hX
+    simpa [P, Goldbach.TI.TwinExports.P, Twin.ChecklistAxioms.P] using hX
   have h_sme_bound : ti_sme.X0 ≤ (Twin.ChecklistAxioms.P.X0 : ℝ) := by
     -- `ti_sme.X0 = 3` while `Twin.ChecklistAxioms.P.X0 = Twin.PaperParams.X0 = 10000`.
     have hsme : ti_sme.X0 = (3 : ℝ) := by
@@ -99,7 +100,8 @@ theorem ti_pinned
     have hReal : (3 : ℝ) ≤ (Twin.ChecklistAxioms.P.X0 : ℝ) := by
       exact_mod_cast hNat
     simpa [hsme] using hReal
-  simpa [ti_emin, ti_eds, P, Twin.Main.P, Twin.ChecklistAxioms.P] using
+  simpa [ti_emin, ti_eds, P, Goldbach.TI.TwinExports.P, Twin.ChecklistAxioms.P,
+    Twin.fullTruncSingularSeries] using
     ((Twin.ChecklistAxioms.gate_onWindow (sme := ti_sme) h_sme_bound).bound (X := X) hX')
 
 noncomputable instance
@@ -108,9 +110,21 @@ noncomputable instance
     [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := ti_sme)]
     [Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := ti_sme)] :
     Twin.HasTwinTI P := by
-  let E : Goldbach.TI.TwinExports.TIExports P := by
-    simpa [Goldbach.TI.TwinExports.P, P] using (Goldbach.TI.TwinExports.GoldbachDerivedExports)
-  exact E.toHasTwinTI
+  -- `GoldbachDerivedExports` already has the right parameter `P` (up to definitional unfolding).
+  exact (Goldbach.TI.TwinExports.GoldbachDerivedExports).toHasTwinTI
+
+-- Convenience: provide the TI instance directly at `Twin.Main.P` (definally the same params).
+noncomputable instance
+    [Twin.ChecklistSme.InstSWBound]
+    [Twin.ChecklistAxioms.DsFourierAtSumBudget] [Twin.ChecklistAxioms.DsPrimePowerAtSumBudget]
+    [Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := ti_sme)]
+    [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := ti_sme)]
+    [Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := ti_sme)] :
+    Twin.HasTwinTI Twin.Main.P := by
+  -- reuse the instance at `P` and unfold the parameter definitions
+  haveI : Twin.HasTwinTI P := by infer_instance
+  simpa [Twin.Main.P, P, Goldbach.TI.TwinExports.P, Goldbach.TI.TwinTI.P, Twin.PaperParams.P] using
+    (show Twin.HasTwinTI P from (by infer_instance))
 
 end
 

@@ -27,13 +27,13 @@ Fourier transform of `W`, normalized so that `W_hat(0) = ∫ W`. -/
 def mainTerm (W_hat : ℝ → ℝ) (X H α : ℝ) (a q : ℕ) : ℂ :=
   Complex.ofReal (muOverPhi q)
   * χ_add ((α - (a : ℝ) / q) * X)
-  * Complex.ofReal (X * W_hat (H * (α - (a : ℝ) / q)))
+  * Complex.ofReal (H * W_hat (H * (α - (a : ℝ) / q)))
 
 /-- Uniform smoothed major-arc estimate at scale `H` for the model
 `Λ, W, W_hat`.  For fixed `A,B>0`, this records a polylogarithmic major-arc
 box, a starting point `X0`, and a global constant `C` such that, on all
-major arcs `|α - a/q| ≤ δ/(H+1)` with `1 ≤ q ≤ (log X)^B`, the
-smoothed exponential sum is within `≪ C · X/(log X)^A` of its expected
+    major arcs `|α - a/q| ≤ δ/(H+1)` with `1 ≤ q ≤ (log H)^B`, the
+    smoothed exponential sum is within `≪ C · H/(log X)^A` of its expected
 main term. -/
 structure SmoothMajorArcEstimate
   (A B : ℝ) (Λ : ℕ → ℝ) (W W_hat : ℝ → ℝ) where
@@ -43,9 +43,9 @@ structure SmoothMajorArcEstimate
   C   : ℝ
   bound :
     ∀ {X H : ℝ}, X0 ≤ X → 1 ≤ H →
-    ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ Real.rpow (Real.log X) B → Nat.Coprime a q →
+    ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ Real.rpow (Real.log H) B → Nat.Coprime a q →
     ∀ {α : ℝ}, |α - (a : ℝ)/q| ≤ δ / (H + 1) →
       ‖sumValue Λ W X H α - mainTerm W_hat X H α a q‖
-        ≤ C * (X / Real.rpow (Real.log X) A)
+        ≤ C * (H / Real.rpow (Real.log X) A)
 
 end Twin.SW

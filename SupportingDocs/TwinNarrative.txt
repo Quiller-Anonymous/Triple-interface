@@ -9,20 +9,20 @@ route, for “gold status” development (axiomatize conventional analytic input
 machine-checked).
 
 Concrete entrypoints:
-  - `All.lean` imports `Twin.Gold` (so `lake build All` includes the Twin gold theorem).
-  - `Twin/Gold.lean` exports:
-      `Twin.Gold.twins_in_all_large_windows`
+  - `All.lean` imports `Twin.ChecklistEntrypointDefault` (so `lake build All` includes the default checklist theorem).
+  - `Twin/ChecklistEntrypoint.lean` exports:
+      `Twin.ChecklistEntrypoint.twins_in_all_large_windows`
     which is definitionally:
-      `Twin.ChecklistGold.twins_in_all_large_windows`.
+      `Twin.ChecklistRoute.twins_in_all_large_windows`.
 
 You can always see what remains axiomatized by running:
   `lake env lean Twin/AxiomAudit.lean`
 
-At the moment, `#print axioms Twin.ChecklistGold.twins_in_all_large_windows` reports exactly
+At the moment, `#print axioms Twin.ChecklistRoute.twins_in_all_large_windows` reports exactly
 these remaining (conventional / paper-facing) axioms (plus `propext`, `Classical.choice`, `Quot.sound`):
   - `Twin.ChecklistSme.instSW_bound`
       Smoothed Siegel–Walfisz-on-major-arcs bound for the frozen model
-      (`Twin/ChecklistSme.lean`; used only by the default `Twin.ChecklistGoldDefault` specialization).
+      (`Twin/ChecklistSme.lean`; used only by the default `Twin/ChecklistRouteDefault.lean` specialization).
   - `Twin.ChecklistAxioms.minorMassAt_sq_sum_bigIcc_core_raw`
       The “CLS/Type-II” minor-arc L² bound, in the enlarged-index-set form that feeds the `/9` budget
       (`Twin/ChecklistAxioms.lean:413`).
@@ -47,7 +47,7 @@ Notes:
   - The window-facing interfaces (`Twin.CLSL2.Bound`, `Twin.AnalyticCore.DesmoothBound`,
     `Twin.MajorArc.MajorArcLower`, `Twin.MajorArc.MajorArcTransfer`) are *not* axioms anymore:
     they are derived in `Twin/ChecklistAxioms.lean` from the raw axioms above plus finitary inequalities.
-  - `Twin.ChecklistGold.lean` is wired into the normal build via `Twin/Gold.lean` and `All.lean`;
+  - `Twin/ChecklistRoute.lean` is wired into the normal build via the checklist entrypoints and `All.lean`;
     `Twin/AxiomAudit.lean` is intentionally *not* imported by the build (it prints audit output).
 
 Optional Goldbach-side “hook” (ETI/TI integration)

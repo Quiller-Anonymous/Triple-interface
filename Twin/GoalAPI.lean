@@ -38,7 +38,7 @@ structure Params where
 def SpectralNullOnWindow (P : Params) : Prop :=
   ∀ {X : ℕ}, P.X0 ≤ X →
     ∀ k : ℕ, k ≤ P.H →
-      ((1 - P.eps) * Twin.truncSingularSeries P.S) * (1 : ℝ)
+      ((1 - P.eps) * Twin.fullTruncSingularSeries P.S) * (1 : ℝ)
         - P.err (X + k)
       ≤ Twin.Kernel.J P.H k * Twin.Bridge.twinIndicator (X + k)
 
@@ -46,11 +46,11 @@ def SpectralNullOnWindow (P : Params) : Prop :=
 def ErrorBudget (P : Params) : Prop :=
   ∀ {X : ℕ}, P.X0 ≤ X →
     Twin.Ledger.windowSum X P.H P.err
-      ≤ P.eps * Twin.truncSingularSeries P.S * (P.H + 1)
+      ≤ P.eps * Twin.fullTruncSingularSeries P.S * (P.H + 1)
 
 /-- Package the two obligations (plus the easy side conditions) into your existing assumptions. -/
 def ToAnalytic (P : Params)
-  (ss_pos : 0 < Twin.truncSingularSeries P.S)
+  (ss_pos : 0 < Twin.fullTruncSingularSeries P.S)
   (eps_pos : 0 < P.eps) (eps_lt_half : P.eps < (1 : ℝ) / 2)
   (hSN : SpectralNullOnWindow P)
   (hEB : ErrorBudget P)
@@ -64,7 +64,7 @@ def ToAnalytic (P : Params)
 
 /-- Directly obtain a witness from the two obligations. -/
 noncomputable def witnessFromGoals (P : Params)
-  (ss_pos : 0 < Twin.truncSingularSeries P.S)
+  (ss_pos : 0 < Twin.fullTruncSingularSeries P.S)
   (eps_pos : 0 < P.eps) (eps_lt_half : P.eps < (1 : ℝ) / 2)
   (hSN : SpectralNullOnWindow P) (hEB : ErrorBudget P) :
   Twin.Analytic.TwinWitness :=
@@ -73,7 +73,7 @@ noncomputable def witnessFromGoals (P : Params)
 
 /-- And the final large-X window theorem in one line. -/
 theorem twins_in_all_large_windows_from_goals (P : Params)
-  (ss_pos : 0 < Twin.truncSingularSeries P.S)
+  (ss_pos : 0 < Twin.fullTruncSingularSeries P.S)
   (eps_pos : 0 < P.eps) (eps_lt_half : P.eps < (1 : ℝ) / 2)
   (hSN : SpectralNullOnWindow P) (hEB : ErrorBudget P) :
   ∀ {X : ℕ}, P.X0 ≤ X → Twin.ExistsTwinInWindow X P.H := by

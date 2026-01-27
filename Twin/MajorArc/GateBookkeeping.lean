@@ -25,9 +25,9 @@ This is the part supplied by §11.2 (Siegel–Walfisz window) + §14.2 (pinned m
 structure MajorArcLower (P : Params) (majMass : ℕ → ℝ) : Prop where
   bound :
     ∀ ⦃X : ℕ⦄, P.X0 ≤ X →
-      (1 - P.eps) * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1)
+      (1 - P.eps) * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1)
         ≤ majMass X
-          + (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
+          + (P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
 
 namespace MajorArcLower
 
@@ -35,28 +35,28 @@ variable {P : Params}
 
 /-- A canonical major-arc mass that makes the lower bound inequality tautological. -/
 def constMajMass (P : Params) : ℕ → ℝ :=
-  fun _ => (1 - P.eps) * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1)
+  fun _ => (1 - P.eps) * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1)
 
 /-- The `MajorArcLower` inequality holds for `constMajMass` by nonnegativity of the tail cap. -/
 theorem constMajMass_lower (P : Params) : MajorArcLower P (constMajMass P) := by
   refine ⟨?_⟩
   intro X hX
   have eps_nonneg : 0 ≤ P.eps := P.eps_nonneg
-  have ss_nonneg : 0 ≤ Twin.truncSingularSeries P.S :=
-    Twin.truncSingularSeries_nonneg_of_ge_three (S := P.S) P.S_ge_three
+  have ss_nonneg : 0 ≤ Twin.fullTruncSingularSeries P.S :=
+    Twin.fullTruncSingularSeries_nonneg_of_ge_three (S := P.S) P.S_ge_three
   have hH_nonneg : 0 ≤ ((P.H : ℝ) + 1) := by
     have : 0 ≤ (P.H : ℝ) := by exact_mod_cast (Nat.zero_le P.H)
     linarith
   have tail_nonneg :
-      0 ≤ (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3 := by
-    have : 0 ≤ (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) :=
+      0 ≤ (P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3 := by
+    have : 0 ≤ (P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) :=
       mul_nonneg (mul_nonneg eps_nonneg ss_nonneg) hH_nonneg
     exact div_nonneg this (by norm_num)
   -- `main ≤ main + tail` (equivalent to `0 ≤ tail`)
   have hmain :
-      (1 - P.eps) * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1)
-        ≤ (1 - P.eps) * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1)
-          + (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3 := by
+      (1 - P.eps) * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1)
+        ≤ (1 - P.eps) * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1)
+          + (P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3 := by
     linarith
   simpa [constMajMass, add_assoc, add_comm, add_left_comm] using hmain
 
@@ -111,13 +111,13 @@ by
   -- add the common tail-cap term to the transfer inequality
   have h2' :
       majMass X
-        + (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
+        + (P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
         ≤ Twin.Bridge.localizedTwinMass X P.H
           + Twin.Ledger.windowSum X P.H emin
           + Twin.Ledger.windowSum X P.H eds
-          + (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3 := by
+          + (P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3 := by
     simpa [add_assoc, add_comm, add_left_comm] using
-      add_le_add_right h2 ((P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3)
+      add_le_add_right h2 ((P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3)
   exact le_trans h1 (by simpa [add_assoc, add_comm, add_left_comm] using h2')
 
 end Twin.MajorArc

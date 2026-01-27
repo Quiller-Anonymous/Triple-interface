@@ -1,19 +1,19 @@
-import Twin.ChecklistGold
-import Twin.ChecklistSmeFoolsGold
+import Twin.ChecklistRoute
+import Twin.ChecklistSmeDefaultAxioms
 
 /-!
-Twin/ChecklistGoldDefault.lean
+Twin/ChecklistRouteDefault.lean
 ==============================
 
-Specialize the parameterized checklist theorem `Twin.ChecklistGold.twins_in_all_large_windows_of_sme`
+Specialize the parameterized checklist theorem `Twin.ChecklistRoute.twins_in_all_large_windows_of_sme`
 to the repo-default frozen-model `sme := Twin.ChecklistSme.sme`.
 
 This file is the only place where the conventional SW major-arc axiom
-`Twin/ChecklistSmeFoolsGold.lean` is imported to provide a convenience (“fool's gold”)
+`Twin/ChecklistSmeDefaultAxioms.lean` is imported to provide a convenience default (axiomatized)
 instantiation of the checklist hypotheses for the frozen model.
 -/
 
-namespace Twin.ChecklistGold
+namespace Twin.ChecklistRoute
 
 noncomputable section
 
@@ -28,7 +28,7 @@ lemma sme_X0_le_PX0 : (Twin.ChecklistSme.sme.X0) ≤ (P.X0 : ℝ) := by
   have hPX : (3 : ℝ) ≤ (P.X0 : ℝ) := by
     have hNat : (3 : ℕ) ≤ P.X0 := by
       -- `P.X0` unfolds to `Twin.PaperParams.X0 = 10000`.
-      simpa [Twin.ChecklistGold.P, Twin.ChecklistTargets.P, Twin.ChecklistAssumptions.P, Twin.Main.P,
+      simpa [Twin.ChecklistRoute.P, Twin.ChecklistTargets.P, Twin.ChecklistAssumptions.P, Twin.Main.P,
         Twin.PaperParams.P, Twin.PaperParams.X0] using
         (show (3 : ℕ) ≤ Twin.PaperParams.X0 from by
           norm_num [Twin.PaperParams.X0])
@@ -39,11 +39,11 @@ lemma sme_X0_le_PX0 : (Twin.ChecklistSme.sme.X0) ≤ (P.X0 : ℝ) := by
 def O' : Twin.ChecklistTargets.Obligations :=
   ((O Twin.ChecklistSme.sme sme_X0_le_PX0).toObligations)
 
-/-- Checklist default theorem (conditional on the axiom bundle in `Twin/ChecklistSmeFoolsGold.lean`). -/
+/-- Checklist default theorem (conditional on the axiom bundle in `Twin/ChecklistSmeDefaultAxioms.lean`). -/
 theorem twins_in_all_large_windows :
     ∀ {X : ℕ}, P.X0 ≤ X → Twin.ExistsTwinInWindow X P.H :=
   twins_in_all_large_windows_of_sme Twin.ChecklistSme.sme sme_X0_le_PX0
 
 end
 
-end Twin.ChecklistGold
+end Twin.ChecklistRoute

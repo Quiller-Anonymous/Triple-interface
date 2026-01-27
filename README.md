@@ -23,10 +23,11 @@ through the conventional theorem-shaped boundary `Goldbach/Cert/MajorArcPowerSav
 **axiom-free** (explicit divisor-sum majorant + real bound `|sigmaTail Q N| ≤ (180/Q)·N²`).
 -- A separate “turnkey” pinned-cap route still exists for convenience:
 `Goldbach/GoldFunX_OptionB_Cert.lean` (this is *fool’s gold* under the above standard).
-2. Twin primes conjecture -- Current status: gold
--- Gold entrypoint: `Twin/Gold.lean` (`Twin.Gold.twins_in_all_large_windows`) is axiom-free (bespoke) and takes the remaining analytic inputs as explicit hypotheses/typeclasses (see `Twin/ChecklistAxioms.lean`).
--- Convenience fool’s-gold instantiation: `Twin/ChecklistSmeFoolsGold.lean` postulates those hypotheses for the frozen model and yields `Twin/ChecklistGoldDefault.lean`.
--- Goldbach-side hook: `Goldbach/TwinGold.lean` runs the Twin pipeline via a conditional `Twin.HasTwinTI` instance (`Goldbach/TI/TwinInstance.lean`), currently still derived from the same checklist hypotheses; see `Goldbach/AxiomAuditTwinGold.lean`.
+2. Twin primes conjecture -- Current status: fool’s gold (default build); conditional (hypothesis-only entrypoint)
+-- Hypothesis-only checklist entrypoint: `Twin/ChecklistEntrypoint.lean` (`Twin.ChecklistEntrypoint.twins_in_all_large_windows`) is axiom-free in-repo and takes the remaining analytic inputs as explicit hypotheses/typeclasses (see `Twin/ChecklistAxioms.lean`).
+-- Verified 2026-01-27: `lake build Twin.ChecklistEntrypoint` succeeds locally.
+-- Default build is **fool’s gold**: `Twin/ChecklistEntrypointDefault.lean` imports `Twin/ChecklistSmeDefaultAxioms.lean` (via `Twin/ChecklistRouteDefault.lean`), which postulates the conventional analytic hypotheses as explicit `axiom`s for the frozen model `sme := Twin.ChecklistSme.sme`.
+-- Goldbach-side hook (default) is also **fool’s gold** for the same reason: `Goldbach/TwinGold.lean` runs the Twin pipeline via a `Twin.HasTwinTI` instance exported from `Goldbach/TI/TwinInstance.lean`, which is currently derived from the same checklist hypotheses.
 3. The alt-zeta construct (nuanced primes detector) -- Current status: gold (B2 interface)
 4. The Riemann hypothesis -- Current status: mud
 
@@ -103,7 +104,7 @@ intended theorem-shape.
 All.lean (default Lake target) imports:
 Goldbach.GoldFunX_OptionB_Gold
 Goldbach.TwinGold (optional Goldbach↔Twin wiring)
-Twin.Final and Twin.Gold (twin-primes companion project)
+Twin.Final and Twin.ChecklistEntrypointDefault (twin-primes companion project; default instantiation)
 
 ## High-level dependency flow
 
@@ -199,16 +200,19 @@ This section lists (1) the hypothesis surface of the gold entrypoints, and (2) a
 `axiom` declarations that exist only for convenience “fool’s gold” instantiations.
 
 **Gold entrypoints (axiom-free; hypothesis-based)**
-- `Twin/Gold.lean` exposes `Twin.Gold.twins_in_all_large_windows`. It takes a `SmoothMajorArcEstimate` argument and assumes instances of the checklist budgets in `Twin/ChecklistAxioms.lean` (`DsFourierAtSumBudget`, `DsPrimePowerAtSumBudget`, `MinorMassAtSqSumBudget`, `PinnedMajorsSWErrorEnvelopeBudget`, `PinnedMajorsMainTermEval`).
+- `Twin/ChecklistEntrypoint.lean` exposes `Twin.ChecklistEntrypoint.twins_in_all_large_windows`. It takes a `SmoothMajorArcEstimate` argument and assumes conventional analytic inputs as typeclasses (`DsFourierAtSumBudget`, `DsPrimePowerAtSumBudget`, `PinnedMajorsSWErrorEnvelopeBudget`, `PinnedMajorsMainTermModel`, `MinorArcSupBound`). The two checklist-budget classes `MinorMassAtSqSumBudget` and `PinnedMajorsMainTermEval` are derived automatically from `MinorArcSupBound` (`Twin/MinorArcSupBound.lean`) and `PinnedMajorsMainTermModel` (`Twin/PinnedMajorsMainTermModel.lean`).
 - `Goldbach/TwinGold.lean` exposes `Goldbach.TwinGold.twins_in_all_large_windows_default`, which runs the Twin pipeline using a `Twin.HasTwinTI` instance exported by `Goldbach/TI/TwinInstance.lean` (also conditional on the same hypotheses).
 
 **Explicit `axiom`s (used only by the fool’s-gold default instantiation)**
-- `Twin/ChecklistSmeFoolsGold.lean:30` `instSW_bound` (smoothed major-arc Siegel–Walfisz estimate in the polylogarithmic major-arc range, used to build the frozen-model `SmoothMajorArcEstimate`).
-- `Twin/ChecklistSmeFoolsGold.lean:40` `pinnedMajors_SW_error_envelope_budget` (budget ensuring the SW approximation error integrates into the pinned-major bookkeeping allowance).
-- `Twin/ChecklistSmeFoolsGold.lean:46` `pinnedMajors_mainTerm_eval` (evaluation of the pinned-major main term at the truncated singular series scale).
-- `Twin/ChecklistSmeFoolsGold.lean:52` `minorMassAt_sq_sum_bigIcc_budget` (minor-arc L² square-sum budget feeding the `/9` CLS window allowance).
-- `Twin/ChecklistSmeFoolsGold.lean:58` `dsFourierAt_sum_bigIcc_budget` (Fourier/smoothing half of the desmoothing discrepancy budget).
-- `Twin/ChecklistSmeFoolsGold.lean:64` `dsPrimePowerAt_sum_bigIcc_budget` (prime-power disposal half of the desmoothing discrepancy budget).
+- `Twin/ChecklistSmeDefaultAxioms.lean:32` `instSW_bound` (smoothed major-arc Siegel–Walfisz estimate in the polylogarithmic major-arc range; the repo currently freezes the modulus cap at `q ≤ (log H)^B` for stability of `∀ X` statements).
+- `Twin/ChecklistSmeDefaultAxioms.lean:42` `pinnedMajors_SW_error_envelope_budget` (budget ensuring the SW approximation error integrates into the pinned-major bookkeeping allowance).
+- `Twin/ChecklistSmeDefaultAxioms.lean:56` `pinnedMajors_mainTerm_model` (decomposed Core 2: a deterministic model identity for `majMassMainTerm` plus two numeric bounds; see `Twin/PinnedMajorsMainTermModel.lean`).
+- `Twin/ChecklistSmeDefaultAxioms.lean:65` `minorArc_supBound` (minor-arc `L∞` bound for `Twin.SW.sumValue` plus a constant gate; this implies `MinorMassAtSqSumBudget` via `Twin/MinorArcSupBound.lean`).
+- `Twin/ChecklistSmeDefaultAxioms.lean:74` `dsFourierAt_sum_bigIcc_budget` (Fourier/smoothing half of the desmoothing discrepancy budget).
+- `Twin/ChecklistSmeDefaultAxioms.lean:80` `dsPrimePowerAt_sum_bigIcc_budget` (prime-power disposal half of the desmoothing discrepancy budget).
+
+**Bespoke-core statements (mathematician-facing, no proofs)**
+- `Twin/BespokeCores.lean:1` restates the remaining Twin-specific analytic cores as readable standalone statements, and records conventional replacements for Core 1 (fourth-moment and/or sup-bound variants).
 
 # ALT-ZETA
 

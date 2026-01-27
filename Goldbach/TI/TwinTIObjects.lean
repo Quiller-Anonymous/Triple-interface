@@ -38,7 +38,7 @@ namespace TI.TwinTI
 open Twin
 
 /-- The concrete Twin parameters we export to (paper params). -/
-abbrev P : Twin.GoalAPI.Params := Twin.Main.P
+abbrev P : Twin.GoalAPI.Params := Twin.PaperParams.P
 
 /-!
 We treat the Twin checklist analytic inputs as explicit hypotheses (typeclass parameters).
@@ -66,11 +66,12 @@ theorem l2_minor_onWindow :
   [Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := ti_sme)] →
   ∀ {X}, P.X0 ≤ X →
     Twin.Ledger.windowSum X P.H (fun n => (ti_emin n) ^ 2)
-      ≤ P.eps ^ 2 * (Twin.truncSingularSeries P.S) ^ 2 * ((P.H : ℝ) + 1) / 9
+      ≤ P.eps ^ 2 * (Twin.fullTruncSingularSeries P.S) ^ 2 * ((P.H : ℝ) + 1) / 9
 := by
   intro _hMinor
   intro X hX
-  simpa [P, ti_emin, Twin.ChecklistAxioms.P, Twin.ChecklistAxioms.SS] using
+  -- This is exactly the checklist lemma specialized to `ti_sme`; no unfolding of `emin` needed.
+  simpa [P, Twin.ChecklistAxioms.P, Twin.ChecklistAxioms.SS, Twin.fullTruncSingularSeries] using
     (Twin.ChecklistAxioms.l2_minor_onWindow (sme := ti_sme) (X := X) hX)
 
 /-- Desmoothing / prime-power budget bound (uniform in `X ≥ X0`). -/
@@ -78,11 +79,11 @@ theorem desmooth_onWindow :
   [Twin.ChecklistAxioms.DsFourierAtSumBudget] → [Twin.ChecklistAxioms.DsPrimePowerAtSumBudget] →
   ∀ {X}, P.X0 ≤ X →
     Twin.Ledger.windowSum X P.H ti_eds
-      ≤ P.eps * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1) / 3
+      ≤ P.eps * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1) / 3
 := by
   intro _hF _hPP
   intro X hX
-  simpa [P, ti_eds, Twin.ChecklistAxioms.P, Twin.ChecklistAxioms.SS] using
+  simpa [P, Twin.ChecklistAxioms.P, Twin.ChecklistAxioms.SS, Twin.fullTruncSingularSeries] using
     (Twin.ChecklistAxioms.desmooth_onWindow (X := X) hX)
 
 /-- Pinned gate inequality on the window (uniform in `X ≥ X0`). -/
@@ -90,16 +91,16 @@ theorem pinned_onWindow :
   [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := ti_sme)] →
   [Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := ti_sme)] →
   ∀ {X}, P.X0 ≤ X →
-    (1 - P.eps) * Twin.truncSingularSeries P.S * ((P.H : ℝ) + 1)
+    (1 - P.eps) * Twin.fullTruncSingularSeries P.S * ((P.H : ℝ) + 1)
       ≤ Twin.Bridge.localizedTwinMass X P.H
         + Twin.Ledger.windowSum X P.H ti_emin
         + Twin.Ledger.windowSum X P.H ti_eds
-        + (P.eps * Twin.truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
+        + (P.eps * Twin.fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
 := by
   intro _hSW _hMain
   intro X hX
   have hX' : Twin.ChecklistAxioms.P.X0 ≤ X := by
-    simpa [P, Twin.Main.P, Twin.ChecklistAxioms.P] using hX
+    simpa [P, Twin.ChecklistAxioms.P] using hX
   have hsmeX0 : Twin.ChecklistSme.sme.X0 ≤ (Twin.ChecklistAxioms.P.X0 : ℝ) := by
     -- `Twin.ChecklistSme.X0 = 3` while `Twin.ChecklistAxioms.P.X0 = Twin.PaperParams.X0 = 10000`.
     have hsme : Twin.ChecklistSme.sme.X0 = (3 : ℝ) := by
@@ -112,7 +113,7 @@ theorem pinned_onWindow :
     have hReal : (3 : ℝ) ≤ (Twin.ChecklistAxioms.P.X0 : ℝ) := by
       exact_mod_cast hNat
     simpa [hsme] using hReal
-  simpa [P, ti_emin, ti_eds, Twin.Main.P, Twin.ChecklistAxioms.P, Twin.ChecklistAxioms.SS] using
+  simpa [P, Twin.ChecklistAxioms.P, Twin.ChecklistAxioms.SS, Twin.fullTruncSingularSeries] using
     ((Twin.ChecklistAxioms.gate_onWindow (sme := ti_sme) hsmeX0).bound (X := X) hX')
 
 end TwinTI

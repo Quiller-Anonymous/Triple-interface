@@ -31,12 +31,12 @@ structure Analytic where
   eps : ℝ
   err : ℕ → ℝ
   -- Positivity of the truncated singular series (from your pinned majors)
-  ss_pos : 0 < Twin.truncSingularSeries S
+  ss_pos : 0 < Twin.fullTruncSingularSeries S
   -- Error budget: uniform over windows (from your CLS/minor-arc analysis)
   err_budget :
     ∀ {X : ℕ}, X0 ≤ X →
       Twin.Ledger.windowSum X H err
-        ≤ eps * Twin.truncSingularSeries S * (H+1)
+        ≤ eps * Twin.fullTruncSingularSeries S * (H+1)
   -- Epsilon constraints
   eps_pos     : 0 < eps
   eps_lt_half : eps < (1 : ℝ)/2
@@ -44,14 +44,14 @@ structure Analytic where
   assemble_onWindow :
     ∀ {X : ℕ}, X0 ≤ X →
       ∀ k : ℕ, k ≤ H →
-        ((1 - eps) * Twin.truncSingularSeries S) * (1 : ℝ)
+        ((1 - eps) * Twin.fullTruncSingularSeries S) * (1 : ℝ)
           - err (X + k)
         ≤ Twin.Kernel.J H k * Twin.Bridge.twinIndicator (X + k)
 
 namespace Analytic
 
 /-- The constant `c` and main-term shape `L ≡ 1`. -/
-def c  (A : Analytic) : ℝ := (1 - A.eps) * Twin.truncSingularSeries A.S
+def c  (A : Analytic) : ℝ := (1 - A.eps) * Twin.fullTruncSingularSeries A.S
 def L  (_A : Analytic) : ℕ → ℝ := fun _ => 1
 
 lemma c_pos (A : Analytic) : 0 < A.c := by

@@ -46,20 +46,20 @@ structure Bricks (P : Twin.GoalAPI.Params) where
       This is the major-arc pinned lower bound after summing over `k=0..H`. -/
   gate_major :
     ∀ {X : ℕ}, P.X0 ≤ X →
-      (1 - P.eps) * Twin.truncSingularSeries P.S * (P.H + 1)
+      (1 - P.eps) * Twin.fullTruncSingularSeries P.S * (P.H + 1)
         ≤ Twin.Bridge.localizedTwinMass X P.H
           + Twin.Ledger.windowSum X P.H E.emin
           + Twin.Ledger.windowSum X P.H E.eds
-          + (P.eps * Twin.truncSingularSeries P.S) * (P.H + 1) / 3
+          + (P.eps * Twin.fullTruncSingularSeries P.S) * (P.H + 1) / 3
   /-- CLS window-sum budget for the minor-arc piece. -/
   cls_budget :
     ∀ {X : ℕ}, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H (fun n => |E.emin n|)
-        ≤ P.eps * Twin.truncSingularSeries P.S * (P.H + 1) / 3
+        ≤ P.eps * Twin.fullTruncSingularSeries P.S * (P.H + 1) / 3
   /-- Desmoothing / prime-power window-sum budget. -/
   desmooth_budget :
     ∀ {X : ℕ}, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H E.eds
-        ≤ P.eps * Twin.truncSingularSeries P.S * (P.H + 1) / 3
+        ≤ P.eps * Twin.fullTruncSingularSeries P.S * (P.H + 1) / 3
 
 end Twin.PaperBricks

@@ -20,6 +20,15 @@ def twinFactor (p : ℕ) : ℝ :=
 def truncSingularSeries (S : Finset ℕ) : ℝ :=
   ∏ p ∈ S, twinFactor p
 
+/-- The “full” truncated twin singular series constant including the `p=2` local factor.
+
+Since `P.S` in this project contains only odd primes, `truncSingularSeries P.S` corresponds to
+the usual odd-prime Euler product \( \prod_{p>2}(1 - 1/(p-1)^2) \).  The classical Hardy–Littlewood
+twin constant carries an additional factor `2` from the `p=2` local density; we package that
+here to match the default major-arc `q`-domain (which includes even moduli). -/
+def fullTruncSingularSeries (S : Finset ℕ) : ℝ :=
+  2 * truncSingularSeries S
+
 /-- Alternate (finite) expansion of the truncated singular series as a sum over subsets.
 
 This is the algebraic identity behind Euler-product expansions; it is useful for aligning
@@ -90,12 +99,29 @@ lemma truncSingularSeries_nonneg_of_ge_three
     0 ≤ truncSingularSeries S :=
   le_of_lt (truncSingularSeries_pos_of_all_ge_three (S := S) hS)
 
+lemma fullTruncSingularSeries_pos_of_all_ge_three
+  {S : Finset ℕ} (hS : ∀ p ∈ S, 3 ≤ p) :
+  0 < fullTruncSingularSeries S := by
+  have : 0 < truncSingularSeries S := truncSingularSeries_pos_of_all_ge_three (S := S) hS
+  simpa [fullTruncSingularSeries] using (mul_pos (by norm_num : (0 : ℝ) < 2) this)
+
+lemma fullTruncSingularSeries_nonneg_of_ge_three
+  {S : Finset ℕ} (hS : ∀ p ∈ S, 3 ≤ p) :
+  0 ≤ fullTruncSingularSeries S := by
+  have : 0 ≤ truncSingularSeries S := truncSingularSeries_nonneg_of_ge_three (S := S) hS
+  simpa [fullTruncSingularSeries] using (mul_nonneg (by norm_num : (0 : ℝ) ≤ 2) this)
+
 -- Compatibility alias under the name you used:
 namespace SingularSeries
   lemma truncSingularSeries_nonneg
       {S : Finset ℕ} (hS : ∀ p ∈ S, 3 ≤ p) :
       0 ≤ Twin.truncSingularSeries S :=
     Twin.truncSingularSeries_nonneg_of_ge_three (S := S) hS
+
+  lemma fullTruncSingularSeries_nonneg
+      {S : Finset ℕ} (hS : ∀ p ∈ S, 3 ≤ p) :
+      0 ≤ Twin.fullTruncSingularSeries S :=
+    Twin.fullTruncSingularSeries_nonneg_of_ge_three (S := S) hS
 end SingularSeries
 
 end Twin

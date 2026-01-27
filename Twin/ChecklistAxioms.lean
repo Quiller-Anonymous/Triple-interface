@@ -32,7 +32,7 @@ private lemma norm_chi_add (t : ℝ) : ‖Twin.SW.χ_add t‖ = 1 := by
   simp [Twin.SW.χ_add, Complex.norm_exp]
 
 abbrev P : Twin.GoalAPI.Params := Twin.PaperParams.P
-abbrev SS : ℝ := Twin.truncSingularSeries P.S
+abbrev SS : ℝ := Twin.fullTruncSingularSeries P.S
 
 /-!
 ## Error channels (paper-faithful definitions)
@@ -170,7 +170,10 @@ private lemma emin_sq_le_card_mul_sum_sq_local (n : ℕ) :
         (f := fun X : ℕ => |minorMassAt (sme := sme) X| / N))
   exact le_trans hsq hcs
 
-private def bigIcc (X : ℕ) : Finset ℕ :=
+/-- Canonical “buffered window” index set around `X`: `[X-H, X+H]`.
+
+This is the index set on which the paper-facing minor-arc and desmoothing budgets are stated. -/
+def bigIcc (X : ℕ) : Finset ℕ :=
   Finset.Icc (X - P.H) (X + P.H)
 
 private lemma localIcc_subset_bigIcc (X k : ℕ) (hk : k ≤ P.H) :
@@ -1713,7 +1716,7 @@ open MeasureTheory
     let q : ℕ := qa.1
     let a : ℕ := qa.2
     1 ≤ q ∧
-      (q : ℝ) ≤ Real.rpow (Real.log X) B ∧
+      (q : ℝ) ≤ Real.rpow (Real.log H) B ∧
       Nat.Coprime a q ∧
       |α - (a : ℝ) / q| ≤ sme.δ / (H + 1)
 
@@ -1760,7 +1763,7 @@ open MeasureTheory
       simp [majorArcWitnessNat, hMaj]
     simpa [hEq] using (Nat.find_spec hex)
 
-private noncomputable def mainTermValue
+noncomputable def mainTermValue
   (sme : Twin.MajorArc.SmoothMajorArcEstimate A B Lambda Wwin What) (X H α : ℝ) : ℂ :=
   let qa := majorArcWitness (sme := sme) X H α
   Twin.SW.mainTerm What X H α qa.2 qa.1
@@ -1770,7 +1773,7 @@ private noncomputable def mainTermValue
     (hX : sme.X0 ≤ X) (hH : 1 ≤ H)
     (h : Twin.MajorArc.IsMajorArc (sme := sme) X H α) :
       ‖Twin.SW.sumValue Lambda Wwin X H α - mainTermValue (sme := sme) X H α‖
-        ≤ sme.C * (X / Real.rpow (Real.log X) A) := by
+        ≤ sme.C * (H / Real.rpow (Real.log X) A) := by
     classical
     -- unpack the deterministic witness and use the SW bound at that `a/q`.
     set qa : ℕ × ℕ := majorArcWitness (sme := sme) X H α
@@ -1778,7 +1781,7 @@ private noncomputable def mainTermValue
     set a : ℕ := qa.2
     have hqa :
         1 ≤ q ∧
-          (q : ℝ) ≤ Real.rpow (Real.log X) B ∧
+          (q : ℝ) ≤ Real.rpow (Real.log H) B ∧
             Nat.Coprime a q ∧
               |α - (a : ℝ) / q| ≤ sme.δ / (H + 1) := by
       have hPred :=
@@ -1791,7 +1794,7 @@ private noncomputable def mainTermValue
     -- apply the packaged major-arc SW bound from `sme`
     have hSW :
         ‖Twin.SW.sumValue Lambda Wwin X H α - Twin.SW.mainTerm What X H α a q‖
-          ≤ sme.C * (X / Real.rpow (Real.log X) A) :=
+          ≤ sme.C * (H / Real.rpow (Real.log X) A) :=
       sme.bound (X := X) (H := H) hX hH (q := q) (a := a) hq1 hqB hcop hdist
     simpa [hmt] using hSW
 
@@ -1868,12 +1871,12 @@ private lemma abs_twinCorrIntegrand_sub_le (S T : ℂ) (α : ℝ) :
     _ = ‖S * conj S - T * conj T‖ := by simp [hχ]
     _ ≤ ‖S - T‖ * (‖S‖ + ‖T‖) := norm_mul_conj_sub_le S T
 
-private noncomputable def twinCorrIntegrandMainTerm
+noncomputable def twinCorrIntegrandMainTerm
   (sme : Twin.MajorArc.SmoothMajorArcEstimate A B Lambda Wwin What) (X H α : ℝ) : ℝ :=
   let S : ℂ := mainTermValue (sme := sme) X H α
   ((S * conj S) * Twin.SW.χ_add (-2 * α)).re
 
-private noncomputable def majorArcTwinIntegrandMainTerm
+noncomputable def majorArcTwinIntegrandMainTerm
   (sme : Twin.MajorArc.SmoothMajorArcEstimate A B Lambda Wwin What) (X H α : ℝ) : ℝ :=
   Twin.MajorArc.majorArcInd (sme := sme) X H α * twinCorrIntegrandMainTerm (sme := sme) X H α
 
@@ -1922,7 +1925,7 @@ over major arcs; everything else is bookkeeping.
     set q : ℕ := qa.1
     set a : ℕ := qa.2
     by_cases hc :
-        1 ≤ q ∧ (q : ℝ) ≤ Real.rpow (Real.log X) B ∧ Nat.Coprime a q
+        1 ≤ q ∧ (q : ℝ) ≤ Real.rpow (Real.log H) B ∧ Nat.Coprime a q
     ·
       have hEq :
           {α : ℝ | majorArcPredNat (sme := sme) X H n α}
@@ -2164,15 +2167,15 @@ over major arcs; everything else is bookkeeping.
       have hOfRealMu : Measurable (fun α : ℝ => Complex.ofReal (Twin.SW.muOverPhi
           (majorArcWitness (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) α).1)) :=
         Complex.measurable_ofReal.comp hMu
-      have hOfRealXW : Measurable (fun α : ℝ =>
-          Complex.ofReal ((X : ℝ) * What ((P.H : ℝ) * (shift α)))) :=
+      have hOfRealHW : Measurable (fun α : ℝ =>
+          Complex.ofReal ((P.H : ℝ) * What ((P.H : ℝ) * (shift α)))) :=
         Complex.measurable_ofReal.comp (measurable_const.mul hWhatComp)
       -- Combine the factors (all measurable).
       have hProd : Measurable (fun α : ℝ =>
           Complex.ofReal (Twin.SW.muOverPhi (majorArcWitness (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) α).1)
             * Twin.SW.χ_add ((shift α) * (X : ℝ))
-            * Complex.ofReal ((X : ℝ) * What ((P.H : ℝ) * (shift α)))) := by
-        exact (hOfRealMu.mul hChi1).mul hOfRealXW
+            * Complex.ofReal ((P.H : ℝ) * What ((P.H : ℝ) * (shift α)))) := by
+        exact (hOfRealMu.mul hChi1).mul hOfRealHW
       -- Match the definitional form of `mainTermValue`.
       simpa [mainTermValue, Twin.SW.mainTerm, shift, aR, qR, mul_assoc, mul_left_comm, mul_comm] using hProd
     exact hMeas.aestronglyMeasurable
@@ -2305,7 +2308,7 @@ over major arcs; everything else is bookkeeping.
       _ ≤ 1 := hμ
 
   private lemma norm_mainTermValue_le (X H α : ℝ) :
-      ‖mainTermValue (sme := sme) X H α‖ ≤ |X| * Twin.ChecklistModel.κ := by
+      ‖mainTermValue (sme := sme) X H α‖ ≤ |H| * Twin.ChecklistModel.κ := by
     classical
     set qa : ℕ × ℕ := majorArcWitness (sme := sme) X H α
     set q : ℕ := qa.1
@@ -2323,25 +2326,25 @@ over major arcs; everything else is bookkeeping.
               simp [mainTermValue, qa, q, a]
       _ = ‖Complex.ofReal (Twin.SW.muOverPhi q)‖
             * ‖Twin.SW.χ_add ((α - (a : ℝ) / q) * X)‖
-            * ‖Complex.ofReal (X * What (H * (α - (a : ℝ) / q)))‖ := by
+            * ‖Complex.ofReal (H * What (H * (α - (a : ℝ) / q)))‖ := by
               simp [Twin.SW.mainTerm, norm_mul, mul_assoc, mul_left_comm, mul_comm]
-      _ = |Twin.SW.muOverPhi q| * 1 * |X * What (H * (α - (a : ℝ) / q))| := by
+      _ = |Twin.SW.muOverPhi q| * 1 * |H * What (H * (α - (a : ℝ) / q))| := by
               -- prevent unfolding `Twin.SW.muOverPhi` (it is `[simp]`), to avoid spurious goals
               simp [hχ, Complex.norm_real, -Twin.SW.muOverPhi]
-      _ ≤ (1 : ℝ) * 1 * (|X| * Twin.ChecklistModel.κ) := by
-            have hXW : |X * What (H * (α - (a : ℝ) / q))| ≤ |X| * Twin.ChecklistModel.κ := by
-              simpa [abs_mul] using (mul_le_mul_of_nonneg_left hW (abs_nonneg X))
+      _ ≤ (1 : ℝ) * 1 * (|H| * Twin.ChecklistModel.κ) := by
+            have hHW : |H * What (H * (α - (a : ℝ) / q))| ≤ |H| * Twin.ChecklistModel.κ := by
+              simpa [abs_mul] using (mul_le_mul_of_nonneg_left hW (abs_nonneg H))
             gcongr
-      _ = |X| * Twin.ChecklistModel.κ := by ring
+      _ = |H| * Twin.ChecklistModel.κ := by ring
 
   private lemma abs_twinCorrIntegrandMainTerm_le (X H α : ℝ) :
-      |twinCorrIntegrandMainTerm (sme := sme) X H α| ≤ (|X| * Twin.ChecklistModel.κ) ^ 2 := by
+      |twinCorrIntegrandMainTerm (sme := sme) X H α| ≤ (|H| * Twin.ChecklistModel.κ) ^ 2 := by
     classical
     set S : ℂ := mainTermValue (sme := sme) X H α
     set χ : ℂ := Twin.SW.χ_add (-2 * α)
     have hχ : ‖χ‖ = 1 := by
       simpa [χ] using norm_chi_add (-2 * α)
-    have hS : ‖S‖ ≤ |X| * Twin.ChecklistModel.κ := by
+    have hS : ‖S‖ ≤ |H| * Twin.ChecklistModel.κ := by
       simpa [S] using norm_mainTermValue_le (sme := sme) (X := X) (H := H) (α := α)
     have hRe : |(((S * conj S) * χ).re)| ≤ ‖(S * conj S) * χ‖ := Complex.abs_re_le_norm _
     have hNorm :
@@ -2357,22 +2360,22 @@ over major arcs; everything else is bookkeeping.
               simp [twinCorrIntegrandMainTerm, S, χ]
       _ ≤ ‖(S * conj S) * χ‖ := hRe
       _ = ‖S‖ ^ 2 := hNorm
-      _ ≤ (|X| * Twin.ChecklistModel.κ) ^ 2 := by
+      _ ≤ (|H| * Twin.ChecklistModel.κ) ^ 2 := by
             -- monotonicity of `t ↦ t^2` on `ℝ≥0`
             have h0 : 0 ≤ ‖S‖ := norm_nonneg _
-            have h1 : 0 ≤ |X| * Twin.ChecklistModel.κ := by
+            have h1 : 0 ≤ |H| * Twin.ChecklistModel.κ := by
               have : 0 ≤ (Twin.ChecklistModel.κ : ℝ) := by
                 have : 0 < (Twin.ChecklistModel.κ : ℝ) := by norm_num [Twin.ChecklistModel.κ]
                 exact le_of_lt this
-              exact mul_nonneg (abs_nonneg X) this
+              exact mul_nonneg (abs_nonneg H) this
             have hmul :
-                ‖S‖ * ‖S‖ ≤ (|X| * Twin.ChecklistModel.κ) * (|X| * Twin.ChecklistModel.κ) :=
+                ‖S‖ * ‖S‖ ≤ (|H| * Twin.ChecklistModel.κ) * (|H| * Twin.ChecklistModel.κ) :=
               mul_le_mul hS hS (norm_nonneg _) h1
             simpa [pow_two] using hmul
 
   private lemma norm_majorArcTwinIntegrandMainTerm_le (X : ℕ) (α : ℝ) :
       ‖majorArcTwinIntegrandMainTerm (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) α‖
-        ≤ (|(X : ℝ)| * Twin.ChecklistModel.κ) ^ 2 := by
+        ≤ (|(P.H : ℝ)| * Twin.ChecklistModel.κ) ^ 2 := by
     classical
     set ind : ℝ := Twin.MajorArc.majorArcInd (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) α
     set core : ℝ := twinCorrIntegrandMainTerm (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) α
@@ -2380,7 +2383,7 @@ over major arcs; everything else is bookkeeping.
       by_cases h : Twin.MajorArc.IsMajorArc (sme := sme) (X : ℝ) (P.H : ℝ) α
       · simp [ind, Twin.MajorArc.majorArcInd, h]
       · simp [ind, Twin.MajorArc.majorArcInd, h]
-    have hcore : ‖core‖ ≤ (|(X : ℝ)| * Twin.ChecklistModel.κ) ^ 2 := by
+    have hcore : ‖core‖ ≤ (|(P.H : ℝ)| * Twin.ChecklistModel.κ) ^ 2 := by
       -- `core` is real, so `‖core‖ = |core|`.
       have h :=
         abs_twinCorrIntegrandMainTerm_le (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) (α := α)
@@ -2389,9 +2392,9 @@ over major arcs; everything else is bookkeeping.
       ‖majorArcTwinIntegrandMainTerm (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) α‖
           = ‖ind * core‖ := by simp [majorArcTwinIntegrandMainTerm, ind, core]
       _ = ‖ind‖ * ‖core‖ := by simp [norm_mul]
-      _ ≤ (1 : ℝ) * (|(X : ℝ)| * Twin.ChecklistModel.κ) ^ 2 := by
+      _ ≤ (1 : ℝ) * (|(P.H : ℝ)| * Twin.ChecklistModel.κ) ^ 2 := by
             gcongr
-      _ = (|(X : ℝ)| * Twin.ChecklistModel.κ) ^ 2 := by simp
+      _ = (|(P.H : ℝ)| * Twin.ChecklistModel.κ) ^ 2 := by simp
 
   /-- Conventional integrability of the chosen main-term major-arc integrand.
   Derived from `pinnedMajors_mainTerm_aestronglyMeasurable_raw` plus a uniform bound on `[0,1]`. -/
@@ -2410,7 +2413,7 @@ over major arcs; everything else is bookkeeping.
       exact ne_of_lt hlt
     refine
       (MeasureTheory.Measure.integrableOn_of_bounded (μ := MeasureTheory.volume) (s := Set.Icc (0 : ℝ) 1)
-        hs (pinnedMajors_mainTerm_aestronglyMeasurable_raw (sme := sme) (X := X) hX) (M := (|(X : ℝ)| * Twin.ChecklistModel.κ) ^ 2) ?_)
+        hs (pinnedMajors_mainTerm_aestronglyMeasurable_raw (sme := sme) (X := X) hX) (M := (|(P.H : ℝ)| * Twin.ChecklistModel.κ) ^ 2) ?_)
     -- provide the a.e. bound on the restricted measure (in fact it holds pointwise)
     refine Filter.Eventually.of_forall ?_
     intro α
@@ -2447,35 +2450,42 @@ over major arcs; everything else is bookkeeping.
   and a uniform bound on the main term `T`). -/
   noncomputable def pinnedMajors_SW_error_envelope (X : ℕ) : ℝ :=
     let Xr : ℝ := (X : ℝ)
-    let err : ℝ := |sme.C| * (Xr / Real.rpow (Real.log Xr) A)
-    err * (err + 2 * (|Xr| * Twin.ChecklistModel.κ))
+    let Hr : ℝ := (P.H : ℝ)
+    let err : ℝ := |sme.C| * (Hr / Real.rpow (Real.log Xr) A)
+    err * (err + 2 * (|Hr| * Twin.ChecklistModel.κ))
 
-  private lemma pinnedMajors_SW_error_envelope_nonneg ⦃X : ℕ⦄ (hX : P.X0 ≤ X) :
-      0 ≤ pinnedMajors_SW_error_envelope (sme := sme) X := by
-    -- unfold the definition and use that all factors are nonnegative
-    dsimp [pinnedMajors_SW_error_envelope]
-    set Xr : ℝ := (X : ℝ)
-    have hx0 : 0 ≤ Xr := by
-      -- unfold `Xr` to use `Nat.zero_le`
-      simpa [Xr] using (show (0 : ℝ) ≤ (X : ℝ) from by exact_mod_cast (Nat.zero_le X))
-    have hxNat : 1 ≤ X := by
-      exact le_trans (by
-        norm_num [P, Twin.PaperParams.P, Twin.PaperParams.X0] : (1 : ℕ) ≤ P.X0) hX
-    have hx1 : (1 : ℝ) ≤ Xr := by
-      -- `Xr = X` and `1 ≤ X` from the paper basepoint
-      simpa [Xr] using (show (1 : ℝ) ≤ (X : ℝ) from by exact_mod_cast hxNat)
-    have hlog : 0 ≤ Real.log Xr := Real.log_nonneg hx1
-    have hden : 0 ≤ Real.rpow (Real.log Xr) A := Real.rpow_nonneg hlog A
-    have hrat : 0 ≤ Xr / Real.rpow (Real.log Xr) A := div_nonneg hx0 hden
-    have herr : 0 ≤ |sme.C| * (Xr / Real.rpow (Real.log Xr) A) := mul_nonneg (abs_nonneg _) hrat
-    have hk : 0 ≤ (Twin.ChecklistModel.κ : ℝ) := by
-      have : 0 < (Twin.ChecklistModel.κ : ℝ) := by norm_num [Twin.ChecklistModel.κ]
-      exact le_of_lt this
-    have htail : 0 ≤ 2 * (|Xr| * Twin.ChecklistModel.κ) :=
-      mul_nonneg (by norm_num) (mul_nonneg (abs_nonneg _) hk)
-    have hsum : 0 ≤ (|sme.C| * (Xr / Real.rpow (Real.log Xr) A)) + 2 * (|Xr| * Twin.ChecklistModel.κ) :=
-      add_nonneg herr htail
-    exact mul_nonneg herr hsum
+    private lemma pinnedMajors_SW_error_envelope_nonneg ⦃X : ℕ⦄ (hX : P.X0 ≤ X) :
+        0 ≤ pinnedMajors_SW_error_envelope (sme := sme) X := by
+      -- unfold the definition and use that all factors are nonnegative
+      dsimp [pinnedMajors_SW_error_envelope]
+      set Xr : ℝ := (X : ℝ)
+      set Hr : ℝ := (P.H : ℝ)
+      have hx0 : 0 ≤ Xr := by
+        -- unfold `Xr` to use `Nat.zero_le`
+        simpa [Xr] using (show (0 : ℝ) ≤ (X : ℝ) from by exact_mod_cast (Nat.zero_le X))
+      have hxNat : 1 ≤ X := by
+        exact le_trans (by
+          norm_num [P, Twin.PaperParams.P, Twin.PaperParams.X0] : (1 : ℕ) ≤ P.X0) hX
+      have hx1 : (1 : ℝ) ≤ Xr := by
+        -- `Xr = X` and `1 ≤ X` from the paper basepoint
+        simpa [Xr] using (show (1 : ℝ) ≤ (X : ℝ) from by exact_mod_cast hxNat)
+      have hlog : 0 ≤ Real.log Xr := Real.log_nonneg hx1
+      have hden : 0 ≤ Real.rpow (Real.log Xr) A := Real.rpow_nonneg hlog A
+      have hH0 : 0 ≤ Hr := by
+        -- `Hr = H` and `H ≥ 0` for naturals
+        simpa [Hr] using (show (0 : ℝ) ≤ (P.H : ℝ) from by exact_mod_cast (Nat.zero_le P.H))
+      have hrat : 0 ≤ Hr / Real.rpow (Real.log Xr) A := div_nonneg hH0 hden
+      have herr : 0 ≤ |sme.C| * (Hr / Real.rpow (Real.log Xr) A) :=
+        mul_nonneg (abs_nonneg _) hrat
+      have hk : 0 ≤ (Twin.ChecklistModel.κ : ℝ) := by
+        have : 0 < (Twin.ChecklistModel.κ : ℝ) := by norm_num [Twin.ChecklistModel.κ]
+        exact le_of_lt this
+      have htail : 0 ≤ 2 * (|Hr| * Twin.ChecklistModel.κ) :=
+        mul_nonneg (by norm_num) (mul_nonneg (abs_nonneg _) hk)
+      have hsum :
+          0 ≤ (|sme.C| * (Hr / Real.rpow (Real.log Xr) A)) + 2 * (|Hr| * Twin.ChecklistModel.κ) :=
+        add_nonneg herr htail
+      exact mul_nonneg herr hsum
 
   /-- Conventional numeric hypothesis: the SW-error envelope is absorbed by the `/6` allowance.
 
@@ -2533,14 +2543,15 @@ over major arcs; everything else is bookkeeping.
         have hST :
             ‖Twin.SW.sumValue Lambda Wwin (X : ℝ) (P.H : ℝ) α
                 - mainTermValue (sme := sme) (X : ℝ) (P.H : ℝ) α‖
-              ≤ sme.C * ((X : ℝ) / Real.rpow (Real.log (X : ℝ)) A) :=
+              ≤ sme.C * ((P.H : ℝ) / Real.rpow (Real.log (X : ℝ)) A) :=
           sumValue_sub_mainTermValue_bound_of_isMajorArc (sme := sme)
             (X := (X : ℝ)) (H := (P.H : ℝ)) (α := α) hXr hH hMaj
         -- bound `‖T‖` and hence `‖S‖` on major arcs
         set T : ℂ := mainTermValue (sme := sme) (X : ℝ) (P.H : ℝ) α
         set S : ℂ := Twin.SW.sumValue Lambda Wwin (X : ℝ) (P.H : ℝ) α
-        have hT : ‖T‖ ≤ |(X : ℝ)| * Twin.ChecklistModel.κ := by
-          simpa [T] using norm_mainTermValue_le (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) (α := α)
+        have hT : ‖T‖ ≤ |(P.H : ℝ)| * Twin.ChecklistModel.κ := by
+          simpa [T] using
+            norm_mainTermValue_le (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) (α := α)
         have hS : ‖S‖ ≤ ‖S - T‖ + ‖T‖ := by
           -- `S = (S - T) + T`
           have hEq : S = (S - T) + T := (sub_add_cancel S T).symm
@@ -2549,28 +2560,33 @@ over major arcs; everything else is bookkeeping.
             simpa using congrArg (fun z : ℂ => ‖z‖) hEq
           -- finish
           simpa [hEq'] using (norm_add_le (S - T) T)
-        have hSum : (‖S - T‖) * (‖S‖ + ‖T‖) ≤
-            (|sme.C| * ((X : ℝ) / Real.rpow (Real.log (X : ℝ)) A))
-              * ((|sme.C| * ((X : ℝ) / Real.rpow (Real.log (X : ℝ)) A)) + 2 * (|(X : ℝ)| * Twin.ChecklistModel.κ)) := by
-          set rat : ℝ := (X : ℝ) / Real.rpow (Real.log (X : ℝ)) A
+        have hSum :
+            (‖S - T‖) * (‖S‖ + ‖T‖) ≤
+              (|sme.C| * ((P.H : ℝ) / Real.rpow (Real.log (X : ℝ)) A))
+                * ((|sme.C| * ((P.H : ℝ) / Real.rpow (Real.log (X : ℝ)) A))
+                    + 2 * (|(P.H : ℝ)| * Twin.ChecklistModel.κ)) := by
+          set rat : ℝ := (P.H : ℝ) / Real.rpow (Real.log (X : ℝ)) A
           have hrat_nonneg : 0 ≤ rat := by
-            have hx : 0 ≤ (X : ℝ) := by exact_mod_cast (Nat.zero_le X)
+            have hH0 : 0 ≤ (P.H : ℝ) := by exact_mod_cast (Nat.zero_le P.H)
             have hxNat : 1 ≤ X := by
-              exact le_trans (by
-                norm_num [P, Twin.PaperParams.P, Twin.PaperParams.X0] : (1 : ℕ) ≤ P.X0) hX
+              exact le_trans
+                (by
+                  norm_num [P, Twin.PaperParams.P, Twin.PaperParams.X0] : (1 : ℕ) ≤ P.X0)
+                hX
             have hx1 : (1 : ℝ) ≤ (X : ℝ) := by exact_mod_cast hxNat
             have hlog : 0 ≤ Real.log (X : ℝ) := Real.log_nonneg hx1
             have hden : 0 ≤ Real.rpow (Real.log (X : ℝ)) A := Real.rpow_nonneg hlog A
-            exact div_nonneg hx hden
+            exact div_nonneg hH0 hden
           have hST1 : ‖S - T‖ ≤ |sme.C| * rat := by
             have hST0 : ‖S - T‖ ≤ sme.C * rat := by
               simpa [S, T, rat, sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using hST
             have hC : sme.C * rat ≤ |sme.C| * rat :=
               mul_le_mul_of_nonneg_right (le_abs_self sme.C) hrat_nonneg
             exact le_trans hST0 hC
-          have hS' : ‖S‖ ≤ (|sme.C| * rat) + (|(X : ℝ)| * Twin.ChecklistModel.κ) := by
+          have hS' : ‖S‖ ≤ (|sme.C| * rat) + (|(P.H : ℝ)| * Twin.ChecklistModel.κ) := by
             linarith [hS, hST1, hT]
-          have hSTT : ‖S‖ + ‖T‖ ≤ (|sme.C| * rat) + 2 * (|(X : ℝ)| * Twin.ChecklistModel.κ) := by
+          have hSTT :
+              ‖S‖ + ‖T‖ ≤ (|sme.C| * rat) + 2 * (|(P.H : ℝ)| * Twin.ChecklistModel.κ) := by
             linarith [hS', hT]
           have hmul :=
             mul_le_mul hST1 hSTT (add_nonneg (norm_nonneg _) (norm_nonneg _))
@@ -2580,8 +2596,9 @@ over major arcs; everything else is bookkeeping.
         have hCore :
             |Twin.MajorArc.twinCorrIntegrand (Λ := Lambda) (W := Wwin) (X := (X : ℝ)) (H := (P.H : ℝ)) α
                 - twinCorrIntegrandMainTerm (sme := sme) (X := (X : ℝ)) (H := (P.H : ℝ)) α|
-              ≤ (|sme.C| * ((X : ℝ) / Real.rpow (Real.log (X : ℝ)) A))
-                * ((|sme.C| * ((X : ℝ) / Real.rpow (Real.log (X : ℝ)) A)) + 2 * (|(X : ℝ)| * Twin.ChecklistModel.κ)) := by
+              ≤ (|sme.C| * ((P.H : ℝ) / Real.rpow (Real.log (X : ℝ)) A))
+                * ((|sme.C| * ((P.H : ℝ) / Real.rpow (Real.log (X : ℝ)) A))
+                    + 2 * (|(P.H : ℝ)| * Twin.ChecklistModel.κ)) := by
           -- `abs_twinCorrIntegrand_sub_le` gives the bound in terms of `‖S-T‖*(‖S‖+‖T‖)`.
           have hAlg :
               |(Twin.MajorArc.twinCorrIntegrand (Λ := Lambda) (W := Wwin) (X := (X : ℝ)) (H := (P.H : ℝ)) α
@@ -2712,7 +2729,7 @@ theorem pinnedMajors_SW_error_raw
     simpa [hMaj, hMain, sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using
       (le_trans (by
         -- `|a-b| = |b - a|` isn't needed; use direct form
-        simpa [hMaj, hMain] using hAbs) hL1)
+        simpa [hMaj, hMain, sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using hAbs) hL1)
 
   simpa using this
 
@@ -2806,7 +2823,7 @@ theorem pinnedMajors_lower_raw
     linarith
   -- `main` is nonnegative, hence `(1-eps)*main ≤ main`.
   have ss_nonneg : 0 ≤ SS :=
-    Twin.truncSingularSeries_nonneg_of_ge_three (S := P.S) P.S_ge_three
+    Twin.fullTruncSingularSeries_nonneg_of_ge_three (S := P.S) P.S_ge_three
   have hH_nonneg : 0 ≤ ((P.H : ℝ) + 1) := by
     have : 0 ≤ (P.H : ℝ) := by exact_mod_cast (Nat.zero_le P.H)
     linarith

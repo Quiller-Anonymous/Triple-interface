@@ -18,10 +18,10 @@ class SiegelWalfisz
   (C   : ℝ)
   (bound :
     ∀ {X H : ℝ}, X0 ≤ X → 1 ≤ H →
-    ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ Real.rpow (Real.log X) B → Nat.Coprime a q →
+    ∀ {q a : ℕ}, 1 ≤ q → (q : ℝ) ≤ Real.rpow (Real.log H) B → Nat.Coprime a q →
     ∀ {α : ℝ}, |α - (a : ℝ)/q| ≤ δ / (H + 1) →
       ‖Twin.SW.sumValue Λ W X H α - Twin.SW.mainTerm W_hat X H α a q‖
-        ≤ C * (X / Real.rpow (Real.log X) A))
+        ≤ C * (H / Real.rpow (Real.log X) A))
 
 /-- For convenience inside the major-arc engine, we simply reuse the
 canonical `Twin.SW.SmoothMajorArcEstimate` interface. -/

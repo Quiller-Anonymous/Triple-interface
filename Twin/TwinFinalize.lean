@@ -20,7 +20,7 @@ open Twin.TargetsFromBricks
 /-- The twin witness, given bricks and positivity of the truncated series. -/
 noncomputable def witness_from_bricks
   {P : Twin.GoalAPI.Params} (b : Bricks P)
-  (ss_pos : 0 < truncSingularSeries P.S)
+  (ss_pos : 0 < fullTruncSingularSeries P.S)
   (_eps_pos : 0 < P.eps)
   (eps_lt_half : P.eps < (1 : ℝ) / 2)
   : Analytic.TwinWitness := by
@@ -44,7 +44,7 @@ noncomputable def witness_from_bricks
 /-- Large-X windows contain a twin, from bricks + positivity. -/
 theorem windows_largeX
   {P : Twin.GoalAPI.Params} (b : Bricks P)
-  (ss_pos : 0 < truncSingularSeries P.S)
+  (ss_pos : 0 < fullTruncSingularSeries P.S)
   (_eps_pos : 0 < P.eps)
   (eps_lt_half : P.eps < (1 : ℝ) / 2) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H := by

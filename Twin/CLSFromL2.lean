@@ -38,7 +38,7 @@ theorem toCLS
 
   -- Shorthands
   let H  : ℕ := P.H
-  let SS : ℝ := truncSingularSeries P.S
+  let SS : ℝ := fullTruncSingularSeries P.S
   let ε  : ℝ := P.eps
   let N  : ℝ := (↑H : ℝ) + 1
   let A  : ℝ := Ledger.windowSum X H (fun n => |e n|)
@@ -50,7 +50,7 @@ theorem toCLS
     exact add_nonneg this (by norm_num)
   have hα_nonneg  : 0 ≤ N / 9 := div_nonneg hN_nonneg (by norm_num : (0 : ℝ) ≤ 9)
   have hε_nonneg  : 0 ≤ ε := le_of_lt P.eps_pos
-  have hSS_nonneg : 0 ≤ SS := Twin.Compat.truncSS_nonneg_of_ge3 P.S P.S_ge_three
+  have hSS_nonneg : 0 ≤ SS := Twin.SingularSeries.fullTruncSingularSeries_nonneg (S := P.S) P.S_ge_three
 
   -- Windowed Cauchy–Schwarz (from LedgerExtra)
   have hCS : A ≤ Real.sqrt N * Real.sqrt L2 :=
@@ -111,7 +111,7 @@ theorem toCLS
 
   -- Present exactly as: ε * SS * (↑H+1) / 3
   have : (Ledger.windowSum X P.H (fun n => |e n|))
-          ≤ P.eps * truncSingularSeries P.S * ((↑P.H : ℝ) + 1) / 3 := by
+          ≤ P.eps * fullTruncSingularSeries P.S * ((↑P.H : ℝ) + 1) / 3 := by
     -- replace N by ((↑H : ℝ) + 1)
     simpa [N, mul_comm, mul_left_comm, mul_assoc] using hA_le_div
 

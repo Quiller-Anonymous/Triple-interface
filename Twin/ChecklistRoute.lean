@@ -2,7 +2,7 @@ import Twin.ChecklistTargets
 import Twin.ChecklistAxioms
 
 /-
-  Twin/ChecklistGold.lean
+  Twin/ChecklistRoute.lean
 
   “Gold status” (Twin, checklist route):
   we allow *conventional* analytic inputs to be postulated as axioms (with citations),
@@ -13,12 +13,12 @@ import Twin.ChecklistAxioms
   choice of `sme` (so axiom audits can isolate which obligations truly depend on it).
 
   The default frozen-model `sme` (and the specialization to it) lives in
-  `Twin/ChecklistGoldDefault.lean`.
+  `Twin/ChecklistRouteDefault.lean`.
 
   This file does NOT touch Goldbach.
 -/
 
-namespace Twin.ChecklistGold
+namespace Twin.ChecklistRoute
 
 noncomputable section
 
@@ -91,7 +91,7 @@ def O
       P, Twin.ChecklistTargets.P, Twin.ChecklistAssumptions.P, Twin.Main.P, Twin.ChecklistAxioms.P,
       Twin.PaperParams.P] using
       (Twin.ChecklistAxioms.pinnedMajors_lower (sme := sme) hsmeX0' (X := X) hX')
-, ss_pos := Twin.PaperParams.ss_pos
+, ss_pos := Twin.PaperParams.ss_full_pos
 }
 
 /-- Gold-status theorem, but *parameterized by* an arbitrary `sme`.
@@ -117,4 +117,4 @@ by
 
 end
 
-end Twin.ChecklistGold
+end Twin.ChecklistRoute

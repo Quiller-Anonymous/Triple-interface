@@ -38,7 +38,7 @@ structure Obligations where
   /-- Window-sum routing: majors ≤ localizedTwinMass + budgets. -/
   h_transfer : Twin.MajorArc.MajorArcTransfer P emin eds majMass
   /-- Positivity of the truncated singular series for `P.S`. -/
-  ss_pos : 0 < SS := Twin.PaperParams.ss_pos
+  ss_pos : 0 < SS := Twin.PaperParams.ss_full_pos
 
 /-- Final theorem obtained once you discharge the checklist obligations. -/
 theorem windows_largeX_all_windows (O : Obligations) :
@@ -100,7 +100,7 @@ structure ObligationsExplicit where
         ≥ (1 - P.eps) * SS * ((P.H : ℝ) + 1)
           - (P.eps * SS) * ((P.H : ℝ) + 1) / 3
   /-- Positivity of the truncated singular series for `P.S`. -/
-  ss_pos : 0 < SS := Twin.PaperParams.ss_pos
+  ss_pos : 0 < SS := Twin.PaperParams.ss_full_pos
 
 namespace ObligationsExplicit
 

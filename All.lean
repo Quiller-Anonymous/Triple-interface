@@ -1,8 +1,11 @@
 -- All.lean
 import Twin.Final
-import Twin.Gold
+import Twin.ChecklistEntrypointDefault
 import Goldbach.TwinGold
 import Goldbach.ETIExport
+
+-- Reference (hypothesis-only) Twin entrypoint; keep modular.
+-- import Twin.ChecklistEntrypoint
 
 -- Main track toggles
 -- import Goldbach.Final

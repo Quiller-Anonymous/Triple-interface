@@ -62,8 +62,8 @@ by
 
   -- Gate spec: choose `cStar := SS` (positive for our concrete paper params).
   let spec : Twin.MajorArc.GateSpec Twin.Main.P :=
-    Twin.MajorArc.gateCert Twin.Main.P (Twin.truncSingularSeries Twin.Main.P.S)
-      Twin.PaperParams.ss_pos
+    Twin.MajorArc.gateCert Twin.Main.P (Twin.fullTruncSingularSeries Twin.Main.P.S)
+      Twin.PaperParams.ss_full_pos
 
   -- Gate inequality from TI.
   have gate : Twin.AnalyticCore.GateOnWindow Twin.Main.P E.emin E.eds := by
@@ -82,7 +82,7 @@ by
   intro X hX
   exact
     Twin.Main.windows_largeX_of_errorData (E := E) (sme := sme) (spec := spec) (pkg := pkg)
-      Twin.PaperParams.ss_pos (X := X) hX
+      Twin.PaperParams.ss_full_pos (X := X) hX
 
 theorem twins_in_all_large_windows_default
     [Twin.ChecklistSme.InstSWBound]

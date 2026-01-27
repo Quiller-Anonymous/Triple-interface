@@ -32,13 +32,13 @@ open Twin
 variable {A B : ℝ} {Λ : ℕ → ℝ} {W W_hat : ℝ → ℝ}
 
 /-- The (naïve) major-arc predicate used by the SW interface: there exist coprime `a/q`
-with `q ≤ (log X)^B` and `|α - a/q| ≤ δ/(H+1)`.
+with `q ≤ (log H)^B` and `|α - a/q| ≤ δ/(H+1)`.
 
 Note: this is *not* reduced modulo `1`; we integrate on `[0,1]` anyway. -/
 def IsMajorArc (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X H α : ℝ) : Prop :=
   ∃ (q a : ℕ),
     1 ≤ q ∧
-    (q : ℝ) ≤ Real.rpow (Real.log X) B ∧
+    (q : ℝ) ≤ Real.rpow (Real.log H) B ∧
     Nat.Coprime a q ∧
     |α - (a : ℝ) / q| ≤ sme.δ / (H + 1)
 
@@ -78,7 +78,7 @@ lemma measurableSet_majorArcSet (sme : SmoothMajorArcEstimate A B Λ W W_hat) (X
   -- Expand the existential definition into a countable union of measurable sets.
   let cond : ℕ → ℕ → Prop :=
     fun q a =>
-      1 ≤ q ∧ (q : ℝ) ≤ Real.rpow (Real.log X) B ∧ Nat.Coprime a q
+      1 ≤ q ∧ (q : ℝ) ≤ Real.rpow (Real.log H) B ∧ Nat.Coprime a q
   let arc : ℕ → ℕ → Set ℝ :=
     fun q a => {α : ℝ | |α - (a : ℝ) / q| ≤ sme.δ / (H + 1)}
   have hEq :

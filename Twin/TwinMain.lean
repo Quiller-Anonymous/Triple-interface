@@ -28,7 +28,7 @@ then every sufficiently large window (starting at `X ≥ P.X0`) contains a twin 
 -/
 theorem windows_largeX
   (b : Twin.PaperBricks.Bricks P)
-  (ss_pos      : 0 < truncSingularSeries P.S)
+  (ss_pos      : 0 < fullTruncSingularSeries P.S)
   (eps_pos     : 0 < P.eps := by norm_num)
   (eps_lt_half : P.eps < (1 : ℝ) / 2 := by norm_num)
   : ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H := by
@@ -47,7 +47,7 @@ theorem windows_largeX_of_errorData
   (spec : Twin.MajorArc.GateSpec P)
   (pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds)
     (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   Twin.WiringFromPaper.windows_largeX_of_errorData (E := E) sme spec pkg ss_pos
 
@@ -60,7 +60,7 @@ theorem windows_largeX_ofSW
   (pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (Twin.MajorArc.SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   Twin.WiringFromPaper.windows_largeX_of_errorData_ofSW (E := E) (spec := spec) (pkg := pkg) ss_pos
 
@@ -72,7 +72,7 @@ theorem windows_largeX_of_checklist
   (spec : Twin.MajorArc.GateSpec P)
   (C : Twin.MajorArc.PaperMajorArcChecklist (P := P) (emin := E.emin) (eds := E.eds)
     (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   Twin.WiringFromPaper.windows_largeX_of_checklist (E := E) sme spec C ss_pos
 
@@ -85,7 +85,7 @@ theorem windows_largeX_of_checklist_ofSW
   (C : Twin.MajorArc.PaperMajorArcChecklist (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (Twin.MajorArc.SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   Twin.WiringFromPaper.windows_largeX_of_checklist_ofSW (E := E) (spec := spec) (C := C) ss_pos
 
@@ -96,7 +96,7 @@ theorem windows_largeX_of_appendixA
   (sme  : Twin.MajorArc.SmoothMajorArcEstimate A B Λ W W_hat)
   (spec : Twin.MajorArc.GateSpec P)
   (I : Twin.MajorArc.AppendixAInputs (P := P) (emin := E.emin) (eds := E.eds) (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   Twin.WiringFromPaper.windows_largeX_of_appendixA (E := E) sme spec I ss_pos
 
@@ -109,7 +109,7 @@ theorem windows_largeX_of_appendixA_ofSW
   (I : Twin.MajorArc.AppendixAInputs (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (Twin.MajorArc.SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   ∀ {X : ℕ}, P.X0 ≤ X → ExistsTwinInWindow X P.H :=
   Twin.WiringFromPaper.windows_largeX_of_appendixA_ofSW (E := E) (spec := spec) (I := I) ss_pos
 
@@ -121,7 +121,7 @@ noncomputable def witness_of_errorData
   (spec : Twin.MajorArc.GateSpec P)
   (pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds)
     (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   Twin.Analytic.TwinWitness :=
   Twin.WiringFromPaper.witness_of_errorData (E := E) sme spec pkg ss_pos
 
@@ -134,7 +134,7 @@ noncomputable def witness_ofSW
   (pkg : Twin.MajorArc.MajorArcPackage (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (Twin.MajorArc.SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   Twin.Analytic.TwinWitness :=
   Twin.WiringFromPaper.witness_of_errorData_ofSW (E := E) (spec := spec) (pkg := pkg) ss_pos
 
@@ -146,7 +146,7 @@ noncomputable def witness_of_checklist
   (spec : Twin.MajorArc.GateSpec P)
   (C : Twin.MajorArc.PaperMajorArcChecklist (P := P) (emin := E.emin) (eds := E.eds)
     (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   Twin.Analytic.TwinWitness :=
   witness_of_errorData (E := E) (sme := sme) (spec := spec) (pkg := C.toMajorArcPackage) ss_pos
 
@@ -159,7 +159,7 @@ noncomputable def witness_of_checklist_ofSW
   (C : Twin.MajorArc.PaperMajorArcChecklist (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (Twin.MajorArc.SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   Twin.Analytic.TwinWitness :=
   witness_ofSW (E := E) (spec := spec) (pkg := C.toMajorArcPackage) ss_pos
 
@@ -170,7 +170,7 @@ noncomputable def witness_of_appendixA
   (sme  : Twin.MajorArc.SmoothMajorArcEstimate A B Λ W W_hat)
   (spec : Twin.MajorArc.GateSpec P)
   (I : Twin.MajorArc.AppendixAInputs (P := P) (emin := E.emin) (eds := E.eds) (sme := sme) (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   Twin.Analytic.TwinWitness :=
   witness_of_errorData (E := E) (sme := sme) (spec := spec) (pkg := I.toMajorArcPackage) ss_pos
 
@@ -183,14 +183,14 @@ noncomputable def witness_of_appendixA_ofSW
   (I : Twin.MajorArc.AppendixAInputs (P := P) (emin := E.emin) (eds := E.eds)
     (sme := (Twin.MajorArc.SmoothMajorArcEstimate.ofSW (A := A) (B := B) (Λ := Λ) (W := W) (W_hat := W_hat)))
     (spec := spec))
-  (ss_pos : 0 < truncSingularSeries P.S) :
+  (ss_pos : 0 < fullTruncSingularSeries P.S) :
   Twin.Analytic.TwinWitness :=
   witness_ofSW (E := E) (spec := spec) (pkg := I.toMajorArcPackage) ss_pos
 
 /-- (Optional convenience) produce the assembled witness object directly. -/
 noncomputable def witness
   (b : Twin.PaperBricks.Bricks P)
-  (ss_pos      : 0 < truncSingularSeries P.S)
+  (ss_pos      : 0 < fullTruncSingularSeries P.S)
   (eps_pos     : 0 < P.eps := by norm_num)
   (eps_lt_half : P.eps < (1 : ℝ) / 2 := by norm_num)
   : Analytic.TwinWitness :=

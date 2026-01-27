@@ -23,7 +23,7 @@ def withErr (P : Params) (err' : ℕ → ℝ) : Params := { P with err := err' }
 
 /-- The error profile built from the bricks: |emin| + eds + constant tail cap. -/
 def errFrom (P : Params) (b : Bricks P) : ℕ → ℝ :=
-  fun n => (b.E.absEmin n) + (b.E.eds n) + (P.eps * truncSingularSeries P.S) / 3
+  fun n => (b.E.absEmin n) + (b.E.eds n) + (P.eps * fullTruncSingularSeries P.S) / 3
 
 /-!
 With the *window-sum* gate, the natural downstream target is positivity of the
@@ -35,12 +35,12 @@ localized twin mass. This is enough to produce a twin pair in the window via
 the bricks’ three budgets each contribute ≤ one third of the main term. -/
 theorem localizedTwinMass_pos_from_bricks
   {P : Params} (b : Bricks P)
-  (ss_pos : 0 < truncSingularSeries P.S)
+  (ss_pos : 0 < fullTruncSingularSeries P.S)
   (eps_lt_half : P.eps < (1 : ℝ) / 2) :
   ∀ {X : ℕ}, P.X0 ≤ X → 0 < Twin.Bridge.localizedTwinMass X P.H := by
   classical
   intro X hX
-  set SS : ℝ := truncSingularSeries P.S
+  set SS : ℝ := fullTruncSingularSeries P.S
   set t  : ℝ := P.eps * SS * (P.H + 1) / 3
   set mass : ℝ := Twin.Bridge.localizedTwinMass X P.H
 

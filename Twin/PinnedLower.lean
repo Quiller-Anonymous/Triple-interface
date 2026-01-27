@@ -5,9 +5,9 @@
 
   It proves:
     ∀ X ≥ X0,  c * windowSum_XH L  -  windowSum_XH err  > 0
-  with L ≡ 1 and c = (1 - eps) * truncSingularSeries S,
+  with L ≡ 1 and c = (1 - eps) * fullTruncSingularSeries S,
   assuming 0 < eps < 1/2 and
-    windowSum_XH err ≤ eps * truncSingularSeries S * (H+1).
+    windowSum_XH err ≤ eps * fullTruncSingularSeries S * (H+1).
 
   It also exposes `toGates` which turns these inputs into
   `Twin.BuildWitness.Gates` once you supply the analytic `assemble_pointwise`.
@@ -23,7 +23,7 @@ open scoped BigOperators
 namespace Twin.PinnedLower
 
 /-- Inputs for the pinned-series lower bound. -/
-structure Inputs where
+ structure Inputs where
   H    : ℕ
   X0   : ℕ
   S    : Finset ℕ            -- primes used in the truncation
@@ -31,17 +31,17 @@ structure Inputs where
   eps_pos     : 0 < eps
   eps_lt_half : eps < (1 : ℝ) / 2
   err  : ℕ → ℝ               -- window error function
-  ss_pos : 0 < Twin.truncSingularSeries S
+  ss_pos : 0 < Twin.fullTruncSingularSeries S
   /-- Uniform windowed error budget for all large X. -/
   err_budget :
     ∀ {X : ℕ}, X0 ≤ X →
       Twin.Ledger.windowSum X H err
-        ≤ eps * Twin.truncSingularSeries S * (H+1)
+        ≤ eps * Twin.fullTruncSingularSeries S * (H+1)
 
 namespace Inputs
 
 /-- The main-term constant coming from the pinned singular series. -/
-def c (i : Inputs) : ℝ := (1 - i.eps) * Twin.truncSingularSeries i.S
+def c (i : Inputs) : ℝ := (1 - i.eps) * Twin.fullTruncSingularSeries i.S
 
 /-- `L` is just the constant-1 function; `windowSum X H L = H+1`. -/
 def L (_ : Inputs) : ℕ → ℝ := fun _ => 1
@@ -64,7 +64,7 @@ lemma window_lower_pos (i : Inputs) :
     simp [Twin.Ledger.windowSum_const_one]
 
   -- Abbreviations
-  set SS : ℝ := Twin.truncSingularSeries i.S
+  set SS : ℝ := Twin.fullTruncSingularSeries i.S
   have SS_pos : 0 < SS := i.ss_pos
   have one_minus_two_eps_pos : 0 < 1 - (2 * i.eps) := by
     have : 2 * i.eps < 1 := by

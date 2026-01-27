@@ -23,7 +23,7 @@ structure Bound (P : Params) (emin : ℕ → ℝ) : Prop where
   bound :
     ∀ X, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H (fun n => (emin n)^2)
-        ≤ (P.eps^2 * (Twin.truncSingularSeries P.S)^2) * (P.H + 1) / 9
+        ≤ (P.eps^2 * (Twin.fullTruncSingularSeries P.S)^2) * (P.H + 1) / 9
 
 namespace Twin
 namespace CLSL2
@@ -33,7 +33,7 @@ structure BoundWithSlack (P : GoalAPI.Params) (e : ℕ → ℝ) : Prop where
   bound :
     ∀ {X}, P.X0 ≤ X →
       Ledger.windowSum X P.H (fun n => (e n)^2)
-        ≤ P.eps^2 * (truncSingularSeries P.S)^2 * ((↑P.H : ℝ) + 1) / 9
+        ≤ P.eps^2 * (fullTruncSingularSeries P.S)^2 * ((↑P.H : ℝ) + 1) / 9
           + P.err X
   err_nonneg : ∀ {X}, 0 ≤ P.err X
 
@@ -59,12 +59,12 @@ theorem fromZero (P : Params) : Bound P (fun _ => (0 : ℝ)) := by
     simp
   -- RHS: nonnegative
   have h_nonneg :
-      0 ≤ (P.eps^2 * (Twin.truncSingularSeries P.S)^2) * (P.H + 1) := by
+      0 ≤ (P.eps^2 * (Twin.fullTruncSingularSeries P.S)^2) * (P.H + 1) := by
     have h1 : 0 ≤ (P.eps : ℝ)^2 := sq_nonneg _
-    have h2 : 0 ≤ (Twin.truncSingularSeries P.S : ℝ)^2 := sq_nonneg _
+    have h2 : 0 ≤ (Twin.fullTruncSingularSeries P.S : ℝ)^2 := sq_nonneg _
     exact mul_nonneg (mul_nonneg h1 h2) (span_nonneg P)
   have hRHS :
-      0 ≤ (P.eps^2 * (Twin.truncSingularSeries P.S)^2) * (P.H + 1) / 9 := by
+      0 ≤ (P.eps^2 * (Twin.fullTruncSingularSeries P.S)^2) * (P.H + 1) / 9 := by
     simpa using div_nonneg h_nonneg (by norm_num : (0 : ℝ) ≤ 9)
   -- conclude
   simpa [hLHS] using hRHS
@@ -73,7 +73,7 @@ theorem fromZero (P : Params) : Bound P (fun _ => (0 : ℝ)) := by
 lemma window_zero (P : Params) :
     ∀ X, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H (fun _ => (0 : ℝ))
-        ≤ (P.eps^2 * (Twin.truncSingularSeries P.S)^2) * (P.H + 1) / 9 := by
+        ≤ (P.eps^2 * (Twin.fullTruncSingularSeries P.S)^2) * (P.H + 1) / 9 := by
   intro X hX
   have h := (fromZero P).bound X hX
   simp only [zero_pow (by norm_num : (2 : ℕ) ≠ 0)] at h

@@ -50,4 +50,8 @@ lemma ss_pos : 0 < Twin.truncSingularSeries P.S := by
   simpa [P, S, Twin.truncSingularSeries] using
     Twin.truncSingularSeries_pos_of_all_ge_three (S := S) S_ge_three
 
+lemma ss_full_pos : 0 < Twin.fullTruncSingularSeries P.S := by
+  simpa [P, S, Twin.fullTruncSingularSeries] using
+    Twin.fullTruncSingularSeries_pos_of_all_ge_three (S := S) S_ge_three
+
 end Twin.PaperParams

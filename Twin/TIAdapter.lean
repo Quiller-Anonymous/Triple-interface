@@ -21,20 +21,20 @@ class HasTwinTI (P : GoalAPI.Params) where
   l2_minor :
     ∀ {X}, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H (fun n => (emin n)^2)
-        ≤ P.eps^2 * (truncSingularSeries P.S)^2 * ((P.H : ℝ) + 1) / 9
+        ≤ P.eps^2 * (fullTruncSingularSeries P.S)^2 * ((P.H : ℝ) + 1) / 9
   -- Desmoothing / prime-power budget (uniform in X)
   desmooth :
     ∀ {X}, P.X0 ≤ X →
       Twin.Ledger.windowSum X P.H eds
-        ≤ P.eps * truncSingularSeries P.S * ((P.H : ℝ) + 1) / 3
+        ≤ P.eps * fullTruncSingularSeries P.S * ((P.H : ℝ) + 1) / 3
   -- Pinned major-arc lower bound, in window-sum form (uniform in X ≥ X0)
   pinned :
     ∀ {X}, P.X0 ≤ X →
-      (1 - P.eps) * truncSingularSeries P.S * ((P.H : ℝ) + 1)
+      (1 - P.eps) * fullTruncSingularSeries P.S * ((P.H : ℝ) + 1)
         ≤ Bridge.localizedTwinMass X P.H
           + Ledger.windowSum X P.H emin
           + Ledger.windowSum X P.H eds
-          + (P.eps * truncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
+          + (P.eps * fullTruncSingularSeries P.S) * ((P.H : ℝ) + 1) / 3
 
 namespace HasTwinTI
 
