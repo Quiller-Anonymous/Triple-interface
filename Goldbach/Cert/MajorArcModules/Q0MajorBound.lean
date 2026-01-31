@@ -6,7 +6,7 @@ turnkey/certificate route:
 
 provide a uniform bound on the `Q0`-major-arc deviation
 
-`‖corr_integral_major_Q0 X N Δ - corrModel N‖ ≤ ε₂`
+`‖corr_integral_major_Q0 X N Δ - corrModel X N‖ ≤ ε₂`
 
 on the canonical window.
 
@@ -37,7 +37,7 @@ structure Q0MajorDeviationBound (Δ ε₂ : ℝ) : Prop where
   bound :
     ∀ {X N : ℕ},
       X0 ≤ X → N ∈ EvenIn X H →
-        ‖corr_integral_major_Q0 X N Δ - corrModel N‖ ≤ ε₂
+        ‖corr_integral_major_Q0 X N Δ - corrModel X N‖ ≤ ε₂
 
 end
 

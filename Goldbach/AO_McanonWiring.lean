@@ -25,18 +25,17 @@ open Goldbach.AO_AssembleEnvelope
 class McanonEqMOffOnWindow (C : Channels) : Prop where
   mcanon_eq_moff :
     ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
-      Goldbach.AO_Core.Mcanon N = Goldbach.AO_Stages.M_off C X N
+      Goldbach.AO_Core.Mcanon X N = Goldbach.AO_Stages.M_off C X N
 
 /-- Once `McanonEqMOffOnWindow` is supplied, the AO decomposition is purely algebraic. -/
 instance (C : Channels) [McanonEqMOffOnWindow C] : Decomposition C := by
   refine ⟨by
     intro X N hX hN
     have hM :
-        Goldbach.AO_Core.Mcanon N = Goldbach.AO_Stages.M_off C X N :=
+        Goldbach.AO_Core.Mcanon X N = Goldbach.AO_Stages.M_off C X N :=
       (McanonEqMOffOnWindow.mcanon_eq_moff (C := C)) hX hN
     simpa using
       (Goldbach.AO_Stages.errAO_decomp_window_of_Mcanon_eq (C := C) (X := X) (N := N) hM)⟩
 
 end AO_McanonWiring
 end Goldbach
-

@@ -1,4 +1,7 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedger
+import Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineFromDyadicGramDecay
+import Goldbach.Cert.MajorArcModules.Q0MinorInterzoneDyadicConventionalAxioms
+import Goldbach.Cert.MajorArcModules.Q0MinorOuterIntegrableResource
 import Goldbach.Cert.MajorArcModules.Q0MajorRoute
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
 import Goldbach.Cert.MajorArcModules.RamanujanDispersionSpec
@@ -29,6 +32,9 @@ open Goldbach.Windows
 open Goldbach.Cert.MajorArcModules.Q0MajorRoute
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
 open Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedger
+open Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineFromDyadicGramDecay
+open Goldbach.Cert.MajorArcModules.Q0MinorInterzoneDyadicConventionalAxioms
+open Goldbach.Cert.MajorArcModules.Q0MinorOuterIntegrableResource
 open Goldbach.Cert.MajorArcModules.RamanujanDispersionSpec
 
 noncomputable section
@@ -41,8 +47,24 @@ Notes provenance: Theorem 9.17 + SSU Theorem 6.27 / (6.7).
 Lean interface: `Q0MinorEnergyLedgerEngine Δ C2 C3`.
 -/
 
-axiom ssu_minor_energy_ledger_engine_exists :
-  ∀ Δ : ℝ, ∃ C2 C3 : ℝ, Q0MinorEnergyLedgerEngine Δ C2 C3
+theorem ssu_minor_energy_ledger_engine_exists :
+    ∀ Δ : ℝ, ∃ C2 C3 : ℝ, Q0MinorEnergyLedgerEngine Δ C2 C3 := by
+  intro Δ
+  rcases q0MinorDyadicGramDecay_exists (Δ := Δ) with ⟨a, C2, C3, hDy⟩
+  refine ⟨(CrowOf a) * C2, (CrowOf a) * C3, ?_⟩
+  -- Deterministic integrability plumbing for the β/α integrals.
+  have hE :
+      Q0MinorEnergyLedgerEngine Δ ((CrowOf a) * C2) ((CrowOf a) * C3) :=
+    ledgerEngine_of_dyadicGramDecay
+      (Δ := Δ) (a := a) (C2 := C2) (C3 := C3) hDy
+      (hInner := fun {X N} hX hN β => hInner (X := X) (N := N) hX hN β)
+      (hOuterMaj := fun {X N} hX hN =>
+        hOuterMaj (X := X) (N := N) hX hN Δ)
+      (hOuterMin := fun {X N} hX hN =>
+        hOuterMin (X := X) (N := N) hX hN Δ)
+      (hOuterZone := fun {X N} hX hN j hj =>
+        hOuterZone (X := X) (N := N) hX hN Δ j)
+  simpa using hE
 
 /-!
 ## ε₂-small engine (small-β major-arc evaluation)

@@ -45,10 +45,10 @@ lemma gExp_eq_fourier_coe (x : ℝ) (n : ℕ) :
 ### Step-21 “trimmed” sums as specializations of `expSumTrim`
 -/
 
-lemma expSumTrim_coe_eq_sum_Lambda_gExp (N : ℕ) (x : ℝ) :
-    expSumTrim N (x : UC)
+lemma expSumTrim_coe_eq_sum_Lambda_gExp (X N : ℕ) (x : ℝ) :
+    expSumTrim X N (x : UC)
       =
-    ∑ n ∈ Finset.Ico 4 ((N - 2) + 1), (Goldbach.BG_Bank.Λ n : ℂ) * gExp x n := by
+    ∑ n ∈ Finset.Ico 4 ((N - 2) + 1), aTerm X n * gExp x n := by
   classical
   unfold expSumTrim
   refine Finset.sum_congr rfl ?_
@@ -72,10 +72,9 @@ lemma sum_gExp_eq_sum_fourier_coe (N : ℕ) (x : ℝ) :
 -/
 
 theorem norm_expSum_sub_expSumTrim_le (X N : ℕ) (γ : UC) (hN : 6 ≤ N) :
-    ‖expSum X N γ - expSumTrim N γ‖ ≤ 2 * Real.log (N : ℝ) :=
+    ‖expSum X N γ - expSumTrim X N γ‖ ≤ 2 * Real.log (N : ℝ) :=
   Q0MajorSmallTrimBridge.norm_expSum_sub_expSumTrim_le (X := X) (N := N) (γ := γ) hN
 
 end
 
 end Goldbach.Cert.MajorArcModules.Q0MajorSmallStep21Bridge
-

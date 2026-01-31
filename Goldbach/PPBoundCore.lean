@@ -13,7 +13,13 @@
   we’ll replace just the final inequality with the refined counting lemma.
 -/
 import Mathlib
-import Goldbach.BG_Identity
+
+/-!
+Small deterministic helper for cardinalities of symmetric integer bands.
+
+We keep this file minimal and robust: it is used as a convenience lemma in other coarse bounds,
+and should not depend on any project-specific analytic structure.
+-/
 
 namespace Goldbach.PPBoundCore
 
@@ -22,44 +28,31 @@ open Int
 /-- Cardinality of the integer offset band `{-H, …, H}`. -/
 lemma card_Icc_neg_to_pos (H : ℕ) :
     (Finset.Icc (-(H : ℤ)) (H : ℤ)).card = 2 * H + 1 := by
-  -- `Icc a b` on `ℤ` has size `(b - a + 1).toNat`
-  have : (Finset.Icc (-(H : ℤ)) (H : ℤ)).card
-           = ( (H : ℤ) - (-(H : ℤ)) + 1 ).toNat := by
-    simpa using (Int.card_Icc (a := (-(H:ℤ))) (b := (H:ℤ)))
-  -- simplify the integer expression and move back to `ℕ`
-  -- `H - (-H) + 1 = 2H + 1` in `ℤ`
-  have : ( (H : ℤ) - (-(H : ℤ)) + 1 ).toNat = (2 * H + 1) := by
-    -- (H - (-H) + 1) = (H + H + 1)
-    have : (H : ℤ) - (-(H : ℤ)) + 1 = (2 * (H : ℤ) + 1) := by
-      ring
-    -- cast toNat of a nonnegative integer equals the natural numeral
-    -- (2*H+1 : ℤ) is nonnegative
-    have hnn : 0 ≤ (2 * (H : ℤ) + 1) := by
-      have : (0 : ℤ) ≤ (H : ℤ) := by exact_mod_cast (Nat.zero_le H)
-      linarith
-    simpa [this, Int.toNat_of_nonneg hnn, two_mul, add_comm, add_left_comm, add_assoc]
-  simpa [this] using this
-
-/-- **Coarse inner bound**: the inner prime-power offset count is at most the
-    size of the inner offset band `{-H,…,H}`, i.e. `2H+1`. -/
-theorem ppInnerCount_le_twoHplus1
-  (H N : ℕ) : Goldbach.BG_Identity.ppInnerCount H N ≤ 2 * H + 1 := by
-  -- By definition `ppInnerCount` is a filtered subset of `Icc (−H) H` on `ℤ`
-  -- so `card(filter …) ≤ card(Icc …)`.
-  have hle :
-      (Goldbach.BG_Identity.ppInnerCount H N)
-        ≤ (Finset.Icc (-(H : ℤ)) (H : ℤ)).card := by
-    -- Unfold the definition just far enough to apply `card_filter_le`.
-    -- In your tree, `ppInnerCount` is of the shape `(Icc …).filter P).card`.
-    -- `simp [Goldbach.BG_Identity.ppInnerCount]` should expose that shape;
-    -- if the predicate name differs, this still works because `card_filter_le`
-    -- only needs the ambient set.
-    simpa [Goldbach.BG_Identity.ppInnerCount] using
-      (Finset.card_filter_le
-        (s := Finset.Icc (-(H : ℤ)) (H : ℤ)) (p := fun _ => True))
-    -- Note: the choice of `p := fun _ => True` in `card_filter_le` is just a
-    -- syntactic handle; `simp [ppInnerCount]` replaces it by your actual predicate.
-  -- now plug the exact band cardinality
-  simpa [card_Icc_neg_to_pos H]
+  -- `Icc a b` on `ℤ` has size `(b + 1 - a).toNat`.
+  have hcard :
+      (Finset.Icc (-(H : ℤ)) (H : ℤ)).card = ((H : ℤ) + 1 - (-(H : ℤ))).toNat := by
+    simpa using (Int.card_Icc (a := (-(H : ℤ))) (b := (H : ℤ)))
+  -- Simplify the integer expression.
+  have hsimp : ((H : ℤ) + 1 - (-(H : ℤ))) = (2 * (H : ℤ) + 1) := by
+    ring
+  have hnn : 0 ≤ (2 * (H : ℤ) + 1) := by
+    have : (0 : ℤ) ≤ (H : ℤ) := by exact_mod_cast (Nat.zero_le H)
+    linarith
+  -- Convert the `toNat` into a closed form in `ℕ`.
+  have htoNat : (2 * (H : ℤ) + 1).toNat = 2 * H + 1 := by
+    apply Int.ofNat.inj
+    -- cast to `ℤ` and use `toNat_of_nonneg`
+    calc
+      ((2 * (H : ℤ) + 1).toNat : ℤ) = 2 * (H : ℤ) + 1 := by
+        simpa using (Int.toNat_of_nonneg hnn)
+      _ = ((2 * H + 1 : ℕ) : ℤ) := by
+        norm_cast
+  -- Finish by rewriting the `card` formula.
+  -- (`Int.card_Icc` uses the shape `(b + 1 - a).toNat`.)
+  calc
+    (Finset.Icc (-(H : ℤ)) (H : ℤ)).card
+        = ((H : ℤ) + 1 - (-(H : ℤ))).toNat := hcard
+    _ = (2 * (H : ℤ) + 1).toNat := by simpa [hsimp]
+    _ = 2 * H + 1 := htoNat
 
 end Goldbach.PPBoundCore

@@ -9,10 +9,10 @@ step for the unnormalized complex correlation integral `corr_integral`.
 
 It does **not** prove any analytic estimates; it only packages triangle-inequality bookkeeping:
 
-to bound `‖corr_integral X N - corrModel N‖`, it suffices to bound
+to bound `‖corr_integral X N - corrModel X N‖`, it suffices to bound
 
 1. the “non-`Q0`” part `‖corr_integral X N - corr_integral_major_Q0 X N Δ‖`, and
-2. the `Q0` major-arc deviation `‖corr_integral_major_Q0 X N Δ - corrModel N‖`.
+2. the `Q0` major-arc deviation `‖corr_integral_major_Q0 X N Δ - corrModel X N‖`.
 
 The certificate route can then focus on producing explicit numeric bounds for these two terms.
 -/
@@ -198,28 +198,28 @@ theorem corr_integral_eq_major_Q0_add_minor_Q0
 theorem norm_corr_integral_sub_corrModel_le_of_two_bounds
     {X N : ℕ} {Δ : ℝ} {ε₁ ε₂ : ℝ}
     (h₁ : ‖corr_integral X N - corr_integral_major_Q0 X N Δ‖ ≤ ε₁)
-    (h₂ : ‖corr_integral_major_Q0 X N Δ - corrModel N‖ ≤ ε₂) :
-    ‖corr_integral X N - corrModel N‖ ≤ ε₁ + ε₂ := by
+    (h₂ : ‖corr_integral_major_Q0 X N Δ - corrModel X N‖ ≤ ε₂) :
+    ‖corr_integral X N - corrModel X N‖ ≤ ε₁ + ε₂ := by
   -- `corr - model = (corr - major) + (major - model)`.
   have hdecomp :
-      corr_integral X N - corrModel N
+      corr_integral X N - corrModel X N
         =
       (corr_integral X N - corr_integral_major_Q0 X N Δ)
         +
-      (corr_integral_major_Q0 X N Δ - corrModel N) := by
+      (corr_integral_major_Q0 X N Δ - corrModel X N) := by
     ring
   -- Apply triangle inequality and then the two bounds.
   have hnormEq :
-      ‖corr_integral X N - corrModel N‖
+      ‖corr_integral X N - corrModel X N‖
         =
       ‖(corr_integral X N - corr_integral_major_Q0 X N Δ)
-          + (corr_integral_major_Q0 X N Δ - corrModel N)‖ := by
+          + (corr_integral_major_Q0 X N Δ - corrModel X N)‖ := by
     simpa using congrArg (fun z : ℂ => ‖z‖) hdecomp
   rw [hnormEq]
   refine le_trans ?_ (add_le_add h₁ h₂)
   simpa using
     (norm_add_le (corr_integral X N - corr_integral_major_Q0 X N Δ)
-      (corr_integral_major_Q0 X N Δ - corrModel N))
+      (corr_integral_major_Q0 X N Δ - corrModel X N))
 
 end
 

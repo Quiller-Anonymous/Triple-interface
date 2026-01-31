@@ -6,7 +6,8 @@ import Goldbach.Cert.MajorArcModules.TurnkeyFromQ0
 turnkey major-arc bound via the `Q0` reduction (`TurnkeyFromQ0`).
 
 This module does **not** prove the analytic bounds `‖corr_integral - corr_integral_major_Q0‖ ≤ ε₁`
-and `‖corr_integral_major_Q0 - corrModel‖ ≤ ε₂`.  Instead, it keeps the certificate side purely
+and `‖corr_integral_major_Q0 - corrModel‖ ≤ ε₂` (with `corrModel` aligned to the bank weight mass).
+Instead, it keeps the certificate side purely
 `ℚ` (stable for regeneration/CI) and exposes a lemma:
 
 `(certificate-validity) + (analytic bounds with those ε’s) ⇒ TurnkeyMajorArcCanon`.
@@ -94,7 +95,7 @@ theorem turnkey
     (h₂ :
       ∀ {X N : ℕ},
         X0 ≤ X → N ∈ EvenIn X H →
-          ‖corr_integral_major_Q0 X N Δ - corrModel N‖ ≤ (C.ε₂ : ℝ)) :
+          ‖corr_integral_major_Q0 X N Δ - corrModel X N‖ ≤ (C.ε₂ : ℝ)) :
     Goldbach.Cert.MajorArcModules.TurnkeyCanon.TurnkeyMajorArcCanon := by
   refine
     turnkey_of_q0_two_bounds

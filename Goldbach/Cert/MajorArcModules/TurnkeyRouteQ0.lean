@@ -74,7 +74,7 @@ structure TwoBounds (ε₁ ε₂ : ℝ) : Prop where
   major :
     ∀ {X N : ℕ},
       X0 ≤ X → N ∈ EvenIn X H →
-        ‖corr_integral_major_Q0 X N Δ_canon - corrModel N‖ ≤ ε₂
+        ‖corr_integral_major_Q0 X N Δ_canon - corrModel X N‖ ≤ ε₂
 
 /-!
 ## Step 2 (fixed parameters): `Δ = 1` + certificate-friendly numeric cap
@@ -110,7 +110,7 @@ theorem turnkey_of_Q0Cert
     (h₂ :
       ∀ {X N : ℕ},
         X0 ≤ X → N ∈ EvenIn X H →
-          ‖corr_integral_major_Q0 X N Δ_canon - corrModel N‖ ≤ (C.ε₂ : ℝ)) :
+          ‖corr_integral_major_Q0 X N Δ_canon - corrModel X N‖ ≤ (C.ε₂ : ℝ)) :
     TurnkeyMajorArcCanon := by
   -- This is exactly `Q0Certificate.Q0Cert.turnkey`, specialized to `Δ = 1`.
   simpa [Δ_canon] using

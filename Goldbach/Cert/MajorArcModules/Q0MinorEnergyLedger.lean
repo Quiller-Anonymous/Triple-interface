@@ -92,6 +92,37 @@ structure Q0MinorEnergyLedgerEngine (Δ C2 C3 : ℝ) : Prop where
           ≤ C2 * ((H : ℝ) / (X : ℝ)) + C3 / ((H : ℝ) * (Q0 : ℝ) ^ 2)
 
 /--
+Monotonicity in the ledger constants: if a ledger engine holds with constants `C2', C3'`, then it
+also holds with any larger constants `C2, C3`.
+-/
+theorem ledgerEngine_mono
+    {Δ C2 C3 C2' C3' : ℝ}
+    (h : Q0MinorEnergyLedgerEngine Δ C2' C3')
+    (hC2 : C2' ≤ C2) (hC3 : C3' ≤ C3)
+    (hC2_nonneg : 0 ≤ C2) (hC3_nonneg : 0 ≤ C3) :
+    Q0MinorEnergyLedgerEngine Δ C2 C3 := by
+  refine ⟨hC2_nonneg, hC3_nonneg, h.hInner, h.hOuterMaj, h.hOuterMin, ?_⟩
+  intro X hX
+  have hmain := h.bound (X := X) hX
+  have hXpos : (0 : ℝ) < (X : ℝ) := by
+    have : (0 : ℕ) < X := lt_of_lt_of_le (by decide : (0 : ℕ) < X0) hX
+    exact_mod_cast this
+  have hHX_nonneg : 0 ≤ (H : ℝ) / (X : ℝ) :=
+    div_nonneg H_nonneg_real (le_of_lt hXpos)
+  have hden_nonneg : 0 ≤ ((H : ℝ) * (Q0 : ℝ) ^ 2) := by
+    exact mul_nonneg H_nonneg_real (sq_nonneg _)
+  have h1 : C2' * ((H : ℝ) / (X : ℝ)) ≤ C2 * ((H : ℝ) / (X : ℝ)) :=
+    mul_le_mul_of_nonneg_right hC2 hHX_nonneg
+  have h2 : C3' / ((H : ℝ) * (Q0 : ℝ) ^ 2) ≤ C3 / ((H : ℝ) * (Q0 : ℝ) ^ 2) :=
+    div_le_div_of_nonneg_right hC3 hden_nonneg
+  have hsum :
+      C2' * ((H : ℝ) / (X : ℝ)) + C3' / ((H : ℝ) * (Q0 : ℝ) ^ 2)
+        ≤
+      C2 * ((H : ℝ) / (X : ℝ)) + C3 / ((H : ℝ) * (Q0 : ℝ) ^ 2) :=
+    add_le_add h1 h2
+  exact le_trans hmain hsum
+
+/--
 Pure constant propagation: a ledger engine gives a uniform `Q0MinorEnergyEngine` with constant
 `C2*(H/X0) + C3/(H*Q0^2)`.
 -/

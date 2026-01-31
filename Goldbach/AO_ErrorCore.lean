@@ -8,9 +8,9 @@ namespace Goldbach.AO_Major
 @[simp] noncomputable abbrev sigma : ℕ → ℝ := Goldbach.AO_Core.sigma
 
 /-- Re-export the canonical AO ledger main term. -/
-@[simp] noncomputable abbrev Mcanon : ℕ → ℝ := Goldbach.AO_Core.Mcanon
+@[simp] noncomputable abbrev Mcanon : ℕ → ℕ → ℝ := Goldbach.AO_Core.Mcanon
 
-@[simp] abbrev weight_mass := Goldbach.AO_Core.weight_mass
+@[simp] noncomputable abbrev weight_mass := Goldbach.AO_Core.weight_mass
 @[simp] noncomputable abbrev errAO := Goldbach.AO_Core.errAO
 
 end Goldbach.AO_Major

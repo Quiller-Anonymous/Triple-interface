@@ -12,10 +12,21 @@ class WeightMassOnWindow : Prop where
     ∀ {X : ℕ}, BankParams.X0 ≤ X → |Goldbach.AO_WeightMass.weight_mass X| ≤ (1 : ℝ)
 
 /-- On the canonical window `X ≥ X0`, the AO weight mass has absolute value ≤ 1.
-    For the normalized tent kernel in `AO_Core`, `weight_mass X` is definitionally `1.0`. -/
+    With the current bank normalization, `weight_mass X = (wScale X)^2` and `wScale X ≤ 1`. -/
 theorem weight_mass_abs_le_one_on_window_canon {X : ℕ} (hX : BankParams.X0 ≤ X) :
     |Goldbach.AO_WeightMass.weight_mass X| ≤ (1 : ℝ) := by
-  norm_num [Goldbach.AO_WeightMass.weight_mass]
+  have hw : Goldbach.BG_Bank.wScale X ≤ 1 := Goldbach.BG_Bank.wScale_le_one X
+  have hw0 : 0 ≤ Goldbach.BG_Bank.wScale X := Goldbach.BG_Bank.wScale_nonneg X
+  -- `wScale^2 ≤ 1` since `0 ≤ wScale ≤ 1`.
+  have hsq : (Goldbach.BG_Bank.wScale X) ^ 2 ≤ (1 : ℝ) := by
+    have : (Goldbach.BG_Bank.wScale X) * (Goldbach.BG_Bank.wScale X) ≤ (1 : ℝ) * (1 : ℝ) :=
+      mul_le_mul hw hw hw0 (by norm_num)
+    simpa [pow_two] using this
+  have hsq0 : 0 ≤ (Goldbach.BG_Bank.wScale X) ^ 2 := by
+    have : 0 ≤ (Goldbach.BG_Bank.wScale X) * (Goldbach.BG_Bank.wScale X) :=
+      mul_nonneg hw0 hw0
+    simpa [pow_two] using this
+  simpa [Goldbach.AO_WeightMass.weight_mass, abs_of_nonneg hsq0] using hsq
 
 /-- Register the window-weight bound as the instance your code expects. -/
 instance : WeightMassOnWindow where

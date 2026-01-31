@@ -1,6 +1,6 @@
 import Goldbach.Cert.MajorArcModules.ExpSumTrivialBound
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallStep21Bridge
-import Goldbach.Cert.MajorArcModules.Step21OnArcSmallBetaBMOR
+import Goldbach.Cert.MajorArcModules.Step21OnArcSmallBetaWeightedAxiom
 import Goldbach.Cert.MajorArcStep17MajorMinorSplit
 
 /-!
@@ -28,13 +28,14 @@ open Complex AddCircle
 
 open Goldbach
 open Goldbach.Cert.MajorArcStep7FourierOrthogonality
+open Goldbach.Cert.MajorArcStep10RLSmoothIntegral
 open Goldbach.Cert.MajorArcStep12ShiftedExpSums
 open Goldbach.Cert.MajorArcStep17MajorMinorSplit
 open Goldbach.Cert.MajorArcModules.BetaLocalization
 open Goldbach.Cert.MajorArcModules.ExpSumTrivialBound
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallStep21Bridge
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallTrimBridge
-open Goldbach.Cert.MajorArcModules.Step21OnArcSmallBetaBMOR
+open Goldbach.Cert.MajorArcModules.Step21OnArcSmallBetaWeightedAxiom
 open Goldbach.Cert.MajorArcStep23RamanujanSum
 open Goldbach.Cert.MajorArcStep24IntegralExtraction
 
@@ -126,7 +127,7 @@ theorem norm_innerIntegrand_sub_muMainTerm_prod_le_of_BMOR210'_of_arcSetTextbook
 
   -- Apply Step 21 on the arc to get the product control for the trimmed sums.
   have hStep21 :=
-    norm_trimmed_bankSum_mul_sub_muMainTerm_mul_le_of_BMOR210'_of_arcSetTextbook_add_sub_of_mem_betaSmallSet_of_le_Q0
+    norm_trimmed_bankSum_mul_sub_muMainTerm_mul_le_of_arcSetTextbook_add_sub_of_mem_betaSmallSet_of_le_Q0
       (X := X) (N := N) (q := q) (a := a) (Δ := Δ)
       hΔ hXpos hq hqQ0 hXΔ (α := α) (β := β) hα ha hβ hN6
   rcases hStep21 with ⟨hplusEq, hminusEq, hprod⟩
@@ -137,42 +138,42 @@ theorem norm_innerIntegrand_sub_muMainTerm_prod_le_of_BMOR210'_of_arcSetTextbook
   -- The Step-21 "trimmed" sums `S₁,S₂` are exactly `expSumTrim N` at `γ±`.
   have hS₁ :
       (∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
-          (Goldbach.BG_Bank.Λ n : ℂ) *
+          aTerm X n *
             Goldbach.Cert.MajorArcStep2ExpSums.gExp
               (((α - (a : ℝ) / (q : ℝ)) + β) + (a : ℝ) / (q : ℝ)) n)
         =
-      expSumTrim N (γp : UC) := by
+      expSumTrim X N (γp : UC) := by
     have hphase : (((α - (a : ℝ) / (q : ℝ)) + β) + (a : ℝ) / (q : ℝ)) = α + β := hplusEq
     have :
         (∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
-            (Goldbach.BG_Bank.Λ n : ℂ) *
+            aTerm X n *
               Goldbach.Cert.MajorArcStep2ExpSums.gExp (α + β) n)
           =
-        expSumTrim N (γp : UC) := by
-      simpa [γp] using (expSumTrim_coe_eq_sum_Lambda_gExp (N := N) (x := α + β)).symm
+        expSumTrim X N (γp : UC) := by
+      simpa [γp] using (expSumTrim_coe_eq_sum_Lambda_gExp (X := X) (N := N) (x := α + β)).symm
     simpa [hphase] using this
 
   have hS₂ :
       (∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
-          (Goldbach.BG_Bank.Λ n : ℂ) *
+          aTerm X n *
             Goldbach.Cert.MajorArcStep2ExpSums.gExp
               (((α - (a : ℝ) / (q : ℝ)) - β) + (a : ℝ) / (q : ℝ)) n)
         =
-      expSumTrim N (γm : UC) := by
+      expSumTrim X N (γm : UC) := by
     have hphase : (((α - (a : ℝ) / (q : ℝ)) - β) + (a : ℝ) / (q : ℝ)) = α - β := hminusEq
     have :
         (∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
-            (Goldbach.BG_Bank.Λ n : ℂ) *
+            aTerm X n *
               Goldbach.Cert.MajorArcStep2ExpSums.gExp (α - β) n)
           =
-        expSumTrim N (γm : UC) := by
-      simpa [γm] using (expSumTrim_coe_eq_sum_Lambda_gExp (N := N) (x := α - β)).symm
+        expSumTrim X N (γm : UC) := by
+      simpa [γm] using (expSumTrim_coe_eq_sum_Lambda_gExp (X := X) (N := N) (x := α - β)).symm
     simpa [hphase] using this
 
   -- Bound the product difference `expSum*expSum - expSumTrim*expSumTrim` using only triangle inequality.
-  have hTrimPlus : ‖expSum X N (γp : UC) - expSumTrim N (γp : UC)‖ ≤ 2 * Real.log (N : ℝ) :=
+  have hTrimPlus : ‖expSum X N (γp : UC) - expSumTrim X N (γp : UC)‖ ≤ 2 * Real.log (N : ℝ) :=
     Q0MajorSmallTrimBridge.norm_expSum_sub_expSumTrim_le (X := X) (N := N) (γ := (γp : UC)) hN6
-  have hTrimMinus : ‖expSum X N (γm : UC) - expSumTrim N (γm : UC)‖ ≤ 2 * Real.log (N : ℝ) :=
+  have hTrimMinus : ‖expSum X N (γm : UC) - expSumTrim X N (γm : UC)‖ ≤ 2 * Real.log (N : ℝ) :=
     Q0MajorSmallTrimBridge.norm_expSum_sub_expSumTrim_le (X := X) (N := N) (γ := (γm : UC)) hN6
 
   have hExpPlus :
@@ -183,24 +184,28 @@ theorem norm_innerIntegrand_sub_muMainTerm_prod_le_of_BMOR210'_of_arcSetTextbook
     norm_expSum_le (X := X) (N := N) hN2 (γm : UC)
 
   have hTrimPlusNorm :
-      ‖expSumTrim N (γp : UC)‖ ≤ ((N + 1 : ℕ) : ℝ) * Real.log (N : ℝ) + 2 * Real.log (N : ℝ) := by
+      ‖expSumTrim X N (γp : UC)‖ ≤ ((N + 1 : ℕ) : ℝ) * Real.log (N : ℝ) + 2 * Real.log (N : ℝ) := by
     calc
-      ‖expSumTrim N (γp : UC)‖
-          = ‖expSum X N (γp : UC) - (expSum X N (γp : UC) - expSumTrim N (γp : UC))‖ := by
+      ‖expSumTrim X N (γp : UC)‖
+          = ‖expSum X N (γp : UC) - (expSum X N (γp : UC) - expSumTrim X N (γp : UC))‖ := by
             abel
-      _ ≤ ‖expSum X N (γp : UC)‖ + ‖expSum X N (γp : UC) - expSumTrim N (γp : UC)‖ := by
-            simpa using (norm_sub_le (expSum X N (γp : UC)) (expSum X N (γp : UC) - expSumTrim N (γp : UC)))
+      _ ≤ ‖expSum X N (γp : UC)‖ + ‖expSum X N (γp : UC) - expSumTrim X N (γp : UC)‖ := by
+            simpa using
+              (norm_sub_le (expSum X N (γp : UC))
+                (expSum X N (γp : UC) - expSumTrim X N (γp : UC)))
       _ ≤ ((N + 1 : ℕ) : ℝ) * Real.log (N : ℝ) + 2 * Real.log (N : ℝ) := by
         gcongr
 
   have hTrimMinusNorm :
-      ‖expSumTrim N (γm : UC)‖ ≤ ((N + 1 : ℕ) : ℝ) * Real.log (N : ℝ) + 2 * Real.log (N : ℝ) := by
+      ‖expSumTrim X N (γm : UC)‖ ≤ ((N + 1 : ℕ) : ℝ) * Real.log (N : ℝ) + 2 * Real.log (N : ℝ) := by
     calc
-      ‖expSumTrim N (γm : UC)‖
-          = ‖expSum X N (γm : UC) - (expSum X N (γm : UC) - expSumTrim N (γm : UC))‖ := by
+      ‖expSumTrim X N (γm : UC)‖
+          = ‖expSum X N (γm : UC) - (expSum X N (γm : UC) - expSumTrim X N (γm : UC))‖ := by
             abel
-      _ ≤ ‖expSum X N (γm : UC)‖ + ‖expSum X N (γm : UC) - expSumTrim N (γm : UC)‖ := by
-            simpa using (norm_sub_le (expSum X N (γm : UC)) (expSum X N (γm : UC) - expSumTrim N (γm : UC)))
+      _ ≤ ‖expSum X N (γm : UC)‖ + ‖expSum X N (γm : UC) - expSumTrim X N (γm : UC)‖ := by
+            simpa using
+              (norm_sub_le (expSum X N (γm : UC))
+                (expSum X N (γm : UC) - expSumTrim X N (γm : UC)))
       _ ≤ ((N + 1 : ℕ) : ℝ) * Real.log (N : ℝ) + 2 * Real.log (N : ℝ) := by
         gcongr
 
@@ -208,13 +213,13 @@ theorem norm_innerIntegrand_sub_muMainTerm_prod_le_of_BMOR210'_of_arcSetTextbook
   -- `AB - A'B' = (A-A')B + A'(B-B')`, then use the crude bounds on norms.
   have hProdTrim :
       ‖(expSum X N (γp : UC)) * (expSum X N (γm : UC))
-          - (expSumTrim N (γp : UC)) * (expSumTrim N (γm : UC))‖
+          - (expSumTrim X N (γp : UC)) * (expSumTrim X N (γm : UC))‖
         ≤ (4 * (N : ℝ) + 16) * (Real.log (N : ℝ)) ^ 2 := by
     -- `A := expSum(γp)`, `B := expSum(γm)`, `A' := expSumTrim(γp)`, `B' := expSumTrim(γm)`.
     set A : ℂ := expSum X N (γp : UC)
     set B : ℂ := expSum X N (γm : UC)
-    set A' : ℂ := expSumTrim N (γp : UC)
-    set B' : ℂ := expSumTrim N (γm : UC)
+    set A' : ℂ := expSumTrim X N (γp : UC)
+    set B' : ℂ := expSumTrim X N (γm : UC)
     have hAB :
         A * B - A' * B' = (A - A') * B + A' * (B - B') := by
       ring
@@ -279,7 +284,7 @@ theorem norm_innerIntegrand_sub_muMainTerm_prod_le_of_BMOR210'_of_arcSetTextbook
   -- The `fourier(-N)` factor has norm `1`, so it does not affect bounds.
   -- Rewrite the Step21 product bound in terms of `expSumTrim` using `hS₁,hS₂`.
   have hprod' :
-      ‖(expSumTrim N (γp : UC)) * (expSumTrim N (γm : UC)) - (M₁' * M₂')‖
+      ‖(expSumTrim X N (γp : UC)) * (expSumTrim X N (γm : UC)) - (M₁' * M₂')‖
         ≤ (E₁' * E₂' + E₁' * ‖M₂'‖ + ‖M₁'‖ * E₂') := by
     -- `hprod` is stated with `S₁,S₂` as explicit `gExp` sums.
     -- We rewrite them to `expSumTrim` via `hS₁,hS₂`.
@@ -298,17 +303,18 @@ theorem norm_innerIntegrand_sub_muMainTerm_prod_le_of_BMOR210'_of_arcSetTextbook
       ‖(expSum X N (γp : UC)) * (expSum X N (γm : UC)) - (M₁' * M₂')‖
           =
         ‖((expSum X N (γp : UC)) * (expSum X N (γm : UC))
-            - (expSumTrim N (γp : UC)) * (expSumTrim N (γm : UC)))
-            + ((expSumTrim N (γp : UC)) * (expSumTrim N (γm : UC)) - (M₁' * M₂'))‖ := by
+            - (expSumTrim X N (γp : UC)) * (expSumTrim X N (γm : UC)))
+            + ((expSumTrim X N (γp : UC)) * (expSumTrim X N (γm : UC)) - (M₁' * M₂'))‖ := by
           ring_nf
       _ ≤
         ‖(expSum X N (γp : UC)) * (expSum X N (γm : UC))
-            - (expSumTrim N (γp : UC)) * (expSumTrim N (γm : UC))‖
+            - (expSumTrim X N (γp : UC)) * (expSumTrim X N (γm : UC))‖
           +
-        ‖(expSumTrim N (γp : UC)) * (expSumTrim N (γm : UC)) - (M₁' * M₂')‖ := by
+        ‖(expSumTrim X N (γp : UC)) * (expSumTrim X N (γm : UC)) - (M₁' * M₂')‖ := by
           simpa using (norm_add_le
-            ((expSum X N (γp : UC)) * (expSum X N (γm : UC)) - (expSumTrim N (γp : UC)) * (expSumTrim N (γm : UC)))
-            ((expSumTrim N (γp : UC)) * (expSumTrim N (γm : UC)) - (M₁' * M₂')))
+            ((expSum X N (γp : UC)) * (expSum X N (γm : UC)) -
+              (expSumTrim X N (γp : UC)) * (expSumTrim X N (γm : UC)))
+            ((expSumTrim X N (γp : UC)) * (expSumTrim X N (γm : UC)) - (M₁' * M₂')))
       _ ≤ ((4 * (N : ℝ) + 16) * (Real.log (N : ℝ)) ^ 2)
           + (E₁' * E₂' + E₁' * ‖M₂'‖ + ‖M₁'‖ * E₂') := by
           gcongr

@@ -354,6 +354,55 @@ theorem fullIntegrable (X : ℕ) :
   -- Continuous on a compact interval ⇒ integrable.
   simpa using (hFullCont.integrableOn_Icc : MeasureTheory.IntegrableOn _ (Set.Icc (0 : ℝ) 1))
 
+theorem fullIntegrableC (X : ℕ) :
+  MeasureTheory.IntegrableOn
+    (fun α =>
+      Twin.MajorArc.fullTwinIntegrandC (Λ := Lambda) (W := Wwin)
+        (X := (X : ℝ)) (H := (P.H : ℝ)) α)
+    (Set.Icc (0 : ℝ) 1) := by
+  -- Continuity of `sumValue` in `α`, by uniform absolute convergence.
+  have hSumValue :
+      Continuous (fun α : ℝ => Twin.SW.sumValue Lambda Wwin (X : ℝ) (P.H : ℝ) α) := by
+    classical
+    let f : ℕ → ℝ → ℂ :=
+      fun n α =>
+        Complex.ofReal (Lambda n * Wwin (((n : ℝ) - (X : ℝ)) / (P.H : ℝ)))
+          * Twin.SW.χ_add (α * (n : ℝ))
+    let u : ℕ → ℝ :=
+      fun n => ‖Complex.ofReal (Lambda n * Wwin (((n : ℝ) - (X : ℝ)) / (P.H : ℝ)))‖
+    have hf : ∀ n, Continuous (f n) := by
+      intro n
+      have hχ : Continuous fun α : ℝ => Twin.SW.χ_add (α * (n : ℝ)) :=
+        continuous_chi_add.comp (continuous_id.mul continuous_const)
+      simpa [f] using (continuous_const.mul hχ)
+    have hu : Summable u := by
+      simpa [u] using (summable_sumValue_bound (X := X))
+    have hfu : ∀ n α, ‖f n α‖ ≤ u n := by
+      intro n α
+      simp [f, u, norm_chi_add]
+    simpa [Twin.SW.sumValue, f] using (continuous_tsum hf hu hfu)
+
+  -- Continuity of the full complex Fourier integrand, hence integrability on `[0,1]`.
+  have hFullCont :
+      Continuous (fun α : ℝ =>
+        Twin.MajorArc.fullTwinIntegrandC (Λ := Lambda) (W := Wwin)
+          (X := (X : ℝ)) (H := (P.H : ℝ)) α) := by
+    classical
+    have : Continuous (fun α : ℝ =>
+        Twin.MajorArc.twinCorrIntegrandC Lambda Wwin (X : ℝ) (P.H : ℝ) α) := by
+      set S : ℝ → ℂ := fun α => Twin.SW.sumValue Lambda Wwin (X : ℝ) (P.H : ℝ) α
+      have hS : Continuous S := by simpa [S] using hSumValue
+      have hconj : Continuous fun α => conj (S α) := Complex.continuous_conj.comp hS
+      have hprod : Continuous fun α => S α * conj (S α) := hS.mul hconj
+      have hχ : Continuous fun α : ℝ => Twin.SW.χ_add (-2 * α) :=
+        continuous_chi_add.comp (continuous_const.mul continuous_id)
+      have hC : Continuous fun α : ℝ => (S α * conj (S α)) * Twin.SW.χ_add (-2 * α) :=
+        hprod.mul hχ
+      simpa [Twin.MajorArc.twinCorrIntegrandC, S] using hC
+    simpa [Twin.MajorArc.fullTwinIntegrandC, Twin.MajorArc.twinCorrIntegrandC] using this
+
+  simpa using (hFullCont.integrableOn_Icc : MeasureTheory.IntegrableOn _ (Set.Icc (0 : ℝ) 1))
+
 end
 
 end Twin.ChecklistIntegrability

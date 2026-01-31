@@ -81,25 +81,39 @@ private lemma expSum_bound {X N : ℕ} (hN2 : 2 ≤ N) (γ : UC) :
       simp [fourier_apply]
 
     have haTerm : ‖aTerm X n‖ ≤ Real.log (N : ℝ) := by
-      -- `aTerm X n` is the complex cast of `Λ n`, and `Λ n ≤ log N`.
+      -- `aTerm X n` is the complex cast of `wX X n * Λ n`.
       unfold Goldbach.Cert.MajorArcStep10RLSmoothIntegral.aTerm
-      simp [Goldbach.BG_Bank.wX]
-      -- now `‖(Λ n : ℂ)‖ = |Λ n|`
-      by_cases hprime : Nat.Prime n
-      · -- prime: `Λ n = log n`
-        have hn_le' : (n : ℝ) ≤ (N : ℝ) := by exact_mod_cast hn_le
-        have hlog_le : Real.log (n : ℝ) ≤ Real.log (N : ℝ) :=
-          Real.log_le_log (by simpa using hnpos) hn_le'
-        have hlog_nonneg : 0 ≤ Real.log (n : ℝ) := (Real.log_pos (by
-          have : (1 : ℝ) < (n : ℝ) := by
-            have : (2 : ℝ) ≤ (n : ℝ) := by
-              have : 2 ≤ n := (Finset.mem_Icc.mp hn).1
-              exact_mod_cast this
-            exact lt_of_lt_of_le (by norm_num : (1 : ℝ) < 2) this
-          exact this)).le
-        simp [Goldbach.BG_Bank.Λ, hprime, abs_of_nonneg hlog_nonneg, hlog_le]
-      · -- not prime: `Λ n = 0`
-        simp [Goldbach.BG_Bank.Λ, hprime, hlog0]
+      have hw : |Goldbach.BG_Bank.wX X n| ≤ 1 := Goldbach.BG_Bank.abs_wX_le_one X n
+      have hΛ : |Goldbach.BG_Bank.Λ n| ≤ Real.log (N : ℝ) := by
+        by_cases hprime : Nat.Prime n
+        · have hn_le' : (n : ℝ) ≤ (N : ℝ) := by exact_mod_cast hn_le
+          have hlog_le : Real.log (n : ℝ) ≤ Real.log (N : ℝ) :=
+            Real.log_le_log (by simpa using hnpos) hn_le'
+          have hlog_nonneg : 0 ≤ Real.log (n : ℝ) := (Real.log_pos (by
+            have : (1 : ℝ) < (n : ℝ) := by
+              have : (2 : ℝ) ≤ (n : ℝ) := by
+                have : 2 ≤ n := (Finset.mem_Icc.mp hn).1
+                exact_mod_cast this
+              exact lt_of_lt_of_le (by norm_num : (1 : ℝ) < 2) this
+            exact this)).le
+          simpa [Goldbach.BG_Bank.Λ, hprime, abs_of_nonneg hlog_nonneg] using hlog_le
+        · -- not prime: `Λ n = 0`
+          simpa [Goldbach.BG_Bank.Λ, hprime, hlog0]
+      have hmul : |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n| ≤ |Goldbach.BG_Bank.Λ n| := by
+        have h0 : 0 ≤ |Goldbach.BG_Bank.Λ n| := abs_nonneg _
+        calc
+          |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n|
+              = |Goldbach.BG_Bank.wX X n| * |Goldbach.BG_Bank.Λ n| := by
+                  simp [abs_mul]
+          _ ≤ 1 * |Goldbach.BG_Bank.Λ n| := by
+                  exact mul_le_mul_of_nonneg_right hw h0
+          _ = |Goldbach.BG_Bank.Λ n| := by simp
+      -- Convert the `ℂ` norm into an `ℝ` absolute value, then use `|wX*Λ| ≤ |Λ| ≤ log N`.
+      have hnorm : ‖((Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n : ℝ) : ℂ)‖
+          = |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n| := by
+        simp [RCLike.norm_ofReal]
+      -- Finish.
+      simpa [hnorm] using le_trans hmul hΛ
 
     calc
       ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖

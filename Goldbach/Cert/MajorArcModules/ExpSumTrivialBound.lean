@@ -74,16 +74,26 @@ theorem norm_expSum_le (X N : ℕ) (hN2 : 2 ≤ N) (γ : UC) :
     -- `‖aTerm‖` is `|Λ n|` and `‖fourier‖ = 1`.
     have hfour : ‖(fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ = 1 := by
       simp [fourier_apply]
-    have haTerm : ‖aTerm X n‖ = |Goldbach.BG_Bank.Λ n| := by
-      -- In the current repo, `wX` is definitionally `1`.
-      simp [MajorArcStep10RLSmoothIntegral.aTerm, Goldbach.BG_Bank.wX]
+    have haTerm_le : ‖aTerm X n‖ ≤ |Goldbach.BG_Bank.Λ n| := by
+      -- `aTerm X n = (wX X n * Λ n : ℝ)` cast to `ℂ`, and `|wX| ≤ 1`.
+      have haTerm' :
+          ‖aTerm X n‖ = |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n| := by
+        simp [MajorArcStep10RLSmoothIntegral.aTerm, RCLike.norm_ofReal]
+      calc
+        ‖aTerm X n‖
+            = |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n| := haTerm'
+        _ = |Goldbach.BG_Bank.wX X n| * |Goldbach.BG_Bank.Λ n| := by simp [abs_mul]
+        _ ≤ 1 * |Goldbach.BG_Bank.Λ n| := by
+              exact mul_le_mul_of_nonneg_right (Goldbach.BG_Bank.abs_wX_le_one X n) (abs_nonneg _)
+        _ = |Goldbach.BG_Bank.Λ n| := by simp
     calc
       ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖
           =
         ‖aTerm X n‖ * ‖(fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ := by
             simp [norm_mul]
-      _ = |Goldbach.BG_Bank.Λ n| := by
-            simp [haTerm, hfour, Goldbach.BG_Bank.wX]
+      _ = ‖aTerm X n‖ := by
+            simp [hfour]
+      _ ≤ |Goldbach.BG_Bank.Λ n| := haTerm_le
       _ ≤ Real.log (N : ℝ) := hΛabs
 
   have hsum_le :

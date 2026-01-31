@@ -1,6 +1,6 @@
 import Twin.ChecklistRoute
 import Twin.PinnedMajorsMainTermModel
-import Twin.MinorArcSupBound
+import Twin.MinorArcDispersionEnergy
 
 /-
   Twin/ChecklistEntrypoint.lean
@@ -34,11 +34,14 @@ theorem twins_in_all_large_windows
   [Twin.ChecklistAxioms.DsFourierAtSumBudget] [Twin.ChecklistAxioms.DsPrimePowerAtSumBudget]
   [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
   [Twin.ChecklistAxioms.PinnedMajorsMainTermModel (sme := sme)]
-  [Twin.ChecklistAxioms.MinorArcSupBound (sme := sme)] :
+  [Twin.ChecklistAxioms.MinorArcDispersionEnergyBound (sme := sme)] :
   sme.X0 ≤ (Twin.Main.P.X0 : ℝ) →
     ∀ {X : ℕ}, Twin.Main.P.X0 ≤ X → Twin.ExistsTwinInWindow X Twin.Main.P.H :=
 by
   intro hsmeX0 X hX
+  -- Convert the conventional “dispersion energy” hypothesis into the exact checklist Core 1 budget.
+  haveI : Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := sme) :=
+    Twin.ChecklistAxioms.minorMassAtSqSumBudget_of_dispersionEnergy (sme := sme)
   have hsmeX0' : sme.X0 ≤ (Twin.ChecklistRoute.P.X0 : ℝ) := by
     simpa [Twin.ChecklistRoute.P, Twin.Main.P] using hsmeX0
   have hX' : Twin.ChecklistRoute.P.X0 ≤ X := by
@@ -53,11 +56,13 @@ theorem twins_in_all_large_windows_of_sme
   [Twin.ChecklistAxioms.DsFourierAtSumBudget] [Twin.ChecklistAxioms.DsPrimePowerAtSumBudget]
   [Twin.ChecklistAxioms.PinnedMajorsSWErrorEnvelopeBudget (sme := sme)]
   [Twin.ChecklistAxioms.PinnedMajorsMainTermModel (sme := sme)]
-  [Twin.ChecklistAxioms.MinorArcSupBound (sme := sme)] :
+  [Twin.ChecklistAxioms.MinorArcDispersionEnergyBound (sme := sme)] :
   sme.X0 ≤ (Twin.Main.P.X0 : ℝ) →
     ∀ {X : ℕ}, Twin.Main.P.X0 ≤ X → Twin.ExistsTwinInWindow X Twin.Main.P.H :=
 by
   intro hsmeX0 X hX
+  haveI : Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := sme) :=
+    Twin.ChecklistAxioms.minorMassAtSqSumBudget_of_dispersionEnergy (sme := sme)
   have hsmeX0' : sme.X0 ≤ (Twin.ChecklistRoute.P.X0 : ℝ) := by
     simpa [Twin.ChecklistRoute.P, Twin.Main.P] using hsmeX0
   have hX' : Twin.ChecklistRoute.P.X0 ≤ X := by

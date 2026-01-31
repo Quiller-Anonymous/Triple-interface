@@ -18,6 +18,9 @@ lean_lib «TwinSW» where
 
 lean_lib «AltZeta» where
 
+-- === SSU library (workbench; not imported by default targets) ===
+lean_lib «SSU» where
+
 -- === Aggregator target: build BOTH on `lake build` ===
 @[default_target]
 lean_lib «All» where

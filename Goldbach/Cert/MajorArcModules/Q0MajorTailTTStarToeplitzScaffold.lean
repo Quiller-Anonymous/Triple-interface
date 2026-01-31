@@ -1124,7 +1124,7 @@ private lemma norm_aTerm_le_log_of_mem_s {X N n : ℕ} (hN : 2 ≤ N) (hn : n �
       exact_mod_cast this
     exact Real.log_nonneg h1N
   have habs : |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n| ≤ Real.log (N : ℝ) := by
-    have hw : Goldbach.BG_Bank.wX X n = 1 := by simp [Goldbach.BG_Bank.wX]
+    have hw : |Goldbach.BG_Bank.wX X n| ≤ 1 := Goldbach.BG_Bank.abs_wX_le_one X n
     by_cases hp : Nat.Prime n
     · have hnpos : (0 : ℝ) < (n : ℝ) := by
         have : 0 < n := lt_of_lt_of_le (by decide : 0 < 2) hn2
@@ -1136,9 +1136,23 @@ private lemma norm_aTerm_le_log_of_mem_s {X N n : ℕ} (hN : 2 ≤ N) (hn : n �
           have : (1 : ℕ) ≤ n := Nat.one_le_of_lt (lt_of_lt_of_le (by decide : 1 < 2) hn2)
           exact_mod_cast this
         exact Real.log_nonneg h1n
-      simp [Goldbach.BG_Bank.Λ, hw, hp, abs_of_nonneg hlogn_nonneg] at *
-      exact hlog_le
-    · simp [Goldbach.BG_Bank.Λ, hw, hp, hlogN_nonneg]
+      have hΛ : |Goldbach.BG_Bank.Λ n| ≤ Real.log (N : ℝ) := by
+        simpa [Goldbach.BG_Bank.Λ, hp, abs_of_nonneg hlogn_nonneg] using hlog_le
+      have hmul : |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n| ≤ |Goldbach.BG_Bank.Λ n| := by
+        -- `|wX * Λ| = |wX|*|Λ| ≤ 1*|Λ|`.
+        have h0 : 0 ≤ |Goldbach.BG_Bank.Λ n| := abs_nonneg _
+        calc
+          |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n|
+              = |Goldbach.BG_Bank.wX X n| * |Goldbach.BG_Bank.Λ n| := by
+                  simp [abs_mul]
+          _ ≤ 1 * |Goldbach.BG_Bank.Λ n| := by
+                  exact mul_le_mul_of_nonneg_right hw h0
+          _ = |Goldbach.BG_Bank.Λ n| := by simp
+      exact le_trans hmul hΛ
+    · -- nonprime: `Λ n = 0`
+      have : |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n| = 0 := by
+        simp [Goldbach.BG_Bank.Λ, hp]
+      simpa [this] using hlogN_nonneg
   have hterm : ‖aTerm X n‖ = |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n| := by
     simp [aTerm, RCLike.norm_ofReal]
   simpa [hterm] using habs

@@ -38,7 +38,7 @@ theorem smallBound_of_upperBound
   refine ⟨?_⟩
   intro X N hX hN
   have h0 :
-      ‖Q0MajorBoundSplit.corr_integral_major_Q0_small X N Δ - CorrModel.corrModel N‖ ≤ U :=
+      ‖Q0MajorBoundSplit.corr_integral_major_Q0_small X N Δ - CorrModel.corrModel X N‖ ≤ U :=
     hU.bound (X := X) (N := N) hX hN
   exact le_trans h0 U_le_εs
 

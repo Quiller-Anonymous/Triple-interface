@@ -40,7 +40,7 @@ structure Q0MajorSmallUpperBound (Δ U : ℝ) : Prop where
   bound :
     ∀ {X N : ℕ},
       X0 ≤ X → N ∈ EvenIn X H →
-        ‖Q0MajorBoundSplit.corr_integral_major_Q0_small X N Δ - CorrModel.corrModel N‖ ≤ U
+        ‖Q0MajorBoundSplit.corr_integral_major_Q0_small X N Δ - CorrModel.corrModel X N‖ ≤ U
 
 end
 

@@ -11,11 +11,86 @@ open scoped BigOperators
 
 -- If these are not already present in this file, keep them here.
 noncomputable def Λ (n : ℕ) : ℝ := if Nat.Prime n then Real.log n else 0
-noncomputable def wX (_X n : ℕ) : ℝ := 1
 
 -- Canonical window params (shared with the rest of the pipeline).
 abbrev X0 : ℕ := Goldbach.BankParams.X0
 abbrev H  : ℕ := Goldbach.BankParams.H
+
+/--
+Smoothed weight `wX(X,n)` for the bank payload.
+
+This repo’s major-arc / TT* certificate work requires that the underlying von Mangoldt weights
+are `X`-local so that the relevant `ℓ²` coefficient masses do not grow like `Θ(X)`.
+
+Implementation choice (deterministic and easy to audit):
+- `wX(X,n) = 1` if `n` lies in a fixed-width window around `X/2`,
+- and `0` otherwise.
+
+In particular, `|wX| ≤ 1` and `wX ≥ 0` everywhere.
+-/
+noncomputable def wScale (X : ℕ) : ℝ :=
+  (1 : ℝ) / (Real.log (X : ℝ) * (2 * (H : ℝ) + 1))
+
+noncomputable def wX (X n : ℕ) : ℝ :=
+  if n ∈ Finset.Icc (X / 2 - H) (X / 2 + H) then wScale X else 0
+
+lemma wScale_nonneg (X : ℕ) : 0 ≤ wScale X := by
+  by_cases hX0 : X = 0
+  · simp [wScale, hX0]
+  have hXpos : 1 ≤ X := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hX0)
+  have hlog : 0 ≤ Real.log (X : ℝ) := by
+    have : (1 : ℝ) ≤ (X : ℝ) := by exact_mod_cast hXpos
+    exact Real.log_nonneg this
+  have hH : 0 ≤ (2 * (H : ℝ) + 1) := by positivity
+  have hden : 0 ≤ Real.log (X : ℝ) * (2 * (H : ℝ) + 1) := mul_nonneg hlog hH
+  simpa [wScale] using (one_div_nonneg.mpr hden)
+
+lemma wScale_le_one (X : ℕ) : wScale X ≤ 1 := by
+  -- If `X ≤ 1` then `log X = 0` and `wScale X = 0`.
+  by_cases hX : X ≤ 1
+  · have : X = 0 ∨ X = 1 := by
+      exact (Nat.le_one_iff_eq_zero_or_eq_one.mp hX)
+    rcases this with rfl | rfl <;> simp [wScale]
+  -- Otherwise `2 ≤ X`, hence the denominator is > 1, so `1/den ≤ 1`.
+  have h2X : 2 ≤ X := Nat.succ_le_iff.mp (lt_of_not_ge hX)
+  have hx : (1 : ℝ) < (X : ℝ) := by
+    have : (2 : ℝ) ≤ (X : ℝ) := by exact_mod_cast h2X
+    exact lt_of_lt_of_le (by norm_num : (1 : ℝ) < (2 : ℝ)) this
+  have hlogXpos : 0 < Real.log (X : ℝ) := Real.log_pos hx
+  have hHpos : 0 < (2 * (H : ℝ) + 1) := by positivity
+  have hden_pos : 0 < Real.log (X : ℝ) * (2 * (H : ℝ) + 1) := mul_pos hlogXpos hHpos
+  have hlog2_le : Real.log (2 : ℝ) ≤ Real.log (X : ℝ) := by
+    have : (2 : ℝ) ≤ (X : ℝ) := by exact_mod_cast h2X
+    exact Real.log_le_log (by norm_num : (0 : ℝ) < (2 : ℝ)) this
+  have hlog_lower : (0.6931471803 : ℝ) < Real.log (X : ℝ) :=
+    lt_of_lt_of_le Real.log_two_gt_d9 hlog2_le
+  have hden_gt_one : (1 : ℝ) < Real.log (X : ℝ) * (2 * (H : ℝ) + 1) := by
+    have hH1 : (1 : ℝ) < (0.6931471803 : ℝ) * (2 * (H : ℝ) + 1) := by
+      norm_num [H, Goldbach.BankParams.H]
+    have hmul :
+        (0.6931471803 : ℝ) * (2 * (H : ℝ) + 1) < Real.log (X : ℝ) * (2 * (H : ℝ) + 1) :=
+      mul_lt_mul_of_pos_right hlog_lower (by positivity : 0 < (2 * (H : ℝ) + 1))
+    exact lt_trans hH1 hmul
+  have hden_ge_one : (1 : ℝ) ≤ Real.log (X : ℝ) * (2 * (H : ℝ) + 1) := le_of_lt hden_gt_one
+  have : (1 : ℝ) / (Real.log (X : ℝ) * (2 * (H : ℝ) + 1)) ≤ 1 := by
+    have := one_div_le_one_div_of_le (by norm_num : (0 : ℝ) < 1) hden_ge_one
+    simpa using this
+  simpa [wScale] using this
+
+lemma wX_nonneg (X n : ℕ) : 0 ≤ wX X n := by
+  by_cases hn : n ∈ Finset.Icc (X / 2 - H) (X / 2 + H)
+  · simp [wX, hn, wScale_nonneg]
+  · simp [wX, hn]
+
+lemma wX_le_one (X n : ℕ) : wX X n ≤ 1 := by
+  by_cases hn : n ∈ Finset.Icc (X / 2 - H) (X / 2 + H)
+  · simp [wX, hn, wScale_le_one]
+  · simp [wX, hn]
+
+lemma abs_wX_le_one (X n : ℕ) : |wX X n| ≤ 1 := by
+  have h0 : 0 ≤ wX X n := wX_nonneg X n
+  have h1 : wX X n ≤ 1 := wX_le_one X n
+  simpa [abs_of_nonneg h0] using h1
 
 /-- Working-band offsets S_BG = { k ∈ ℤ | |k| ≤ H }. -/
 def S_BG : Finset ℤ := (Finset.Icc (-(H:ℤ)) (H:ℤ))
@@ -207,9 +282,9 @@ lemma payload_bound_window
                 linarith
               simp [hp, abs_of_nonneg hlog_Np1_nn]
               exact hlog_Np1_nn
-          -- |wX| ≤ 1 since wX ≡ 1 here
-          have hw1 : |wX X n| ≤ 1 := by simp [wX]
-          have hw2 : |wX X (N - n)| ≤ 1 := by simp [wX]
+          -- |wX| ≤ 1 (by construction, wX ∈ {0,1})
+          have hw1 : |wX X n| ≤ 1 := abs_wX_le_one X n
+          have hw2 : |wX X (N - n)| ≤ 1 := abs_wX_le_one X (N - n)
           have : |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|
                   ≤ (Real.log ((N:ℝ) + 1))^2 := by
             -- |ab| ≤ |a||b|, then bound each factor by log(N+1)

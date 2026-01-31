@@ -52,23 +52,15 @@ Once this is proved, the four-channel decomposition becomes a purely algebraic t
 theorem Mcanon_eq_M_off_on_window :
   ∀ {X N : ℕ}, Goldbach.BankParams.X0 ≤ X →
       N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H →
-    Goldbach.AO_Core.Mcanon N = Goldbach.AO_Stages.M_off channels X N := by
+    Goldbach.AO_Core.Mcanon X N = Goldbach.AO_Stages.M_off channels X N := by
   intro X N hX hN
-  have hkern :
-      Goldbach.AO_KernelTail.E_kernel Goldbach.BankParams.X0 N =
-        Goldbach.AO_KernelTail.E_kernel X N := by
-    simpa using (Goldbach.AO_KernelTail.E_kernel_congr_X Goldbach.BankParams.X0 X N)
-  have hoff :
-      Goldbach.AO_OffDiag.E_off Goldbach.BankParams.X0 N =
-        Goldbach.AO_OffDiag.E_off X N := by
-    simpa using (Goldbach.AO_OffDiag.E_off_congr_X Goldbach.BankParams.X0 X N)
-  -- Everything is definitionally independent of `X` on the main track.
+  -- Unfold the definitions: `AO_Core.Mcanon` is the main-track staged term.
   simp [Goldbach.AO_Core.Mcanon, Goldbach.AO_Mcanon.Mcanon, channels, Goldbach.AO_CanonChannels.channels,
     Goldbach.AO_Stages.M_off, Goldbach.AO_Stages.M_kernel, Goldbach.AO_Stages.M_mellin,
     Goldbach.AO_Stages.M_smooth, Goldbach.AO_Stages.M_raw,
     Goldbach.AO_Core.sigma, Goldbach.AO_Core.weight_mass, Goldbach.AO_WeightMass.weight_mass,
     Goldbach.AO_SmoothLoss.E_smooth, Goldbach.AO_MellinTrunc.E_mellin,
-    hkern, hoff, add_assoc, add_left_comm, add_comm]
+    add_assoc, add_left_comm, add_comm]
 
 instance : Goldbach.AO_McanonWiring.McanonEqMOffOnWindow channels := by
   refine ⟨by

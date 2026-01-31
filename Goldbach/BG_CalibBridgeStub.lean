@@ -148,11 +148,10 @@ private lemma R_bank_tenorPrime_eq_ratio_sq_mul_conv_full
     -- the per-offset inner sum is definitionally the same; only the log normalization differs
     unfold Goldbach.BG_Identity.P_tenorPrime Goldbach.BG_Identity.P_tenor
     unfold Goldbach.BG_Bank.P_BG
-    -- unify the arithmetic weights (`Λp = BG_Bank.Λ`) and `wX = 1`
-    simp [Goldbach.BG_Identity.Λp, Goldbach.BG_Bank.Λ, Goldbach.BG_Bank.wX, mul_assoc, mul_left_comm,
-      mul_comm]
-    -- now it’s pure algebra in ℝ
-    -- goal reduces to cancelling `(log N)^2` between the ratio and the BG normalization
+    -- Unify the arithmetic weights (`Λp = BG_Bank.Λ`) and compare only the normalization factors.
+    -- (We do *not* unfold `wX`; both sides use the same `wX` definition.)
+    simp [Goldbach.BG_Identity.Λp, Goldbach.BG_Bank.Λ, mul_assoc, mul_left_comm, mul_comm]
+    -- Now it’s pure algebra in ℝ: cancel the `(log N)^2` factors between the ratio and the BG normalization.
     field_simp [hlogX, hlogN]
   calc
     Finset.sum Goldbach.BG_Identity.bandU

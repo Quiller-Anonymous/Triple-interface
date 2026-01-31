@@ -48,12 +48,12 @@ lemma M_off_sub_M_raw_eq_sum (C : Channels) (X N : ℕ) :
     add_comm]
 
 lemma errAO_eq_M_off_sub_M_raw_of_Mcanon_eq
-    {C : Channels} {X N : ℕ} (hM : Goldbach.AO_Core.Mcanon N = M_off C X N) :
+    {C : Channels} {X N : ℕ} (hM : Goldbach.AO_Core.Mcanon X N = M_off C X N) :
     Goldbach.AO_Core.errAO X N = M_off C X N - M_raw X N := by
   simp [Goldbach.AO_Core.errAO, M_raw, hM]
 
 lemma errAO_decomp_window_of_Mcanon_eq
-    {C : Channels} {X N : ℕ} (hM : Goldbach.AO_Core.Mcanon N = M_off C X N) :
+    {C : Channels} {X N : ℕ} (hM : Goldbach.AO_Core.Mcanon X N = M_off C X N) :
     Goldbach.AO_Core.errAO X N =
       C.E_smooth X N + C.E_mellin X N + C.E_kernel X N + C.E_off X N := by
   calc

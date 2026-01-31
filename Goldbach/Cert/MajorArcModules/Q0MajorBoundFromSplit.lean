@@ -42,7 +42,7 @@ theorem q0MajorDeviationBound_of_small_large
     (hSmall :
       ∀ {X N : ℕ},
         X0 ≤ X → N ∈ EvenIn X H →
-          ‖corr_integral_major_Q0_small X N Δ - corrModel N‖ ≤ εs)
+          ‖corr_integral_major_Q0_small X N Δ - corrModel X N‖ ≤ εs)
     (hLarge :
       ∀ {X N : ℕ},
         X0 ≤ X → N ∈ EvenIn X H →
@@ -63,4 +63,3 @@ theorem q0MajorDeviationBound_of_small_large
 end
 
 end Goldbach.Cert.MajorArcModules.Q0MajorBoundFromSplit
-

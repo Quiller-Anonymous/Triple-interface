@@ -1,4 +1,4 @@
-import Goldbach.ParallelTenorFunX
+import Goldbach.ParallelTenorFunXCore
 import Goldbach.Cert.MajorArcCalibrationFunX
 
 /-!

@@ -57,15 +57,15 @@ private lemma P_BG_nonneg (X N : ℕ) (k : ℤ) : 0 ≤ Goldbach.BG_Bank.P_BG X 
             else 0 : ℝ) := by
     intro n hn
     by_cases hcond : ( (n : ℤ) - ((N : ℤ) - (n : ℤ)) = k )
-    · have hw1 : 0 ≤ Goldbach.BG_Bank.wX X n := by simp [Goldbach.BG_Bank.wX]
-      have hw2 : 0 ≤ Goldbach.BG_Bank.wX X (N - n) := by simp [Goldbach.BG_Bank.wX]
+    · have hw1 : 0 ≤ Goldbach.BG_Bank.wX X n := Goldbach.BG_Bank.wX_nonneg X n
+      have hw2 : 0 ≤ Goldbach.BG_Bank.wX X (N - n) := Goldbach.BG_Bank.wX_nonneg X (N - n)
       have hΛ1 : 0 ≤ Goldbach.BG_Bank.Λ n := Λp_nonneg n
       have hΛ2 : 0 ≤ Goldbach.BG_Bank.Λ (N - n) := Λp_nonneg (N - n)
       have hA : 0 ≤ Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n :=
         mul_nonneg hw1 hΛ1
       have hB : 0 ≤ Goldbach.BG_Bank.wX X (N - n) * Goldbach.BG_Bank.Λ (N - n) :=
         mul_nonneg hw2 hΛ2
-      simpa [Goldbach.BG_Bank.P_BG, hcond] using mul_nonneg hA hB
+      simpa [hcond] using mul_nonneg hA hB
     · simp [hcond]
   have hsum_nonneg :
       0 ≤ Finset.sum (Finset.Icc 2 (N - 2)) (fun n =>
@@ -158,12 +158,11 @@ private lemma rep_of_R_bank_pos {X N : ℕ} (hpos : 0 < Goldbach.BG_Identity.R_b
             else 0 : ℝ) := by
     intro n hn
     by_cases hcond : ( (n : ℤ) - ((N : ℤ) - (n : ℤ)) = k )
-    · have hw1 : 0 ≤ Goldbach.BG_Bank.wX X n := by simp [Goldbach.BG_Bank.wX]
-      have hw2 : 0 ≤ Goldbach.BG_Bank.wX X (N - n) := by simp [Goldbach.BG_Bank.wX]
+    · have hw1 : 0 ≤ Goldbach.BG_Bank.wX X n := Goldbach.BG_Bank.wX_nonneg X n
+      have hw2 : 0 ≤ Goldbach.BG_Bank.wX X (N - n) := Goldbach.BG_Bank.wX_nonneg X (N - n)
       have hΛ1 : 0 ≤ Goldbach.BG_Bank.Λ n := Λp_nonneg n
       have hΛ2 : 0 ≤ Goldbach.BG_Bank.Λ (N - n) := Λp_nonneg (N - n)
-      have hA : 0 ≤ Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n :=
-        mul_nonneg hw1 hΛ1
+      have hA : 0 ≤ Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n := mul_nonneg hw1 hΛ1
       have hB : 0 ≤ Goldbach.BG_Bank.wX X (N - n) * Goldbach.BG_Bank.Λ (N - n) :=
         mul_nonneg hw2 hΛ2
       simpa [hcond] using mul_nonneg hA hB
@@ -185,11 +184,10 @@ private lemma rep_of_R_bank_pos {X N : ℕ} (hpos : 0 < Goldbach.BG_Identity.R_b
         (Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n) *
           (Goldbach.BG_Bank.wX X (N - n) * Goldbach.BG_Bank.Λ (N - n)) := by
     simpa [hcond] using hnpos
-  have hA_nonneg : 0 ≤ Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n := by
-    simpa [Goldbach.BG_Bank.wX] using mul_nonneg (by norm_num : (0:ℝ) ≤ 1) (Λp_nonneg n)
-  have hB_nonneg : 0 ≤ Goldbach.BG_Bank.wX X (N - n) * Goldbach.BG_Bank.Λ (N - n) := by
-    simpa [Goldbach.BG_Bank.wX] using
-      mul_nonneg (by norm_num : (0:ℝ) ≤ 1) (Λp_nonneg (N - n))
+  have hA_nonneg : 0 ≤ Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n :=
+    mul_nonneg (Goldbach.BG_Bank.wX_nonneg X n) (Λp_nonneg n)
+  have hB_nonneg : 0 ≤ Goldbach.BG_Bank.wX X (N - n) * Goldbach.BG_Bank.Λ (N - n) :=
+    mul_nonneg (Goldbach.BG_Bank.wX_nonneg X (N - n)) (Λp_nonneg (N - n))
   have hAB := (mul_pos_iff).1 hprod_pos
   have hApos : 0 < Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n := by
     rcases hAB with ⟨h1, _⟩ | ⟨h1, _⟩
@@ -201,8 +199,19 @@ private lemma rep_of_R_bank_pos {X N : ℕ} (hpos : 0 < Goldbach.BG_Identity.R_b
     · exact h2
     · exfalso
       exact (not_lt_of_ge hB_nonneg) h2
-  have hΛnpos : 0 < Goldbach.BG_Bank.Λ n := by simpa [Goldbach.BG_Bank.wX] using hApos
-  have hΛmpos : 0 < Goldbach.BG_Bank.Λ (N - n) := by simpa [Goldbach.BG_Bank.wX] using hBpos
+  have hΛnpos : 0 < Goldbach.BG_Bank.Λ n := by
+    -- Since `wX ≥ 0`, positivity of the product forces `Λ n > 0`.
+    have hw0 : 0 ≤ Goldbach.BG_Bank.wX X n := Goldbach.BG_Bank.wX_nonneg X n
+    rcases (mul_pos_iff).1 hApos with ⟨_hwpos, hΛpos⟩ | ⟨hwneg, _hΛneg⟩
+    · exact hΛpos
+    · exfalso
+      exact (not_lt_of_ge hw0) hwneg
+  have hΛmpos : 0 < Goldbach.BG_Bank.Λ (N - n) := by
+    have hw0 : 0 ≤ Goldbach.BG_Bank.wX X (N - n) := Goldbach.BG_Bank.wX_nonneg X (N - n)
+    rcases (mul_pos_iff).1 hBpos with ⟨_hwpos, hΛpos⟩ | ⟨hwneg, _hΛneg⟩
+    · exact hΛpos
+    · exfalso
+      exact (not_lt_of_ge hw0) hwneg
   have hn_prime : Nat.Prime n := by
     by_contra hn
     simpa [Goldbach.BG_Bank.Λ, hn] using hΛnpos

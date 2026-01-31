@@ -1,4 +1,5 @@
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundConventionalAxiom
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundSpec
 import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
@@ -32,10 +33,12 @@ noncomputable section
 
 noncomputable abbrev Us : ℝ := (Q0MajorSmallCertData.data.U : ℝ)
 
-axiom major_arc_small_beta_upperBound :
-  Q0MajorSmallUpperBound Δ_canon Us
+theorem major_arc_small_beta_upperBound :
+  Q0MajorSmallUpperBound Δ_canon Us := by
+  simpa [Us] using
+    (Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundConventionalAxiom.major_arc_small_beta_upperBound
+      (Δ := Δ_canon) (U := Us))
 
 end
 
 end Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
-

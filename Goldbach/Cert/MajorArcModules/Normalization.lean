@@ -13,10 +13,10 @@ open Goldbach.Cert.MajorArcAxiomsFunX
 
 noncomputable section
 
--- Convenience: in this project `weight_mass X = 1`, so the model is just `sigma N`.
-lemma RΛ_model_eq_sigma (X N : ℕ) :
-    RΛ_model X N = Goldbach.AO_SigmaModel.sigma N := by
-  simp [RΛ_model, Goldbach.AO_WeightMass.weight_mass]
+lemma RΛ_model_eq_sigma_mul_weight_mass (X N : ℕ) :
+    RΛ_model X N =
+      Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X := by
+  simp [RΛ_model]
 
 /-- Log-scaled version of the smoothed correlation (undoes the payload’s `(log N)^{-2}`). -/
 noncomputable def RΛ_smooth_logScaled (X N : ℕ) : ℝ :=

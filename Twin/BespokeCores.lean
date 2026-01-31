@@ -1,6 +1,6 @@
 import Twin.ChecklistAxioms
 import Twin.ChecklistSme
-import Twin.MinorArcFourthMoment
+import Twin.MinorArcDispersionEnergy
 import Twin.MinorArcSupBound
 
 /-!
@@ -14,8 +14,8 @@ They are **not proved** here.  The project’s hypothesis-only checklist entrypo
 (`Twin/ChecklistEntrypoint.lean`) treats these as
 typeclass hypotheses (so the pipeline remains axiom-free). The default “fool’s gold” build
 postulates the required hypotheses in `Twin/ChecklistSmeDefaultAxioms.lean` (Core 2 via the decomposed
-`PinnedMajorsMainTermModel`, and Core 1 via the conventional `MinorArcSupBound` package; see also
-the alternative fourth-moment replacement below).
+`PinnedMajorsMainTermModel`, and Core 1 via the conventional `MinorArcDispersionEnergyBound` package;
+see also the optional `MinorArcSupBound` replacement below).
 
 Numerics (external, for human sanity-checking only; not used in proofs):
 * for `P.S = { odd primes < 1000 }`, a collaborator reported the odd-prime product
@@ -84,24 +84,45 @@ structure MinorArcSquareMassCore : Prop where
         ≤ (P.eps^2 * SS^2) * (P.H + 1) / 9
 
 /-!
-## Core 1 (replacement): minor-arc fourth-moment budget
+## Core 1 (replacement): minor-arc dispersion / energy bound (unnormalized)
 
-This is a more conventional-looking hypothesis that implies `MinorMassAtSqSumBudget` via
-`Twin.ChecklistAxioms.minorMassAtSqSumBudget_of_fourthMoment` (`Twin/MinorArcFourthMoment.lean`).
+This is the recommended “conventional” hypothesis to replace the bespoke Core 1 square-mass axiom.
+It is stated directly on the *correlation functional* itself:
+
+`M_Y := ∫_{α ∈ minor(Y)} S_Y(α) * conj(S_Y(α)) * e(-2α) dα`.
+
+It implies `MinorMassAtSqSumBudget` via
+`Twin.ChecklistAxioms.minorMassAtSqSumBudget_of_dispersionEnergy`
+(`Twin/MinorArcDispersionEnergy.lean`).
+
+Warning: analytic feedback suggests this *unnormalized* `O(H)` energy bound may be conjectural for
+von Mangoldt weights; see the normalized variant below.
 -/
 
-structure MinorArcFourthMomentCore : Prop where
-  integrable :
-    ∀ Y : ℕ,
-      MeasureTheory.IntegrableOn
-        (fun α : ℝ =>
-          (Twin.MajorArc.minorArcInd (sme := sme) (X := (Y : ℝ)) (H := (P.H : ℝ)) α)
-            * (‖Twin.SW.sumValue Lambda Wwin (Y : ℝ) (P.H : ℝ) α‖ ^ (4 : ℕ)))
-        (Set.Icc (0 : ℝ) 1)
+structure MinorArcDispersionEnergyCore : Prop where
   budget :
     ∀ X : ℕ, P.X0 ≤ X →
       (Twin.ChecklistAxioms.bigIcc (X := X)).sum
-          (fun Y => Twin.ChecklistAxioms.minorArcFourthMomentAt (sme := sme) Y)
+          (fun Y => ‖Twin.ChecklistAxioms.minorMassAtC (sme := sme) Y‖ ^ (2 : ℕ))
+        ≤ (P.eps^2 * SS^2) * (P.H + 1) / 9
+
+/-!
+## Core 1 (replacement, normalized): dispersion energy at `H·log X` scale
+
+This is the “theorem-shaped” statement suggested by analytic feedback:
+the correlation functional is normalized by `N(H,X) = H·log X` (or `H·log Y`).
+
+As written, this does **not** imply the checklist budget used by the gate; it is included as a
+mathematician-facing intermediate target.
+-/
+
+structure MinorArcDispersionEnergyCoreNorm : Prop where
+  budget_norm :
+    ∀ X : ℕ, P.X0 ≤ X →
+      (Twin.ChecklistAxioms.bigIcc (X := X)).sum
+          (fun Y =>
+            (‖Twin.ChecklistAxioms.minorMassAtC (sme := sme) Y‖
+              / Twin.ChecklistAxioms.energyNorm (X := X)) ^ (2 : ℕ))
         ≤ (P.eps^2 * SS^2) * (P.H + 1) / 9
 
 /-!
@@ -162,13 +183,12 @@ theorem minorArcSquareMassCore_to_typeclass
     Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := sme) :=
   ⟨h.budget⟩
 
-theorem minorArcFourthMomentCore_to_typeclass
-    (h : MinorArcFourthMomentCore (sme := sme)) :
+theorem minorArcDispersionEnergyCore_to_typeclass
+    (h : MinorArcDispersionEnergyCore (sme := sme)) :
     Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := sme) := by
-  haveI : Twin.ChecklistAxioms.MinorArcFourthMomentBound (sme := sme) :=
-    { integrable := h.integrable
-      budget := h.budget }
-  exact Twin.ChecklistAxioms.minorMassAtSqSumBudget_of_fourthMoment (sme := sme)
+  haveI : Twin.ChecklistAxioms.MinorArcDispersionEnergyBound (sme := sme) :=
+    { budget := h.budget }
+  exact Twin.ChecklistAxioms.minorMassAtSqSumBudget_of_dispersionEnergy (sme := sme)
 
 theorem minorArcSupBoundCore_to_typeclass
     (h : MinorArcSupBoundCore (sme := sme)) :

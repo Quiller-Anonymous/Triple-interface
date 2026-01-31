@@ -100,9 +100,9 @@ Define intermediate approximants to the projected main term and set:
 
 Then `M_canon X N = M_raw X N + E_smooth + E_mellin + E_kernel + E_off` is **pure algebra**.
 
-2) **Conventional-analysis layer (may remain axiomatic at “gold standard”)**
+2) **Conventional-analysis layer (axiomatic boundary at gold / polished gold)**
 
-Provide conventional theorems/axioms that bound each remainder on the canonical window:
+Provide theorem-shaped axioms that bound each remainder on the canonical window:
 `|E_* X N| ≤ δ_*` for `X0 ≤ X` and `N ∈ EvenIn X H`.
 
 Finally, define the global `AO_Core.Mcanon N` to coincide with the canonical-window `M_canon X N`

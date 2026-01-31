@@ -33,9 +33,6 @@ noncomputable def E_off (X N : ℕ) : ℝ :=
   (Goldbach.AO_OffDiag.sigmaHonest N - TailBlock.sigma_trunc_Q0 N) *
     Goldbach.AO_WeightMass.weight_mass X
 
-lemma E_off_congr_X (X₁ X₂ N : ℕ) : E_off X₁ N = E_off X₂ N := by
-  simp [E_off, Goldbach.AO_WeightMass.weight_mass]
-
 theorem E_off_bound {X N : ℕ}
     (hX : BankParams.X0 ≤ X)
     (hN : N ∈ Windows.EvenIn X BankParams.H) :

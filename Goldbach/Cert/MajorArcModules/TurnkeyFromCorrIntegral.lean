@@ -98,29 +98,40 @@ private lemma norm_normFactor_le (N : ℕ) (hN : X0 ≤ N) :
   rw [hnorm]
   exact hnf_le
 
-private lemma normFactor_mul_corrModel_eq_sigma (N : ℕ) (hN : X0 ≤ N) :
-    (normFactor N : ℂ) * corrModel N = (Goldbach.AO_SigmaModel.sigma N : ℂ) := by
+private lemma normFactor_mul_corrModel_eq_sigma_mass (X N : ℕ) (hN : X0 ≤ N) :
+    (normFactor N : ℂ) * corrModel X N =
+      (Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X : ℂ) := by
   have hlog : (13 : ℝ) ≤ Real.log (N : ℝ) := thirteen_le_log_of_X0_le (X := N) hN
   have hlog_ne : Real.log (N : ℝ) ≠ 0 := ne_of_gt (lt_of_lt_of_le (by norm_num : (0 : ℝ) < 13) hlog)
   have hpow_ne : (Real.log (N : ℝ)) ^ 2 ≠ 0 := pow_ne_zero 2 hlog_ne
   -- Prove the corresponding identity in `ℝ`, then cast to `ℂ`.
   have hReal :
-      normFactor N * ((Real.log (N : ℝ)) ^ 2 * (800 : ℝ) * Goldbach.AO_SigmaModel.sigma N)
+      normFactor N * ((Real.log (N : ℝ)) ^ 2 * (800 : ℝ)
+          * Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X)
         =
-      Goldbach.AO_SigmaModel.sigma N := by
+      Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X := by
     set L : ℝ := (Real.log (N : ℝ)) ^ 2
     have hL : L ≠ 0 := by simpa [L] using hpow_ne
     -- Unfold `normFactor`, rewrite everything in terms of `L`, and let `simp` cancel.
     -- The only nontrivial cancellation is `(1/L) * L = 1`, which uses `hL`.
     -- The `mul_assoc` hints are only for reassociation, not for rewriting numerics.
-    have : (1 / 800 : ℝ) * ((1 / L : ℝ) * (L * ((800 : ℝ) * Goldbach.AO_SigmaModel.sigma N)))
-        = Goldbach.AO_SigmaModel.sigma N := by
+    have :
+        (1 / 800 : ℝ) *
+            ((1 / L : ℝ) *
+              (L * ((800 : ℝ) * Goldbach.AO_SigmaModel.sigma N)
+                * Goldbach.AO_WeightMass.weight_mass X))
+          =
+        Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X := by
       simp [one_div, hL, mul_assoc, mul_left_comm, mul_comm]
     -- Now match the displayed expression with the original one.
     simpa [normFactor, L, mul_assoc, mul_left_comm, mul_comm, div_eq_mul_inv] using this
   -- Cast the real identity into `ℂ` and rewrite the LHS to match `corrModel`.
-  have hC : ((normFactor N * ((Real.log (N : ℝ)) ^ 2 * (800 : ℝ) * Goldbach.AO_SigmaModel.sigma N)) : ℂ)
-      = (Goldbach.AO_SigmaModel.sigma N : ℂ) := by
+  have hC :
+      ((normFactor N
+          * ((Real.log (N : ℝ)) ^ 2 * (800 : ℝ)
+              * Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X)) : ℂ)
+        =
+      (Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X : ℂ) := by
     simpa using congrArg (fun r : ℝ => (r : ℂ)) hReal
   simpa [corrModel, mul_assoc, mul_left_comm, mul_comm] using hC
 
@@ -134,31 +145,35 @@ inequality bookkeeping. The “log interaction” is limited to the fixed inequa
 theorem turnkey_of_corr_integral_bound
     (ε : ℝ)
     (hCorr :
-      ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H → ‖corr_integral X N - corrModel N‖ ≤ ε)
+      ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H → ‖corr_integral X N - corrModel X N‖ ≤ ε)
     (hε :
       (1 / 135200 : ℝ) * ε ≤ δ_major_canon) :
     TurnkeyMajorArcCanon := by
   refine ⟨?_⟩
   intro X N hX hN
   have hN0 : X0 ≤ N := X0_le_of_mem_EvenIn (X := X) (N := N) hX hN
-  have hCorr' : ‖corr_integral X N - corrModel N‖ ≤ ε := hCorr hX hN
+  have hCorr' : ‖corr_integral X N - corrModel X N‖ ≤ ε := hCorr hX hN
 
   -- Work in `ℂ` and then switch back to `ℝ` at the end.
   have hsmoothC :
       (RΛ_smooth X N : ℂ) = (normFactor N : ℂ) * corr_integral X N := by
     simpa [normFactor, mul_assoc, mul_left_comm, mul_comm] using
       (RΛ_smooth_cast_eq_norm_mul_corr_integral (X := X) (N := N))
-  have hmodelC : (RΛ_model X N : ℂ) = (Goldbach.AO_SigmaModel.sigma N : ℂ) := by
-    simp [RΛ_model_eq_sigma]
+  have hmodelC :
+      (RΛ_model X N : ℂ) =
+        (Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X : ℂ) := by
+    simp [RΛ_model_eq_sigma_mul_weight_mass]
 
   have hdiffC :
       (RΛ_smooth X N : ℂ) - (RΛ_model X N : ℂ)
         =
-      (normFactor N : ℂ) * (corr_integral X N - corrModel N) := by
+      (normFactor N : ℂ) * (corr_integral X N - corrModel X N) := by
     -- Substitute the two identities and factor out `normFactor`.
     rw [hsmoothC, hmodelC]
-    have hmain : (normFactor N : ℂ) * corrModel N = (Goldbach.AO_SigmaModel.sigma N : ℂ) :=
-      normFactor_mul_corrModel_eq_sigma (N := N) hN0
+    have hmain :
+        (normFactor N : ℂ) * corrModel X N =
+          (Goldbach.AO_SigmaModel.sigma N * Goldbach.AO_WeightMass.weight_mass X : ℂ) :=
+      normFactor_mul_corrModel_eq_sigma_mass (X := X) (N := N) hN0
     -- `nf*corr - sigma = nf*corr - nf*corrModel = nf*(corr - corrModel)`.
     simp [hmain, mul_sub, sub_eq_add_neg, add_assoc, add_left_comm, add_comm, mul_add, mul_assoc]
 
@@ -176,13 +191,13 @@ theorem turnkey_of_corr_integral_bound
       simpa [hnf_abs] using (norm_normFactor_le (N := N) hN0)
     calc
       ‖(RΛ_smooth X N : ℂ) - (RΛ_model X N : ℂ)‖
-          = ‖(normFactor N : ℂ) * (corr_integral X N - corrModel N)‖ := by
+          = ‖(normFactor N : ℂ) * (corr_integral X N - corrModel X N)‖ := by
               simpa using congrArg (fun z : ℂ => ‖z‖) hdiffC
-      _ = |normFactor N| * ‖corr_integral X N - corrModel N‖ := by
+      _ = |normFactor N| * ‖corr_integral X N - corrModel X N‖ := by
               -- `‖(r:ℂ)‖ = |r|` for `r : ℝ`.
               simpa [hnf_abs] using
-                (norm_mul (normFactor N : ℂ) (corr_integral X N - corrModel N))
-      _ ≤ (1 / 135200 : ℝ) * ‖corr_integral X N - corrModel N‖ := by
+                (norm_mul (normFactor N : ℂ) (corr_integral X N - corrModel X N))
+      _ ≤ (1 / 135200 : ℝ) * ‖corr_integral X N - corrModel X N‖ := by
               exact mul_le_mul_of_nonneg_right hnf_abs_le (norm_nonneg _)
       _ ≤ (1 / 135200 : ℝ) * ε := by
               exact mul_le_mul_of_nonneg_left hCorr' (by norm_num)

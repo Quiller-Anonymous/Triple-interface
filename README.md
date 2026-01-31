@@ -7,7 +7,12 @@ Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple
 
 ## Status legend:
 - Platinum standard: builds; unconditional proof; no `axiom`/`sorry`/`admit` dependencies (beyond core classical axioms).
-- Gold standard: builds; end-to-end proof depending only on explicitly listed **conventional math axioms**. - **Conventional math axiom** means a textbook/Mathlib-candidate statement that is parameterized and invariant across project constants/encodings (i.e. it does not bake in our pinned windows, numeric caps, bespoke certificates, etc.).
+- Gold standard: builds; end-to-end proof depending only on explicitly listed **conventional math axioms**.
+  - **Conventional math axiom** means a textbook/Mathlib-candidate statement that is parameterized and invariant across project constants/encodings (i.e. it does not bake in our pinned windows, numeric caps, bespoke certificates, etc.).
+- Polished gold standard: builds; end-to-end proof with a small, explicitly listed set of **paper-quality analytic tool axioms**
+  (project-neutral “theorem-shaped” boundaries that may be *non-textbook* and not in Mathlib yet, e.g. SSU/interzone-style operator bounds),
+  and with all **project instantiations** and **pinned numeric budgets** discharged in-repo (proved or checked by certificates).
+  - Polished gold is *weaker than gold* (it allows non-textbook analytic tool axioms), but *stronger than fool’s gold* (it forbids project-pinned caps as axioms).
 - Fool's gold standard: builds end-to-end proof, but some remaining dependencies are *project-specific* axioms/sorries/admits (not conventional math or project-invariant formulas). If the project includes a finite-base/certificate component, that component is completed and checked; otherwise this clause is N/A.
 - Silver standard: builds; end-to-end conditional proof where a required project component (finite base, numeric certificates, calibration bounds, etc.) is still incomplete or not wired in.
 - Iron standard: builds; partial/leaf theorems exist but there is no stable end-to-end pipeline yet (assumptions may be idiosyncratic; certificates/components typically incomplete).
@@ -16,16 +21,20 @@ Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: gold
--- The Option-B pipeline entry point `Goldbach/GoldFunX_OptionB.lean` now routes the major-arc step
-through the conventional theorem-shaped boundary `Goldbach/Cert/MajorArcPowerSavingSpec.lean`
-(`majorArc_powerSaving`), rather than a project-pinned window/cap axiom. The σ-tail channel is
-**axiom-free** (explicit divisor-sum majorant + real bound `|sigmaTail Q N| ≤ (180/Q)·N²`).
+1. Goldbach conjecture -- Current status: fool's gold (Option‑B textbook major‑arc boundary); polished‑gold workbench in progress
+-- The Option‑B entry point `Goldbach/GoldFunX_OptionB_Gold.lean` routes the major‑arc step through the
+  conventional theorem‑shaped boundary `Goldbach/Cert/MajorArcPowerSavingSpec.lean` (`majorArc_powerSaving`),
+  rather than a project‑pinned window/cap axiom.
+-- The σ‑tail channel is **axiom‑free** (explicit divisor‑sum majorant + real bound `|sigmaTail Q N| ≤ (180/Q)·N²`).
 -- A separate “turnkey” pinned-cap route still exists for convenience:
 `Goldbach/GoldFunX_OptionB_Cert.lean` (this is *fool’s gold* under the above standard).
+-- Polished‑gold target (in progress): keep a small auditable list of “analytic tool” axioms (e.g. an SSU/interzone bundle)
+  and prove/certify our project-specific instantiations (major-arc sub-bounds, TT*/Toeplitz kernel masses, and minor-energy
+  lever-bundle/Gram-decay inputs) so the remaining axioms are theorem-shaped and reusable across Goldbach/Twin.
 2. Twin primes conjecture -- Current status: fool’s gold (default build); conditional (hypothesis-only entrypoint)
 -- Hypothesis-only checklist entrypoint: `Twin/ChecklistEntrypoint.lean` (`Twin.ChecklistEntrypoint.twins_in_all_large_windows`) is axiom-free in-repo and takes the remaining analytic inputs as explicit hypotheses/typeclasses (see `Twin/ChecklistAxioms.lean`).
 -- Verified 2026-01-27: `lake build Twin.ChecklistEntrypoint` succeeds locally.
+-- Verified 2026-01-27: `lake build All` succeeds locally (default `All.lean` target).
 -- Default build is **fool’s gold**: `Twin/ChecklistEntrypointDefault.lean` imports `Twin/ChecklistSmeDefaultAxioms.lean` (via `Twin/ChecklistRouteDefault.lean`), which postulates the conventional analytic hypotheses as explicit `axiom`s for the frozen model `sme := Twin.ChecklistSme.sme`.
 -- Goldbach-side hook (default) is also **fool’s gold** for the same reason: `Goldbach/TwinGold.lean` runs the Twin pipeline via a `Twin.HasTwinTI` instance exported from `Goldbach/TI/TwinInstance.lean`, which is currently derived from the same checklist hypotheses.
 3. The alt-zeta construct (nuanced primes detector) -- Current status: gold (B2 interface)
@@ -200,19 +209,21 @@ This section lists (1) the hypothesis surface of the gold entrypoints, and (2) a
 `axiom` declarations that exist only for convenience “fool’s gold” instantiations.
 
 **Gold entrypoints (axiom-free; hypothesis-based)**
-- `Twin/ChecklistEntrypoint.lean` exposes `Twin.ChecklistEntrypoint.twins_in_all_large_windows`. It takes a `SmoothMajorArcEstimate` argument and assumes conventional analytic inputs as typeclasses (`DsFourierAtSumBudget`, `DsPrimePowerAtSumBudget`, `PinnedMajorsSWErrorEnvelopeBudget`, `PinnedMajorsMainTermModel`, `MinorArcSupBound`). The two checklist-budget classes `MinorMassAtSqSumBudget` and `PinnedMajorsMainTermEval` are derived automatically from `MinorArcSupBound` (`Twin/MinorArcSupBound.lean`) and `PinnedMajorsMainTermModel` (`Twin/PinnedMajorsMainTermModel.lean`).
+- `Twin/ChecklistEntrypoint.lean` exposes `Twin.ChecklistEntrypoint.twins_in_all_large_windows`. It takes a `SmoothMajorArcEstimate` argument and assumes analytic inputs as typeclasses (`DsFourierAtSumBudget`, `DsPrimePowerAtSumBudget`, `PinnedMajorsSWErrorEnvelopeBudget`, `PinnedMajorsMainTermModel`, `MinorArcDispersionEnergyBound`). The checklist-budget classes `MinorMassAtSqSumBudget` and `PinnedMajorsMainTermEval` are derived automatically from `MinorArcDispersionEnergyBound` (`Twin/MinorArcDispersionEnergy.lean`) and `PinnedMajorsMainTermModel` (`Twin/PinnedMajorsMainTermModel.lean`).
+  - Note: `Twin/MinorArcDispersionEnergy.lean` also records a more “plausible” *normalized* variant `MinorArcDispersionEnergyBoundNorm` (at `H·log X` scale), but it is not currently strong enough on its own to feed the checklist gate.
+- `Twin/TIMinorArcGate.lean` introduces a TI-aligned *Core 1* interface: “uniform-in-shift minor-arc bound” + “pin Fourier ℓ¹ tail bound”. It includes a stronger (paper-faithful) pin hypothesis `PinWeightedTail` (Lemma 14.9 shape) ⇒ `PinL1Bound`, and paper-facing wrappers (`PaperWrappers.CH1RawScaled` / `PaperWrappers.CH1Raw`) for converting a raw bound on `Iraw(X,t)` into the dimensionless `I(X,t)`. From these TI-shaped hypotheses it derives a paper-facing `Twin.CLSL2.Bound P emin` for a simple constant `emin`.
 - `Goldbach/TwinGold.lean` exposes `Goldbach.TwinGold.twins_in_all_large_windows_default`, which runs the Twin pipeline using a `Twin.HasTwinTI` instance exported by `Goldbach/TI/TwinInstance.lean` (also conditional on the same hypotheses).
 
 **Explicit `axiom`s (used only by the fool’s-gold default instantiation)**
 - `Twin/ChecklistSmeDefaultAxioms.lean:32` `instSW_bound` (smoothed major-arc Siegel–Walfisz estimate in the polylogarithmic major-arc range; the repo currently freezes the modulus cap at `q ≤ (log H)^B` for stability of `∀ X` statements).
 - `Twin/ChecklistSmeDefaultAxioms.lean:42` `pinnedMajors_SW_error_envelope_budget` (budget ensuring the SW approximation error integrates into the pinned-major bookkeeping allowance).
 - `Twin/ChecklistSmeDefaultAxioms.lean:56` `pinnedMajors_mainTerm_model` (decomposed Core 2: a deterministic model identity for `majMassMainTerm` plus two numeric bounds; see `Twin/PinnedMajorsMainTermModel.lean`).
-- `Twin/ChecklistSmeDefaultAxioms.lean:65` `minorArc_supBound` (minor-arc `L∞` bound for `Twin.SW.sumValue` plus a constant gate; this implies `MinorMassAtSqSumBudget` via `Twin/MinorArcSupBound.lean`).
+- `Twin/ChecklistSmeDefaultAxioms.lean:65` `minorArc_dispersionEnergyBound` (Core 1: dispersion/energy bound on the *minor-arc correlation integrals*; implies `MinorMassAtSqSumBudget` via `Twin/MinorArcDispersionEnergy.lean`).
 - `Twin/ChecklistSmeDefaultAxioms.lean:74` `dsFourierAt_sum_bigIcc_budget` (Fourier/smoothing half of the desmoothing discrepancy budget).
 - `Twin/ChecklistSmeDefaultAxioms.lean:80` `dsPrimePowerAt_sum_bigIcc_budget` (prime-power disposal half of the desmoothing discrepancy budget).
 
 **Bespoke-core statements (mathematician-facing, no proofs)**
-- `Twin/BespokeCores.lean:1` restates the remaining Twin-specific analytic cores as readable standalone statements, and records conventional replacements for Core 1 (fourth-moment and/or sup-bound variants).
+- `Twin/BespokeCores.lean:1` restates the remaining Twin-specific analytic cores as readable standalone statements, and records conventional replacements for Core 1 (checklist-style energy/sup variants). The TI-gate-shaped Core 1 work lives in `Twin/TIMinorArcGate.lean`.
 
 # ALT-ZETA
 
@@ -317,4 +328,5 @@ This section lists (1) the hypothesis surface of the gold entrypoint(s), and (2)
 - A reasonable draft of Twin Primes was completed in October. No real progress was made on Riemann -- it produced blather, in part because I had no insight into what was required to complete it.
 - November: I became curious if this was genuinely interesting math or just AI Slop. In late November I began work on machine coding the proof of Goldbach (VS Code Studio, Lean 4), in an attempt to see if the underlying fundamentals were slop or genuine. I also started a new approach to Riemann (inspired by conversations with Copilot): I realized that the completion of the extended triple interface might help in creating an enhanced primes detector function that would be informative to efforts at solving Riemann. This became the "alt-Zeta" project.
 - December 2025 was all coding and revisions, mainly struggles with compiling the finite base chunks on an underpowered laptop, and then unexpected wiring issues in hooking up the finite base to the analytic engine. Mid-December, Codex was functionally useless, and Copilot on Github was of very limited help. Progress became noticeably quicker when I created files to help it understand the limits of our codebase (Mathlib) and also started to use AGENTS.md to guide it using Codex in VS Code Studio. The project had more or less grown beyond MathGPT by this point.
-- By early January 2026, Codex was operating more or less on its own with minimal prompting; something has clearly changed. Most work was now in decomposing bespoke axioms into conventions, lemmas, and constants. January 3, 2026: Goldbach reached gold status for the first time, and on January 6, Twin Primes reaches gold status for the first time; work on Alt-Zeta begins. Then the haggling started; discovered problems with the sigma tail and major arc. Most of the month has been a battle over budgets and constants, trying to find a path to platinum (unconditional proof, no axioms) for Goldbach.
+- By early January 2026, Codex was operating more or less on its own with minimal prompting; something has clearly changed. Most work was now in decomposing bespoke axioms into conventions, lemmas, and constants. Early January 2026: axiom audits became cleaner and the “gold vs fool’s-gold” boundary became more explicit; work on Alt‑Zeta begins. Then the haggling started; discovered problems with the sigma tail and major arc. Much of the month has been a battle over budgets and constants, trying to find a path toward “platinum” (unconditional, no axioms) and a more precise intermediate target (“polished gold”: auditable tool axioms + discharged project instantiations). 
+- Jan 30: I came to realize that the SSU part of the Goldbach was being treated as conventional or textbook math, as it is too ambitious to prove it as part of the Goldbach project end-to-end. So I split it into a separate project and let Goldbach work on an instantiation of SSU complete with project-specific parameters. New plan: bring Goldbach up to polished gold with SSU-I, then take a few months to prove SSU independently (to platinum), thereby (hopefully) bringing Goldbach to platinum.

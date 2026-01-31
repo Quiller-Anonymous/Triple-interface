@@ -26,12 +26,13 @@ noncomputable section
 
 abbrev UC : Type := Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC
 
-private lemma aTerm_eq_Lambda (X n : ℕ) : aTerm X n = (Goldbach.BG_Bank.Λ n : ℂ) := by
-  -- In the current repo, `wX` is definitionally constant `1`.
-  simp [MajorArcStep10RLSmoothIntegral.aTerm, Goldbach.BG_Bank.wX]
+private lemma aTerm_eq_wX_mul_Lambda (X n : ℕ) :
+    aTerm X n = ((Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n : ℝ) : ℂ) := by
+  simp [MajorArcStep10RLSmoothIntegral.aTerm, mul_assoc]
 
-noncomputable def expSumTrim (N : ℕ) (γ : UC) : ℂ :=
-  ∑ n ∈ Finset.Ico 4 ((N - 2) + 1), (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)
+noncomputable def expSumTrim (X N : ℕ) (γ : UC) : ℂ :=
+  ∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+    aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)
 
 private lemma s_filter_ge4_eq_Ico (N : ℕ) :
     (s N).filter (fun n => 4 ≤ n) = Finset.Ico 4 ((N - 2) + 1) := by
@@ -54,79 +55,76 @@ private lemma s_filter_ge4_eq_Ico (N : ℕ) :
 
 private lemma expSum_eq_sum_Lambda (X N : ℕ) (γ : UC) :
     expSum X N γ =
-      ∑ n ∈ s N, (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
+      ∑ n ∈ s N, aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
   classical
-  unfold MajorArcStep12ShiftedExpSums.expSum
-  refine Finset.sum_congr rfl ?_
-  intro n hn
-  simp [aTerm_eq_Lambda (X := X) (n := n), mul_assoc]
+  rfl
 
 private lemma expSumTrim_eq_filter (X N : ℕ) (γ : UC) :
-    expSumTrim N γ = ∑ n ∈ (s N).filter (fun n => 4 ≤ n),
-      (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
+    expSumTrim X N γ = ∑ n ∈ (s N).filter (fun n => 4 ≤ n),
+      aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
   classical
   simp [expSumTrim, s_filter_ge4_eq_Ico]
 
 private lemma expSum_sub_expSumTrim_eq_sum_small (X N : ℕ) (γ : UC) :
-    expSum X N γ - expSumTrim N γ =
+    expSum X N γ - expSumTrim X N γ =
       ∑ n ∈ (s N).filter (fun n => n < 4),
-        (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
+        aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
   classical
   -- Split `s N` into the `n<4` and `4≤n` parts.
   have hsplit :
-      (∑ n ∈ s N, (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
+      (∑ n ∈ s N, aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
         =
       (∑ n ∈ (s N).filter (fun n => n < 4),
-          (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
+          aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
         +
       (∑ n ∈ (s N).filter (fun n => 4 ≤ n),
-          (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)) := by
+          aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)) := by
     -- Split `s N` into the `n < 4` and `4 ≤ n` parts.
     -- (`¬ n < 4` is definitionally `4 ≤ n`.)
     simpa [Nat.not_lt] using
       (Finset.sum_filter_add_sum_filter_not
         (s := s N)
-        (f := fun n => (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
+        (f := fun n => aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
         (p := fun n => n < 4)).symm
   -- Substitute `expSum` and `expSumTrim`.
   have hexp : expSum X N γ =
-      ∑ n ∈ s N, (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) :=
+      ∑ n ∈ s N, aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) :=
     expSum_eq_sum_Lambda (X := X) (N := N) (γ := γ)
-  have htrim : expSumTrim N γ =
+  have htrim : expSumTrim X N γ =
       ∑ n ∈ (s N).filter (fun n => 4 ≤ n),
-        (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) :=
+        aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) :=
     expSumTrim_eq_filter (X := X) (N := N) (γ := γ)
   -- Rearrange.
   -- `a = b + c` implies `a - c = b`.
   calc
-    expSum X N γ - expSumTrim N γ
-        = (∑ n ∈ s N, (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
+    expSum X N γ - expSumTrim X N γ
+        = (∑ n ∈ s N, aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
             -
           (∑ n ∈ (s N).filter (fun n => 4 ≤ n),
-            (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)) := by
+            aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)) := by
           rw [hexp, htrim]
     _ = ∑ n ∈ (s N).filter (fun n => n < 4),
-          (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
+          aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
           -- Use the split identity: `(a + b) - b = a`, without expanding `fourier`.
           let A : ℂ :=
             ∑ n ∈ (s N).filter (fun n => n < 4),
-              (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)
+              aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)
           let B : ℂ :=
             ∑ n ∈ (s N).filter (fun n => 4 ≤ n),
-              (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)
+              aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)
           have hsplitAB :
               (∑ n ∈ s N,
-                  (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
+                  aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ))
                 = A + B := by
             simpa [A, B] using hsplit
           calc
             (∑ n ∈ s N,
-                (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)) - B
+                aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)) - B
                 = (A + B) - B := by
                     rw [hsplitAB]
             _ = A := add_sub_cancel_right A B
             _ = ∑ n ∈ (s N).filter (fun n => n < 4),
-                  (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
+                  aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ) := by
                   simp [A]
 
 private lemma norm_fourier_nat (n : ℕ) (γ : UC) :
@@ -155,21 +153,21 @@ controlled by the finitely many missing indices `n=2,3`.
 
 This is uniform in `γ` and uses only the inequality `Λ(n) ≤ log N` for `n≤N`. -/
 theorem norm_expSum_sub_expSumTrim_le (X N : ℕ) (γ : UC) (hN : 6 ≤ N) :
-    ‖expSum X N γ - expSumTrim N γ‖ ≤ 2 * Real.log (N : ℝ) := by
+    ‖expSum X N γ - expSumTrim X N γ‖ ≤ 2 * Real.log (N : ℝ) := by
   classical
   -- Rewrite as a sum over the `n<4` slice of `s N`.
   have hdiff := expSum_sub_expSumTrim_eq_sum_small (X := X) (N := N) (γ := γ)
   -- Triangle inequality on the finite sum.
   have htri :
       ‖∑ n ∈ (s N).filter (fun n => n < 4),
-          (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖
+          aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖
         ≤
       ∑ n ∈ (s N).filter (fun n => n < 4),
-        ‖(Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ := by
+        ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ := by
     simpa using
       (norm_sum_le (s := (s N).filter (fun n => n < 4))
         (f := fun n =>
-          (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)))
+          aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)))
   -- Bound each term by `log N` and count at most two terms.
   have hN2 : 2 ≤ N := le_trans (by decide : (2:ℕ) ≤ 6) hN
   have hΛnonneg : ∀ n : ℕ, 0 ≤ Goldbach.BG_Bank.Λ n := by
@@ -193,7 +191,7 @@ theorem norm_expSum_sub_expSumTrim_le (X N : ℕ) (γ : UC) (hN : 6 ≤ N) :
     simpa using le_trans hcard' (by decide : (Finset.Icc 2 3).card ≤ 2)
   have hterm :
       ∀ n ∈ (s N).filter (fun n => n < 4),
-        ‖(Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ ≤ Real.log (N : ℝ) := by
+        ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ ≤ Real.log (N : ℝ) := by
     intro n hn
     have hn_s : n ∈ s N := (Finset.mem_filter.mp hn).1
     have hn_le : n ≤ N := by
@@ -203,20 +201,34 @@ theorem norm_expSum_sub_expSumTrim_le (X N : ℕ) (γ : UC) (hN : 6 ≤ N) :
     have hΛabs : |Goldbach.BG_Bank.Λ n| ≤ Real.log (N : ℝ) := by
       -- `Λ n ≥ 0`, so `|Λ n| = Λ n`.
       simpa [abs_of_nonneg (hΛnonneg n)] using hΛ
-    -- `‖(Λ n : ℂ) * fourier‖ = |Λ n|` (since `‖fourier‖ = 1`).
+    -- `‖aTerm X n * fourier‖ = |wX*Λ| ≤ |Λ|`.
+    have hwX : |Goldbach.BG_Bank.wX X n| ≤ 1 := Goldbach.BG_Bank.abs_wX_le_one X n
+    have hmul :
+        |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n|
+          ≤ |Goldbach.BG_Bank.Λ n| := by
+      -- `|wX| ≤ 1` and `|Λ| ≥ 0`.
+      simpa [abs_mul, mul_assoc] using
+        (mul_le_mul_of_nonneg_right hwX (abs_nonneg (Goldbach.BG_Bank.Λ n)))
     have hnorm :
-        ‖(Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ = |Goldbach.BG_Bank.Λ n| := by
-      simp [norm_mul, norm_fourier_nat (n := n) (γ := γ)]
-    simpa [hnorm] using hΛabs
+        ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖
+          =
+        |Goldbach.BG_Bank.wX X n * Goldbach.BG_Bank.Λ n| := by
+      -- `aTerm` is a real scalar in `ℂ`, and `‖fourier‖ = 1`.
+      simp [MajorArcStep10RLSmoothIntegral.aTerm, aTerm_eq_wX_mul_Lambda, norm_mul,
+        norm_fourier_nat (n := n) (γ := γ), abs_mul]
+    have hnorm_le_abs :
+        ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ ≤ |Goldbach.BG_Bank.Λ n| := by
+      simpa [hnorm] using hmul
+    exact le_trans hnorm_le_abs hΛabs
   -- Put it all together.
   have hsum :
       (∑ n ∈ (s N).filter (fun n => n < 4),
-        ‖(Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖)
+        ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖)
         ≤
       2 * Real.log (N : ℝ) := by
     have hsum_le_const :
         (∑ n ∈ (s N).filter (fun n => n < 4),
-          ‖(Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖)
+          ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖)
           ≤
         ∑ _n ∈ (s N).filter (fun n => n < 4), Real.log (N : ℝ) := by
       refine Finset.sum_le_sum ?_
@@ -238,19 +250,19 @@ theorem norm_expSum_sub_expSumTrim_le (X N : ℕ) (γ : UC) (hN : 6 ≤ N) :
         (mul_le_mul_of_nonneg_right hcard' hlog)
     have hsum' :
         (∑ n ∈ (s N).filter (fun n => n < 4),
-          ‖(Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖)
+          ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖)
           ≤
         (((s N).filter (fun n => n < 4)).card : ℝ) * Real.log (N : ℝ) := by
       simpa [hconst] using hsum_le_const
     exact le_trans hsum' hcardR
   -- Use the difference identity and the norm bound on the sum.
   calc
-    ‖expSum X N γ - expSumTrim N γ‖
+    ‖expSum X N γ - expSumTrim X N γ‖
         = ‖∑ n ∈ (s N).filter (fun n => n < 4),
-            (Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ := by
+            aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ := by
           simpa [hdiff]
     _ ≤ ∑ n ∈ (s N).filter (fun n => n < 4),
-          ‖(Goldbach.BG_Bank.Λ n : ℂ) * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ := htri
+          ‖aTerm X n * (fourier (T := (1 : ℝ)) (n : ℤ) γ : ℂ)‖ := htri
     _ ≤ 2 * Real.log (N : ℝ) := hsum
 
 end

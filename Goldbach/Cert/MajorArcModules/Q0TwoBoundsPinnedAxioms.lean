@@ -4,7 +4,7 @@ import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert
-import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitzAxiom
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitz
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
 import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
@@ -35,7 +35,7 @@ open Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundSpec
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
-open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitzAxiom
+open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitz
 open Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 noncomputable section
@@ -76,11 +76,11 @@ The numeric budget `U` comes from the generated TT* certificate data (currently 
 -/
 
 -- The remaining pinned assumption is now the Toeplitz expression upper bound (see
--- `Q0MajorTailTTStarUpperBoundFromToeplitzAxiom.lean`); the TT* `kSupport` upper bound is derived.
+-- `Q0MajorTailTTStarUpperBoundFromToeplitz.lean`); the TT* `kSupport` upper bound is derived.
 theorem innerMajorQ0_full_ttstar_kSupport_upperBound :
     Q0InnerMajorFullTTStarKSupportUpperBound Δ_canon Ut := by
-  simpa [Ut, Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitzAxiom.U_target] using
-    Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitzAxiom.innerMajorQ0_full_ttstar_kSupport_upperBound
+  simpa [Ut, Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitz.U_target] using
+    Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitz.innerMajorQ0_full_ttstar_kSupport_upperBound
 
 end
 

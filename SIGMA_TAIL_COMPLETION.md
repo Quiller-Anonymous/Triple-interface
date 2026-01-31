@@ -156,11 +156,12 @@ Windowed budget closes (proved)
 
 ## Conclusion
 
-The σ-tail work is **not** at “gold” by the strict conventional-math standard yet.
+The σ-tail work is **axiom-free** (beyond core classical axioms) and is therefore compatible with both
+the “gold” and “polished gold” standards as defined in `README.md`.
 
 What is proved is an explicit, axiom-free **absolute majorant** for `|sigmaTail Q N|` that depends
 on the arithmetic of `N` (via a divisor sum), plus a conservative pipeline-usable real bound derived
 from it.
 
-**Status for Gold:** σ-tail is not currently the “gold blocker” for the canonical theorem; major-arc
-calibration is.
+**Status:** σ-tail is not currently the blocker for discharging the remaining analytic inputs; the
+major-arc and minor-energy boundaries are.

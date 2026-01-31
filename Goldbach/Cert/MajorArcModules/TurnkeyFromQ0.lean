@@ -40,7 +40,7 @@ theorem turnkey_of_q0_two_bounds
     (h₂ :
       ∀ {X N : ℕ},
         X0 ≤ X → N ∈ EvenIn X H →
-          ‖corr_integral_major_Q0 X N Δ - corrModel N‖ ≤ ε₂)
+          ‖corr_integral_major_Q0 X N Δ - corrModel X N‖ ≤ ε₂)
     (hε : (1 / 135200 : ℝ) * (ε₁ + ε₂) ≤ δ_major_canon) :
     TurnkeyMajorArcCanon := by
   refine
@@ -55,4 +55,3 @@ theorem turnkey_of_q0_two_bounds
 end
 
 end Goldbach.Cert.MajorArcModules.TurnkeyFromQ0
-

@@ -1,7 +1,7 @@
 import Twin.ChecklistSme
 import Twin.ChecklistAxioms
 import Twin.PinnedMajorsMainTermModel
-import Twin.MinorArcSupBound
+import Twin.MinorArcDispersionEnergy
 
 /-!
 Twin/ChecklistSmeDefaultAxioms.lean
@@ -62,14 +62,14 @@ instance : Twin.ChecklistAxioms.PinnedMajorsMainTermModel (sme := sme) :=
 instance : Twin.ChecklistAxioms.PinnedMajorsMainTermEval (sme := sme) :=
   Twin.ChecklistAxioms.pinnedMajorsMainTermEval_of_model (sme := sme)
 
-axiom minorArc_supBound :
-  Twin.ChecklistAxioms.MinorArcSupBound (sme := sme)
+axiom minorArc_dispersionEnergyBound :
+  Twin.ChecklistAxioms.MinorArcDispersionEnergyBound (sme := sme)
 
-instance : Twin.ChecklistAxioms.MinorArcSupBound (sme := sme) :=
-  minorArc_supBound
+instance : Twin.ChecklistAxioms.MinorArcDispersionEnergyBound (sme := sme) :=
+  minorArc_dispersionEnergyBound
 
 instance : Twin.ChecklistAxioms.MinorMassAtSqSumBudget (sme := sme) :=
-  Twin.ChecklistAxioms.minorMassAtSqSumBudget_of_supBound (sme := sme)
+  Twin.ChecklistAxioms.minorMassAtSqSumBudget_of_dispersionEnergy (sme := sme)
 
 axiom dsFourierAt_sum_bigIcc_budget :
   Twin.ChecklistAxioms.DsFourierAtSumBudget

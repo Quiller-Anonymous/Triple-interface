@@ -176,7 +176,7 @@ lemma errAO_bound (Hoff : OffDiagHyp)
 lemma McanoN_lb_cAO (Hoff : OffDiagHyp) [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X)
     (hN : N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H) :
-    Mcanon Hoff X N ≥ Goldbach.AO_Major.cAO (caps Hoff) := by
+    Mcanon Hoff X N ≥ Goldbach.AO_Major.cAO (caps Hoff) X := by
   have hX' : (10 ^ 6 : ℕ) ≤ X := by simpa [Goldbach.BankParams.X0] using hX
   have hN' : N ∈ Goldbach.Windows.EvenIn X (10 ^ 4) := by
     simpa [Goldbach.BankParams.H] using hN
@@ -189,9 +189,9 @@ lemma McanoN_lb_cAO (Hoff : OffDiagHyp) [Goldbach.AO_SigmaPos.SigmaLowerOnWindow
 
   have herr : |errAO Hoff X N| ≤ δAO Hoff := errAO_bound (Hoff := Hoff) (X := X) (N := N) hX hN
   have herr_lo : -(δAO Hoff) ≤ errAO Hoff X N := (abs_le.mp herr).1
-
-  have hraw : Goldbach.AO_Stages.M_raw X N = Goldbach.AO_SigmaPos.sigma N := by
-    simp [Goldbach.AO_Stages.M_raw, Goldbach.AO_SigmaPos.sigma, Goldbach.AO_Core.weight_mass]
+  have hwm0 : 0 ≤ Goldbach.AO_Core.weight_mass X := by
+    simpa [Goldbach.AO_Core.weight_mass, Goldbach.AO_WeightMass.weight_mass] using
+      (sq_nonneg (Goldbach.BG_Bank.wScale X))
 
   calc
     Mcanon Hoff X N
@@ -199,17 +199,28 @@ lemma McanoN_lb_cAO (Hoff : OffDiagHyp) [Goldbach.AO_SigmaPos.SigmaLowerOnWindow
             -- `errAO = Mcanon - M_raw`
             ring_nf
             simp [errAO, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
-    _   ≥ Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin + (-(δAO Hoff)) := by
+    _   ≥ Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin * Goldbach.AO_Core.weight_mass X
+            + (-(δAO Hoff)) := by
+            have hsigma' :
+                Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin ≤ Goldbach.AO_Core.sigma N := by
+              simpa [Goldbach.AO_SigmaPos.sigma, Goldbach.AO_Core.sigma] using hσ
             have hs0 :
-                Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin ≤ Goldbach.AO_Stages.M_raw X N := by
-              simpa [hraw] using hσ
+                Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin * Goldbach.AO_Core.weight_mass X
+                  ≤ Goldbach.AO_Stages.M_raw X N := by
+              have hmul :
+                  Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin * Goldbach.AO_Core.weight_mass X
+                    ≤ Goldbach.AO_Core.sigma N * Goldbach.AO_Core.weight_mass X :=
+                mul_le_mul_of_nonneg_right hsigma' hwm0
+              simpa [Goldbach.AO_Stages.M_raw] using hmul
             have hsum :
-                Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin + (-(δAO Hoff))
-                  ≤ Goldbach.AO_Stages.M_raw X N + errAO Hoff X N :=
+                Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin * Goldbach.AO_Core.weight_mass X
+                  + (-(δAO Hoff))
+                    ≤ Goldbach.AO_Stages.M_raw X N + errAO Hoff X N :=
               add_le_add hs0 herr_lo
             simpa [add_assoc, add_left_comm, add_comm] using hsum
-    _   = Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin - δAO Hoff := by ring
-    _   = Goldbach.AO_Major.cAO (caps Hoff) := by
+    _   = Goldbach.AO_SigmaPos.SigmaLowerOnWindow.σmin * Goldbach.AO_Core.weight_mass X
+            - δAO Hoff := by ring
+    _   = Goldbach.AO_Major.cAO (caps Hoff) X := by
             simp [Goldbach.AO_Major.cAO, δAO]
 
 end Goldbach.AO_InstantiateTenorFunX

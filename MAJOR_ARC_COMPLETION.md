@@ -4,11 +4,16 @@
 
 **Status: partial**.
 
-**Gold acceptance check (local):** run `lake env lean Goldbach/AxiomAuditGold.lean` and inspect the
-output of `#print axioms Goldbach.goldbach_funX_canon`. “Gold” (axiom transparency) means no
-pinned/certificate project-specific axioms remain (in particular, nothing from
-`Goldbach/Cert/MajorArcCanonCalibrationFromPinned.lean`); note this does **not** report remaining
-hypotheses in the theorem statement.
+**Gold / polished-gold acceptance check (local):** run `lake env lean Goldbach/AxiomAuditGold.lean`
+and inspect the output of `#print axioms Goldbach.goldbach_funX_canon`.
+
+- “Gold” means: the remaining `axiom`s are only **conventional math axioms** (textbook / Mathlib-candidate,
+  project-neutral theorem-shapes), and there are no project-pinned caps/certificates in the import chain.
+- “Polished gold” means: project-pinned caps/certificates are still forbidden as `axiom`s, but the remaining
+  `axiom`s may include a small list of **paper-quality analytic tool axioms** (e.g. SSU/interzone-style bounds).
+
+This audit does **not** report remaining hypotheses in theorem statements; it only reports `axiom`-style
+dependencies in the import chain.
 
 The codebase cleanly separates:
 
@@ -32,7 +37,7 @@ small “certificate interface”, and downstream files only use the calibration
 useful if you want to discharge `InnerSwapOnWindow` by importing a pinned/certificate instance, but
 it is no longer required by the canonical Goldbach endpoint.
 
-## What is already “conventional” (gold-eligible)
+## What is already conventional (gold-eligible)
 
 **File: `Goldbach/Cert/MajorArcAxiomsFunX.lean`**
 
@@ -43,7 +48,7 @@ it is no longer required by the canonical Goldbach endpoint.
   for each exponent `A`, there exists a constant `C(A)` with
   `|RΛ_smooth X N - RΛ_model X N| ≤ C(A)/(log X)^A` on the window.
 
-This is the right “conventional math” surface area: parameterized and not tied to our pinned caps.
+This is the right conventional surface area: parameterized and not tied to our pinned caps.
 
 ## What remains bespoke (blocks a fully discharged major arc)
 
@@ -56,7 +61,7 @@ This is the right “conventional math” surface area: parameterized and not ti
 - Downstream files consume the pinned cap only through the calibration API
   (`major_arc_eval_on_window_canon_of_calibration`), so swapping this out later is localized.
   This file is no longer in the import chain for `Goldbach.goldbach_funX_canon`, but it remains one
-  plausible way to *supply* `InnerSwapOnWindow` if you accept a pinned/certificate boundary.
+  plausible way to *supply* `InnerSwapOnWindow` if you accept a pinned/certificate boundary (fool’s gold).
 
 **File: `Goldbach/Cert/MajorArcStep25MinorArcCert.lean`**
 
@@ -65,7 +70,7 @@ This is the right “conventional math” surface area: parameterized and not ti
   yielding the pinned minor-arc consequence
   `norm_corr_integral_minor_le_kernelCap_mul_sq_canon`.
   This is not currently in the canonical Goldbach endpoint’s dependency chain, but it is another
-  non-theorem “analytic boundary” if the end goal is a fully theorem-level major-arc proof.
+  non-theorem analytic boundary if the end goal is a fully theorem-level major-arc proof.
 
 ## Constant plumbing (already transparent)
 

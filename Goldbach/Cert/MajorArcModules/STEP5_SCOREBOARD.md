@@ -38,8 +38,7 @@ All downstream “turnkey Q0 major arc” code depends only on these interfaces 
     cert check `U_s ≤ εs` (`Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundFromCert.lean`).
   - Still missing: final assembly from BMOR Step20/21 + Step24 main-term identification producing `≤ U_s`.
   - Temporary (Option B): `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundTextbookAxiom.lean`
-    supplies the current analytic assumption `Q0MajorSmallUpperBound Δ_canon U_s` (re-exported by
-    `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean`).
+    supplies the current analytic assumption `Q0MajorSmallUpperBound Δ_canon U_s`.
 - ε₂-large (large β tail, option-3): `Q0InnerMajorFullTTStarKSupportBound Δ_canon M2`
   - Spec/scaffold: `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarCertScaffold.lean`
   - This is the TT*/Parseval payload that ultimately drives `Q0MajorLargeBound Δ_canon εl`.
@@ -47,11 +46,19 @@ All downstream “turnkey Q0 major arc” code depends only on these interfaces 
 The remaining analytic assumptions are centralized in:
 
 - Project-neutral spec sheet: `Goldbach/Cert/MajorArcModules/Q0TwoBoundsConventionalAxioms.lean`
-- Current pinned-cap boundary (fool’s gold): `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean`
+- Current pinned assumptions (fool’s gold): imported directly by `Goldbach/Cert/MajorArcModules/Q0TwoBoundsSpec.lean`:
+  - `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundTextbookAxiom.lean`
+  - `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarUpperBoundFromToeplitz.lean`
+  - `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedgerEngineAxiom.lean`
+
+Note (Stage 2 target): the remaining ε₂-large Step-5 goal is generator-facing:
+`Q0MajorTailTTStarUpperBoundFromToeplitz.toeplitzExprTopTight_upper_le_U_target`,
+where `toeplitzExprTopTight_upper` is the explicit expression from
+`Q0MajorTailTTStarStep5ToeplitzUpperBound.lean`.
 
 Build notes:
 - Gold-grade staging bundle (no pinned axioms): `lake build Goldbach.Cert.MajorArcModules.All`
-- Fool’s-gold turnkey bundle (imports the pinned-cap assumptions via `Q0TwoBoundsSpec.lean`):
+- Fool’s-gold turnkey bundle (imports pinned assumptions via `Q0TwoBoundsSpec.lean`):
   `lake build Goldbach.Cert.MajorArcModules.AllFoolsGold`
 
 ## Deterministic facts already in Lean (reused during tightening)
@@ -649,8 +656,8 @@ Every experiment entry should include:
 - ε₂-large: compute/upper-bound the finite `kSupport` TT* sum bound `U` in
   `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarCertData.lean`
   (now generated; see below).
-- ε₁: either keep the ledger engine as a “conventional” axiom, or replace it by a separate
-  certificate once the SSU/dispersion constants are available.
+- ε₁: either keep the ledger engine as a **paper-quality analytic tool axiom** (polished-gold),
+  or replace it by a separate certificate once the SSU/dispersion constants are available.
 
 ## Generated TT* certificate `U` (current “passes budget” run; not a proof)
 

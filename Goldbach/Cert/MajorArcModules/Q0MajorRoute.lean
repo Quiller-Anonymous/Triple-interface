@@ -6,7 +6,7 @@ import Goldbach.Cert.MajorArcModules.Q0MajorBoundFromSplit
 
 The `Q0` reduction asks for a uniform bound
 
-`‖corr_integral_major_Q0 X N Δ - corrModel N‖ ≤ ε₂`
+`‖corr_integral_major_Q0 X N Δ - corrModel X N‖ ≤ ε₂`
 
 on the canonical window.  The existing module `Q0MajorBoundFromSplit` already provides the
 bookkeeping lemma reducing this to:
@@ -59,7 +59,7 @@ structure Q0MajorSmallBound (Δ εs : ℝ) : Prop where
   bound :
     ∀ {X N : ℕ},
       X0 ≤ X → N ∈ EvenIn X H →
-        ‖corr_integral_major_Q0_small X N Δ - corrModel N‖ ≤ εs
+        ‖corr_integral_major_Q0_small X N Δ - corrModel X N‖ ≤ εs
 
 /-- Interface: large-β tail bound. -/
 structure Q0MajorLargeBound (Δ εl : ℝ) : Prop where

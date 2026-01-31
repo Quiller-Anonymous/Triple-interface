@@ -1,16 +1,17 @@
 import Goldbach.Cert.MajorArcModules.Q0CertData
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
 import Goldbach.Cert.MajorArcModules.Q0MinorBound
-import Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
+import Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundAxiom
 import Goldbach.Cert.MajorArcModules.Q0MajorRoute
 import Goldbach.Cert.MajorArcModules.Q0MajorBound
 import Goldbach.Cert.MajorArcModules.Q0MajorTailFromCert
 import Goldbach.Cert.MajorArcModules.Q0MajorIntegrableProof
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCertScaffold
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert
+import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBound
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
-import Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms
 import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 /-!
@@ -39,8 +40,7 @@ open Goldbach.Windows
 
 open Goldbach.Cert.MajorArcModules.Q0Certificate
 open Goldbach.Cert.MajorArcModules.Q0MinorBound
-open Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
-open Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedger
+open Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundAxiom
 open Goldbach.Cert.MajorArcModules.Q0MajorBound
 open Goldbach.Cert.MajorArcModules.Q0MajorRoute
 open Goldbach.Cert.MajorArcModules.Q0MajorTailSpec
@@ -48,8 +48,11 @@ open Goldbach.Cert.MajorArcModules.Q0MajorTailFromCert
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStar
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCertScaffold
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert
+open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBound
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
+open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
+open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
 open Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 open Goldbach.Cert.MajorArcModules.TurnkeyCanon
 
@@ -65,27 +68,15 @@ noncomputable abbrev εs : ℝ := (Goldbach.Cert.MajorArcModules.Q0MajorSmallCer
 ## ε₁ (Q0-complement): TT*/energy-style bound
 -/
 
-/--
-Analytic axiom (note: Theorem 9.17 + SSU Theorem 6.27 / (6.7)):
-a *ledger-shaped* `ℓ²`/energy bound over the *finite* window `EvenIn X H` for the `Q0`-complement.
-
-This is stated with explicit constants `C2,C3` coming from a small generated `ℚ` certificate
-(`Q0MinorLedgerCertData`), so the only remaining non-generated content is the analytic inequality
-itself.
--/
-lemma q0Minor_ledger_engine :
-    Q0MinorEnergyLedgerEngine Δ_canon C2 C3 :=
-  Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms.ssu_minor_energy_ledger_engine
-
 lemma q0Minor_energy : Q0MinorEnergyBound Δ_canon (((C.ε₁ : ℝ) ^ 2)) := by
   -- `C.ε₁ = 4` in the current generated artifact, so `((C.ε₁)^2) = 16`.
   have hE : (16 : ℝ) = ((C.ε₁ : ℝ) ^ 2) := by
     -- reduce to a concrete rational identity
     dsimp [C, Goldbach.Cert.MajorArcModules.Q0CertData.cert]
     norm_num
-  -- Use the ledger-certificate glue to get energy `≤ 16`, then cast to the expected `E`.
+  -- Use the direct SSU/energy tool axiom.
   have h16 : Q0MinorEnergyBound Δ_canon 16 :=
-    energyBound16_of_ledger_engine (Δ := Δ_canon) q0Minor_ledger_engine
+    Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundAxiom.q0Minor_energyBound16
   simpa [hE] using h16
 
 lemma q0Minor_bound : Q0MinorDeviationBound Δ_canon (C.ε₁ : ℝ) := by
@@ -115,20 +106,27 @@ remaining analytic content is split into a small set of clean assumptions.
 lemma q0Major_integrable : Q0MajorIntegrable Δ_canon :=
   Goldbach.Cert.MajorArcModules.Q0MajorIntegrableProof.q0Major_integrable (Δ := Δ_canon)
 
-private noncomputable abbrev Us : ℝ := (Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData.data.U : ℝ)
-
-lemma q0Major_small_upperBound : Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundSpec.Q0MajorSmallUpperBound Δ_canon Us :=
-  Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms.major_arc_small_beta_upperBound
+lemma q0Major_small_upperBound :
+    Q0MajorSmallUpperBoundSpec.Q0MajorSmallUpperBound Δ_canon
+      Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert.U := by
+  simpa [Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom.Us,
+    Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert.U] using
+    (Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom.major_arc_small_beta_upperBound :
+      Q0MajorSmallUpperBoundSpec.Q0MajorSmallUpperBound Δ_canon
+        Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom.Us)
 
 lemma q0Major_small_bound : Q0MajorSmallBound Δ_canon εs := by
-  -- Upgrade the analytic upper bound `≤ U` to the budgeted `εs` using the certificate check `U ≤ εs`.
-  exact Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert.smallBound_of_upperBound
-    (Δ := Δ_canon) (hU := q0Major_small_upperBound)
+  simpa [εs, Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert.εs] using
+    (smallBound_of_upperBound (Δ := Δ_canon) q0Major_small_upperBound)
 
 lemma q0InnerMajor_full_ttstar_kSupport_upper :
     Q0InnerMajorFullTTStarKSupportUpperBound Δ_canon
       Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert.U :=
-  Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms.innerMajorQ0_full_ttstar_kSupport_upperBound
+  by
+    simpa using
+      (Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBound.q0InnerMajor_full_ttstar_kSupport_upper :
+        Q0InnerMajorFullTTStarKSupportUpperBound Δ_canon
+          Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert.U)
 
 lemma q0InnerMajor_full_ttstar_kSupport :
     Q0InnerMajorFullTTStarKSupportBound Δ_canon M2 :=

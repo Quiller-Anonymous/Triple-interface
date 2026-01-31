@@ -34,6 +34,7 @@ import Goldbach.Rep
 import Goldbach.AO_Major
 import Goldbach.AO_AssembleEnvelope
 import Goldbach.AO_SigmaPos
+import Goldbach.AO_OffDiag.WeightMass
 
 namespace Goldbach.BG_Calib
 
@@ -264,7 +265,7 @@ lemma ppMidband_bound
     reference operator is exactly `errAO`. -/
 lemma conv_ref_const_gap_eq_errAO
   {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-  Goldbach.AO_Major.Mcanon N - BG_Identity.conv_ref_const X N
+  Goldbach.AO_Major.Mcanon X N - BG_Identity.conv_ref_const X N
     = Goldbach.AO_Major.errAO X N := by
   have hconst :
       BG_Identity.conv_ref_const X N =
@@ -279,7 +280,7 @@ lemma conv_ref_const_gap_eq_errAO
 /-- Absolute-value version of `conv_ref_const_gap_eq_errAO`. -/
 lemma conv_ref_const_gap_abs_eq_errAO
   {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-  |Goldbach.AO_Major.Mcanon N - BG_Identity.conv_ref_const X N|
+  |Goldbach.AO_Major.Mcanon X N - BG_Identity.conv_ref_const X N|
     = |Goldbach.AO_Major.errAO X N| := by
   have h := conv_ref_const_gap_eq_errAO (X:=X) (N:=N) hX hN
   simp [h]
@@ -290,22 +291,28 @@ lemma pref_bound_on_window
     {k : ℤ} (hk : k ∈ BG_Identity.S_BG) :
     |BG_Identity.Pref X N k| ≤ SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
   classical
-  -- on `S_BG` the `if` branch fires and weight_mass = 1
+  -- on `S_BG` the `if` branch fires and we get the constant reference value
   have hmass_pos : 0 < BG_Identity.mass_BG := BG_Identity.mass_BG_pos
-  have hσ : |Goldbach.AO_Major.sigma N| ≤ SigmaUpperOnWindow.Cσ :=
+  have hσ : |AO_SigmaPos.sigma N| ≤ SigmaUpperOnWindow.Cσ :=
     SigmaUpperOnWindow.sigma_even_ub_on_window (X:=X) (N:=N) hX hN
+  have hwm : |Goldbach.AO_WeightMass.weight_mass X| ≤ (1 : ℝ) :=
+    Goldbach.AO_OffDiag.weight_mass_abs_le_one_on_window_canon (X := X) hX
   have hmass_nonneg : 0 ≤ BG_Identity.mass_BG := le_of_lt hmass_pos
   have hrewrite :
       |BG_Identity.Pref X N k|
-        = |Goldbach.AO_Major.sigma N| / BG_Identity.mass_BG := by
-    simp [BG_Identity.Pref, hk, Goldbach.AO_Major.weight_mass, abs_div,
-      abs_of_pos hmass_pos]
-  -- divide the σ-bound by the positive mass
-  have hdiv : |Goldbach.AO_Major.sigma N| / BG_Identity.mass_BG
-      ≤ SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG := by
-    have := div_le_div_of_nonneg_right hσ hmass_nonneg
-    simpa using this
-  simpa [hrewrite] using hdiv
+        = (|AO_SigmaPos.sigma N| * |Goldbach.AO_WeightMass.weight_mass X|) / BG_Identity.mass_BG := by
+    simp [BG_Identity.Pref, hk, AO_SigmaPos.sigma, abs_div, abs_mul, abs_of_pos hmass_pos,
+      mul_assoc, mul_left_comm, mul_comm]
+  -- multiply the σ-bound by `|weight_mass| ≤ 1`, then divide by the positive mass
+  have hmul : |AO_SigmaPos.sigma N| * |Goldbach.AO_WeightMass.weight_mass X|
+      ≤ SigmaUpperOnWindow.Cσ * (1 : ℝ) := by
+    have hCσ0 : 0 ≤ SigmaUpperOnWindow.Cσ := SigmaUpperOnWindow.Cσ_nonneg
+    exact mul_le_mul hσ hwm (abs_nonneg _) hCσ0
+  have hdiv :
+      (|AO_SigmaPos.sigma N| * |Goldbach.AO_WeightMass.weight_mass X|) / BG_Identity.mass_BG
+        ≤ (SigmaUpperOnWindow.Cσ * (1 : ℝ)) / BG_Identity.mass_BG := by
+    exact div_le_div_of_nonneg_right hmul hmass_nonneg
+  simpa [hrewrite, mul_one] using hdiv
 
 /-- Inner-band swap bound between the variable reference convolution and the constant reference. -/
 lemma conv_ref_sub_conv_ref_const_bound
@@ -404,21 +411,21 @@ lemma ref_to_M_bound
     [AO_AssembleEnvelope.Decomposition C] [AO_AssembleEnvelope.Bounds C K]
     [SigmaUpperOnWindow]
     {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-    |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+    |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N|
       ≤ AO_AssembleEnvelope.δAO K
         + ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
             (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
   classical
   -- AO envelope on the constant reference
   have hAO :
-      |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N|
+      |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N|
         ≤ AO_AssembleEnvelope.δAO K := by
     have herr : |Goldbach.AO_Major.errAO X N| ≤ AO_AssembleEnvelope.δAO K := by
       simpa using (AO_AssembleEnvelope.errAO_bound (C := C) (K := K) (X := X) (N := N) hX hN)
     have hgap := conv_ref_const_gap_abs_eq_errAO (X := X) (N := N) hX hN
     calc
-      |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N|
-          = |Goldbach.AO_Major.Mcanon N - BG_Identity.conv_ref_const X N| := by
+      |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N|
+          = |Goldbach.AO_Major.Mcanon X N - BG_Identity.conv_ref_const X N| := by
               simp [abs_sub_comm]
       _ = |Goldbach.AO_Major.errAO X N| := by simpa using hgap
       _ ≤ AO_AssembleEnvelope.δAO K := herr
@@ -461,38 +468,38 @@ lemma ref_to_M_bound
 
   -- final triangle inequality
   have hdecomp :
-      BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N
+      BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N
         = (BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
-          + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N) := by ring
+          + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N) := by ring
   have htri :
-      |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+      |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N|
         ≤ |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
-          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N| := by
+          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N| := by
     have habs :
-        |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+        |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N|
           =
         |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
-            + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N)| :=
+            + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N)| :=
       congrArg (fun t : ℝ => |t|) hdecomp
     have htri' :
         |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
-            + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N)|
+            + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N)|
           ≤
         |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
-          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N| :=
+          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N| :=
       abs_add_le _ _
     calc
-      |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+      |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N|
           =
         |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
-            + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N)| := habs
+            + (BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N)| := habs
       _ ≤
         |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
-          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N| := htri'
+          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N| := htri'
   calc
-    |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N|
+    |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N|
         ≤ |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
-          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon N| := htri
+          + |BG_Identity.conv_ref_const X N - Goldbach.AO_Major.Mcanon X N| := htri
     _ ≤ (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
           * ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ))
         + AO_AssembleEnvelope.δAO K := by
@@ -666,34 +673,34 @@ lemma R_to_Mcanon_window
     [AO_AssembleEnvelope.Decomposition C] [AO_AssembleEnvelope.Bounds C K]
     [SigmaUpperOnWindow] [WeightsBridgeHyp]
     {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
-    |BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon N|
+    |BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon X N|
       ≤ δbridge_canon + 0.01
         + (AO_AssembleEnvelope.δAO K
             + ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) *
                 (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)) := by
   -- split R - Mcanon through conv_ref
   have hdecomp :
-      BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon N
+      BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon X N
         = ((BG_Identity.R_bank X N) - BG_Identity.conv_ref X N)
-            + (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N) := by ring
+            + (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N) := by ring
   have htriangle :
-      |BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon N|
+      |BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon X N|
         ≤ |BG_Identity.R_bank X N - BG_Identity.conv_ref X N|
-          + |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N| := by
+          + |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N| := by
     -- triangle inequality on the split `(R - conv_ref) + (conv_ref - Mcanon)`
     have hnorm :
         |BG_Identity.R_bank X N - BG_Identity.conv_ref X N
-            + (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N)|
+            + (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N)|
           ≤ |BG_Identity.R_bank X N - BG_Identity.conv_ref X N|
-              + |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N| := by
+              + |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N| := by
       simpa [Real.norm_eq_abs] using
         (norm_add_le
           (BG_Identity.R_bank X N - BG_Identity.conv_ref X N)
-          (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N))
+          (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N))
     have hsum :
         BG_Identity.R_bank X N - BG_Identity.conv_ref X N
-          + (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N)
-          = BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon N := by ring
+          + (BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N)
+          = BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon X N := by ring
     -- rewrite the left side using `hsum`
     simpa [hsum] using hnorm
   -- bounds for each part
@@ -701,9 +708,9 @@ lemma R_to_Mcanon_window
   have href :=
     ref_to_M_bound (C := C) (K := K) (X := X) (N := N) hX hN
   calc
-    |BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon N|
+    |BG_Identity.R_bank X N - Goldbach.AO_Major.Mcanon X N|
         ≤ |BG_Identity.R_bank X N - BG_Identity.conv_ref X N|
-          + |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon N| := htriangle
+          + |BG_Identity.conv_ref X N - Goldbach.AO_Major.Mcanon X N| := htriangle
     _ ≤ (δbridge_canon + 0.01)
           + (AO_AssembleEnvelope.δAO K
               + ((2*H+1 : ℝ) / (BG_Identity.Ucut : ℝ)) *

@@ -196,34 +196,34 @@ theorem norm_corr_integral_major_Q0_sub_corrModel_le_of_small_large
         =
       corr_integral_major_Q0_small X N Δ + corr_integral_major_Q0_large X N Δ)
     (hs :
-      ‖corr_integral_major_Q0_small X N Δ - corrModel N‖ ≤ εs)
+      ‖corr_integral_major_Q0_small X N Δ - corrModel X N‖ ≤ εs)
     (hl :
       ‖corr_integral_major_Q0_large X N Δ‖ ≤ εl) :
-    ‖corr_integral_major_Q0 X N Δ - corrModel N‖ ≤ εs + εl := by
+    ‖corr_integral_major_Q0 X N Δ - corrModel X N‖ ≤ εs + εl := by
   have hrewrite :
-      corr_integral_major_Q0 X N Δ - corrModel N
+      corr_integral_major_Q0 X N Δ - corrModel X N
         =
-      (corr_integral_major_Q0_small X N Δ - corrModel N) + corr_integral_major_Q0_large X N Δ := by
+      (corr_integral_major_Q0_small X N Δ - corrModel X N) + corr_integral_major_Q0_large X N Δ := by
     -- Substitute `corr = small + large`, then reassociate by ring arithmetic.
     calc
-      corr_integral_major_Q0 X N Δ - corrModel N
+      corr_integral_major_Q0 X N Δ - corrModel X N
           =
-        (corr_integral_major_Q0_small X N Δ + corr_integral_major_Q0_large X N Δ) - corrModel N := by
+        (corr_integral_major_Q0_small X N Δ + corr_integral_major_Q0_large X N Δ) - corrModel X N := by
             simpa [hdecomp]
       _ =
-        (corr_integral_major_Q0_small X N Δ - corrModel N) + corr_integral_major_Q0_large X N Δ := by
+        (corr_integral_major_Q0_small X N Δ - corrModel X N) + corr_integral_major_Q0_large X N Δ := by
             ring
   have htri :
-      ‖(corr_integral_major_Q0_small X N Δ - corrModel N) + corr_integral_major_Q0_large X N Δ‖
-        ≤ ‖corr_integral_major_Q0_small X N Δ - corrModel N‖ + ‖corr_integral_major_Q0_large X N Δ‖ := by
+      ‖(corr_integral_major_Q0_small X N Δ - corrModel X N) + corr_integral_major_Q0_large X N Δ‖
+        ≤ ‖corr_integral_major_Q0_small X N Δ - corrModel X N‖ + ‖corr_integral_major_Q0_large X N Δ‖ := by
     simpa using
-      (norm_add_le (corr_integral_major_Q0_small X N Δ - corrModel N)
+      (norm_add_le (corr_integral_major_Q0_small X N Δ - corrModel X N)
         (corr_integral_major_Q0_large X N Δ))
   calc
-    ‖corr_integral_major_Q0 X N Δ - corrModel N‖
-        = ‖(corr_integral_major_Q0_small X N Δ - corrModel N) + corr_integral_major_Q0_large X N Δ‖ := by
+    ‖corr_integral_major_Q0 X N Δ - corrModel X N‖
+        = ‖(corr_integral_major_Q0_small X N Δ - corrModel X N) + corr_integral_major_Q0_large X N Δ‖ := by
             simpa [hrewrite]
-    _ ≤ ‖corr_integral_major_Q0_small X N Δ - corrModel N‖ + ‖corr_integral_major_Q0_large X N Δ‖ := htri
+    _ ≤ ‖corr_integral_major_Q0_small X N Δ - corrModel X N‖ + ‖corr_integral_major_Q0_large X N Δ‖ := htri
     _ ≤ εs + εl := add_le_add hs hl
 
 /-!

@@ -1,0 +1,600 @@
+Goldbach ε₁ Gram-Decay (3A) Implementation Plan
+=============================================
+
+Goal
+----
+Remove the remaining ε₁ **analytic tool axiom** (polished-gold boundary) by proving an explicit almost-orthogonality / Cotlar–Stein
+Gram-decay bound for a canonical dyadic level decomposition of the minor/Q0-complement statistic.
+
+We want to construct, for each X ≥ X0=10^6:
+  • J_X : Finset ℕ (dyadic levels),
+  • v_{X,j} : EvenIn(X,H) → ℂ (level vectors),
+  • D_{X,j} : ℝ≥0 (diagonal weights),
+such that:
+  (i)  Σ_{j∈J_X} v_{X,j} = f_X, where f_X(N) := corr_integral_minor_Q0 X N Δ (Δ=1),
+  (ii) Gram decay: |⟪v_{X,i}, v_{X,j}⟫| ≤ a(dist(i,j)) √(D_i D_j) with summable a,
+  (iii) Row-sum/Crow: ∀i, Σ_{j∈J_X} a(dist(i,j)) ≤ Crow (automatic from summability),
+and then deduce the ε₁ energy bound via the existing interzone/ledger glue.
+
+Fixed parameters
+----------------
+X0 = 10^6
+H  = 10^4
+Q0 = 30000
+Δ  = 1
+
+All statements must be uniform for X ≥ X0 and N ∈ EvenIn(X,H).
+
+Step A: Canonical dyadic level sets in α
+----------------------------------------
+1) Define Dirichlet major-arc unions up to a cutoff Q:
+     MA_{≤Q}(X) := ⋃_{1≤q≤Q} ⋃_{(a,q)=1} { α ∈ [0,1): |α - a/q| ≤ 1/(qX) }.
+   (Use the same “textbook” arc geometry already in the repo: width 1/(qX).)
+
+2) Define dyadic cutoffs:
+     Q_j := 2^j.
+   Let j0 := ⌈log2(Q0)⌉ and j1(X) := ⌈log2(X)⌉ (or a slightly larger cutoff to ensure coverage).
+
+3) Define dyadic zones:
+     Z_j(X) := MA_{≤Q_{j+1}}(X) \ MA_{≤Q_j}(X), for j ∈ [j0, j1(X)].
+
+4) Prove deterministic set facts:
+   • Z_j(X) are pairwise disjoint.
+   • The union over j∈J_X covers the complement of MA_{≤Q0}(X) up to the chosen top cutoff.
+     (Use Dirichlet approximation / continued fraction lemma: every α is within 1/(qX) of some a/q with q ≤ X.)
+   If exact equality is inconvenient, add one “gap zone” for MA_{≤2^{j0}}(X) \ MA_{≤Q0}(X).
+
+Deliverables (Lean):
+   • def MA_le (X Q) : Set α
+   • def Z (X j) : Set α
+   • lemma disjoint_Z : Disjoint (Z X i) (Z X j) for i≠j
+   • lemma cover_minor : ([0,1) \ MA_{≤Q0}(X)) ⊆ ⋃_{j∈J_X} Z_j(X)
+
+Step B: Define level vectors v_{X,j}
+------------------------------------
+Define f_X(N) := corr_integral_minor_Q0 X N Δ (Δ=1) as in the repo.
+
+Define each level vector by restricting only the α-domain to Z_j(X):
+  v_{X,j}(N) := ∫_{β} ∫_{α∈Z_j(X)} Integrand(X,N,α,β) dα dβ,
+where Integrand is the same integrand used in corr_integral_minor_Q0 (same K(β), same expSum factors, same phase e(-Nα)).
+
+Prove the reconstruction identity:
+  Σ_{j∈J_X} v_{X,j} = f_X  (pointwise in N),
+using disjointness + set coverage + Fubini/Tonelli.
+
+Deliverables (Lean):
+   • def v (X j) : EvenIn(X,H) → ℂ
+   • lemma sum_v_eq_f : (∑ j∈J_X, v X j) = f_X
+
+Step C: Choose diagonal weights D_{X,j}
+----------------------------------------
+Canonical choice:
+  D_{X,j} := ‖v_{X,j}‖_{ℓ^2(EvenIn(X,H))}^2 = Σ_{N∈EvenIn(X,H)} |v_{X,j}(N)|^2.
+
+This makes the Gram inequality easiest to state and keeps D nonnegative by definition.
+(If later you have a sharper analytic upper bound on ‖v_{X,j}‖, you may set D_{X,j} to that upper bound instead.)
+
+Deliverables (Lean):
+   • def D (X j) : ℝ := ‖v X j‖^2
+   • lemma D_nonneg
+
+Step D: Crow lemma (pure combinatorics; prove once)
+---------------------------------------------------
+For any a:ℕ→ℝ≥0, any finite J⊆ℕ, any i:
+  Σ_{j∈J} a(dist(i,j)) ≤ a(0) + 2 Σ_{d≥1} a(d).
+Reason: for each d≥1 there are at most two integers at distance d from i (i-d and i+d).
+
+If a is geometric (preferred):
+  a(d)=C ρ^d, 0≤ρ<1, then Crow = C*(1 + 2ρ/(1-ρ)).
+
+Deliverables (Lean):
+   • lemma rowSum_le_a0_add_two_sum (works for any finset J)
+   • lemma Crow_geom (closed form for geometric decay)
+
+Step E: The analytic heart: Gram decay (SSU / Type-I / alias suppression)
+-------------------------------------------------------------------------
+This is the only “hard” part.
+
+Target analytic statement (geometric decay preferred):
+  |⟪v_{X,i}, v_{X,j}⟫| ≤ C * ρ^{dist(i,j)} * √(D_{X,i}) * √(D_{X,j})
+for all X≥X0 and all i,j∈J_X, with explicit C≥0 and 0≤ρ<1 independent of X.
+
+Equivalent operator-norm formulation (often easier conceptually):
+  Let T_j be the operator that maps the (α,β)-integrand to v_{X,j} by restricting α to Z_j(X).
+  Prove ‖T_i^* T_j‖ ≤ C ρ^{|i-j|}. Then Gram decay follows by Cauchy–Schwarz.
+
+Where the decay comes from:
+  • dyadic separation of denominator scales (q ~ 2^j),
+  • almost-orthogonality of the corresponding kernels after TT*/Cotlar–Stein,
+  • alias suppression / mean-zero to remove constant mode contributions where needed,
+  • Type-I / SSU bounds to control cross-scale leakage.
+
+Engineering advice:
+  • state the Gram decay lemma first as an axiom-shaped “engine lemma” to unblock plumbing,
+    then replace it with a proof as the SSU/Type-I development matures.
+  • keep constants symbolic initially (C, ρ), and only later optimize them.
+
+Step F: Plug into interzone/ledger interface (already in repo)
+--------------------------------------------------------------
+ Once Gram decay is proved:
+  • set a(d)=C ρ^d,
+  • compute Crow = C*(1 + 2ρ/(1-ρ)),
+  • use existing Q0MinorInterzone + Q0MinorCrow to get the row-sum bound,
+  • conclude the ε₁ energy bound for f_X from the lever bundle + interzone lemma,
+  • delete the analytic tool axiom ssu_minor_energy_ledger_engine_exists.
+
+Notes on keeping things cert-friendly
+-------------------------------------
+• Steps A–D are fully deterministic and should be proved in Lean (no computation needed).
+• Step E is the analytic engine: either prove it in Lean from SSU/Type-I machinery with constants,
+  or treat it as the single remaining **analytic tool axiom** boundary (polished-gold) until a proof exists.
+• Once Step E exists with explicit (C,ρ), all remaining numeric checks are simple ℚ inequalities.
+
+Checklist
+---------
+[ ] Define MA_{≤Q}(X), dyadic zones Z_j(X), and prove disjointness/coverage.
+[ ] Define v_{X,j} as zone-restricted corr_integral_minor_Q0 and prove Σ v_{X,j} = f_X.
+[ ] Define D_{X,j} and prove nonnegativity.
+[ ] Prove Crow lemma (row-sum bound) and geometric closed form.
+[ ] Prove (or assume, temporarily) Gram decay with explicit C, ρ.
+[ ] Use existing interzone/ledger glue to derive ε₁ energy bound and remove the axiom.
+
+------
+
+Project-Neutral Analytic Lemma for Dyadic Gram Decay (Bird’s-Eye + “Prove in Bits” Plan)
+=====================================================================================
+
+Context
+-------
+We need a single project-neutral analytic lemma that implies dyadic Gram decay for level vectors
+v_{X,j} (zone-restricted minor/Q0-complement contributions). The dyadic partition alone does not
+produce decay; the decay must come from an almost-orthogonality (Cotlar–Stein / SSU / Type-I) step.
+
+This document states:
+  (1) A canonical “one lemma” schema sufficient to imply geometric (or summable) decay,
+  (2) A staged proof plan (prove in bits) that avoids a snipe hunt,
+  (3) Two viable decay targets: geometric (ideal) or summable polynomial (fallback).
+
+
+Fixed parameters (project)
+--------------------------
+X0 = 10^6, H = 10^4, Q0 = 30000, Δ = 1.
+All statements must hold uniformly for X ≥ X0 and N ∈ EvenIn(X,H).
+
+
+A. Canonical dyadic zones in α
+------------------------------
+Define Dirichlet arc unions up to Q:
+  MA_{≤Q}(X) := ⋃_{1≤q≤Q} ⋃_{(a,q)=1} { α ∈ [0,1): |α - a/q| ≤ 1/(qX) } (mod 1).
+
+Choose dyadic cutoffs:
+  Q_j := 2^j.
+Let j0 := ⌈log2(Q0)⌉, and j1(X) := ⌈log2(X)⌉ (or slightly larger to guarantee coverage by Dirichlet).
+
+Define dyadic zones:
+  Z_j(X) := MA_{≤Q_{j+1}}(X) \ MA_{≤Q_j}(X), for j ∈ J_X := {j0,…,j1(X)}.
+
+Deterministic facts (to prove in Lean):
+  • Z_j(X) are disjoint.
+  • ⋃_{j∈J_X} Z_j(X) covers [0,1) \ MA_{≤Q0}(X) (possibly plus one “gap zone” if needed).
+
+
+B. Level vectors v_{X,j}
+------------------------
+Let f_X(N) := corr_integral_minor_Q0 X N Δ (Δ=1) be the actual minor/Q0-complement statistic.
+
+Define each level vector by restricting the α-integral to Z_j(X):
+  v_{X,j}(N) := ∫_{β} ∫_{α∈Z_j(X)} Integrand(X,N,α,β) dα dβ,
+where Integrand is exactly the corr_integral integrand (same K(β), expSum factors, e(-Nα)).
+
+Then disjointness + coverage + Fubini give:
+  Σ_{j∈J_X} v_{X,j} = f_X (pointwise in N).
+
+Choose diagonal weights:
+  D_{X,j} := ‖v_{X,j}‖_{ℓ^2(EvenIn(X,H))}^2.
+
+
+C. The “one lemma” to aim for (project-neutral)
+------------------------------------------------
+We want an almost-orthogonality (Cotlar–Stein) hypothesis that implies a summable decay function a(d).
+
+Operator formulation:
+  View v_{X,j} = T_{X,j}(G_X), where T_{X,j} is “Fourier-in-N against e(-Nα), restricted to α∈Z_j(X)”
+  and G_X is the remaining (α,β)-dependent integrand source.
+
+Key target: bound cross-operators:
+  (ZoneAO)  ∃ C≥0, 0≤ρ<1 s.t. for all X≥X0 and all i,j∈J_X,
+            ‖T_{X,i}^* T_{X,j}‖ ≤ C ρ^{|i-j|}
+            and similarly ‖T_{X,i} T_{X,j}^*‖ ≤ C ρ^{|i-j|}.
+
+Consequences:
+  • Gram decay: |⟪v_{X,i}, v_{X,j}⟫| ≤ C ρ^{|i-j|} √(D_{X,i} D_{X,j}).
+  • Take a(d)=C ρ^d; Crow = C(1 + 2ρ/(1-ρ)).
+  • Existing Q0MinorInterzone + Q0MinorCrow then imply the ε₁ energy ledger bound.
+
+
+D. “Prove in bits” plan for (ZoneAO)
+------------------------------------
+Rather than trying to prove (ZoneAO) in one shot, prove it via these staged lemmas:
+
+Bit 1: Represent T_{X,j} as a restricted Fourier transform.
+  Show (after integrating β into a function of α if needed):
+    (T_{X,j} f)(N) = ∫_{α∈Z_j(X)} f(α) e(-Nα) dα.
+  Then T_{X,j} depends on j only through the α-mask 1_{Z_j(X)}.
+
+Bit 2: Kernel representation for cross-operators.
+  Show T_{X,i}^* T_{X,j} is an integral operator on L^2([0,1]) with kernel
+    K_{i,j}(α,α') = 1_{Z_i(X)}(α) 1_{Z_j(X)}(α') D_X(α-α'),
+  where D_X is a Dirichlet-type kernel coming from the finite N-window (EvenIn X H).
+  This step is deterministic harmonic analysis (no number theory).
+
+Bit 3: Reduce ‖T_{X,i}^*T_{X,j}‖ to a correlation/overlap quantity.
+  Use Schur test or L^1 bounds for D_X to get
+    ‖T_{X,i}^*T_{X,j}‖ ≤ OverlapMeasure(i,j) * ‖D_X‖_{L^1},
+  or a refined bound in terms of Fourier coefficients of 1_{Z_j(X)}.
+  This is where you choose whether to target geometric or polynomial decay.
+
+Bit 4: Prove OverlapMeasure(i,j) decays with |i-j| using dyadic denominator separation.
+  Here you need the actual analytic engine:
+    • SSU “tube almost orthogonality” / Cotlar–Stein style lemma, and/or
+    • Type-I leakage with alias suppression across dyadic scales,
+    • a large-sieve/dispersion bound specialized to denominator ranges (2^j,2^{j+1}].
+  Output: explicit decay a(|i-j|) (geometric preferred).
+
+Bit 5: Plug decay into Crow lemma and the lever-bundle/ledger interface.
+  Once a(d) is summable, Crow is automatic:
+    Crow := a(0) + 2 Σ_{d≥1} a(d).
+  For a(d)=Cρ^d, Crow = C(1 + 2ρ/(1-ρ)).
+
+
+E. Decay targets (choose one)
+-----------------------------
+Preferred (certificate-friendly):
+  Geometric decay a(d)=Cρ^d with 0≤ρ<1.
+  This yields an explicit closed form Crow = C(1 + 2ρ/(1-ρ)).
+
+Fallback (easier to prove initially):
+  Polynomial decay a(d)=C(1+d)^{-p} with p>1 (summable).
+  Then Crow exists and can be bounded explicitly using an integral test.
+
+Recommendation:
+  If geometric decay is hard initially, prove polynomial decay first to unblock the ledger proof;
+  later refine to geometric decay once stronger SSU machinery is formalized.
+
+
+F. What the engineer should implement now (deterministic plumbing)
+------------------------------------------------------------------
+1) Implement MA_{≤Q}(X), Z_j(X), J_X and prove disjointness/coverage.
+2) Define v_{X,j} by restricting the α-domain to Z_j(X).
+3) Prove Σ_{j∈J_X} v_{X,j} = f_X.
+4) Implement Crow lemma in Lean (row-sum bound from summable a).
+5) Introduce the analytic lemma (ZoneAO) as a temporary axiom-shaped interface if needed.
+6) Later: replace the (ZoneAO) axiom by a proof from SSU/Type-I machinery with explicit constants.
+
+
+G. Summary: the single “one lemma” schema
+-----------------------------------------
+If you can prove (ZoneAO) with explicit (C,ρ) independent of X, then you immediately get the required
+dyadic Gram decay and Crow constant, and the existing interzone/lever-bundle lemma yields the ε₁ energy bound.
+
+-----
+
+Addendum: Proof-Executable Analytic Lemma (Step E / 3A) Specification
+====================================================================
+
+This addendum upgrades the previous “plan-executable” blueprint into a “proof-executable” work document by:
+  (i) pinning down the exact operator and kernel that must satisfy almost-orthogonality,
+  (ii) stating a single project-neutral analytic lemma (with constants) that implies Gram decay,
+  (iii) explaining exactly where the decay in |i-j| is meant to come from,
+  (iv) mapping to the existing Lean objects and giving a constant-tracking policy.
+
+Everything below is compatible with the existing lever-bundle/ledger interface:
+  J_X : Finset ℕ, v_{X,j} : EvenIn(X,H) → ℂ, D_{X,j} : ℝ≥0,
+  Σ_{j∈J_X} v_{X,j} = f_X, and Gram decay ⇒ Crow ⇒ energy.
+
+
+E0. Exact operator model (project-neutral; only depends on the α-mask)
+---------------------------------------------------------------------
+
+Let the ambient Hilbert space for α be Hα := L²([0,1], ℂ) with Lebesgue measure.
+
+Let the N-window be the finite set:
+  WX := EvenIn(X,H) = { N ∈ ℤ : X ≤ N ≤ X+H and N even }.
+Lean uses N as a Finset / Fintype on this set.
+
+Define the restricted Fourier synthesis operator
+  FX : Hα → ℓ²(WX)
+by
+  (FX f)(N) := ∫₀¹ f(α) * e(-N α) dα.
+
+This is the *exact* linear operator in α that appears after you integrate out β and other factors into f(α)
+(and/or treat the β-integral as part of f).
+
+Define the dyadic α-zone projector
+  P_{X,j} : Hα → Hα by
+  (P_{X,j} f)(α) := 1_{Z_j(X)}(α) * f(α).
+
+Then the canonical level operators are:
+  T_{X,j} := FX ∘ P_{X,j}  : Hα → ℓ²(WX).
+
+In the “idealized” case where v_{X,j} is obtained by applying T_{X,j} to the α-dependent source function g_X(α),
+one has:
+  v_{X,j} = T_{X,j}(g_X).
+
+
+E1. Exact TT*/kernel for cross-operators (this is what you must estimate)
+-------------------------------------------------------------------------
+
+The adjoint FX* : ℓ²(WX) → Hα is
+  (FX* u)(α) = Σ_{N∈WX} u(N) * e(N α).
+
+Hence the cross operator on Hα is:
+  T_{X,i}* T_{X,j} = P_{X,i} * (FX* FX) * P_{X,j}.
+
+The middle operator FX* FX is convolution on the torus by the “window Dirichlet kernel” D_X:
+
+  (FX* FX f)(α) = ∫₀¹ D_X(α-α') f(α') dα',
+where
+  D_X(u) := Σ_{N∈WX} e(N u).
+
+This is fully explicit. Because WX is an arithmetic progression of even integers of length about H/2,
+you have a closed form:
+
+Let M := ⌊H/2⌋ and N0 := the smallest even N in [X, X+H]. Then
+  D_X(u) = e(N0 u) * Σ_{m=0}^{M} e(2 m u)
+         = e(N0 u) * (1 - e(2(M+1)u)) / (1 - e(2u))     if e(2u)≠1.
+
+So |D_X(u)| depends only on u via the geometric sum and is bounded by:
+  |D_X(u)| ≤ min(M+1, 1/|e(2u)-1|).
+
+A standard deterministic inequality is:
+  |e(2u)-1| = 2|sin(2πu)| ≥ 4||u||   for ||u||≤1/4,
+so
+  |D_X(u)| ≤ min(M+1, 1/(4||u||))   for all u (after periodic reduction),
+with ||u|| the distance to the nearest integer.
+
+Thus:
+  T_{X,i}* T_{X,j} is the integral operator on Hα with kernel
+    K_{i,j}(α,α') = 1_{Z_i(X)}(α) * D_X(α-α') * 1_{Z_j(X)}(α').
+
+This pins down the exact “Dirichlet-type kernel” previously mentioned.
+
+
+E2. The single project-neutral analytic lemma to import/prove (ZoneAO kernel form)
+----------------------------------------------------------------------------------
+
+To get Gram decay a(|i-j|) with summable a, it suffices to prove an operator-norm decay for the kernels above.
+
+A clean lemma schema is:
+
+  (ZoneAO-Kernel)  There exist explicit constants C≥0 and 0≤ρ<1 such that
+  for all X≥X0 and all i,j ∈ J_X,
+    ‖T_{X,i}* T_{X,j}‖_{Hα→Hα} ≤ C ρ^{|i-j|},
+  and similarly
+    ‖T_{X,i} T_{X,j}*‖_{ℓ²→ℓ²} ≤ C ρ^{|i-j|}.
+
+This implies the Gram bound:
+  |⟪v_{X,i}, v_{X,j}⟫| ≤ C ρ^{|i-j|} * ‖v_{X,i}‖₂ * ‖v_{X,j}‖₂,
+so we can take
+  D_{X,j} := ‖v_{X,j}‖₂²
+and a(d):=Cρ^d, Crow=C(1+2ρ/(1-ρ)).
+
+If geometric decay is too strong initially, replace by polynomial:
+  ‖T_{X,i}* T_{X,j}‖ ≤ C (1+|i-j|)^{-p},  p>1,
+which still yields a summable a and a finite Crow (via an integral test).
+
+
+E3. Where the decay in |i-j| is supposed to come from (what must be shown)
+---------------------------------------------------------------------------
+
+The dyadic zones Z_j(X) are defined by denominator ranges q ∈ (2^j, 2^{j+1}].
+Heuristically:
+  • Z_i and Z_j are supported on rational neighborhoods at very different denominator scales when |i-j| is large.
+  • The kernel D_X(α-α') oscillates on scale ≈ 1/H in u = α-α'.
+  • When denominator scales are separated, the set of differences α-α' supported by Z_i × Z_j avoids the “slow oscillation” region,
+    or has small overlap measure near u=0. This produces small operator norm.
+
+A proof-executable way to express this is a Schur-test bound that reduces the operator norm to row/column integrals:
+
+  ‖T_{X,i}* T_{X,j}‖ ≤ sqrt( sup_{α∈Z_i} ∫_{α'∈Z_j} |D_X(α-α')| dα'  *  sup_{α'∈Z_j} ∫_{α∈Z_i} |D_X(α-α')| dα )
+
+Thus it suffices to bound integrals of |D_X(u)| over the “difference set” of Z_i and Z_j.
+
+What must be proved analytically is that these integrals decay in |i-j|, e.g.
+  sup_{α∈Z_i} ∫_{α'∈Z_j} |D_X(α-α')| dα' ≤ C' ρ^{|i-j|},
+with explicit C', ρ independent of X≥X0.
+
+This is the SSU/interzone content: a scale-separated almost-orthogonality of dyadic denominator zones under convolution
+with the window Dirichlet kernel D_X.
+
+
+E4. Mapping to existing Lean objects / files (to avoid mismatch)
+---------------------------------------------------------------
+
+• corr_integral_minor_Q0:
+  This is the target f_X in ℓ²(EvenIn X H).
+
+• “zone-restricted minor statistic” v_{X,j}:
+  Implement v_{X,j} by restricting only the α-domain to Z_j(X) in the definition of corr_integral_minor_Q0.
+
+• Z_j(X) and MA_{≤Q}(X):
+  Represent as Sets α inside AddCircle 1 or ℝ with mod-1 distance.
+
+• Measure and integrals:
+  Use the same measure theory objects already used for corr_integral (intervalIntegral or Haar measure on AddCircle 1).
+
+• Fubini/Tonelli:
+  Reuse existing lemmas for swapping α/β integrals and finite sums over N where available.
+
+• Window Dirichlet kernel D_X:
+  Define D_X(u) := Σ_{N∈EvenIn(X,H)} e(Nu) as a finite sum (Finset.sum).
+  Prove the closed-form bound |D_X(u)| ≤ min(M+1, 1/(4||u||)) deterministically.
+
+
+E5. Constant-tracking policy (cert-friendly)
+--------------------------------------------
+
+Allowed to be “coarse after squaring”:
+  • Use |D_X(u)| ≤ min(M+1, 1/(4||u||)).
+  • Use measure bounds for Z_j(X) that are crude but explicit (e.g., total measure ≤ const * (2^{j+1}/X)).
+
+Forbidden (numerically fatal):
+  • Any ℓ∞-in-index bound that introduces a factor comparable to |WX| ≈ H.
+  • Any step that drops cancellation before squaring when using Ramanujan sums (not relevant in this α-zone approach unless you
+    further decompose Z_j into arcs and sum over a/q).
+
+Target decay function:
+  • Prefer geometric a(d)=Cρ^d, because Crow is closed-form.
+  • Polynomial is acceptable if geometric is too hard; ensure p>1 to make Crow finite.
+
+
+E6. Deliverable (single analytic tool lemma to import/axiomatize if needed)
+---------------------------------------------------------------------------
+
+If the SSU/Type-I proof is not ready, isolate precisely one project-neutral lemma:
+
+  (DyadicZoneAlmostOrthogonality)  ∃ C≥0, 0≤ρ<1 such that
+    for all X≥X0 and all i,j∈J_X:
+      sup_{α∈Z_i(X)} ∫_{α'∈Z_j(X)} |D_X(α-α')| dα' ≤ C ρ^{|i-j|},
+  and symmetrically swapping i,j.
+
+From this, a Schur-test lemma yields (ZoneAO-Kernel), hence Gram decay, Crow, and the ε₁ energy ledger.
+
+This is recognizable to a referee as a Cotlar–Stein/SSU interzone hypothesis specialized to dyadic denominator zones.
+
+
+Project-Neutral Analytic Lemma for Dyadic Gram Decay (Bird’s-Eye + “Prove in Bits” Plan)
+=====================================================================================
+
+Context
+-------
+We need a single project-neutral analytic lemma that implies dyadic Gram decay for level vectors
+v_{X,j} (zone-restricted minor/Q0-complement contributions). The dyadic partition alone does not
+produce decay; the decay must come from an almost-orthogonality (Cotlar–Stein / SSU / Type-I) step.
+
+This document states:
+  (1) A canonical “one lemma” schema sufficient to imply geometric (or summable) decay,
+  (2) A staged proof plan (prove in bits) that avoids a snipe hunt,
+  (3) Two viable decay targets: geometric (ideal) or summable polynomial (fallback).
+
+
+Fixed parameters (project)
+--------------------------
+X0 = 10^6, H = 10^4, Q0 = 30000, Δ = 1.
+All statements must hold uniformly for X ≥ X0 and N ∈ EvenIn(X,H).
+
+
+A. Canonical dyadic zones in α
+------------------------------
+Define Dirichlet arc unions up to Q:
+  MA_{≤Q}(X) := ⋃_{1≤q≤Q} ⋃_{(a,q)=1} { α ∈ [0,1): |α - a/q| ≤ 1/(qX) } (mod 1).
+
+Choose dyadic cutoffs:
+  Q_j := 2^j.
+Let j0 := ⌈log2(Q0)⌉, and j1(X) := ⌈log2(X)⌉ (or slightly larger to guarantee coverage by Dirichlet).
+
+Define dyadic zones:
+  Z_j(X) := MA_{≤Q_{j+1}}(X) \ MA_{≤Q_j}(X), for j ∈ J_X := {j0,…,j1(X)}.
+
+Deterministic facts (to prove in Lean):
+  • Z_j(X) are disjoint.
+  • ⋃_{j∈J_X} Z_j(X) covers [0,1) \ MA_{≤Q0}(X) (possibly plus one “gap zone” if needed).
+
+
+B. Level vectors v_{X,j}
+------------------------
+Let f_X(N) := corr_integral_minor_Q0 X N Δ (Δ=1) be the actual minor/Q0-complement statistic.
+
+Define each level vector by restricting the α-integral to Z_j(X):
+  v_{X,j}(N) := ∫_{β} ∫_{α∈Z_j(X)} Integrand(X,N,α,β) dα dβ,
+where Integrand is exactly the corr_integral integrand (same K(β), expSum factors, e(-Nα)).
+
+Then disjointness + coverage + Fubini give:
+  Σ_{j∈J_X} v_{X,j} = f_X (pointwise in N).
+
+Choose diagonal weights:
+  D_{X,j} := ‖v_{X,j}‖_{ℓ^2(EvenIn(X,H))}^2.
+
+
+C. The “one lemma” to aim for (project-neutral)
+------------------------------------------------
+We want an almost-orthogonality (Cotlar–Stein) hypothesis that implies a summable decay function a(d).
+
+Operator formulation:
+  View v_{X,j} = T_{X,j}(G_X), where T_{X,j} is “Fourier-in-N against e(-Nα), restricted to α∈Z_j(X)”
+  and G_X is the remaining (α,β)-dependent integrand source.
+
+Key target: bound cross-operators:
+  (ZoneAO)  ∃ C≥0, 0≤ρ<1 s.t. for all X≥X0 and all i,j∈J_X,
+            ‖T_{X,i}^* T_{X,j}‖ ≤ C ρ^{|i-j|}
+            and similarly ‖T_{X,i} T_{X,j}^*‖ ≤ C ρ^{|i-j|}.
+
+Consequences:
+  • Gram decay: |⟪v_{X,i}, v_{X,j}⟫| ≤ C ρ^{|i-j|} √(D_{X,i} D_{X,j}).
+  • Take a(d)=C ρ^d; Crow = C(1 + 2ρ/(1-ρ)).
+  • Existing Q0MinorInterzone + Q0MinorCrow then imply the ε₁ energy ledger bound.
+
+
+D. “Prove in bits” plan for (ZoneAO)
+------------------------------------
+Rather than trying to prove (ZoneAO) in one shot, prove it via these staged lemmas:
+
+Bit 1: Represent T_{X,j} as a restricted Fourier transform.
+  Show (after integrating β into a function of α if needed):
+    (T_{X,j} f)(N) = ∫_{α∈Z_j(X)} f(α) e(-Nα) dα.
+  Then T_{X,j} depends on j only through the α-mask 1_{Z_j(X)}.
+
+Bit 2: Kernel representation for cross-operators.
+  Show T_{X,i}^* T_{X,j} is an integral operator on L^2([0,1]) with kernel
+    K_{i,j}(α,α') = 1_{Z_i(X)}(α) 1_{Z_j(X)}(α') D_X(α-α'),
+  where D_X is a Dirichlet-type kernel coming from the finite N-window (EvenIn X H).
+  This step is deterministic harmonic analysis (no number theory).
+
+Bit 3: Reduce ‖T_{X,i}^*T_{X,j}‖ to a correlation/overlap quantity.
+  Use Schur test or L^1 bounds for D_X to get
+    ‖T_{X,i}^*T_{X,j}‖ ≤ OverlapMeasure(i,j) * ‖D_X‖_{L^1},
+  or a refined bound in terms of Fourier coefficients of 1_{Z_j(X)}.
+  This is where you choose whether to target geometric or polynomial decay.
+
+Bit 4: Prove OverlapMeasure(i,j) decays with |i-j| using dyadic denominator separation.
+  Here you need the actual analytic engine:
+    • SSU “tube almost orthogonality” / Cotlar–Stein style lemma, and/or
+    • Type-I leakage with alias suppression across dyadic scales,
+    • a large-sieve/dispersion bound specialized to denominator ranges (2^j,2^{j+1}].
+  Output: explicit decay a(|i-j|) (geometric preferred).
+
+Bit 5: Plug decay into Crow lemma and the lever-bundle/ledger interface.
+  Once a(d) is summable, Crow is automatic:
+    Crow := a(0) + 2 Σ_{d≥1} a(d).
+  For a(d)=Cρ^d, Crow = C(1 + 2ρ/(1-ρ)).
+
+
+E. Decay targets (choose one)
+-----------------------------
+Preferred (certificate-friendly):
+  Geometric decay a(d)=Cρ^d with 0≤ρ<1.
+  This yields an explicit closed form Crow = C(1 + 2ρ/(1-ρ)).
+
+Fallback (easier to prove initially):
+  Polynomial decay a(d)=C(1+d)^{-p} with p>1 (summable).
+  Then Crow exists and can be bounded explicitly using an integral test.
+
+Recommendation:
+  If geometric decay is hard initially, prove polynomial decay first to unblock the ledger proof;
+  later refine to geometric decay once stronger SSU machinery is formalized.
+
+
+F. What the engineer should implement now (deterministic plumbing)
+------------------------------------------------------------------
+1) Implement MA_{≤Q}(X), Z_j(X), J_X and prove disjointness/coverage.
+2) Define v_{X,j} by restricting the α-domain to Z_j(X).
+3) Prove Σ_{j∈J_X} v_{X,j} = f_X.
+4) Implement Crow lemma in Lean (row-sum bound from summable a).
+5) Introduce the analytic lemma (ZoneAO) as a temporary axiom-shaped interface if needed.
+6) Later: replace the (ZoneAO) axiom by a proof from SSU/Type-I machinery with explicit constants.
+
+
+G. Summary: the single “one lemma” schema
+-----------------------------------------
+If you can prove (ZoneAO) with explicit (C,ρ) independent of X, then you immediately get the required
+dyadic Gram decay and Crow constant, and the existing interzone/lever-bundle lemma yields the ε₁ energy bound.

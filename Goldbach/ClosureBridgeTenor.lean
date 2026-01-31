@@ -82,8 +82,8 @@ private lemma P_tenorPrime_nonneg {X N : ℕ} (hX : X0 ≤ X) (k : ℤ) :
             else 0 : ℝ) := by
     intro n hn
     by_cases hcond : ( (n : ℤ) - ((N : ℤ) - (n : ℤ)) = k )
-    · have hw1 : 0 ≤ Goldbach.BG_Bank.wX X n := by simp [Goldbach.BG_Bank.wX]
-      have hw2 : 0 ≤ Goldbach.BG_Bank.wX X (N - n) := by simp [Goldbach.BG_Bank.wX]
+    · have hw1 : 0 ≤ Goldbach.BG_Bank.wX X n := Goldbach.BG_Bank.wX_nonneg X n
+      have hw2 : 0 ≤ Goldbach.BG_Bank.wX X (N - n) := Goldbach.BG_Bank.wX_nonneg X (N - n)
       have hΛ1 : 0 ≤ Goldbach.BG_Identity.Λp n := Λp_nonneg n
       have hΛ2 : 0 ≤ Goldbach.BG_Identity.Λp (N - n) := Λp_nonneg (N - n)
       have hA : 0 ≤ Goldbach.BG_Bank.wX X n * Goldbach.BG_Identity.Λp n :=
@@ -178,8 +178,8 @@ theorem rep_of_R_bank_tenorPrime_pos
     have := (P_tenorPrime_nonneg (X := X) (N := N) hX k)
     -- reuse the earlier nonneg proof for each summand
     by_cases hcond : ( (n : ℤ) - ((N : ℤ) - (n : ℤ)) = k )
-    · have hw1 : 0 ≤ Goldbach.BG_Bank.wX X n := by simp [Goldbach.BG_Bank.wX]
-      have hw2 : 0 ≤ Goldbach.BG_Bank.wX X (N - n) := by simp [Goldbach.BG_Bank.wX]
+    · have hw1 : 0 ≤ Goldbach.BG_Bank.wX X n := Goldbach.BG_Bank.wX_nonneg X n
+      have hw2 : 0 ≤ Goldbach.BG_Bank.wX X (N - n) := Goldbach.BG_Bank.wX_nonneg X (N - n)
       have hΛ1 : 0 ≤ Goldbach.BG_Identity.Λp n := Λp_nonneg n
       have hΛ2 : 0 ≤ Goldbach.BG_Identity.Λp (N - n) := Λp_nonneg (N - n)
       have hA : 0 ≤ Goldbach.BG_Bank.wX X n * Goldbach.BG_Identity.Λp n :=
@@ -205,10 +205,10 @@ theorem rep_of_R_bank_tenorPrime_pos
       0 < (Goldbach.BG_Bank.wX X n * Goldbach.BG_Identity.Λp n) *
             (Goldbach.BG_Bank.wX X (N - n) * Goldbach.BG_Identity.Λp (N - n)) := by
     simpa [hcond] using hnpos
-  have hA_nonneg : 0 ≤ Goldbach.BG_Bank.wX X n * Goldbach.BG_Identity.Λp n := by
-    simpa [Goldbach.BG_Bank.wX] using mul_nonneg (by norm_num : (0:ℝ) ≤ 1) (Λp_nonneg n)
-  have hB_nonneg : 0 ≤ Goldbach.BG_Bank.wX X (N - n) * Goldbach.BG_Identity.Λp (N - n) := by
-    simpa [Goldbach.BG_Bank.wX] using mul_nonneg (by norm_num : (0:ℝ) ≤ 1) (Λp_nonneg (N - n))
+  have hA_nonneg : 0 ≤ Goldbach.BG_Bank.wX X n * Goldbach.BG_Identity.Λp n :=
+    mul_nonneg (Goldbach.BG_Bank.wX_nonneg X n) (Λp_nonneg n)
+  have hB_nonneg : 0 ≤ Goldbach.BG_Bank.wX X (N - n) * Goldbach.BG_Identity.Λp (N - n) :=
+    mul_nonneg (Goldbach.BG_Bank.wX_nonneg X (N - n)) (Λp_nonneg (N - n))
   have hAB := (mul_pos_iff).1 hprod_pos
   have hApos : 0 < Goldbach.BG_Bank.wX X n * Goldbach.BG_Identity.Λp n := by
     rcases hAB with ⟨h1, h2⟩ | ⟨h1, h2⟩
@@ -220,8 +220,10 @@ theorem rep_of_R_bank_tenorPrime_pos
     · exact h2
     · exfalso
       exact (not_lt_of_ge hB_nonneg) h2
-  have hΛnpos : 0 < Goldbach.BG_Identity.Λp n := by simpa [Goldbach.BG_Bank.wX] using hApos
-  have hΛmpos : 0 < Goldbach.BG_Identity.Λp (N - n) := by simpa [Goldbach.BG_Bank.wX] using hBpos
+  have hΛnpos : 0 < Goldbach.BG_Identity.Λp n :=
+    pos_of_mul_pos_right hApos (Goldbach.BG_Bank.wX_nonneg X n)
+  have hΛmpos : 0 < Goldbach.BG_Identity.Λp (N - n) :=
+    pos_of_mul_pos_right hBpos (Goldbach.BG_Bank.wX_nonneg X (N - n))
   have hn_prime : Nat.Prime n := by
     by_contra hn
     simpa [Goldbach.BG_Identity.Λp, hn] using hΛnpos
