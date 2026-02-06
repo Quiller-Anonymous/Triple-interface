@@ -37,8 +37,9 @@ Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple
 -- Verified 2026-01-27: `lake build All` succeeds locally (default `All.lean` target).
 -- Default build is **fool’s gold**: `Twin/ChecklistEntrypointDefault.lean` imports `Twin/ChecklistSmeDefaultAxioms.lean` (via `Twin/ChecklistRouteDefault.lean`), which postulates the conventional analytic hypotheses as explicit `axiom`s for the frozen model `sme := Twin.ChecklistSme.sme`.
 -- Goldbach-side hook (default) is also **fool’s gold** for the same reason: `Goldbach/TwinGold.lean` runs the Twin pipeline via a `Twin.HasTwinTI` instance exported from `Goldbach/TI/TwinInstance.lean`, which is currently derived from the same checklist hypotheses.
-3. The alt-zeta construct (nuanced primes detector) -- Current status: gold (B2 interface)
-4. The Riemann hypothesis -- Current status: mud
+3. SSU -- The analytical backend of the triple interface -- current status: tin
+4. The alt-zeta construct (nuanced primes detector) -- Current status: gold (B2 interface)
+5. The Riemann hypothesis -- Current status: mud
 
 NOTE (Jan 9 2026): Note that when I say "it builds", I mean it builds locally (VS Code Studio on Macbrook Pro, 28GB Ram, bought in 2025), NOT on Github. Reason: the finite base chunks outpace the resources available on the repo, and I'm not going to spend a small fortune to convince it to do the job to completion.
 

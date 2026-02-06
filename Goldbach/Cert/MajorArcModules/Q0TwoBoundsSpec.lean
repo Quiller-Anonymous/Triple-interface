@@ -1,9 +1,9 @@
 import Goldbach.Cert.MajorArcModules.Q0CertData
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
-import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundDeterministic
 import Goldbach.Cert.MajorArcModules.Q0MinorBound
-import Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundAxiom
+import Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundProvider
 import Goldbach.Cert.MajorArcModules.Q0MajorRoute
 import Goldbach.Cert.MajorArcModules.Q0MajorBound
 import Goldbach.Cert.MajorArcModules.Q0MajorTailFromCert
@@ -40,7 +40,7 @@ open Goldbach.Windows
 
 open Goldbach.Cert.MajorArcModules.Q0Certificate
 open Goldbach.Cert.MajorArcModules.Q0MinorBound
-open Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundAxiom
+open Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundProvider
 open Goldbach.Cert.MajorArcModules.Q0MajorBound
 open Goldbach.Cert.MajorArcModules.Q0MajorRoute
 open Goldbach.Cert.MajorArcModules.Q0MajorTailSpec
@@ -52,7 +52,7 @@ open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBound
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
-open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
+open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundDeterministic
 open Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 open Goldbach.Cert.MajorArcModules.TurnkeyCanon
 
@@ -76,7 +76,7 @@ lemma q0Minor_energy : Q0MinorEnergyBound Δ_canon (((C.ε₁ : ℝ) ^ 2)) := by
     norm_num
   -- Use the direct SSU/energy tool axiom.
   have h16 : Q0MinorEnergyBound Δ_canon 16 :=
-    Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundAxiom.q0Minor_energyBound16
+    Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundProvider.q0Minor_energyBound16
   simpa [hE] using h16
 
 lemma q0Minor_bound : Q0MinorDeviationBound Δ_canon (C.ε₁ : ℝ) := by
@@ -109,11 +109,10 @@ lemma q0Major_integrable : Q0MajorIntegrable Δ_canon :=
 lemma q0Major_small_upperBound :
     Q0MajorSmallUpperBoundSpec.Q0MajorSmallUpperBound Δ_canon
       Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert.U := by
-  simpa [Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom.Us,
-    Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert.U] using
-    (Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom.major_arc_small_beta_upperBound :
+  simpa using
+    (Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundDeterministic.major_arc_small_beta_upperBound :
       Q0MajorSmallUpperBoundSpec.Q0MajorSmallUpperBound Δ_canon
-        Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom.Us)
+        Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert.U)
 
 lemma q0Major_small_bound : Q0MajorSmallBound Δ_canon εs := by
   simpa [εs, Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert.εs] using

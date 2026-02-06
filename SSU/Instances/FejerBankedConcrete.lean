@@ -52,7 +52,7 @@ local instance : Fact (0 < (1 : ℝ)) := ⟨by norm_num⟩
 ## Construction parameters
 -/
 
-structure Params (Q : ℕ) where
+ structure Params (Q : ℕ) where
   /-- Short-shift scale parameter `H` (TeX). -/
   H : ℝ
   hH : 0 < H
@@ -62,6 +62,7 @@ structure Params (Q : ℕ) where
   N : ℤ → ℕ
   /-- An `L^∞` window multiplier `Φ_H` (TeX’s Fejér window, treated abstractly here). -/
   Φ : UC → ℂ
+  measurable_Φ : Measurable Φ
   hΦ : MemLp Φ (∞ : ℝ≥0∞) μ
   Φmax : ℝ
   Φmax_nonneg : 0 ≤ Φmax
@@ -430,6 +431,16 @@ noncomputable def setup : SSU.Instances.FejerBankedConstruction.Setup (κ (Q := 
   J := P.J
   K := P.K
   parent := Prod.fst
+  δ := fun _j _r _x => (1 : ℝ)
+  hδ := by
+    intro j r
+    simpa using (measurable_const : Measurable fun _x : UC => (1 : ℝ))
+  δ_nonneg := by
+    intro j r x
+    norm_num
+  δ_le_one := by
+    intro j r x
+    norm_num
   ϑ := P.ϑ
   hϑ := fun r => P.measurable_ϑ r
   ϑ_nonneg := fun r x => P.ϑ_nonneg r x
@@ -443,8 +454,11 @@ noncomputable def setup : SSU.Instances.FejerBankedConstruction.Setup (κ (Q := 
   χ_le_one := fun j t => P.χ_le_one j t
   t := P.t
   P := P.PU
-  P_eq := by intro j k x; rfl
+  P_eq := by
+    intro j k x
+    simp [SSU.Instances.FejerBankedConcrete.Params.PU, SSU.Instances.FejerBankedConcrete.Params.ν]
   Φ := P.Φ
+  measurable_Φ := P.measurable_Φ
   hΦ := P.hΦ
   Φmax := P.Φmax
   Φmax_nonneg := P.Φmax_nonneg

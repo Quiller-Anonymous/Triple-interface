@@ -29,27 +29,26 @@ This file is the “freeze point” for the successive-approximation workflow:
 
 All downstream “turnkey Q0 major arc” code depends only on these interfaces + the ℚ budget checks.
 
-- ε₁ (minor / Q0-complement): `Q0MinorEnergyLedgerEngine Δ_canon C2 C3`
-  - Spec: `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedger.lean`
-  - Used by: `Goldbach/Cert/MajorArcModules/Q0TwoBoundsSpec.lean` via `energyBound16_of_ledger_engine`.
+- ε₁ (minor / Q0-complement): `Q0MinorEnergyBound Δ_canon 16`
+  - Spec: `Goldbach/Cert/MajorArcModules/Q0MinorBound.lean`
+  - Tool-axiom seam (polished gold): `Goldbach/Cert/MajorArcModules/Q0MinorEnergyBoundAxiom.lean`
+  - Provider module (stage (3) prep): `Goldbach/Cert/MajorArcModules/Q0MinorEnergyBoundProvider.lean`
 - ε₂-small (small β major evaluation): `Q0MajorSmallBound Δ_canon εs`
   - Spec: `Goldbach/Cert/MajorArcModules/Q0MajorRoute.lean`
   - Certificate seam (new): `Q0MajorSmallUpperBound Δ_canon U_s` +
     cert check `U_s ≤ εs` (`Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundFromCert.lean`).
-  - Still missing: final assembly from BMOR Step20/21 + Step24 main-term identification producing `≤ U_s`.
-  - Temporary (Option B): `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundTextbookAxiom.lean`
-    supplies the current analytic assumption `Q0MajorSmallUpperBound Δ_canon U_s`.
+  - Current status: proved deterministically (axiom-free) in
+    `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundDeterministic.lean`.
 - ε₂-large (large β tail, option-3): `Q0InnerMajorFullTTStarKSupportBound Δ_canon M2`
   - Spec/scaffold: `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarCertScaffold.lean`
   - This is the TT*/Parseval payload that ultimately drives `Q0MajorLargeBound Δ_canon εl`.
+  - Current status: Toeplitz top bound is proved deterministically (axiom-free) in
+    `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarUpperBoundFromToeplitz.lean`.
 
 The remaining analytic assumptions are centralized in:
 
 - Project-neutral spec sheet: `Goldbach/Cert/MajorArcModules/Q0TwoBoundsConventionalAxioms.lean`
-- Current pinned assumptions (fool’s gold): imported directly by `Goldbach/Cert/MajorArcModules/Q0TwoBoundsSpec.lean`:
-  - `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundTextbookAxiom.lean`
-  - `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarUpperBoundFromToeplitz.lean`
-  - `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedgerEngineAxiom.lean`
+- Current pinned assumptions (fool’s gold): `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean`
 
 Note (Stage 2 target): the remaining ε₂-large Step-5 goal is generator-facing:
 `Q0MajorTailTTStarUpperBoundFromToeplitz.toeplitzExprTopTight_upper_le_U_target`,

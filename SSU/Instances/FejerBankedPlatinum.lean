@@ -54,6 +54,9 @@ theorem measurable_χBase : Measurable χBase := by
 
 /-- Parameters for the frozen “platinum” Fejér-banked partition. -/
 structure Params (Q : ℕ) where
+  /-- The large parameter `X` from the notes (window length). -/
+  X : ℝ
+  hX : 0 < X
   /-- Short-shift scale parameter `H` (TeX). -/
   H : ℝ
   hH : 0 < H
@@ -154,9 +157,56 @@ theorem χ_le_one (j : ℤ) (t : ℝ) : P.χ j t ≤ 1 := by
 def t (j : ℤ) (k : κ (Q := Q)) : ℝ :=
   (k.2 : ℝ) * P.step j
 
-/-- Tube projector `P_{U_{j,k}}(ξ) := ϑ_{I(k)}(ξ) * χ_j(ν_{I(k)}(ξ) - t_{j,k})`. -/
+/--
+Dyadic shell in the **normal coordinate** (local version of TeX’s `𝒟_j`).
+
+We use the signed wrap-around coordinate `ν_r(ξ) ∈ (-1/2,1/2]` and take the shell
+`2^{-(j+1)}/H < |ν_r(ξ)| ≤ 2^{-j}/H`, i.e. `step (j+1) < |ν| ≤ step j`.
+
+This is the missing “`P_{U_{j,k}}` is supported in `𝓐 ∩ 𝒟_j`” bookkeeping needed for the
+TeX partition statement `∑_{j,k} P_{U_{j,k}} ≍ 1_𝓐`.
+-/
+def Dj (j : ℤ) (r : RatCenter Q) : Set UC :=
+  {ξ : UC | P.step (j + 1) < |Params.ν (Q := Q) r ξ| ∧ |Params.ν (Q := Q) r ξ| ≤ P.step j}
+
+/-- Shell cut-off `1_{𝒟_j}` (as an `ℝ`-valued indicator). -/
+def shellCut (j : ℤ) (r : RatCenter Q) : UC → ℝ :=
+  Set.indicator (P.Dj j r) (fun _ => (1 : ℝ))
+
+theorem measurableSet_Dj (j : ℤ) (r : RatCenter Q) : MeasurableSet (P.Dj j r) := by
+  -- `Dj` is defined by two inequalities on the measurable function `ξ ↦ |ν_r(ξ)|`.
+  have hν : Measurable fun ξ : UC => Params.ν (Q := Q) r ξ := Params.measurable_ν (Q := Q) (r := r)
+  have habs : Measurable fun ξ : UC => |Params.ν (Q := Q) r ξ| := hν.abs
+  have hlt :
+      MeasurableSet {ξ : UC | P.step (j + 1) < |Params.ν (Q := Q) r ξ|} :=
+    measurableSet_lt measurable_const habs
+  have hle :
+      MeasurableSet {ξ : UC | |Params.ν (Q := Q) r ξ| ≤ P.step j} :=
+    measurableSet_le habs measurable_const
+  simpa [Params.Dj, Set.setOf_and] using hlt.inter hle
+
+theorem measurable_shellCut (j : ℤ) (r : RatCenter Q) : Measurable (P.shellCut j r) := by
+  have hS : MeasurableSet (P.Dj j r) := P.measurableSet_Dj (Q := Q) j r
+  simpa [Params.shellCut] using (measurable_const.indicator hS)
+
+theorem shellCut_nonneg (j : ℤ) (r : RatCenter Q) (x : UC) : 0 ≤ P.shellCut j r x := by
+  by_cases hx : x ∈ P.Dj j r <;> simp [Params.shellCut, hx]
+
+theorem shellCut_le_one (j : ℤ) (r : RatCenter Q) (x : UC) : P.shellCut j r x ≤ 1 := by
+  by_cases hx : x ∈ P.Dj j r <;> simp [Params.shellCut, hx]
+
+/--
+Tube projector (TeX `\eqref{eq:P_U_def}`) with an explicit shell cut-off:
+
+`P_{U_{j,k}}(ξ) := 1_{𝒟_j}(ξ) * ϑ_{I(k)}(ξ) * χ_j(ν_{I(k)}(ξ) - t_{j,k})`.
+
+This keeps the SSU story 1D in `j` while ensuring the “dyadic shell” interpretation matches the
+`ψ_j` primitives.
+-/
 def Pproj (j : ℤ) (k : κ (Q := Q)) : UC → ℝ :=
-  fun ξ => (P.ϑ k.1 ξ) * P.χ j ((Params.ν (Q := Q) k.1 ξ) - P.t j k)
+  fun ξ =>
+    (P.shellCut j k.1 ξ) *
+      ((P.ϑ k.1 ξ) * P.χ j ((Params.ν (Q := Q) k.1 ξ) - P.t j k))
 
 /-!
 ### Fejér window `Φ̂_H` (Option A)

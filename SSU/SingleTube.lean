@@ -37,6 +37,31 @@ def tubeForm (K : ℤ → ℝ) (T : Finset TubePoint) (F : TubePoint → ℂ) : 
 def tubeEnergy (T : Finset TubePoint) (F : TubePoint → ℂ) : ℝ :=
   Finset.sum T (fun p => ‖F p‖ ^ 2)
 
+theorem tubeEnergy_mul_const (T : Finset TubePoint) (c : ℂ) (F : TubePoint → ℂ) :
+    tubeEnergy T (fun p => c * F p) = (‖c‖ ^ 2) * tubeEnergy T F := by
+  classical
+  unfold tubeEnergy
+  -- Rewrite the sum termwise and factor out the constant `‖c‖^2`.
+  have hrewrite :
+      (∑ p ∈ T, ‖c * F p‖ ^ 2) = ∑ p ∈ T, (‖c‖ ^ 2) * (‖F p‖ ^ 2) := by
+    refine Finset.sum_congr rfl ?_
+    intro p hp
+    have hn :
+        ‖c * F p‖ ^ 2 = (‖c‖ ^ 2) * (‖F p‖ ^ 2) := by
+      calc
+        ‖c * F p‖ ^ 2 = (‖c‖ * ‖F p‖) ^ 2 := by simp [norm_mul]
+        _ = (‖c‖ ^ 2) * (‖F p‖ ^ 2) := by
+              simpa using (mul_pow (‖c‖) (‖F p‖) 2)
+    simpa [norm_mul] using hn
+  -- Now pull out `‖c‖^2`.
+  calc
+    (∑ p ∈ T, ‖c * F p‖ ^ 2) = ∑ p ∈ T, (‖c‖ ^ 2) * (‖F p‖ ^ 2) := hrewrite
+    _ = (‖c‖ ^ 2) * (∑ p ∈ T, ‖F p‖ ^ 2) := by
+          -- `Finset.mul_sum` is oriented as `a * ∑ = ∑ a * _`.
+          simpa [mul_assoc] using
+            (Finset.mul_sum (s := T) (f := fun p => ‖F p‖ ^ 2) (a := (‖c‖ ^ 2))).symm
+    _ = (‖c‖ ^ 2) * tubeEnergy T F := rfl
+
 /-!
 Single-tube SSU statement (Theorem 6.5 / 6.22 in the notes), in a project-neutral shell.
 

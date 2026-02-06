@@ -105,6 +105,35 @@ noncomputable def ψLinf (j : ℤ) : Torus.Linf :=
 noncomputable def packetOp (j : ℤ) : OpT :=
   (M.normFactor • Torus.mulL2Op (φ := M.ψ j) (hφ := M.hψ j))
 
+/--
+The torus-side dyadic packet operator `T_j` as the *unnormalized* multiplier
+`f ↦ ψ_j • f` on `L²(𝕋)`.
+
+This is the TeX-faithful “primitive operator” viewpoint; the SSU engine often inserts the
+normalization factor `sqrt(H/X)` later.
+-/
+noncomputable def packetOpUnnormalized (j : ℤ) : OpT :=
+  Torus.mulL2Op (φ := M.ψ j) (hφ := M.hψ j)
+
+theorem packetOp_eq_normFactor_smul_packetOpUnnormalized (j : ℤ) :
+    M.packetOp j = M.normFactor • M.packetOpUnnormalized j := rfl
+
+/-!
+### Gram expansion (TeX “multiplier inner product”)
+
+If `T_i` and `T_j` are (unnormalized) multiplier operators, then
+`⟪T_i f, T_j g⟫` is the integral of `(ψ_i)^* ψ_j` against `f^* g`.
+This is the Stage-1 Gram expansion needed before any tube/Toeplitz reindexing.
+-/
+
+theorem inner_packetOpUnnormalized_eq_integral (i j : ℤ) (f g : SignalT) :
+    inner ℂ (M.packetOpUnnormalized i f) (M.packetOpUnnormalized j g)
+      =
+    ∫ x : UC, (star (M.ψ i x) * (M.ψ j x)) * (star (f x) * g x) ∂μ := by
+  simpa [MultiplierModel.packetOpUnnormalized] using
+    (SSU.Torus.inner_mulL2Op_eq_integral
+      (φ := M.ψ i) (ψ := M.ψ j) (hφ := M.hψ i) (hψ := M.hψ j) (f := f) (g := g))
+
 /-- The torus-side packet family induced by a multiplier model. -/
 noncomputable def toTorusPacketFamily : TorusPacketFamily :=
   { J := M.J

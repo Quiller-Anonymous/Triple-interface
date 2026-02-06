@@ -1,5 +1,6 @@
 import SSU.Torus.Basic
 import Mathlib.MeasureTheory.Function.Holder
+import Mathlib.MeasureTheory.Function.L2Space
 
 /-!
 Torus-side multiplier operators on `L²(AddCircle 1)`.
@@ -77,6 +78,73 @@ noncomputable def mulL2Op (φ : UC → ℂ) (hφ : MemLp φ (∞ : ℝ≥0∞) �
 theorem mulL2Op_apply (φ : UC → ℂ) (hφ : MemLp φ (∞ : ℝ≥0∞) μ) (f : L2) :
     mulL2Op (φ := φ) hφ f = ((toLinf (φ := φ) hφ) • f : L2) :=
   rfl
+
+/-!
+## Gram expansion for multiplier packets
+
+This is the deterministic lemma used in the TeX “Gram expansion” step:
+
+If `T_i` and `T_j` are Fourier-side multiplier operators, then
+`⟪T_i f, T_j g⟫` is an integral of the pointwise multiplier product against `conj(f) * g`.
+-/
+
+theorem inner_mulL2Op_eq_integral_toLinf
+    (φ ψ : UC → ℂ)
+    (hφ : MemLp φ (∞ : ℝ≥0∞) μ) (hψ : MemLp ψ (∞ : ℝ≥0∞) μ)
+    (f g : L2) :
+    inner ℂ (mulL2Op (φ := φ) hφ f) (mulL2Op (φ := ψ) hψ g)
+      =
+    ∫ x : UC,
+      (star ((toLinf (φ := φ) hφ) x) * (toLinf (φ := ψ) hψ) x)
+        * (star (f x) * g x) ∂μ := by
+  classical
+  -- Expand the multiplier operators into `L^∞` scalar multiplication.
+  simp [mulL2Op_apply, MeasureTheory.L2.inner_def]
+  -- Reduce pointwise scalar multiplication to actual multiplication, a.e.
+  have hsmul_f :
+      ((toLinf (φ := φ) hφ) • f : L2) =ᵐ[μ] fun x : UC => ((toLinf (φ := φ) hφ) x) • (f x) := by
+    simpa using (MeasureTheory.Lp.coeFn_lpSMul (f := (toLinf (φ := φ) hφ)) (g := f))
+  have hsmul_g :
+      ((toLinf (φ := ψ) hψ) • g : L2) =ᵐ[μ] fun x : UC => ((toLinf (φ := ψ) hψ) x) • (g x) := by
+    simpa using (MeasureTheory.Lp.coeFn_lpSMul (f := (toLinf (φ := ψ) hψ)) (g := g))
+  -- Use the a.e. pointwise formula for `inner` after rewriting the `smul` representatives.
+  refine integral_congr_ae ?_
+  filter_upwards [hsmul_f, hsmul_g] with x hxF hxG
+  -- On complex numbers, `⟪a•u, b•v⟫ = star a * b * ⟪u,v⟫` and `⟪u,v⟫ = star u * v`.
+  simp [hxF, hxG, inner_smul_left, inner_smul_right, mul_assoc, mul_left_comm, mul_comm]
+
+theorem inner_mulL2Op_eq_integral
+    (φ ψ : UC → ℂ)
+    (hφ : MemLp φ (∞ : ℝ≥0∞) μ) (hψ : MemLp ψ (∞ : ℝ≥0∞) μ)
+    (f g : L2) :
+    inner ℂ (mulL2Op (φ := φ) hφ f) (mulL2Op (φ := ψ) hψ g)
+      =
+    ∫ x : UC, (star (φ x) * ψ x) * (star (f x) * g x) ∂μ := by
+  classical
+  -- Replace each `toLinf` evaluation by the underlying function a.e.
+  have hφae : (fun x : UC => (toLinf (φ := φ) hφ) x) =ᵐ[μ] φ := by
+    simpa [toLinf] using
+      (hφ.coeFn_toLp (μ := μ) (p := (∞ : ℝ≥0∞)) (f := φ))
+  have hψae : (fun x : UC => (toLinf (φ := ψ) hψ) x) =ᵐ[μ] ψ := by
+    simpa [toLinf] using
+      (hψ.coeFn_toLp (μ := μ) (p := (∞ : ℝ≥0∞)) (f := ψ))
+  -- Start from the `toLinf` form and then apply `integral_congr_ae`.
+  have h0 :=
+    inner_mulL2Op_eq_integral_toLinf (φ := φ) (ψ := ψ) (hφ := hφ) (hψ := hψ) (f := f) (g := g)
+  -- Rewrite the integrand a.e.
+  -- We need to push the a.e. equalities through `star` and multiplication.
+  have hint :
+      (fun x : UC =>
+          (star ((toLinf (φ := φ) hφ) x) * (toLinf (φ := ψ) hψ) x) * (star (f x) * g x))
+        =ᵐ[μ]
+      (fun x : UC => (star (φ x) * ψ x) * (star (f x) * g x)) := by
+    -- Combine and simplify pointwise.
+    filter_upwards [hφae, hψae] with x hxφ hxψ
+    simp [hxφ, hxψ, mul_assoc, mul_left_comm, mul_comm]
+  -- Finish.
+  simpa using h0.trans (by
+    -- Replace the integral by `integral_congr_ae` using `hint`.
+    refine integral_congr_ae hint)
 
 end
 
