@@ -150,3 +150,62 @@ end
 
 end Torus
 end SSU
+
+namespace SSU
+namespace Torus
+
+/-!
+## Multiplier packet families (general extraction bridge)
+
+This is a lightweight “public API” wrapper around `mulL2Op` + the Gram expansion lemma:
+if a packet family is implemented as Fourier-side multipliers `(ψ i)`, then their Gram entries
+are given by the corresponding weighted integral.
+-/
+
+open MeasureTheory
+
+noncomputable section
+
+namespace Packets
+
+open scoped ENNReal
+
+open SSU.Torus
+
+local instance : Fact (0 < (1 : ℝ)) := ⟨by norm_num⟩
+
+/-- A torus-side multiplier packet family: each packet is multiplication by `ψ i ∈ L^∞`. -/
+structure MultiplierPacketFamily (ι : Type*) where
+  ψ : ι → UC → ℂ
+  memLp_ψ : ∀ i : ι, MemLp (ψ i) (∞ : ℝ≥0∞) μ
+
+namespace MultiplierPacketFamily
+
+variable {ι : Type*} (P : MultiplierPacketFamily ι)
+
+/-- The bounded `L²` operator corresponding to packet `i`: multiplication by `ψ i`. -/
+noncomputable def packetOp (i : ι) : L2 →L[ℂ] L2 :=
+  mulL2Op (φ := P.ψ i) (P.memLp_ψ i)
+
+@[simp] theorem packetOp_apply (i : ι) (f : L2) :
+    P.packetOp i f = ((toLinf (φ := P.ψ i) (P.memLp_ψ i)) • f : L2) :=
+  rfl
+
+/-- Gram expansion for multiplier packets: `⟪T_i f, T_j g⟫` is the weighted integral of
+`(ψ_i)^* ψ_j` against `(f)^* g`. -/
+theorem inner_packetOp_eq_integral (i j : ι) (f g : L2) :
+    inner ℂ (P.packetOp i f) (P.packetOp j g)
+      =
+    ∫ x : UC, (star (P.ψ i x) * P.ψ j x) * (star (f x) * g x) ∂μ := by
+  simpa [MultiplierPacketFamily.packetOp] using
+    (inner_mulL2Op_eq_integral
+      (φ := P.ψ i) (ψ := P.ψ j) (hφ := P.memLp_ψ i) (hψ := P.memLp_ψ j) (f := f) (g := g))
+
+end MultiplierPacketFamily
+
+end Packets
+
+end
+
+end Torus
+end SSU

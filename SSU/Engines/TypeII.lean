@@ -113,6 +113,26 @@ theorem shearMap_fst (a q : ℤ) (p : TubePoint) : (shearMap a q p).1 = shearU a
 
 theorem shearMap_snd (a q : ℤ) (p : TubePoint) : (shearMap a q p).2 = shearV p := rfl
 
+theorem shearMap_injective (a q : ℤ) (hq : q ≠ 0) : Function.Injective (shearMap a q) := by
+  intro p p' h
+  have hv : shearV p = shearV p' := by
+    simpa [shearMap] using congrArg Prod.snd h
+  have hu : shearU a q p = shearU a q p' := by
+    simpa [shearMap] using congrArg Prod.fst h
+  cases p with
+  | mk d n =>
+    cases p' with
+    | mk d' n' =>
+      dsimp [shearV] at hv
+      dsimp [shearU] at hu
+      have hd : d = d' := hv
+      subst hd
+      have hnq : q * n = q * n' := by
+        linarith
+      have hn : n = n' := (Int.mul_eq_mul_left_iff (a := n) (b := n') (c := q) hq).1 hnq
+      subst hn
+      rfl
+
 theorem shearU_add_a_mul_v_eq_q_mul_n (a q : ℤ) (p : TubePoint) :
     shearU a q p + a * shearV p = q * p.2 := by
   dsimp [shearU, shearV]

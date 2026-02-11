@@ -13,9 +13,11 @@ Design goals:
 
 Current status:
 
-- Scaffolding only (definitions / statement shells + the first pure Hilbert-space brick).
-- Nothing in this directory is wired into the default `All` target; build explicitly with
-  `lake build SSU` when desired.
+- The Type–II Toeplitz “plumbing” layer is in place (deterministic reductions + TeX-facing
+  identities + packet-model bridges).
+- The remaining work is the analytic heart: proving the Step 3–4 / Type–II inequality (and later
+  the single-tube SSU heart), rather than assuming it.
+- See `SSU/STATUS.md` for the rolling, line-referenced proof status.
 
 Suggested layout (mirrors the “Layer 0–3” plan):
 
