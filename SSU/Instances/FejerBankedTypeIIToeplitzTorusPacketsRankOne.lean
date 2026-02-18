@@ -1,6 +1,8 @@
 import SSU.Instances.FejerBankedPartition
 import SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcProof
+import SSU.Instances.FejerBankedTypeIIToeplitzTorusRankOneTTStar
 import SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcHypothesis
+import SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis
 import SSU.Engines.BGTypeIIRankOneSignal
 import SSU.Torus.AddCircleMeasurability
 
@@ -501,6 +503,309 @@ theorem inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne
     arcIntegral_eq_toeplitzFormTeXC_rankOne (D := D) (P := P) (W := W) (I := I)
       (hX := hX) (hH := hH) (hsmall := hsmall) i j
   simpa [hArc] using hArcToToep
+
+/-- `J`-indexed wrapper of `inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne`. -/
+theorem inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne_onJ
+    (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ))
+    (i : ℤ) (_hi : i ∈ D.J) (j : ℤ) (_hj : j ∈ D.J) :
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+      =
+    ((1 / D.X : ℝ) : ℂ) *
+      SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+        (K := fun t =>
+          SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean (D := D) D.X D.H i j t)
+        (T := P.box)
+        (F := fun p => I.F (P := P) (W := W) p) := by
+  simpa using
+    inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne
+      (D := D) (P := P) (W := W) (I := I)
+      (hX := hX) (hH := hH) (hsmall := hsmall) i j
+
+/--
+Weighted-band-integral form of the rank-one TT* identity (torus packet operators).
+
+This rewrites the Toeplitz quadratic form via the deterministic Toeplitzization lemma in
+`FejerBankedTypeIIToeplitzTorusRankOneTTStar`.
+-/
+theorem inner_packetOpUnnormalized_eq_weightedIntegral_rankOne
+    (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ))
+    (i j : ℤ) :
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+      =
+    ((1 / D.X : ℝ) : ℂ) *
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := D) D.X D.H i j ξ) *
+            (I.signalRealByProd P W D.X ξ) *
+              star (I.signalRealByProd P W D.X ξ)) := by
+  have hToep :=
+    inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne
+      (D := D) (P := P) (W := W) (I := I)
+      (hX := hX) (hH := hH) (hsmall := hsmall) i j
+  have hDet :
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := D) D.X D.H i j ξ) *
+            (I.signalRealByProd P W D.X ξ) *
+              star (I.signalRealByProd P W D.X ξ))
+        =
+      SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+        (K := fun t =>
+          SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean (D := D) D.X D.H i j t)
+        (T := P.box)
+        (F := fun p => I.F (P := P) (W := W) p) := by
+    have hX0 : (D.X : ℝ) ≠ 0 := ne_of_gt hX
+    simpa using
+      (SSU.Instances.FejerBankedTypeIIToeplitzTorusRankOneTTStar.RankOne.bandIntegral_eq_toeplitzFormTeXC_rankOne
+        (D := D) (P := P) (W := W) (I := I) (hH := hH) (hX := hX0) (i := i) (j := j))
+  calc
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        =
+      ((1 / D.X : ℝ) : ℂ) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean (D := D) D.X D.H i j t)
+          (T := P.box)
+          (F := fun p => I.F (P := P) (W := W) p) := hToep
+    _ =
+      ((1 / D.X : ℝ) : ℂ) *
+        (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+            (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                (D := D) D.X D.H i j ξ) *
+              (I.signalRealByProd P W D.X ξ) *
+                star (I.signalRealByProd P W D.X ξ)) := by
+      rw [← hDet]
+
+/-- `J`-indexed wrapper of `inner_packetOpUnnormalized_eq_weightedIntegral_rankOne`. -/
+theorem inner_packetOpUnnormalized_eq_weightedIntegral_rankOne_onJ
+    (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ))
+    (i : ℤ) (_hi : i ∈ D.J) (j : ℤ) (_hj : j ∈ D.J) :
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+      =
+    ((1 / D.X : ℝ) : ℂ) *
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := D) D.X D.H i j ξ) *
+            (I.signalRealByProd P W D.X ξ) *
+              star (I.signalRealByProd P W D.X ξ)) := by
+  simpa using
+    inner_packetOpUnnormalized_eq_weightedIntegral_rankOne
+      (D := D) (P := P) (W := W) (I := I)
+      (hX := hX) (hH := hH) (hsmall := hsmall) i j
+
+/-!
+## Box-data rephrasing (rank-one)
+
+For the rank-one input, the coefficient array is independent of `(f,i,j)`. We record a
+box-data variant that rewrites the product sum in terms of `BGTypeIIArray.Data.prodSumRealByProd`.
+-/
+
+theorem inner_packetOpUnnormalized_eq_weightedIntegral_rankOne_boxData
+    (hU : 2 * P.N ≤ P.U)
+    (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ))
+    (i j : ℤ) :
+    let Dtype :
+        SSU.Engines.BGTypeIIArray.Data SSU.Torus.L2 :=
+      I.boxData (H0 := SSU.Torus.L2) (P := P) hU W
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+      =
+    ((1 / D.X : ℝ) : ℂ) *
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := D) D.X D.H i j ξ) *
+            (Dtype.prodSumRealByProd D.X ξ (0 : SSU.Torus.L2) i j) *
+              star (Dtype.prodSumRealByProd D.X ξ (0 : SSU.Torus.L2) i j)) := by
+  classical
+  -- Start from the rank-one weighted-integral identity.
+  have hbase :=
+    inner_packetOpUnnormalized_eq_weightedIntegral_rankOne
+      (D := D) (P := P) (W := W) (I := I)
+      (hX := hX) (hH := hH) (hsmall := hsmall) i j
+  -- Rewrite the product sum using the `boxData` coefficients.
+  let Dtype :
+      SSU.Engines.BGTypeIIArray.Data SSU.Torus.L2 :=
+    I.boxData (H0 := SSU.Torus.L2) (P := P) hU W
+  have htube : Dtype.tube = P.box :=
+    I.boxData_tube_eq_box (H0 := SSU.Torus.L2) (P := P) (hU := hU) (W := W)
+  have hA :
+      ∀ k : ℤ,
+        Dtype.A (0 : SSU.Torus.L2) i j k = I.A P W k := by
+    intro k
+    simpa using
+      (I.boxData_A_eq_A (H0 := SSU.Torus.L2) (P := P) (hU := hU) (W := W)
+        (f := (0 : SSU.Torus.L2)) (i := i) (j := j) (k := k))
+  have hsum :
+      ∀ ξ : ℝ,
+        I.signalRealByProd P W D.X ξ =
+          Dtype.prodSumRealByProd D.X ξ (0 : SSU.Torus.L2) i j := by
+    intro ξ
+    -- Expand both sums and rewrite `tube`/`A`.
+    simp [SSU.Engines.BGTypeIIArray.Data.prodSumRealByProd,
+      SSU.Engines.BGTypeIIRankOne.Input.signalRealByProd, htube, hA]
+  -- Replace the integrand using `hsum`.
+  have hrew :
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := D) D.X D.H i j ξ) *
+            (I.signalRealByProd P W D.X ξ) *
+              star (I.signalRealByProd P W D.X ξ))
+        =
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := D) D.X D.H i j ξ) *
+            (Dtype.prodSumRealByProd D.X ξ (0 : SSU.Torus.L2) i j) *
+              star (Dtype.prodSumRealByProd D.X ξ (0 : SSU.Torus.L2) i j)) := by
+    refine MeasureTheory.integral_congr_ae ?_
+    refine ae_of_all _ (fun ξ => ?_)
+    simp [hsum ξ]
+  -- Finish.
+  calc
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        =
+      ((1 / D.X : ℝ) : ℂ) *
+        (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+            (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                (D := D) D.X D.H i j ξ) *
+              (I.signalRealByProd P W D.X ξ) *
+                star (I.signalRealByProd P W D.X ξ)) := hbase
+    _ =
+      ((1 / D.X : ℝ) : ℂ) *
+        (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+            (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                (D := D) D.X D.H i j ξ) *
+              (Dtype.prodSumRealByProd D.X ξ (0 : SSU.Torus.L2) i j) *
+                star (Dtype.prodSumRealByProd D.X ξ (0 : SSU.Torus.L2) i j)) := by
+      rw [hrew]
+
+theorem inner_packetOpUnnormalized_eq_weightedIntegral_rankOne_boxData_onJ
+    (hU : 2 * P.N ≤ P.U)
+    (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ))
+    (i : ℤ) (_hi : i ∈ D.J) (j : ℤ) (_hj : j ∈ D.J) :
+    let Dtype :
+        SSU.Engines.BGTypeIIArray.Data SSU.Torus.L2 :=
+      I.boxData (H0 := SSU.Torus.L2) (P := P) hU W
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+      =
+    ((1 / D.X : ℝ) : ℂ) *
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := D) D.X D.H i j ξ) *
+            (Dtype.prodSumRealByProd D.X ξ (0 : SSU.Torus.L2) i j) *
+              star (Dtype.prodSumRealByProd D.X ξ (0 : SSU.Torus.L2) i j)) := by
+  simpa using
+    inner_packetOpUnnormalized_eq_weightedIntegral_rankOne_boxData
+      (D := D) (P := P) (W := W) (I := I)
+      (hU := hU) (hX := hX) (hH := hH) (hsmall := hsmall) i j
+
+theorem inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne_boxData
+    (hU : 2 * P.N ≤ P.U)
+    (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ))
+    (i j : ℤ) :
+    let Dtype :
+        SSU.Engines.BGTypeIIArray.Data SSU.Torus.L2 :=
+      I.boxData (H0 := SSU.Torus.L2) (P := P) hU W
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+      =
+    ((1 / D.X : ℝ) : ℂ) *
+      SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+        (K := fun t =>
+          SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean (D := D) D.X D.H i j t)
+        (T := Dtype.tube)
+        (F := Dtype.F (0 : SSU.Torus.L2) i j) := by
+  classical
+  -- Start from the weighted-integral identity and rewrite the integral using the box-data Toeplitzization.
+  have hbase :=
+    inner_packetOpUnnormalized_eq_weightedIntegral_rankOne
+      (D := D) (P := P) (W := W) (I := I)
+      (hX := hX) (hH := hH) (hsmall := hsmall) i j
+  have hX0 : (D.X : ℝ) ≠ 0 := ne_of_gt hX
+  -- Deterministic Toeplitzization with `boxData`.
+  have hdet :=
+    (SSU.Instances.FejerBankedTypeIIToeplitzTorusRankOneTTStar.RankOne.bandIntegral_eq_toeplitzFormTeXC_rankOne_boxData
+      (D := D) (P := P) (W := W) (I := I)
+      (hU := hU) (hH := hH) (hX := hX0) i j)
+  -- Finish by rewriting the integral.
+  calc
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        =
+      ((1 / D.X : ℝ) : ℂ) *
+        (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band D.H,
+            (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                (D := D) D.X D.H i j ξ) *
+              (I.signalRealByProd P W D.X ξ) *
+                star (I.signalRealByProd P W D.X ξ)) := hbase
+    _ =
+      ((1 / D.X : ℝ) : ℂ) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean (D := D) D.X D.H i j t)
+          (T := (I.boxData (H0 := SSU.Torus.L2) (P := P) hU W).tube)
+          (F := (I.boxData (H0 := SSU.Torus.L2) (P := P) hU W).F (0 : SSU.Torus.L2) i j) := by
+      -- Apply the deterministic box-data Toeplitzization.
+      rw [hdet]
+
+theorem inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne_boxData_onJ
+    (hU : 2 * P.N ≤ P.U)
+    (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ))
+    (i : ℤ) (_hi : i ∈ D.J) (j : ℤ) (_hj : j ∈ D.J) :
+    let Dtype :
+        SSU.Engines.BGTypeIIArray.Data SSU.Torus.L2 :=
+      I.boxData (H0 := SSU.Torus.L2) (P := P) hU W
+    inner ℂ (((D.toMultiplierModel).packetOpUnnormalized i) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+        (((D.toMultiplierModel).packetOpUnnormalized j) (fTT (D := D) (P := P) (W := W) (I := I) hH))
+      =
+    ((1 / D.X : ℝ) : ℂ) *
+      SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+        (K := fun t =>
+          SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean (D := D) D.X D.H i j t)
+        (T := Dtype.tube)
+        (F := Dtype.F (0 : SSU.Torus.L2) i j) := by
+  simpa using
+    inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne_boxData
+      (D := D) (P := P) (W := W) (I := I)
+      (hU := hU) (hX := hX) (hH := hH) (hsmall := hsmall) i j
+
+/-!
+## Fixed-signal TT* Toeplitz hypothesis (rank-one, box-data)
+
+This packages the proved rank-one TT* identity into the fixed-signal hypothesis interface, which
+is the natural use-site form for the flagship extracted coefficients.
+-/
+
+noncomputable def ttStarToeplitzHypothesisFor_rankOne_boxData
+    (hU : 2 * P.N ≤ P.U)
+    (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ)) :
+    SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis.HypothesisFor (κ := κ) where
+  Dpacket := D
+  Dtype := I.boxData (H0 := SSU.Torus.L2) (P := P) hU W
+  f := fTT (D := D) (P := P) (W := W) (I := I) hH
+  hH := hH
+  hX := ne_of_gt hX
+  inner_eq_toeplitzFormTeXC := by
+    intro i hi j hj
+    simpa using
+      inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne_boxData_onJ
+        (D := D) (P := P) (W := W) (I := I)
+        (hU := hU) (hX := hX) (hH := hH) (hsmall := hsmall)
+        (i := i) (j := j) hi hj
+
+noncomputable def ttStarBandHypothesisFor_rankOne_boxData
+    (hU : 2 * P.N ≤ P.U)
+    (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ)) :
+    SSU.Instances.FejerBankedTypeIIToeplitzTTStarHypothesis.HypothesisFor (κ := κ) :=
+  (SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis.HypothesisFor.toBandHypothesis
+      (h := ttStarToeplitzHypothesisFor_rankOne_boxData
+        (D := D) (P := P) (W := W) (I := I)
+        (hU := hU) (hX := hX) (hH := hH) (hsmall := hsmall)))
 
 end RankOne
 

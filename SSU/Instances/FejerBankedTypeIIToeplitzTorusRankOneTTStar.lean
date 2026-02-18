@@ -76,8 +76,8 @@ theorem bandIntegral_eq_toeplitzFormTeXC_rankOne
   simpa [SSU.Engines.BGTypeIIWeightedToeplitz.Ssum, SSU.Engines.BGTypeIIWeightedToeplitz.K,
     SSU.Engines.BGTypeIIWeightedToeplitz.band, Weight.band, Weight.KLean,
     SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC, SSU.Engines.BGTypeIIRankOne.Input.A,
-    SSU.Engines.BGTypeIIRankOneSignal.Input.signalRealByProd, SSU.Engines.BGTypeIIRankOneSignal.Input.signalTorusByProd,
-    SSU.Engines.BGTypeIIRankOneSignal.Input.e_eq_fourier_coe, SSU.Engines.BGTypeIIRankOne.Input.F,
+    SSU.Engines.BGTypeIIRankOne.Input.signalRealByProd, SSU.Engines.BGTypeIIRankOne.Input.signalTorusByProd,
+    SSU.Engines.BGTypeIIRankOne.Input.e_eq_fourier_coe, SSU.Engines.BGTypeIIRankOne.Input.F,
     SSU.Engines.BGTypeIIRankOne.Input.W_on_point] using hToeplitz
 
 /--
@@ -97,19 +97,22 @@ theorem bandIntegral_eq_toeplitzFormTeXC_rankOne_boxData
       =
     SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
       (K := fun t => Weight.KLean (D := D) D.X D.H i j t)
-      (T := (I.boxData (P := P) hU W).tube)
-      (F := (I.boxData (P := P) hU W).F (0 : SSU.Torus.L2) i j) := by
+      (T := (I.boxData (H0 := SSU.Torus.L2) (P := P) hU W).tube)
+      (F := (I.boxData (H0 := SSU.Torus.L2) (P := P) hU W).F (0 : SSU.Torus.L2) i j) := by
   classical
   -- Start from the original statement.
   have hmain :=
     bandIntegral_eq_toeplitzFormTeXC_rankOne (D := D) (P := P) (W := W) (I := I) hH hX i j
   -- Rewrite the tube finset and coefficient array using the deterministic `boxData` lemmas.
-  have htube : (I.boxData (P := P) hU W).tube = P.box :=
-    I.boxData_tube_eq_box (P := P) (hU := hU) (W := W)
+  have htube : (I.boxData (H0 := SSU.Torus.L2) (P := P) hU W).tube = P.box :=
+    I.boxData_tube_eq_box (H0 := SSU.Torus.L2) (P := P) (hU := hU) (W := W)
   have hF :
-      (I.boxData (P := P) hU W).F (0 : SSU.Torus.L2) i j = fun p => I.F (P := P) (W := W) p := by
+      (I.boxData (H0 := SSU.Torus.L2) (P := P) hU W).F (0 : SSU.Torus.L2) i j =
+        fun p => I.F (P := P) (W := W) p := by
     funext p
-    simpa using (I.boxData_F_eq_F (P := P) (hU := hU) (W := W) (f := (0 : SSU.Torus.L2)) (i := i) (j := j) (p := p))
+    simpa using
+      (I.boxData_F_eq_F (H0 := SSU.Torus.L2) (P := P) (hU := hU) (W := W)
+        (f := (0 : SSU.Torus.L2)) (i := i) (j := j) (p := p))
   simpa [htube, hF] using hmain
 
 /--

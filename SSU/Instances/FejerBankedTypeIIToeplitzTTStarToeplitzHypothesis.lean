@@ -58,6 +58,33 @@ structure Hypothesis where
           (T := Dtype.tube)
           (F := Dtype.F f i j)
 
+/-!
+## Fixed-signal (use-site) variant
+
+For some applications (e.g. rank-one extractions), we only need the TT* Toeplitz identity for a
+single fixed input signal `f`. This lighter interface packages that case directly.
+-/
+
+structure HypothesisFor where
+  Dpacket : SSU.Instances.FejerBankedPartition.Data κ
+  Dtype : SSU.Engines.BGTypeIIArray.Data SSU.Torus.L2
+  f : SSU.Torus.L2
+  hH : 0 < Dpacket.H
+  hX : Dpacket.X ≠ 0
+  /-- TT* reduction target (fixed `f`): packet Gram = Toeplitz form. -/
+  inner_eq_toeplitzFormTeXC :
+    ∀ i ∈ Dpacket.J, ∀ j ∈ Dpacket.J,
+      inner ℂ (((Dpacket.toMultiplierModel).packetOpUnnormalized i) f)
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized j) f)
+        =
+      (1 / Dpacket.X) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+              (D := Dpacket) Dpacket.X Dpacket.H i j t)
+          (T := Dtype.tube)
+          (F := Dtype.F f i j)
+
 namespace Hypothesis
 
 variable (h : Hypothesis (κ := κ))
@@ -94,9 +121,36 @@ noncomputable def toBandHypothesis :
 
 end Hypothesis
 
+namespace HypothesisFor
+
+variable (h : HypothesisFor (κ := κ))
+
+noncomputable def toBandHypothesis :
+    SSU.Instances.FejerBankedTypeIIToeplitzTTStarHypothesis.HypothesisFor (κ := κ) where
+  Dpacket := h.Dpacket
+  Dtype := h.Dtype
+  f := h.f
+  hH := h.hH
+  hX := h.hX
+  inner_eq_weightedIntegral := by
+    classical
+    intro i hi j hj
+    -- Start from the Toeplitz-form TT* hypothesis.
+    have hToeplitz := h.inner_eq_toeplitzFormTeXC (i := i) hi (j := j) hj
+    -- Deterministically rewrite the Toeplitz form as a weighted ξ-band integral.
+    have hDet :=
+      (SSU.Instances.FejerBankedTypeIIToeplitzKernel.integral_weight_mul_prodSumRealByProd_mul_star_eq_toeplitzFormTeXC_auto
+        (Dpacket := h.Dpacket) (D := h.Dtype) (X := h.Dpacket.X) (H := h.Dpacket.H)
+        (f := h.f) (i := i) (j := j) (hH := h.hH) (hX := h.hX))
+    -- Replace the Toeplitz form using `hDet`, keeping the `1/X` prefactor.
+    simpa [mul_assoc] using hToeplitz.trans (by
+      have := congrArg (fun z : ℂ => ((1 / h.Dpacket.X : ℝ) : ℂ) * z) hDet.symm
+      simpa [mul_assoc] using this)
+
+end HypothesisFor
+
 end
 
 end FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis
 end Instances
 end SSU
-

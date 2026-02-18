@@ -56,6 +56,32 @@ structure Hypothesis where
             (Dtype.prodSumRealByProd Dpacket.X ξ f i j) *
               star (Dtype.prodSumRealByProd Dpacket.X ξ f i j)
 
+/-!
+## Fixed-signal (use-site) variant
+
+When the application only needs the TT* identity for a single fixed signal `f`, we package that
+case directly (mirroring the global hypothesis above).
+-/
+
+structure HypothesisFor where
+  Dpacket : SSU.Instances.FejerBankedPartition.Data κ
+  Dtype : SSU.Engines.BGTypeIIArray.Data SSU.Torus.L2
+  f : SSU.Torus.L2
+  hH : 0 < Dpacket.H
+  hX : Dpacket.X ≠ 0
+  /-- TT* reduction target (fixed `f`): packet Gram = weighted ξ-integral. -/
+  inner_eq_weightedIntegral :
+    ∀ i ∈ Dpacket.J, ∀ j ∈ Dpacket.J,
+      inner ℂ (((Dpacket.toMultiplierModel).packetOpUnnormalized i) f)
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized j) f)
+        =
+      (1 / Dpacket.X) *
+        ∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+            (Dtype.prodSumRealByProd Dpacket.X ξ f i j) *
+              star (Dtype.prodSumRealByProd Dpacket.X ξ f i j)
+
 namespace Hypothesis
 
 variable (h : Hypothesis (κ := κ))

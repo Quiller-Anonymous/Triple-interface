@@ -4,10 +4,10 @@ Last updated: 2026-02-18
 
 Estimated “status bar” (**TeX-strength**, end-to-end SSU as in TeX): ~64%
 
-Internal micro-bar (Type–II large sieve stage): ~92%
+Internal micro-bar (Type–II large sieve stage): ~93%
 
 Secondary bar (**plumbing + weak fallbacks**, end-to-end objects exist but with crude CS/geometry
-surrogates standing in for real large-sieve input): ~79%
+surrogates standing in for real large-sieve input): ~80%
 
 ## What’s next (major remaining steps)
 
@@ -39,6 +39,174 @@ These four steps are the main remaining path from current ~64% TeX-strength to a
 proved SSU apparatus for the flagship instance.
 
 Latest microstep:
+- Added a **rank-one convenience constructor** for BG geometry inputs with constant coefficients
+  (no explicit `hαconst`/`hβconst` plumbing) in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `GeometryInput.ofBGGeometryCoeffReduction_rankOne`.
+  This packages the rank-one `BGTypeIIRankOne.Input` directly into the coefficient-reduction
+  geometry input, using modEq constancy hypotheses for `α`/`β` only.
+- Added a **fixed-signal TT\* Toeplitz hypothesis interface** and packaged the rank-one box-data
+  torus packet identity into it:
+  - new `HypothesisFor` in
+    `SSU/Instances/FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis.lean`,
+  - new constructor
+    `ttStarToeplitzHypothesisFor_rankOne_boxData` in
+    `SSU/Instances/FejerBankedTypeIIToeplitzTorusPacketsRankOne.lean`.
+  This gives a clean use-site wrapper for the rank-one extracted signal
+  `fTT` in Toeplitz form (with `I.boxData`).
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIToeplitzTorusPacketsRankOne`.
+- Added a **box-data weighted-integral `onJ` wrapper** for the rank-one torus packets in
+  `SSU/Instances/FejerBankedTypeIIToeplitzTorusPacketsRankOne.lean`:
+  - `inner_packetOpUnnormalized_eq_weightedIntegral_rankOne_boxData_onJ`.
+  This matches the earlier box-data integral identity but fits heart-facing `i,j ∈ J` APIs.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIToeplitzTorusPacketsRankOne`.
+- Added **box-data Toeplitz TT\*** endpoints for the rank-one torus packets in
+  `SSU/Instances/FejerBankedTypeIIToeplitzTorusPacketsRankOne.lean`:
+  - `inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne_boxData`,
+  - `inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne_boxData_onJ`.
+  These rewrite the weighted-integral identity directly into
+  `toeplitzFormTeXC` with `I.boxData` (no manual `prodSumRealByProd` re-expansion at call sites).
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIToeplitzTorusPacketsRankOne`.
+- Added a **non-fallback constant-input coeff-reduction route** (supplied Step-3/Step-4, modEq)
+  in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - new `GeometryInputConst` endpoints:
+    - `toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq`,
+    - `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq`,
+    - `contract_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq`;
+  - new top-level one-record wrappers:
+    - `hypothesisStep34ForUniform_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq`,
+    - `gramHypothesis_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq`,
+    - `contract_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq`.
+  These consume `step3`/`step4` directly for the fixed rank-one coeff array
+  `RankOneShear.coeff td g.α0 g.β0` and discharge `inner_eq_coeff`/`energy_le_coeff`
+  from `g.reduction` + `g.hF`, removing duplicated call-site plumbing on the
+  non-fallback path.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a new **direct rank-one coeff-reduction one-record layer** for `GeometryInput` in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` that removes extracted-constancy
+  assumptions (`hαconst`/`hβconst`) from these routes:
+  - auto one-add-log modEq endpoints:
+    - `hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_direct_ofModEq`,
+    - `gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_direct_ofModEq`,
+    - `contract_ofBGGeometry_input_rankOne_coeffReduction_direct_ofModEq`;
+  - supplied non-fallback Step-3/Step-4 endpoints:
+    - `hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq`,
+    - `gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq`,
+    - `contract_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq`.
+  These route via the existing coefficient-form `GeometryInput` APIs and accept direct
+  rank-one/modEq + `inner_eq_coeff`/`energy_le_coeff` hypotheses instead of extracted coefficient
+  constancy across `(f,i,j)`.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a **class-witness completion layer** for the constant-input BG const-on-index route in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - new constant-input constructors:
+    - `GeometryInputConst.toInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofClassWitness`,
+    - `GeometryInputConst.toInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`;
+  - new constant-input endpoints (uniform/Gram/contract) for both class-constancy and
+    modEq-derived variants:
+    - `...toHypothesisStep34ForUniform_ofBGConstOnIndex_oneAddLog_ofClassWitness`,
+    - `...gramHypothesis_ofBGConstOnIndex_oneAddLog_ofClassWitness`,
+    - `...contract_ofBGConstOnIndex_oneAddLog_ofClassWitness`,
+    - `...toHypothesisStep34ForUniform_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`,
+    - `...gramHypothesis_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`,
+    - `...contract_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`;
+  - new top-level one-record wrappers for the same class-witness paths:
+    - `hypothesisStep34ForUniform_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofClassWitness`,
+    - `gramHypothesis_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofClassWitness`,
+    - `contract_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofClassWitness`,
+    - `hypothesisStep34ForUniform_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`,
+    - `gramHypothesis_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`,
+    - `contract_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`.
+  These remove direct `(mRefU, hmRefU, mRefV, hmRefV)` plumbing at call sites and keep the
+  constant-input flagship path aligned with the existing coefficient-reduction class-witness API.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added **one-record consumption endpoints** that wire the new auto rank-one/modEq
+  coeff-reduction route into the constant-input flagship-plumbing layer in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `GeometryInputConst.toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_ofModEq`,
+  - `GeometryInputConst.gramHypothesis_ofBGGeometryCoeffReduction_rankOne_ofModEq`,
+  - `GeometryInputConst.contract_ofBGGeometryCoeffReduction_rankOne_ofModEq`,
+  - plus top-level wrappers
+    `hypothesisStep34ForUniform_ofBGGeometry_const_input_coeffReduction_rankOne_ofModEq`,
+    `gramHypothesis_ofBGGeometry_const_input_coeffReduction_rankOne_ofModEq`,
+    `contract_ofBGGeometry_const_input_coeffReduction_rankOne_ofModEq`.
+  These discharge `inner_eq_coeff`/`energy_le_coeff` from `g.reduction` via `g.hF` and remove
+  explicit step3/step4 and residue-reference plumbing at this insertion layer.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added direct **auto Step-3/Step-4 one-add-log wrappers** for rank-one coeff-reduction + modEq in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_ofModEq`,
+  - `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_ofModEq`,
+  - `contract_ofBGGeometryCoeffReduction_rankOne_ofModEq`.
+  These route through `GeometryInput.hypothesisStep34ForUniform_ofBGGeometryCoeffReduction` and
+  remove manual use-site `step3/step4` arguments for this endpoint family.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a new **non-fallback Step-3/Step-4 coefficient-reduction insertion route** in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_step3step4`,
+  - `gramHypothesis_ofBGGeometryCoeffReduction_step3step4`,
+  - `contract_ofBGGeometryCoeffReduction_step3step4`.
+  These endpoints take the real extracted coefficient-form inputs (`α,β`, `inner_eq_coeff`,
+  `energy_le_coeff`) plus supplied use-site Step-3 and Step-4 bounds, then route directly to the
+  TeX Step-5 packaging/Gram/contract without using fallback Step-3/Step-4 constructors.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Discharged the symmetric **V-side extraction-constancy obligation** at the geometry-input layer
+  by adding modEq-derived endpoints (no explicit `hαconst` assumption) in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `toUniformInputStep3Step4_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq`,
+  - `toHypothesisStep34ForUniform_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq`,
+  - `gramHypothesis_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq`,
+  - `contract_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq`.
+  These derive the required V-index constancy directly from `g.hαmod_sig` plus residue-partition
+  geometry (`vFromIndex`/`vResidue` modEq lemmas), completing U/V parity at this geometry-input
+  insertion layer.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Discharged the first **U-side extraction-constancy obligation** at the geometry-input layer by
+  adding modEq-derived endpoints (no explicit `hβconst` assumption) in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `toUniformInputStep3Step4_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq`,
+  - `toHypothesisStep34ForUniform_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq`,
+  - `gramHypothesis_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq`,
+  - `contract_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq`.
+  These derive the required U-index constancy directly from `g.hβmod_sig` plus residue-partition
+  geometry (`uFromIndex`/`uResidue` modEq lemmas), matching the existing full-index modEq pattern.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added **fallback-side `ofModEq` parity** (plus class-witness discharge) for coefficient-reduction
+  BG one-add-log routes in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - new `..._step3_fallback_step4_ofModEq` and `..._step4_fallback_step3_ofModEq` endpoint
+    families (hypothesis/Gram/contract);
+  - new matching `..._ofModEq_ofClassWitness` wrappers for both fallback directions
+    (hypothesis/Gram/contract), deriving index references from geometric class witnesses;
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added fallback-side coefficient-reduction endpoint parity with class-witness discharge in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - new one-shot endpoints for Step-3-proved/Step-4-fallback and Step-4-proved/Step-3-fallback:
+    - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4`,
+    - `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4`,
+    - `contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4`,
+    - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3`,
+    - `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3`,
+    - `contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3`;
+  - added matching class-witness/class-constancy wrappers that derive index references internally:
+    - `...step3_fallback_step4_ofClassWitness` (hypothesis/Gram/contract),
+    - `...step4_fallback_step3_ofClassWitness` (hypothesis/Gram/contract);
+  - these wrappers use `uFromIndex`/`vFromIndex` class-membership lemmas to discharge
+    index-reference constancy from geometric class witnesses.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
 - Added a new **class-witness + class-constancy** API tier for the non-modEq coefficient-reduction
   BG-const-on-index one-add-log route in
   `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
@@ -320,6 +488,17 @@ Latest microstep:
     `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne
       SSU.Instances.FejerBankedTypeIIToeplitzTorusPacketsStep34Bound
       SSU.Instances.FejerBankedPlatinum`.
+- Added rank-one torus packet TT* identities in weighted-band form:
+  - in `SSU/Instances/FejerBankedTypeIIToeplitzTorusPacketsRankOne.lean`, added
+    `inner_packetOpUnnormalized_eq_weightedIntegral_rankOne` and
+    `inner_packetOpUnnormalized_eq_weightedIntegral_rankOne_onJ`, giving the exact TeX-style
+    weighted-band integral (with `signalRealByProd`) for the rank-one torus packet Gram entry.
+  - fixed `FejerBankedTypeIIToeplitzTorusRankOneTTStar.lean` to use the current
+    `BGTypeIIRankOne.Input` signal names and the explicit `H0 := SSU.Torus.L2` box-data packaging.
+  - net effect: the rank-one torus TT* bridge now exposes both Toeplitz-form and weighted-integral
+    statements, aligned with the `TTStarHypothesis` interfaces for downstream use-site wiring.
+  - Build check passes:
+    `lake build SSU.Instances.FejerBankedTypeIIToeplitzTorusPacketsRankOne`.
 - Big non-fallback Toeplitz bridge wiring chunk (use-site Step-3/Step-4 route now transported
   through normalization + Fourier-core conjugation):
   - in `SSU/Engines/TypeIIToeplitz.lean`, added:

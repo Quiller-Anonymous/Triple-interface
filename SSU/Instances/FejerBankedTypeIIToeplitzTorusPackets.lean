@@ -553,6 +553,27 @@ theorem inner_packetOpUnnormalized_eq_toeplitzFormTeXC
           (F := D.F f i j) := by
         simpa [hscalar]
 
+/-- `J`-indexed wrapper of `inner_packetOpUnnormalized_eq_toeplitzFormTeXC` for heart-facing APIs. -/
+theorem inner_packetOpUnnormalized_eq_toeplitzFormTeXC_onJ
+    (f : H0)
+    (i : ℤ) (_hi : i ∈ Dpacket.J)
+    (j : ℤ) (_hj : j ∈ Dpacket.J)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ)) :
+    inner ℂ (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+      =
+    ((1 / Dpacket.X : ℝ) : ℂ) *
+      SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+        (K := fun t =>
+          SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean (D := Dpacket) Dpacket.X Dpacket.H i j t)
+        (T := D.tube)
+        (F := D.F f i j) := by
+  simpa using
+    inner_packetOpUnnormalized_eq_toeplitzFormTeXC
+      (Dpacket := Dpacket) (D := D) (f := f) (i := i) (j := j)
+      (hX := hX) (hH := hH) (hsmall := hsmall)
+
 /--
 Same extraction step as `inner_packetOpUnnormalized_eq_toeplitzFormTeXC`, but kept in the
 weighted-band-integral form (the exact TT*/Step-2 shape used by bridge hypotheses).
