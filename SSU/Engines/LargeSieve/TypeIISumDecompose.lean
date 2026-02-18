@@ -61,6 +61,30 @@ def zSet (td : TubeData) (u : ℤ) : Finset ℤ :=
 def fiberUZ (td : TubeData) (u z : ℤ) : Finset TubePoint :=
   (fiberU td u).filter fun p => zCoord td u p = z
 
+/-!
+### Support lemmas for `zSet`
+
+These are tiny deterministic facts used repeatedly later (e.g. when enlarging `zSet` to a uniform
+box such as `zBox`): if `z` is not in the image defining `zSet`, then the corresponding `z`-fiber
+is empty, hence its coefficient sum is `0`.
+-/
+
+theorem sum_fiberUZ_eq_zero_of_not_mem_zSet (td : TubeData) (F : TubePoint → ℂ)
+    (u z : ℤ) (hz : z ∉ zSet td u) :
+    (∑ p ∈ fiberUZ td u z, F p) = 0 := by
+  classical
+  -- If `fiberUZ` had a point, then `z` would lie in the image defining `zSet`.
+  have hempty : fiberUZ td u z = ∅ := by
+    refine Finset.eq_empty_iff_forall_notMem.2 ?_
+    intro p hp
+    have hpU : p ∈ fiberU td u := (Finset.mem_filter.mp hp).1
+    have hpz : zCoord td u p = z := (Finset.mem_filter.mp hp).2
+    have : z ∈ zSet td u := by
+      refine Finset.mem_image.2 ?_
+      exact ⟨p, hpU, by simpa [hpz]⟩
+    exact hz this
+  simp [hempty]
+
 theorem sum_fiberU_eq_sum_z (td : TubeData) (ξ : ℝ) (u : ℤ) (F : TubePoint → ℂ) :
     (∑ p ∈ fiberU td u,
         F p * e (ξ * (u : ℝ) * (zCoord td u p : ℝ) / td.X))

@@ -327,6 +327,21 @@ theorem uFromIndex_mem_uClass_of_mem_uIndexSet {r m : ℤ} (hm : m ∈ uIndexSet
     simpa [hmEq] using (uFromIndex_uIndex_of_mem_uClass (td := td) (u := u) (r := r) hu)
   simpa [this] using hu
 
+/-- `uFromIndex` lands in `uSet` whenever `m ∈ uIndexSet`. -/
+theorem uFromIndex_mem_uSet_of_mem_uIndexSet {r m : ℤ} (hm : m ∈ uIndexSet (td := td) r) :
+    uFromIndex (td := td) r m ∈ uSet td := by
+  exact
+    (uClass_subset_uSet (td := td) (r := r))
+      (uFromIndex_mem_uClass_of_mem_uIndexSet (td := td) (r := r) hm)
+
+/-- On `uIndexSet`, `uFromIndex` has residue `r` for the Step 3 partition map `u ↦ vResidue`. -/
+theorem vResidue_uFromIndex_eq_of_mem_uIndexSet {r m : ℤ}
+    (hm : m ∈ uIndexSet (td := td) r) :
+    vResidue td (uFromIndex (td := td) r m) = r := by
+  have huClass : uFromIndex (td := td) r m ∈ uClass td r :=
+    uFromIndex_mem_uClass_of_mem_uIndexSet (td := td) (r := r) hm
+  exact (Finset.mem_filter.mp huClass).2
+
 theorem sum_uClass_eq_sum_uIndexSet {β : Type*} [AddCommMonoid β]
     (r : ℤ) (f : ℤ → β) :
     (uClass td r).sum (fun u => f u) =
@@ -630,6 +645,21 @@ theorem vFromIndex_mem_vClass_of_mem_vIndexSet {r m : ℤ} (hm : m ∈ vIndexSet
   have : vFromIndex (td := td) r m = v := by
     simpa [hmEq] using (vFromIndex_vIndex_of_mem_vClass (td := td) (v := v) (r := r) hv)
   simpa [this] using hv
+
+/-- `vFromIndex` lands in `vSet` whenever `m ∈ vIndexSet`. -/
+theorem vFromIndex_mem_vSet_of_mem_vIndexSet {r m : ℤ} (hm : m ∈ vIndexSet (td := td) r) :
+    vFromIndex (td := td) r m ∈ vSet td := by
+  exact
+    (vClass_subset_vSet (td := td) (r := r))
+      (vFromIndex_mem_vClass_of_mem_vIndexSet (td := td) (r := r) hm)
+
+/-- On `vIndexSet`, `vFromIndex` has residue `r` for the Step 4 partition map `v ↦ uResidue`. -/
+theorem uResidue_vFromIndex_eq_of_mem_vIndexSet {r m : ℤ}
+    (hm : m ∈ vIndexSet (td := td) r) :
+    uResidue td (vFromIndex (td := td) r m) = r := by
+  have hvClass : vFromIndex (td := td) r m ∈ vClass td r :=
+    vFromIndex_mem_vClass_of_mem_vIndexSet (td := td) (r := r) hm
+  exact (Finset.mem_filter.mp hvClass).2
 
 theorem sum_vClass_eq_sum_vIndexSet {β : Type*} [AddCommMonoid β]
     (r : ℤ) (f : ℤ → β) :

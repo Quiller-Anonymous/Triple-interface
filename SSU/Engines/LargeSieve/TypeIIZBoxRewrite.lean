@@ -29,37 +29,6 @@ open SSU.Engines.TypeII
 private theorem e_add (x y : ℝ) : e (x + y) = e x * e y := by
   simp [TypeII.e, Complex.exp_add, mul_add, add_mul, mul_assoc, mul_left_comm, mul_comm]
 
-private theorem sum_fiberUZ_eq_zero_of_not_mem_zSet (td : TubeData) (F : TubePoint → ℂ)
-    (u z : ℤ) (hz : z ∉ zSet td u) :
-    (∑ p ∈ fiberUZ td u z, F p) = 0 := by
-  classical
-  -- If `fiberUZ` had a point, then `z` would be in the image defining `zSet`.
-  have hempty : fiberUZ td u z = ∅ := by
-    refine Finset.eq_empty_iff_forall_notMem.2 ?_
-    intro p hp
-    have hpU : p ∈ fiberU td u := (Finset.mem_filter.mp hp).1
-    have hpz : zCoord td u p = z := (Finset.mem_filter.mp hp).2
-    have : z ∈ zSet td u := by
-      refine Finset.mem_image.2 ?_
-      exact ⟨p, hpU, by simpa [hpz]⟩
-    exact hz this
-  simp [hempty]
-
-private theorem sum_fiberVZ_eq_zero_of_not_mem_zSetV (td : TubeData) (F : TubePoint → ℂ)
-    (v z : ℤ) (hz : z ∉ zSetV td v) :
-    (∑ p ∈ fiberVZ td v z, F p) = 0 := by
-  classical
-  have hempty : fiberVZ td v z = ∅ := by
-    refine Finset.eq_empty_iff_forall_notMem.2 ?_
-    intro p hp
-    have hpV : p ∈ fiberV td v := (Finset.mem_filter.mp hp).1
-    have hpz : zCoordV td v p = z := (Finset.mem_filter.mp hp).2
-    have : z ∈ zSetV td v := by
-      refine Finset.mem_image.2 ?_
-      exact ⟨p, hpV, by simpa [hpz]⟩
-    exact hz this
-  simp [hempty]
-
 /-- Step 3: rewrite `innerSumUZ` as a sum over the uniform `zBox td`. -/
 theorem innerSumUZ_eq_sum_zBox (td : TubeData) (ξ : ℝ) (F : TubePoint → ℂ) (u : ℤ) :
     innerSumUZ td ξ F u

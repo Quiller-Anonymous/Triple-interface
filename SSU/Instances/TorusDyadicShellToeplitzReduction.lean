@@ -51,6 +51,20 @@ by
       (J := M.J) (T := M.packetOpUnnormalized) (X := X) (Hpar := Hpar) (K := K) (tube := tube)
       (c := M.normFactor) R)
 
+@[simp] theorem reductionUnnormalizedToNormalized_F
+    {X Hpar : ℝ} {K : ℤ → ℝ} {tube : Finset SSU.TubePoint}
+    (R :
+      SSU.Engines.TypeIIToeplitz.ReductionToTubeFormProd
+        (H := SSU.Torus.L2)
+        (J := M.J)
+        (T := M.packetOpUnnormalized)
+        X Hpar K tube)
+    (f : SSU.Torus.L2) (i j : ℤ) (p : SSU.TubePoint) :
+    (reductionUnnormalizedToNormalized (M := M) (X := X) (Hpar := Hpar) (K := K) (tube := tube) R).F f i j p
+      = M.normFactor * R.F f i j p := by
+  simp [reductionUnnormalizedToNormalized,
+    SSU.Engines.TypeIIToeplitz.ReductionToTubeFormProd.mulConst]
+
 /--
 Transport a Toeplitz Type-II reduction from the torus-side packet operators to the SSU core
 operators on `L2Z` (Fourier conjugation).
@@ -135,6 +149,35 @@ by
           ≤ R.Cenergy * ‖M.packetOp i fT‖ * ‖M.packetOp j fT‖ :=
       R.energy_le (f := fT) (i := i) hi (j := j) hj
     simpa [hnorm_i, hnorm_j] using hR
+
+@[simp] theorem reductionToCore_F
+    {X Hpar : ℝ} {K : ℤ → ℝ} {tube : Finset SSU.TubePoint}
+    (R :
+      SSU.Engines.TypeIIToeplitz.ReductionToTubeFormProd
+        (H := SSU.Torus.L2)
+        (J := M.J)
+        (T := M.packetOp)
+        X Hpar K tube)
+    (f : SSU.Global.Signal) (i j : ℤ) (p : SSU.TubePoint) :
+    (reductionToCore (M := M) (X := X) (Hpar := Hpar) (K := K) (tube := tube) R).F f i j p
+      = R.F (SSU.FourierBridge.l2ZToTorus f) i j p :=
+  rfl
+
+@[simp] theorem reductionToCore_reductionUnnormalizedToNormalized_F
+    {X Hpar : ℝ} {K : ℤ → ℝ} {tube : Finset SSU.TubePoint}
+    (R :
+      SSU.Engines.TypeIIToeplitz.ReductionToTubeFormProd
+        (H := SSU.Torus.L2)
+        (J := M.J)
+        (T := M.packetOpUnnormalized)
+        X Hpar K tube)
+    (f : SSU.Global.Signal) (i j : ℤ) (p : SSU.TubePoint) :
+    (reductionToCore
+      (M := M) (X := X) (Hpar := Hpar) (K := K) (tube := tube)
+      (reductionUnnormalizedToNormalized
+        (M := M) (X := X) (Hpar := Hpar) (K := K) (tube := tube) R)).F f i j p
+      = M.normFactor * R.F (SSU.FourierBridge.l2ZToTorus f) i j p := by
+  simp
 
 end MultiplierModel
 

@@ -203,6 +203,30 @@ theorem uIndexSet_finiteLargeSieve_C_le_one_add_log
   -- Finish.
   simpa [hEq, hinv, R] using hC
 
+/-- Interval-geometry wrapper for `uIndexSet_finiteLargeSieve_C_le_one_add_log`.
+
+This removes an explicit `|ξ| ≤ 1/H` argument by deriving it from
+`ξ ∈ [-(1/H), 1/H]`. -/
+theorem uIndexSet_finiteLargeSieve_C_le_one_add_log_outerGeom
+    (td : TubeData) (hU0 : 0 ≤ td.U)
+    (r : ℤ) (N : ℕ) (ξ : ℝ) (hξ0 : ξ ≠ 0) (hX : 0 < td.X) (hH : 0 < td.H)
+    (hξI : ξ ∈ Set.Icc (-(1 / td.H)) (1 / td.H))
+    (hXH : (2 * ((2 * Int.toNat (Int.ceil td.U + td.q) : ℕ) : ℝ)) * (td.q : ℝ) ≤ td.X * td.H) :
+    (uIndexSet_finiteLargeSieve (td := td) (hU0 := hU0) (r := r) (N := N) (ξ := ξ)
+        (hξ0 := hξ0) (hX := hX) (hH := hH)
+        (hξH := by
+          exact abs_le.mpr ⟨by simpa using hξI.1, by simpa using hξI.2⟩)
+        (hXH := hXH)).C
+      ≤
+    (N : ℝ) +
+      (td.X / (|ξ| * (td.q : ℝ))) * (1 + Real.log (2 * Int.toNat (Int.ceil td.U + td.q))) := by
+  have hξH : |ξ| ≤ 1 / td.H := by
+    exact abs_le.mpr ⟨by simpa using hξI.1, by simpa using hξI.2⟩
+  simpa [hξH] using
+    (uIndexSet_finiteLargeSieve_C_le_one_add_log
+      (td := td) (hU0 := hU0) (r := r) (N := N) (ξ := ξ)
+      (hξ0 := hξ0) (hX := hX) (hH := hH) (hξH := hξH) (hXH := hXH))
+
 /-- MV finite large sieve instance on `vIndexSet td r` for phases `m,n ↦ -(ξ*q/td.X) * m * n`. -/
 def vIndexSet_finiteLargeSieve
     (td : TubeData) (hD0 : 0 ≤ td.D)
@@ -372,6 +396,31 @@ theorem vIndexSet_finiteLargeSieve_C_le_one_add_log
       _ = (td.X : ℝ) / (|ξ| * (td.q : ℝ)) := by
         field_simp [hX0, hξabs0, hq0]
   simpa [hEq, hinv, R] using hC
+
+/-- Interval-geometry wrapper for `vIndexSet_finiteLargeSieve_C_le_one_add_log`.
+
+This removes an explicit `|ξ| ≤ 1/H` argument by deriving it from
+`ξ ∈ [-(1/H), 1/H]`. -/
+theorem vIndexSet_finiteLargeSieve_C_le_one_add_log_outerGeom
+    (td : TubeData) (hD0 : 0 ≤ td.D)
+    (r : ℤ) (N : ℕ) (ξ : ℝ) (hξ0 : ξ ≠ 0) (hX : 0 < td.X) (hH : 0 < td.H)
+    (hξI : ξ ∈ Set.Icc (-(1 / td.H)) (1 / td.H))
+    (hXH :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * td.D) + td.q) : ℕ) : ℝ)) * (td.q : ℝ) ≤ td.X * td.H) :
+    (vIndexSet_finiteLargeSieve (td := td) (hD0 := hD0) (r := r) (N := N) (ξ := ξ)
+        (hξ0 := hξ0) (hX := hX) (hH := hH)
+        (hξH := by
+          exact abs_le.mpr ⟨by simpa using hξI.1, by simpa using hξI.2⟩)
+        (hXH := hXH)).C
+      ≤
+    (N : ℝ) +
+      (td.X / (|ξ| * (td.q : ℝ))) * (1 + Real.log (2 * Int.toNat (Int.ceil (2 * td.D) + td.q))) := by
+  have hξH : |ξ| ≤ 1 / td.H := by
+    exact abs_le.mpr ⟨by simpa using hξI.1, by simpa using hξI.2⟩
+  simpa [hξH] using
+    (vIndexSet_finiteLargeSieve_C_le_one_add_log
+      (td := td) (hD0 := hD0) (r := r) (N := N) (ξ := ξ)
+      (hξ0 := hξ0) (hX := hX) (hH := hH) (hξH := hξH) (hXH := hXH))
 
 end ResidueIndexLargeSieve
 

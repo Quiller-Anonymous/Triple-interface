@@ -2,6 +2,7 @@ import SSU.Engines.LargeSieve.TypeIIZBoxToFin
 import SSU.Engines.LargeSieve.MontgomeryVaughanHypothesis
 import SSU.Engines.LargeSieve.TypeIIIndexLargeSieve
 import SSU.Engines.LargeSieve.TypeIIResidueIndexLargeSieve
+import SSU.Engines.LargeSieve.TypeIIConstCoeffFromFiber
 import SSU.Engines.LargeSieve.TypeIIStep3Reduce
 import SSU.Engines.LargeSieve.TypeIIStep4Reduce
 
@@ -386,6 +387,91 @@ by
     _ = LS.C * (∑ k ∈ (Finset.univ : Finset (Fin (zBoxN td))), ‖a k‖ ^ 2) := by
           simpa [hNormCoeff]
 
+/-- Step 3, residue-class form: deduce coefficient constancy on `uIndexSet td r` from equality of
+all fiber coefficient sums against a fixed reference index. -/
+theorem step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_sum_fiberUZ_uFromIndex_eq_ref_finiteLargeSieve
+    (td : TubeData) (hU0 : 0 ≤ td.U) (r : ℤ)
+    (ξ : ℝ) (hξ0 : ξ ≠ 0) (hX : 0 < td.X) (hH : 0 < td.H) (hξH : |ξ| ≤ 1 / td.H)
+    (hXH :
+      (2 * ((2 * Int.toNat (Int.ceil td.U + td.q) : ℕ) : ℝ)) * (td.q : ℝ) ≤ td.X * td.H)
+    (F : TubePoint → ℂ)
+    (m0 : ℤ) (_hm0 : m0 ∈ ResiduePartition.uIndexSet (td := td) r)
+    (hEq :
+      ∀ m : ℤ, m ∈ ResiduePartition.uIndexSet (td := td) r →
+        ∀ k : Fin (zBoxN td),
+          (∑ p ∈ fiberUZ td (ResiduePartition.uFromIndex (td := td) r m)
+              (zBoxA td + 1 + (k : ℕ)), F p)
+            =
+          (∑ p ∈ fiberUZ td (ResiduePartition.uFromIndex (td := td) r m0)
+              (zBoxA td + 1 + (k : ℕ)), F p)) :
+    (∑ m ∈ ResiduePartition.uIndexSet (td := td) r,
+        ‖innerSumUZ td ξ F (ResiduePartition.uFromIndex (td := td) r m)‖ ^ 2)
+      ≤
+    (uIndexSet_finiteLargeSieve (td := td) (hU0 := hU0) (r := r) (N := zBoxN td) (ξ := -ξ)
+        (hξ0 := by simpa using (neg_ne_zero.2 hξ0)) (hX := hX) (hH := hH)
+        (hξH := by simpa using hξH) (hXH := hXH)).C *
+      (∑ k ∈ (Finset.univ : Finset (Fin (zBoxN td))),
+          ‖coeffUZFin td F (ResiduePartition.uFromIndex (td := td) r m0) k‖ ^ 2) := by
+  classical
+  have hCoeff :
+      ∀ m : ℤ, m ∈ ResiduePartition.uIndexSet (td := td) r →
+        coeffUZFin td F (ResiduePartition.uFromIndex (td := td) r m)
+          =
+        coeffUZFin td F (ResiduePartition.uFromIndex (td := td) r m0) := by
+    intro m hm
+    funext k
+    simpa [coeffUZFin] using (hEq m hm k)
+  simpa using
+    (step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_constCoeff_uIndexSet_finiteLargeSieve
+      (td := td) (hU0 := hU0) (r := r) (ξ := ξ) (hξ0 := hξ0) (hX := hX) (hH := hH)
+      (hξH := hξH) (hXH := hXH) (F := F)
+      (a := coeffUZFin td F (ResiduePartition.uFromIndex (td := td) r m0))
+      (hCoeff := hCoeff))
+
+/-- Step 3, residue-class form: same as
+`step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_sum_fiberUZ_uFromIndex_eq_ref_finiteLargeSieve`,
+but with the weaker (and geometry-friendly) hypothesis package:
+`zSet`-domain equality along the progression plus fiber-sum equality only on that common domain. -/
+theorem step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_sum_fiberUZ_uFromIndex_eq_ref_on_zSet_finiteLargeSieve
+    (td : TubeData) (hU0 : 0 ≤ td.U) (r : ℤ)
+    (ξ : ℝ) (hξ0 : ξ ≠ 0) (hX : 0 < td.X) (hH : 0 < td.H) (hξH : |ξ| ≤ 1 / td.H)
+    (hXH :
+      (2 * ((2 * Int.toNat (Int.ceil td.U + td.q) : ℕ) : ℝ)) * (td.q : ℝ) ≤ td.X * td.H)
+    (F : TubePoint → ℂ)
+    (m0 : ℤ) (hm0 : m0 ∈ ResiduePartition.uIndexSet (td := td) r)
+    (hZeq :
+      ∀ m : ℤ, m ∈ ResiduePartition.uIndexSet (td := td) r →
+        zSet td (ResiduePartition.uFromIndex (td := td) r m)
+          = zSet td (ResiduePartition.uFromIndex (td := td) r m0))
+    (hEqOn :
+      ∀ m : ℤ, m ∈ ResiduePartition.uIndexSet (td := td) r →
+        ∀ z : ℤ, z ∈ zSet td (ResiduePartition.uFromIndex (td := td) r m0) →
+          (∑ p ∈ fiberUZ td (ResiduePartition.uFromIndex (td := td) r m) z, F p)
+            =
+          (∑ p ∈ fiberUZ td (ResiduePartition.uFromIndex (td := td) r m0) z, F p)) :
+    (∑ m ∈ ResiduePartition.uIndexSet (td := td) r,
+        ‖innerSumUZ td ξ F (ResiduePartition.uFromIndex (td := td) r m)‖ ^ 2)
+      ≤
+    (uIndexSet_finiteLargeSieve (td := td) (hU0 := hU0) (r := r) (N := zBoxN td) (ξ := -ξ)
+        (hξ0 := by simpa using (neg_ne_zero.2 hξ0)) (hX := hX) (hH := hH)
+        (hξH := by simpa using hξH) (hXH := hXH)).C *
+      (∑ k ∈ (Finset.univ : Finset (Fin (zBoxN td))),
+          ‖coeffUZFin td F (ResiduePartition.uFromIndex (td := td) r m0) k‖ ^ 2) := by
+  classical
+  have hCoeff :
+      ∀ m : ℤ, m ∈ ResiduePartition.uIndexSet (td := td) r →
+        coeffUZFin td F (ResiduePartition.uFromIndex (td := td) r m)
+          =
+        coeffUZFin td F (ResiduePartition.uFromIndex (td := td) r m0) :=
+    ConstCoeffFromFiber.constCoeffUZFin_of_sum_fiberUZ_uFromIndex_eq_ref_on_zSet
+      (td := td) (F := F) (r := r) (m0 := m0) (_hm0 := hm0) (hZeq := hZeq) (hEqOn := hEqOn)
+  simpa using
+    (step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_constCoeff_uIndexSet_finiteLargeSieve
+      (td := td) (hU0 := hU0) (r := r) (ξ := ξ) (hξ0 := hξ0) (hX := hX) (hH := hH)
+      (hξH := hξH) (hXH := hXH) (F := F)
+      (a := coeffUZFin td F (ResiduePartition.uFromIndex (td := td) r m0))
+      (hCoeff := hCoeff))
+
 /-- Step 4, residue-class form: analogue of
 `step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_constCoeff_uIndexSet_finiteLargeSieve`. -/
 theorem step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_constCoeff_vIndexSet_finiteLargeSieve
@@ -497,6 +583,90 @@ by
     _ = LS.C * (∑ k ∈ (Finset.univ : Finset (Fin (zBoxVN td))), ‖a k‖ ^ 2) := by
           simpa [hNormCoeff]
 
+/-- Step 4, residue-class form: deduce coefficient constancy on `vIndexSet td r` from equality of
+all fiber coefficient sums against a fixed reference index. -/
+theorem step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_sum_fiberVZ_vFromIndex_eq_ref_finiteLargeSieve
+    (td : TubeData) (hD0 : 0 ≤ td.D) (r : ℤ)
+    (ξ : ℝ) (hξ0 : ξ ≠ 0) (hX : 0 < td.X) (hH : 0 < td.H) (hξH : |ξ| ≤ 1 / td.H)
+    (hXH :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * td.D) + td.q) : ℕ) : ℝ)) * (td.q : ℝ) ≤ td.X * td.H)
+    (F : TubePoint → ℂ)
+    (m0 : ℤ) (_hm0 : m0 ∈ ResiduePartitionV.vIndexSet (td := td) r)
+    (hEq :
+      ∀ m : ℤ, m ∈ ResiduePartitionV.vIndexSet (td := td) r →
+        ∀ k : Fin (zBoxVN td),
+          (∑ p ∈ fiberVZ td (ResiduePartitionV.vFromIndex (td := td) r m)
+              (zBoxVA td + (k : ℕ)), F p)
+            =
+          (∑ p ∈ fiberVZ td (ResiduePartitionV.vFromIndex (td := td) r m0)
+              (zBoxVA td + (k : ℕ)), F p)) :
+    (∑ m ∈ ResiduePartitionV.vIndexSet (td := td) r,
+        ‖innerSumVZ td ξ F (ResiduePartitionV.vFromIndex (td := td) r m)‖ ^ 2)
+      ≤
+    (vIndexSet_finiteLargeSieve (td := td) (hD0 := hD0) (r := r) (N := zBoxVN td) (ξ := -ξ)
+        (hξ0 := by simpa using (neg_ne_zero.2 hξ0)) (hX := hX) (hH := hH)
+        (hξH := by simpa using hξH) (hXH := hXH)).C *
+      (∑ k ∈ (Finset.univ : Finset (Fin (zBoxVN td))),
+          ‖coeffVZFin td F (ResiduePartitionV.vFromIndex (td := td) r m0) k‖ ^ 2) := by
+  classical
+  have hCoeff :
+      ∀ m : ℤ, m ∈ ResiduePartitionV.vIndexSet (td := td) r →
+        coeffVZFin td F (ResiduePartitionV.vFromIndex (td := td) r m)
+          =
+        coeffVZFin td F (ResiduePartitionV.vFromIndex (td := td) r m0) := by
+    intro m hm
+    funext k
+    simpa [coeffVZFin] using (hEq m hm k)
+  simpa using
+    (step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_constCoeff_vIndexSet_finiteLargeSieve
+      (td := td) (hD0 := hD0) (r := r) (ξ := ξ) (hξ0 := hξ0) (hX := hX) (hH := hH)
+      (hξH := hξH) (hXH := hXH) (F := F)
+      (a := coeffVZFin td F (ResiduePartitionV.vFromIndex (td := td) r m0))
+      (hCoeff := hCoeff))
+
+/-- Step 4 analogue of
+`step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_sum_fiberUZ_uFromIndex_eq_ref_on_zSet_finiteLargeSieve`.
+-/
+theorem step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_sum_fiberVZ_vFromIndex_eq_ref_on_zSetV_finiteLargeSieve
+    (td : TubeData) (hD0 : 0 ≤ td.D) (r : ℤ)
+    (ξ : ℝ) (hξ0 : ξ ≠ 0) (hX : 0 < td.X) (hH : 0 < td.H) (hξH : |ξ| ≤ 1 / td.H)
+    (hXH :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * td.D) + td.q) : ℕ) : ℝ)) * (td.q : ℝ) ≤ td.X * td.H)
+    (F : TubePoint → ℂ)
+    (m0 : ℤ) (hm0 : m0 ∈ ResiduePartitionV.vIndexSet (td := td) r)
+    (hZeq :
+      ∀ m : ℤ, m ∈ ResiduePartitionV.vIndexSet (td := td) r →
+        zSetV td (ResiduePartitionV.vFromIndex (td := td) r m)
+          = zSetV td (ResiduePartitionV.vFromIndex (td := td) r m0))
+    (hEqOn :
+      ∀ m : ℤ, m ∈ ResiduePartitionV.vIndexSet (td := td) r →
+        ∀ z : ℤ, z ∈ zSetV td (ResiduePartitionV.vFromIndex (td := td) r m0) →
+          (∑ p ∈ fiberVZ td (ResiduePartitionV.vFromIndex (td := td) r m) z, F p)
+            =
+          (∑ p ∈ fiberVZ td (ResiduePartitionV.vFromIndex (td := td) r m0) z, F p)) :
+    (∑ m ∈ ResiduePartitionV.vIndexSet (td := td) r,
+        ‖innerSumVZ td ξ F (ResiduePartitionV.vFromIndex (td := td) r m)‖ ^ 2)
+      ≤
+    (vIndexSet_finiteLargeSieve (td := td) (hD0 := hD0) (r := r) (N := zBoxVN td) (ξ := -ξ)
+        (hξ0 := by simpa using (neg_ne_zero.2 hξ0)) (hX := hX) (hH := hH)
+        (hξH := by simpa using hξH) (hXH := hXH)).C *
+      (∑ k ∈ (Finset.univ : Finset (Fin (zBoxVN td))),
+          ‖coeffVZFin td F (ResiduePartitionV.vFromIndex (td := td) r m0) k‖ ^ 2) := by
+  classical
+  have hCoeff :
+      ∀ m : ℤ, m ∈ ResiduePartitionV.vIndexSet (td := td) r →
+        coeffVZFin td F (ResiduePartitionV.vFromIndex (td := td) r m)
+          =
+        coeffVZFin td F (ResiduePartitionV.vFromIndex (td := td) r m0) :=
+    ConstCoeffFromFiber.constCoeffVZFin_of_sum_fiberVZ_vFromIndex_eq_ref_on_zSetV
+      (td := td) (F := F) (r := r) (m0 := m0) (_hm0 := hm0) (hZeq := hZeq) (hEqOn := hEqOn)
+  simpa using
+    (step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_constCoeff_vIndexSet_finiteLargeSieve
+      (td := td) (hD0 := hD0) (r := r) (ξ := ξ) (hξ0 := hξ0) (hX := hX) (hH := hH)
+      (hξH := hξH) (hXH := hXH) (F := F)
+      (a := coeffVZFin td F (ResiduePartitionV.vFromIndex (td := td) r m0))
+      (hCoeff := hCoeff))
+
 /-!
 ### TeX-friendly corollaries: replace `LS.C` by an explicit `(1+log)` bound (per residue class)
 
@@ -554,6 +724,33 @@ by
     positivity
   exact hmain.trans hmul
 
+/-- Interval-geometry wrapper for
+`step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_constCoeff_uIndexSet_one_add_log`.
+
+It derives `|ξ| ≤ 1/H` from `ξ ∈ [-(1/H), 1/H]`. -/
+theorem step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_constCoeff_uIndexSet_one_add_log_outerGeom
+    (td : TubeData) (hU0 : 0 ≤ td.U) (r : ℤ)
+    (ξ : ℝ) (hξ0 : ξ ≠ 0) (hX : 0 < td.X) (hH : 0 < td.H)
+    (hξI : ξ ∈ Set.Icc (-(1 / td.H)) (1 / td.H))
+    (hXH :
+      (2 * ((2 * Int.toNat (Int.ceil td.U + td.q) : ℕ) : ℝ)) * (td.q : ℝ) ≤ td.X * td.H)
+    (F : TubePoint → ℂ) (a : Fin (zBoxN td) → ℂ)
+    (hCoeff :
+      ∀ m : ℤ, m ∈ ResiduePartition.uIndexSet (td := td) r →
+        coeffUZFin td F (ResiduePartition.uFromIndex (td := td) r m) = a) :
+    (∑ m ∈ ResiduePartition.uIndexSet (td := td) r,
+        ‖innerSumUZ td ξ F (ResiduePartition.uFromIndex (td := td) r m)‖ ^ 2)
+      ≤
+    ((zBoxN td : ℝ) +
+        (td.X / (|ξ| * (td.q : ℝ))) * (1 + Real.log (2 * Int.toNat (Int.ceil td.U + td.q)))) *
+      (∑ k ∈ (Finset.univ : Finset (Fin (zBoxN td))), ‖a k‖ ^ 2) := by
+  have hξH : |ξ| ≤ 1 / td.H := by
+    exact abs_le.mpr ⟨by simpa using hξI.1, by simpa using hξI.2⟩
+  exact
+    step3_sum_uFromIndex_norm_innerSumUZ_sq_le_of_constCoeff_uIndexSet_one_add_log
+      (td := td) (hU0 := hU0) (r := r) (ξ := ξ) (hξ0 := hξ0) (hX := hX) (hH := hH)
+      (hξH := hξH) (hXH := hXH) (F := F) (a := a) (hCoeff := hCoeff)
+
 /-- Step 4, residue-class form, with the MV constant replaced by an explicit polylog expression. -/
 theorem step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_constCoeff_vIndexSet_one_add_log
     (td : TubeData) (hD0 : 0 ≤ td.D) (r : ℤ)
@@ -601,6 +798,33 @@ by
     refine mul_le_mul_of_nonneg_right hC' ?_
     positivity
   exact hmain.trans hmul
+
+/-- Interval-geometry wrapper for
+`step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_constCoeff_vIndexSet_one_add_log`.
+
+It derives `|ξ| ≤ 1/H` from `ξ ∈ [-(1/H), 1/H]`. -/
+theorem step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_constCoeff_vIndexSet_one_add_log_outerGeom
+    (td : TubeData) (hD0 : 0 ≤ td.D) (r : ℤ)
+    (ξ : ℝ) (hξ0 : ξ ≠ 0) (hX : 0 < td.X) (hH : 0 < td.H)
+    (hξI : ξ ∈ Set.Icc (-(1 / td.H)) (1 / td.H))
+    (hXH :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * td.D) + td.q) : ℕ) : ℝ)) * (td.q : ℝ) ≤ td.X * td.H)
+    (F : TubePoint → ℂ) (a : Fin (zBoxVN td) → ℂ)
+    (hCoeff :
+      ∀ m : ℤ, m ∈ ResiduePartitionV.vIndexSet (td := td) r →
+        coeffVZFin td F (ResiduePartitionV.vFromIndex (td := td) r m) = a) :
+    (∑ m ∈ ResiduePartitionV.vIndexSet (td := td) r,
+        ‖innerSumVZ td ξ F (ResiduePartitionV.vFromIndex (td := td) r m)‖ ^ 2)
+      ≤
+    ((zBoxVN td : ℝ) +
+        (td.X / (|ξ| * (td.q : ℝ))) * (1 + Real.log (2 * Int.toNat (Int.ceil (2 * td.D) + td.q)))) *
+      (∑ k ∈ (Finset.univ : Finset (Fin (zBoxVN td))), ‖a k‖ ^ 2) := by
+  have hξH : |ξ| ≤ 1 / td.H := by
+    exact abs_le.mpr ⟨by simpa using hξI.1, by simpa using hξI.2⟩
+  exact
+    step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_constCoeff_vIndexSet_one_add_log
+      (td := td) (hD0 := hD0) (r := r) (ξ := ξ) (hξ0 := hξ0) (hX := hX) (hH := hH)
+      (hξH := hξH) (hXH := hXH) (F := F) (a := a) (hCoeff := hCoeff)
 
 /-!
 ## TeX-friendly corollaries: explicit `(1+log)` bounds for the MV constant

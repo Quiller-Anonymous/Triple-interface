@@ -23,6 +23,11 @@ open scoped BigOperators
 
 noncomputable section
 
+private theorem abs_le_one_div_of_mem_Icc {H ξ : ℝ}
+    (hξI : ξ ∈ Set.Icc (-(1 / H)) (1 / H)) :
+    |ξ| ≤ 1 / H := by
+  exact abs_le.mpr ⟨by simpa using hξI.1, by simpa using hξI.2⟩
+
 /-!
 ## TeX Step 3: large sieve over progressions in `v`
 
@@ -43,6 +48,20 @@ structure Step3LargeSieveOuterU (td : TubeData) where
           ≤
         C * ((td.D / (td.q : ℝ)) * (td.U + td.X / |ξ|) * tubeEnergy td.T F)
 
+namespace Step3LargeSieveOuterU
+
+/-- Interval-geometry wrapper for Step 3 large-sieve bounds. -/
+theorem bound_outerGeom (h3 : Step3LargeSieveOuterU td)
+    (ξ : ℝ) (hξ0 : ξ ≠ 0)
+    (hξI : ξ ∈ Set.Icc (-(1 / td.H)) (1 / td.H))
+    (F : TubePoint → ℂ) :
+    ‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2
+      ≤
+    h3.C * ((td.D / (td.q : ℝ)) * (td.U + td.X / |ξ|) * tubeEnergy td.T F) := by
+  exact h3.bound ξ hξ0 (abs_le_one_div_of_mem_Icc hξI) F
+
+end Step3LargeSieveOuterU
+
 /-!
 ## TeX Step 4: large sieve over progressions in `u`
 
@@ -60,6 +79,20 @@ structure Step4LargeSieveOuterV (td : TubeData) where
         ‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2
           ≤
         C * (td.D * (td.U / (td.q : ℝ) + td.X / |ξ|) * tubeEnergy td.T F)
+
+namespace Step4LargeSieveOuterV
+
+/-- Interval-geometry wrapper for Step 4 large-sieve bounds. -/
+theorem bound_outerGeom (h4 : Step4LargeSieveOuterV td)
+    (ξ : ℝ) (hξ0 : ξ ≠ 0)
+    (hξI : ξ ∈ Set.Icc (-(1 / td.H)) (1 / td.H))
+    (F : TubePoint → ℂ) :
+    ‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2
+      ≤
+    h4.C * (td.D * (td.U / (td.q : ℝ) + td.X / |ξ|) * tubeEnergy td.T F) := by
+  exact h4.bound ξ hξ0 (abs_le_one_div_of_mem_Icc hξI) F
+
+end Step4LargeSieveOuterV
 
 /-!
 ## TeX Step 5: geometric-mean combined bound
@@ -88,6 +121,24 @@ structure Step34LargeSieveTeX (td : TubeData) where
             Real.sqrt (td.U + td.X / |ξ|) *
             Real.sqrt (td.D + td.X / |ξ|) *
                 tubeEnergy td.T F
+
+namespace Step34LargeSieveTeX
+
+/-- Interval-geometry wrapper for Step 5 large-sieve bounds. -/
+theorem bound_outerGeom (h34 : Step34LargeSieveTeX td)
+    (ξ : ℝ) (hξ0 : ξ ≠ 0)
+    (hξI : ξ ∈ Set.Icc (-(1 / td.H)) (1 / td.H))
+    (F : TubePoint → ℂ) :
+    ‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2
+      ≤
+    h34.C *
+      Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+        Real.sqrt (td.U + td.X / |ξ|) *
+        Real.sqrt (td.D + td.X / |ξ|) *
+          tubeEnergy td.T F := by
+  exact h34.bound ξ hξ0 (abs_le_one_div_of_mem_Icc hξI) F
+
+end Step34LargeSieveTeX
 
 end
 

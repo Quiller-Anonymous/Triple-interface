@@ -51,21 +51,21 @@ theorem integral_weight_mul_prodSumTorusByProd_mul_star
       (D.A f i j k') * star (D.A f i j k) *
         (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean (D := Dpacket) X H i j (k' - k)) := by
   classical
-  -- Rewrite the torus-side product sum as the real-frequency TeX `e(ξk/X)` sum, then apply the
-  -- deterministic Toeplitzization lemma with the packet-overlap weight.
-  have hbridge :
-      ∀ ξ : ℝ, D.prodSumRealByProd X ξ f i j =
-        D.prodSumTorusByProd f i j ((ξ / X : ℝ) : SSU.Torus.UC) := by
-    intro ξ
-    simpa using (D.prodSumRealByProd_eq_prodSumTorusByProd (X := X) (ξ := ξ) (f := f) (i := i) (j := j))
-  -- Apply the already-proved weighted Toeplitzization for `prodSumRealByProd`.
-  have htoeplitz :=
-    (SSU.Instances.FejerBankedTypeIIToeplitzKernel.integral_weight_mul_prodSumRealByProd_mul_star_auto
-      (Dpacket := Dpacket) (D := D) (X := X) (H := H) (f := f) (i := i) (j := j)
-      (hH := hH) (hX := hX))
-  -- Use `hbridge` to rewrite the LHS integrand.
-  -- (The RHS already matches by definition of `Weight.K`.)
-  simpa [hbridge] using htoeplitz
+  -- This is the domain-general Toeplitzization lemma, specialized to the Fejér-banked weight.
+  -- (The `KLean` on the RHS is definitional `BGTypeIIWeightedToeplitz.K` applied to `wLean`.)
+  simpa [SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean,
+    SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band]
+    using
+      (SSU.Engines.BGTypeIIArrayWeightedToeplitz.integral_weight_mul_prodSumTorusByProd_mul_star
+        (D := D) (X := X) (H := H)
+        (w := fun ξ => SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean (D := Dpacket) X H i j ξ)
+        (f := f) (i := i) (j := j) (hH := hH)
+        (hw := by
+          -- Integrability of the Fejér-banked weight is already packaged.
+          simpa [SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band] using
+            (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.integrableOn_wLean
+              (D := Dpacket) (X := X) (H := H) hH i j))
+        (hX := hX))
 
 end
 

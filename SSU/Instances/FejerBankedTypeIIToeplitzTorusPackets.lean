@@ -3,6 +3,7 @@ import SSU.Instances.FejerBankedTypeIIToeplitzBandToArc
 import SSU.Instances.FejerBankedTypeIIToeplitzKernel
 import SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcHypothesis
 import SSU.Engines.BGTypeIIArray
+import SSU.Torus.AddCircleMeasurability
 
 /-!
 Fejér-banked packets (torus-side): deterministic extraction bridge to a Toeplitz Type–II form.
@@ -51,29 +52,14 @@ other “torus packet extraction” files can reuse it.
 
 theorem measurable_equivIoc (p a : ℝ) [Fact (0 < p)] :
     Measurable (AddCircle.equivIoc (p := p) a) := by
-  classical
-  -- `equivIoc` is continuous on `{a}ᶜ`.
-  have hcont : ContinuousOn (AddCircle.equivIoc (p := p) a) ({(a : AddCircle p)}ᶜ) := by
-    intro x hx
-    have hx' : x ≠ (a : AddCircle p) := by
-      simpa [Set.mem_compl_iff, Set.mem_singleton_iff] using hx
-    exact (AddCircle.continuousAt_equivIoc (p := p) (a := a) (x := x) hx').continuousWithinAt
-  -- A single-point discontinuity is measurable.
-  simpa using (measurable_of_continuousOn_compl_singleton (a := (a : AddCircle p)) hcont)
+  simpa using SSU.Torus.AddCircleMeasurability.measurable_equivIoc (p := p) (a := a)
 
 theorem measurable_liftIoc {B : Type*} [TopologicalSpace B] [MeasurableSpace B] [BorelSpace B]
     (p a : ℝ) [Fact (0 < p)] [Archimedean ℝ]
     (f : ℝ → B) (hf : Measurable f) :
     Measurable (AddCircle.liftIoc (p := p) (a := a) f) := by
-  classical
-  -- Expand `liftIoc` and prove measurability by composition.
-  have hrep : Measurable fun y : Set.Ioc a (a + p) => f (y : ℝ) :=
-    hf.comp measurable_subtype_coe
-  have hEq : AddCircle.liftIoc (p := p) (a := a) f =
-      (fun x : AddCircle p => f ((AddCircle.equivIoc (p := p) a x : Set.Ioc a (a + p)) : ℝ)) := by
-    rfl
-  have he : Measurable (AddCircle.equivIoc (p := p) a) := measurable_equivIoc (p := p) (a := a)
-  simpa [hEq] using (hrep.comp he)
+  simpa using
+    SSU.Torus.AddCircleMeasurability.measurable_liftIoc (p := p) (a := a) (f := f) hf
 
 end Helpers
 
@@ -104,7 +90,7 @@ private theorem measurable_arc : MeasurableSet (arc (Dpacket := Dpacket)) := by
   -- `arcAtBand` is a compact image of `Icc`, hence closed, hence measurable.
   -- This matches the proof pattern in the rank-one bridge.
   dsimp [arc, SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcHypothesis.Arc.arcAtBand,
-    FejerBankedTypeIIToeplitzBandMap.arc]
+    SSU.Torus.BandMap.arc]
   have hcont : Continuous (fun x : ℝ => (x : UC)) := by
     simpa using (continuous_quotient_mk' : Continuous fun x : ℝ => (x : UC))
   have hcompact : IsCompact (Set.Icc (-(1 / Dpacket.H) / Dpacket.X) ((1 / Dpacket.H) / Dpacket.X)) :=
@@ -566,6 +552,96 @@ theorem inner_packetOpUnnormalized_eq_toeplitzFormTeXC
           (T := D.tube)
           (F := D.F f i j) := by
         simpa [hscalar]
+
+/--
+Same extraction step as `inner_packetOpUnnormalized_eq_toeplitzFormTeXC`, but kept in the
+weighted-band-integral form (the exact TT*/Step-2 shape used by bridge hypotheses).
+-/
+theorem inner_packetOpUnnormalized_eq_weightedIntegral
+    (f : H0) (i j : ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ)) :
+    inner ℂ (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+      =
+    ((1 / Dpacket.X : ℝ) : ℂ) *
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+            (D.prodSumRealByProd Dpacket.X ξ f i j) *
+              star (D.prodSumRealByProd Dpacket.X ξ f i j)) := by
+  have hToe :
+      inner ℂ (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+        =
+      ((1 / Dpacket.X : ℝ) : ℂ) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+              (D := Dpacket) Dpacket.X Dpacket.H i j t)
+          (T := D.tube)
+          (F := D.F f i j) :=
+    inner_packetOpUnnormalized_eq_toeplitzFormTeXC
+      (Dpacket := Dpacket) (D := D) (f := f) (i := i) (j := j)
+      (hX := hX) (hH := hH) (hsmall := hsmall)
+  have hX0 : (Dpacket.X : ℝ) ≠ 0 := ne_of_gt hX
+  have hDet :
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+            (D.prodSumRealByProd Dpacket.X ξ f i j) *
+              star (D.prodSumRealByProd Dpacket.X ξ f i j))
+        =
+      SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+        (K := fun t =>
+          SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+            (D := Dpacket) Dpacket.X Dpacket.H i j t)
+        (T := D.tube)
+        (F := D.F f i j) := by
+    simpa using
+      (SSU.Instances.FejerBankedTypeIIToeplitzKernel.integral_weight_mul_prodSumRealByProd_mul_star_eq_toeplitzFormTeXC_auto
+        (Dpacket := Dpacket) (D := D) (X := Dpacket.X) (H := Dpacket.H)
+        (f := f) (i := i) (j := j) (hH := hH) (hX := hX0))
+  calc
+    inner ℂ (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+        =
+      ((1 / Dpacket.X : ℝ) : ℂ) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+              (D := Dpacket) Dpacket.X Dpacket.H i j t)
+          (T := D.tube)
+          (F := D.F f i j) := hToe
+    _ =
+      ((1 / Dpacket.X : ℝ) : ℂ) *
+        (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
+            (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+              (D.prodSumRealByProd Dpacket.X ξ f i j) *
+                star (D.prodSumRealByProd Dpacket.X ξ f i j)) := by
+      rw [← hDet]
+
+/-- `J`-indexed wrapper of `inner_packetOpUnnormalized_eq_weightedIntegral` for heart-facing APIs. -/
+theorem inner_packetOpUnnormalized_eq_weightedIntegral_onJ
+    (f : H0)
+    (i : ℤ) (_hi : i ∈ Dpacket.J)
+    (j : ℤ) (_hj : j ∈ Dpacket.J)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ)) :
+    inner ℂ (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (fTT (Dpacket := Dpacket) (D := D) f i j hH))
+      =
+    ((1 / Dpacket.X : ℝ) : ℂ) *
+      (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+            (D.prodSumRealByProd Dpacket.X ξ f i j) *
+              star (D.prodSumRealByProd Dpacket.X ξ f i j)) := by
+  simpa using
+    inner_packetOpUnnormalized_eq_weightedIntegral
+      (Dpacket := Dpacket) (D := D) (f := f) (i := i) (j := j)
+      (hX := hX) (hH := hH) (hsmall := hsmall)
 
 end General
 

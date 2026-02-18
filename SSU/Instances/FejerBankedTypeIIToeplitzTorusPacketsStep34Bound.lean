@@ -41,6 +41,7 @@ variable (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
 variable {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
 variable (D : SSU.Engines.BGTypeIIArray.Data H0)
 
+set_option maxHeartbeats 800000 in
 theorem norm_inner_packetOpUnnormalized_le
     (f : H0) (i j : ℤ)
     (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
@@ -119,10 +120,41 @@ theorem norm_inner_packetOpUnnormalized_le
                 (D := Dpacket) Dpacket.X Dpacket.H i j t)
             (T := D.tube)
             (F := D.F f i j)‖ := by
-    have : ‖((1 / Dpacket.X : ℝ) : ℂ)‖ = (1 / Dpacket.X) := by
+    have hscalarNorm : ‖((1 / Dpacket.X : ℝ) : ℂ)‖ = (1 / Dpacket.X) := by
       have hnonneg : 0 ≤ (1 / Dpacket.X : ℝ) := one_div_nonneg.2 (le_of_lt hX)
-      simpa [Complex.norm_real, abs_of_nonneg hnonneg]
-    simp [norm_mul, this, mul_assoc, mul_left_comm, mul_comm]
+      rw [Complex.norm_real, Real.norm_eq_abs, abs_of_nonneg hnonneg]
+    calc
+      ‖((1 / Dpacket.X : ℝ) : ℂ) *
+          SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+            (K := fun t =>
+              SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+                (D := Dpacket) Dpacket.X Dpacket.H i j t)
+            (T := D.tube)
+            (F := D.F f i j)‖
+          =
+        ‖((1 / Dpacket.X : ℝ) : ℂ)‖ *
+          ‖SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+            (K := fun t =>
+              SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+                (D := Dpacket) Dpacket.X Dpacket.H i j t)
+            (T := D.tube)
+            (F := D.F f i j)‖ := by simpa using
+              (norm_mul
+                (((1 / Dpacket.X : ℝ) : ℂ))
+                (SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+                  (K := fun t =>
+                    SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+                      (D := Dpacket) Dpacket.X Dpacket.H i j t)
+                  (T := D.tube)
+                  (F := D.F f i j)))
+      _ =
+        (1 / Dpacket.X) *
+          ‖SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+            (K := fun t =>
+              SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+                (D := Dpacket) Dpacket.X Dpacket.H i j t)
+            (T := D.tube)
+            (F := D.F f i j)‖ := by rw [hscalarNorm]
 
   have hnormToInt :
       ‖SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
@@ -186,22 +218,21 @@ theorem norm_inner_packetOpUnnormalized_le
       exact abs_le.2 hle
     -- Step34 bound on the (ungrouped) product sum.
     have hprod :
-        D.prodSumReal Dpacket.X ξ f i j = SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ D.tube (D.F f i j) := by
-      rfl
+        D.prodSumRealByProd Dpacket.X ξ f i j
+          = SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ D.tube (D.F f i j) := by
+      simpa [SSU.Engines.BGTypeIIArray.Data.prodSumReal] using
+        (D.prodSumReal_eq_prodSumRealByProd (X := Dpacket.X) (ξ := ξ) (f := f) (i := i) (j := j)).symm
     have hS0 :
         ‖D.prodSumRealByProd Dpacket.X ξ f i j‖ ^ 2
           ≤
         step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j) := by
-      -- Rewrite `prodSumRealByProd` into `prodSumReal`, then apply `step34.bound`.
-      have hEq := (D.prodSumReal_eq_prodSumRealByProd (X := Dpacket.X) (ξ := ξ) (f := f) (i := i) (j := j))
       have h34 :
           ‖SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ D.tube (D.F f i j)‖ ^ 2
             ≤
           step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j) := by
         have hAbs : |ξ| ≤ (1 / Dpacket.H) := hξabs
         simpa using (step34.bound ξ hAbs (D.F f i j))
-      -- `prodSumRealByProd = prodSumReal = prodSum`.
-      simpa [hEq, hprod] using h34
+      simpa [hprod] using h34
     -- Bound `‖wLean‖` using `‖ψ‖ ≤ M*Φmax` and `KhatTorus_eval_eq_Khat_on_band`.
     have hKhat :
         SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcHypothesis.Khat.KhatTorus Dpacket.X Dpacket.H ((ξ / Dpacket.X : ℝ) : UC)
@@ -219,26 +250,15 @@ theorem norm_inner_packetOpUnnormalized_le
         ‖SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean (D := Dpacket) Dpacket.X Dpacket.H i j ξ‖
           ≤
         (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * ((Dpacket.M * Dpacket.Φmax) ^ 2) := by
-      -- Expand `wLean` and apply `‖ab‖ ≤ ‖a‖‖b‖` and `‖ψ‖ ≤ MΦmax`.
-      -- Note: `wLean = Khat * conj(ψ_i(ξ/X)) * ψ_j(ξ/X)`.
-      -- We rewrite `KhatTorus((ξ/X):𝕋)` to `Khat ξ` on the band.
-      -- Then use `‖conj z‖ = ‖z‖`.
-      have hK0 : 0 ≤ SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ :=
-        SSU.Engines.TypeII.AdmissibleKernel.Khat_nonneg (H := Dpacket.H) (hH := hH) ξ
-      -- `KhatReal H ξ` is `Khat H ξ` as an `ℝ`-value; `wLean` uses it via casts.
-      -- Just bound in `ℝ` using `norm_mul` and `hψi/hψj`.
-      -- Use a direct simp-normalization.
-      simp [SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean,
-        SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.w,
-        SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.Khat,
-        SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band,
-        hKhat, mul_assoc, mul_left_comm, mul_comm, norm_mul, hψi, hψj,
-        pow_two, mul_le_mul_of_nonneg_left, hK0] at *
+      have hw0 :=
+        SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.norm_w_le
+          (D := Dpacket) (X := Dpacket.X) (H := Dpacket.H) (hH := hH) (i := i) (j := j) (ξ := ξ)
+      simpa [SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean] using hw0
     -- Combine: `‖wLean * S * star S‖ = ‖wLean‖ * ‖S‖^2`.
     have hSS : ‖(D.prodSumRealByProd Dpacket.X ξ f i j) * star (D.prodSumRealByProd Dpacket.X ξ f i j)‖
         = ‖D.prodSumRealByProd Dpacket.X ξ f i j‖ ^ 2 := by
-      -- In `ℂ`, `z * conj z = ‖z‖^2`.
-      simpa [pow_two, mul_assoc] using (Complex.mul_conj (D.prodSumRealByProd Dpacket.X ξ f i j)).symm
+      simpa [pow_two, mul_assoc] using
+        (norm_mul (D.prodSumRealByProd Dpacket.X ξ f i j) (star (D.prodSumRealByProd Dpacket.X ξ f i j)))
     -- Finish the pointwise inequality.
     calc
       ‖SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean (D := Dpacket) Dpacket.X Dpacket.H i j ξ *
@@ -251,20 +271,19 @@ theorem norm_inner_packetOpUnnormalized_le
       _ =
         ‖SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean (D := Dpacket) Dpacket.X Dpacket.H i j ξ‖ *
           (‖D.prodSumRealByProd Dpacket.X ξ f i j‖ ^ 2) := by
-            simp [hSS]
+            rw [hSS]
       _ ≤
         ((SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * ((Dpacket.M * Dpacket.Φmax) ^ 2)) *
           (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)) := by
-            have h0 : 0 ≤ ‖SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean (D := Dpacket) Dpacket.X Dpacket.H i j ξ‖ := by positivity
             have h1 :=
               mul_le_mul_of_nonneg_right hw (by positivity : 0 ≤ ‖D.prodSumRealByProd Dpacket.X ξ f i j‖ ^ 2)
-            have h2 :=
-              mul_le_mul_of_nonneg_left hS0 (by
-                have : 0 ≤ (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * ((Dpacket.M * Dpacket.Φmax) ^ 2) := by
-                  exact mul_nonneg (SSU.Engines.TypeII.AdmissibleKernel.Khat_nonneg (H := Dpacket.H) (hH := hH) ξ) (by nlinarith [Dpacket.M_nonneg, Dpacket.Φmax_nonneg])
-                simpa [mul_assoc] using this)
-            -- Rearrange: use commutativity of `ℝ` to match the target shape.
-            nlinarith [h1, hS0]
+            have hKfac :
+                0 ≤ (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * ((Dpacket.M * Dpacket.Φmax) ^ 2) := by
+              exact mul_nonneg
+                (SSU.Engines.TypeII.AdmissibleKernel.Khat_nonneg (H := Dpacket.H) (hH := hH) ξ)
+                (by positivity)
+            have h2 := mul_le_mul_of_nonneg_left hS0 hKfac
+            exact le_trans h1 (by simpa [mul_assoc, mul_left_comm, mul_comm] using h2)
       _ = (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * ((Dpacket.M * Dpacket.Φmax) ^ 2) *
             (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)) := by
             ring
@@ -280,72 +299,120 @@ theorem norm_inner_packetOpUnnormalized_le
       ((Dpacket.M * Dpacket.Φmax) ^ 2) *
         (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)) *
           (2 * (Dpacket.H)⁻¹) := by
-    -- First use `integral_mono` with `hpoint`, then factor out constants and apply `integral_Khat_le`.
-    have hs : MeasurableSet (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H) := by
-      dsimp [SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band]
-      measurability
-    have hmono :=
-      MeasureTheory.integral_mono_of_nonneg
-        (μ := (volume : Measure ℝ).restrict (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H))
-        (f := fun ξ => ‖(SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
-              (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
-            (D.prodSumRealByProd Dpacket.X ξ f i j) *
-              star (D.prodSumRealByProd Dpacket.X ξ f i j)‖)
-        (g := fun ξ =>
-          (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) *
-            ((Dpacket.M * Dpacket.Φmax) ^ 2) *
-              (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)))
-        (by intro ξ; positivity)
-        (by intro ξ; positivity)
-        (by
-          -- Convert `≤ᵐ` to pointwise a.e. on the restricted measure.
-          exact hpoint)
-    -- Now simplify the RHS integral: constants pull out, leaving `∫ Khat`.
+    -- First use `integral_mono_of_nonneg` on the restricted measure.
+    let μ : Measure ℝ :=
+      (volume : Measure ℝ).restrict (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H)
+    set Cfac : ℝ :=
+      ((Dpacket.M * Dpacket.Φmax) ^ 2) *
+        (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j))
+    have hnonneg :
+        0 ≤ᵐ[μ] fun ξ =>
+          ‖(SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+              (D.prodSumRealByProd Dpacket.X ξ f i j) *
+                star (D.prodSumRealByProd Dpacket.X ξ f i j)‖ := by
+      exact Filter.Eventually.of_forall (fun ξ => norm_nonneg _)
+    have hKhat_int_on :
+        IntegrableOn (fun ξ => SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ)
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H) := by
+      have hband :
+          SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H =
+            Set.Icc (-(Dpacket.H)⁻¹) (Dpacket.H)⁻¹ := by
+        simp [SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band,
+          SSU.Engines.BGTypeIIWeightedToeplitz.band]
+      simpa [hband] using
+        (SSU.Engines.TypeII.AdmissibleKernel.Khat_integrableOn (H := Dpacket.H) hH)
+    have hKhat_int :
+        Integrable (fun ξ => SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) μ := by
+      simpa [μ, MeasureTheory.IntegrableOn] using hKhat_int_on
+    have hgi :
+        Integrable
+          (fun ξ => (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * Cfac) μ := by
+      simpa [Cfac, mul_assoc] using hKhat_int.mul_const Cfac
+    have hpoint' :
+        (fun ξ =>
+            ‖(SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                  (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+                (D.prodSumRealByProd Dpacket.X ξ f i j) *
+                  star (D.prodSumRealByProd Dpacket.X ξ f i j)‖)
+          ≤ᵐ[μ]
+          (fun ξ => (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * Cfac) := by
+      simpa [μ, Cfac, mul_assoc, mul_left_comm, mul_comm] using hpoint
+    have hmono :
+        (∫ ξ, ‖(SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                    (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+                  (D.prodSumRealByProd Dpacket.X ξ f i j) *
+                    star (D.prodSumRealByProd Dpacket.X ξ f i j)‖ ∂ μ)
+          ≤
+        (∫ ξ, (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * Cfac ∂ μ) := by
+      exact MeasureTheory.integral_mono_of_nonneg (μ := μ) hnonneg hgi hpoint'
+    -- Pull out constants and apply `∫ Khat ≤ 2/H`.
     have hpull :
-        (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
-          (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) *
-            ((Dpacket.M * Dpacket.Φmax) ^ 2) *
-              (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)))
+        (∫ ξ, (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * Cfac ∂ μ)
           =
-        ((Dpacket.M * Dpacket.Φmax) ^ 2) *
-          (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)) *
-            (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
-              (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ)) := by
-      -- Pull out the constant factor twice.
-      simp [mul_assoc, mul_left_comm, mul_comm, MeasureTheory.integral_mul_right, MeasureTheory.integral_mul_left]
-    -- Bound the remaining kernel moment.
+        (∫ ξ, SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ ∂ μ) * Cfac := by
+      simpa using
+        (MeasureTheory.integral_mul_const
+          (μ := μ)
+          (f := fun ξ => SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ)
+          Cfac)
     have hKhat :
-        (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
-          (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ))
+        (∫ ξ, SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ ∂ μ)
           ≤ 2 * (Dpacket.H)⁻¹ := by
-      simpa [SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band] using
+      have hband :
+          SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H =
+            Set.Icc (-(Dpacket.H)⁻¹) (Dpacket.H)⁻¹ := by
+        simp [SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band,
+          SSU.Engines.BGTypeIIWeightedToeplitz.band]
+      simpa [μ, hband] using
         (SSU.Engines.TypeII.AdmissibleKernel.integral_Khat_le (H := Dpacket.H) hH)
-    -- Combine.
+    have hE0 : 0 ≤ tubeEnergy D.tube (D.F f i j) := by
+      unfold SSU.tubeEnergy
+      refine Finset.sum_nonneg ?_
+      intro p hp
+      positivity
+    have hCfac0 : 0 ≤ Cfac := by
+      have hM0 : 0 ≤ (Dpacket.M * Dpacket.Φmax) ^ 2 := by positivity
+      have hsqrt0 : 0 ≤ Real.sqrt (Dpacket.H / Dpacket.X) := Real.sqrt_nonneg _
+      have htail0 :
+          0 ≤ step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j) := by
+        exact mul_nonneg (mul_nonneg step34.C_nonneg hsqrt0) hE0
+      exact mul_nonneg hM0 htail0
+    have hbound :
+        (∫ ξ, ‖(SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                    (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+                  (D.prodSumRealByProd Dpacket.X ξ f i j) *
+                    star (D.prodSumRealByProd Dpacket.X ξ f i j)‖ ∂ μ)
+          ≤ (2 * (Dpacket.H)⁻¹) * Cfac := by
+      calc
+        (∫ ξ, ‖(SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                    (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+                  (D.prodSumRealByProd Dpacket.X ξ f i j) *
+                    star (D.prodSumRealByProd Dpacket.X ξ f i j)‖ ∂ μ)
+            ≤ (∫ ξ, (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) * Cfac ∂ μ) := hmono
+        _ = (∫ ξ, SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ ∂ μ) * Cfac := hpull
+        _ ≤ (2 * (Dpacket.H)⁻¹) * Cfac := by
+          exact mul_le_mul_of_nonneg_right hKhat hCfac0
+    -- Return to set-integral notation.
+    have hboundSet :
+        ∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
+          ‖(SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
+              (D.prodSumRealByProd Dpacket.X ξ f i j) *
+                star (D.prodSumRealByProd Dpacket.X ξ f i j)‖
+          ≤ (2 * (Dpacket.H)⁻¹) * Cfac := by
+      simpa [μ] using hbound
     calc
       ∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
           ‖(SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
                 (D := Dpacket) Dpacket.X Dpacket.H i j ξ) *
               (D.prodSumRealByProd Dpacket.X ξ f i j) *
                 star (D.prodSumRealByProd Dpacket.X ξ f i j)‖
-          ≤
-        ∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
-          (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ) *
-            ((Dpacket.M * Dpacket.Φmax) ^ 2) *
-              (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)) := hmono
-      _ =
-        ((Dpacket.M * Dpacket.Φmax) ^ 2) *
-          (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)) *
-            (∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band Dpacket.H,
-              (SSU.Engines.TypeII.AdmissibleKernel.Khat Dpacket.H ξ)) := hpull
-      _ ≤
-        ((Dpacket.M * Dpacket.Φmax) ^ 2) *
-          (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)) *
-            (2 * (Dpacket.H)⁻¹) := by
-        have hC0 :
-            0 ≤ ((Dpacket.M * Dpacket.Φmax) ^ 2) *
-              (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)) := by
-          nlinarith [Dpacket.M_nonneg, Dpacket.Φmax_nonneg, step34.C_nonneg, SSU.tubeEnergy_nonneg (T := D.tube) (F := D.F f i j)]
-        exact mul_le_mul_of_nonneg_left hKhat hC0
+          ≤ (2 * (Dpacket.H)⁻¹) * Cfac := hboundSet
+      _ = ((Dpacket.M * Dpacket.Φmax) ^ 2) *
+            (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j)) *
+              (2 * (Dpacket.H)⁻¹) := by
+            simp [Cfac, mul_assoc, mul_left_comm, mul_comm]
 
   -- 6) Combine all pieces.
   have hnormInner :
@@ -364,7 +431,7 @@ theorem norm_inner_packetOpUnnormalized_le
               (D := Dpacket) Dpacket.X Dpacket.H i j t)
           (T := D.tube)
           (F := D.F f i j)‖ := by
-    simpa [hToe]
+    simpa using congrArg norm hToe
   -- Use `hnormInner`, `hnorm1`, `hnormToInt`, `hleInt`, and `hInt`.
   -- Keep everything on the `ℝ` side; cast/`simp` is handled earlier.
   calc
@@ -419,4 +486,3 @@ end
 end FejerBankedTypeIIToeplitzTorusPacketsStep34Bound
 end Instances
 end SSU
-

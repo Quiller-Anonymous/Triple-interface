@@ -1,6 +1,4 @@
-import SSU.Instances.FejerBankedTypeIIToeplitzBandMap
-import Mathlib.MeasureTheory.Integral.IntervalIntegral.Periodic
-import Mathlib.MeasureTheory.Integral.Bochner.Set
+import SSU.Torus.ArcBridge
 
 /-!
 Small-arc bridge on the torus `𝕋 = AddCircle 1`.
@@ -21,7 +19,7 @@ noncomputable section
 
 open MeasureTheory
 open SSU.Torus
-open FejerBankedTypeIIToeplitzBandMap
+open SSU.Torus.BandMap
 
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E] [CompleteSpace E]
 
@@ -44,98 +42,8 @@ theorem integral_indicator_arc_eq_integral_Icc
     (∫ z : UC, (arc a b).indicator g z)
       =
     ∫ x in Set.Icc a b, g (x : UC) := by
-  -- Use the full-circle preimage integral formula on the fundamental domain `(t, t+1]`
-  -- with `t = -1/2`, then simplify the indicator using `mem_arc_iff_of_mem_fundDom`.
-  have hpre :
-      (∫ z : UC, (arc a b).indicator g z)
-        =
-      ∫ x in Set.Ioc (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)), (arc a b).indicator g (x : UC) := by
-    -- `AddCircle.integral_preimage` is stated for `volume` on `AddCircle 1` and `volume.restrict`.
-    -- We just rewrite it in the direction we need.
-    simpa using (AddCircle.integral_preimage (T := (1 : ℝ)) (t := (-(1 / 2 : ℝ)))
-      (f := (arc a b).indicator g)).symm
-  -- Replace `Ioc` by `Ioo` (remove the endpoint `1/2`, which is irrelevant for integrals).
-  have hIocIoo :
-      (∫ x in Set.Ioc (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)),
-          (arc a b).indicator g (x : UC))
-        =
-      ∫ x in Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)),
-          (arc a b).indicator g (x : UC) := by
-    -- `volume` on `ℝ` has no atoms.
-    simpa using
-      (MeasureTheory.integral_Ioc_eq_integral_Ioo (μ := (volume : Measure ℝ))
-        (f := fun x : ℝ => (arc a b).indicator g (x : UC))
-        (x := (-(1 / 2 : ℝ))) (y := ((-(1 / 2 : ℝ)) + (1 : ℝ))))
-  -- On `Ioo (-1/2, 1/2)`, membership in the arc is equivalent to membership in `Icc a b`.
-  have haFD : a ∈ fundDom := ⟨le_of_lt ha.1, ha.2⟩
-  have hbFD : b ∈ fundDom := ⟨le_of_lt hb.1, hb.2⟩
-  have hcongr :
-      (fun x : ℝ => (arc a b).indicator g (x : UC))
-        =ᵐ[(volume : Measure ℝ).restrict (Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)))]
-      (fun x : ℝ => (Set.Icc a b).indicator (fun t : ℝ => g (t : UC)) x) := by
-    have hs : MeasurableSet (Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ))) := by
-      measurability
-    filter_upwards [ae_restrict_mem hs] with x hx
-    have hxFund : x ∈ fundDom := by
-      -- `Ioo (-1/2, -1/2+1) ⊆ Ico (-1/2, -1/2+1)`.
-      exact ⟨le_of_lt hx.1, hx.2⟩
-    have hmem : ((x : UC) ∈ arc a b) ↔ x ∈ Set.Icc a b :=
-      mem_arc_iff_of_mem_fundDom (a := a) (b := b) (x := x) haFD hbFD hxFund
-    by_cases hxab : x ∈ Set.Icc a b <;> simp [Set.indicator, hmem, hxab]
-  -- Apply the a.e. congruence inside the `Ioo`-integral, then collapse the indicator integral.
-  have hIoo :
-      (∫ x in Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)),
-          (arc a b).indicator g (x : UC))
-        =
-      ∫ x in Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)),
-          (Set.Icc a b).indicator (fun t : ℝ => g (t : UC)) x := by
-    -- `integral_congr_ae` on the restricted measure.
-    simpa [MeasureTheory.integral] using integral_congr_ae hcongr
-  -- Finally, rewrite the indicator integral as a set-integral over `Ioo ∩ Icc = Icc`
-  -- (since `a,b` are in the fundamental domain).
-  have hsubset :
-      Set.Icc a b ⊆ Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)) := by
-    intro x hxIcc
-    have hxlo : (-(1 / 2 : ℝ)) < x := lt_of_lt_of_le ha.1 hxIcc.1
-    have hxhi : x < ((-(1 / 2 : ℝ)) + (1 : ℝ)) := lt_of_le_of_lt hxIcc.2 hb.2
-    exact ⟨hxlo, hxhi⟩
-  have hindicator :
-      (∫ x in Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)),
-          (Set.Icc a b).indicator (fun t : ℝ => g (t : UC)) x)
-        =
-      ∫ x in Set.Icc a b, g (x : UC) := by
-    have hsIcc : MeasurableSet (Set.Icc a b) := by
-      measurability
-    -- `∫_{Ioo} (Icc).indicator f = ∫_{Ioo ∩ Icc} f = ∫_{Icc} f` since `Icc ⊆ Ioo`.
-    have :=
-      (MeasureTheory.setIntegral_indicator (μ := (volume : Measure ℝ))
-        (s := Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)))
-        (t := Set.Icc a b) (f := fun t : ℝ => g (t : UC)) hsIcc)
-    have hinter :
-        (Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ))) ∩ (Set.Icc a b) = Set.Icc a b := by
-      ext x
-      constructor
-      · intro hx
-        exact hx.2
-      · intro hx
-        exact ⟨hsubset hx, hx⟩
-    -- Rewrite the intersection and finish.
-    have h' := this
-    -- `rw` is more reliable than `simp` here.
-    rw [hinter] at h'
-    exact h'
-  -- Assemble the chain.
-  calc
-    (∫ z : UC, (arc a b).indicator g z)
-        =
-      ∫ x in Set.Ioc (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)), (arc a b).indicator g (x : UC) := hpre
-    _ =
-      ∫ x in Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)), (arc a b).indicator g (x : UC) := hIocIoo
-    _ =
-      ∫ x in Set.Ioo (-(1 / 2 : ℝ)) ((-(1 / 2 : ℝ)) + (1 : ℝ)),
-        (Set.Icc a b).indicator (fun t : ℝ => g (t : UC)) x := hIoo
-    _ =
-      ∫ x in Set.Icc a b, g (x : UC) := hindicator
+  simpa [SSU.Torus.BandMap.arc] using
+    (SSU.Torus.ArcBridge.integral_indicator_arc_eq_integral_Icc (a := a) (b := b) ha hb g)
 
 end
 

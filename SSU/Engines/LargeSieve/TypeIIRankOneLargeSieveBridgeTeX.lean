@@ -1,5 +1,6 @@
 import SSU.Engines.TypeII
 import SSU.Engines.LargeSieve.RankOneShearLargeSieveTeX
+import SSU.Hilbert.DistZ
 
 /-!
 Rank-one large sieve bridge for the Type–II oscillatory sum (`05b_SSU.tex` Step 3/4 style).
@@ -67,6 +68,38 @@ theorem typeIISum_norm_sq_le_of_rankOneDecomp_one_add_log
       (a := a) (N := N) (α := α) (β := β)
   -- Transport across `hDecomp`.
   simpa [hDecomp] using this
+
+/-- Interval-specialized version of
+`typeIISum_norm_sq_le_of_rankOneDecomp_one_add_log`, with deterministic diameter
+`distZ ≤ Int.toNat (B - A)` on `J = Icc A B`. -/
+theorem typeIISum_norm_sq_le_of_rankOneDecomp_one_add_log_Icc
+    (td : TubeData) (ξ : ℝ) (F : TubePoint → ℂ)
+    (A B : ℤ) (t : ℝ)
+    (ht : |t| * (Int.toNat (B - A) : ℝ) ≤ (1 / 2 : ℝ)) (ht0 : t ≠ 0)
+    (a : ℤ) (N : ℕ) (α β : ℤ → ℂ)
+    (hDecomp :
+      typeIISum td.a td.q td.X ξ td.T F
+        =
+      ∑ u ∈ (Finset.Icc A B),
+        β u * (∑ v ∈ (Finset.Icc a (a + (N : ℤ) - 1)),
+          α v * SSU.Engines.TypeII.e (t * (u : ℝ) * (v : ℝ)))) :
+    ‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2
+      ≤
+    (∑ u ∈ (Finset.Icc A B), ‖β u‖ ^ 2) *
+      ((N : ℝ) + (1 / |t|) * (1 + Real.log (Int.toNat (B - A)))) *
+      (∑ k ∈ (Finset.univ : Finset (Fin N)), ‖α (a + (k : ℕ))‖ ^ 2) := by
+  let J : Finset ℤ := Finset.Icc A B
+  let R : ℕ := Int.toNat (B - A)
+  have hDist : ∀ i ∈ J, ∀ j ∈ J, SSU.Hilbert.distZ i j ≤ R := by
+    intro i hi j hj
+    simpa [J, R] using
+      (SSU.Hilbert.distZ_le_toNat_sub_of_mem_Icc (A := A) (B := B) (i := i) (j := j) hi hj)
+  simpa [J, R] using
+    (typeIISum_norm_sq_le_of_rankOneDecomp_one_add_log
+      (td := td) (ξ := ξ) (F := F)
+      (J := J) (R := R) (hDist := hDist)
+      (t := t) (ht := by simpa [R] using ht) (ht0 := ht0)
+      (a := a) (N := N) (α := α) (β := β) (hDecomp := by simpa [J] using hDecomp))
 
 end
 

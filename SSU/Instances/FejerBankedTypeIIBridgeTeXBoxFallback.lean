@@ -58,6 +58,133 @@ noncomputable def hypothesisMVKhat
     (hDq := hDq) (hXH1 := hXH1)
     (tubeForm_eq := tubeForm_eq) (reduction := reduction)
 
+/-- The same fallback packaged in the global-Step-5 `HypothesisKhat` format. -/
+noncomputable def hypothesisKhat
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K td) td.T F =
+          ((∫ ξ in Set.Icc (-(1 / td.H)) (1 / td.H),
+                (Khat td ξ) * (‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2)) : ℂ))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        td
+        (K td)) :
+    HypothesisKhat κ ι :=
+  { FB := FB
+    td := td
+    hX := hX
+    hH1 := hH1
+    hU := hU
+    hD := hD
+    step34 := (hypothesisMVKhat
+      (FB := FB) (td := td)
+      (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+      (hDq := hDq) (hXH1 := hXH1)
+      (tubeForm_eq := tubeForm_eq) (reduction := reduction)).step34
+    tubeForm_eq := tubeForm_eq
+    reduction := reduction }
+
+/-- The fallback packaged directly as the legacy global-Step-5 `Hypothesis` bundle. -/
+noncomputable def hypothesis
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K td) td.T F =
+          ((∫ ξ in Set.Icc (-(1 / td.H)) (1 / td.H),
+                (Khat td ξ) * (‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2)) : ℂ))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        td
+        (K td)) :
+    Hypothesis κ ι :=
+  (hypothesisKhat
+      (FB := FB) (td := td)
+      (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+      (hDq := hDq) (hXH1 := hXH1)
+      (tubeForm_eq := tubeForm_eq) (reduction := reduction)).toHypothesis
+
+/-- The fallback packaged as the uniform use-site Step-5 bridge bundle. -/
+noncomputable def hypothesisStep34ForUniform
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K td) td.T F =
+          ((∫ ξ in Set.Icc (-(1 / td.H)) (1 / td.H),
+                (Khat td ξ) * (‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2)) : ℂ))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        td
+        (K td)) :
+    HypothesisStep34ForUniform κ ι :=
+  (hypothesisMVKhat
+      (FB := FB) (td := td)
+      (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+      (hDq := hDq) (hXH1 := hXH1)
+      (tubeForm_eq := tubeForm_eq) (reduction := reduction)).toHypothesisStep34ForUniform
+
+/-- The resulting Gram hypothesis through the uniform use-site Step-5 route. -/
+noncomputable def gramHypothesis_uniform
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K td) td.T F =
+          ((∫ ξ in Set.Icc (-(1 / td.H)) (1 / td.H),
+                (Khat td ξ) * (‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2)) : ℂ))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        td
+        (K td)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  SSU.Instances.FejerBankedTypeIIBridgeTeX.gramHypothesis_of_box_geometry
+    (FB := FB) (td := td)
+    (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+    (hDq := hDq) (hXH1 := hXH1)
+    (tubeForm_eq := tubeForm_eq) (reduction := reduction)
+
 /-- The resulting SSU contract for the Fejér-banked packet family (still assuming `tubeForm_eq` and
 `reduction`). -/
 noncomputable def contract
@@ -87,6 +214,96 @@ noncomputable def contract
       (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
       (hDq := hDq) (hXH1 := hXH1)
       (tubeForm_eq := tubeForm_eq) (reduction := reduction)).contract
+
+/-- Gram hypothesis through the legacy global-Step-5 `Hypothesis` route. -/
+noncomputable def gramHypothesis
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K td) td.T F =
+          ((∫ ξ in Set.Icc (-(1 / td.H)) (1 / td.H),
+                (Khat td ξ) * (‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2)) : ℂ))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        td
+        (K td)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  (hypothesis
+      (FB := FB) (td := td)
+      (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+      (hDq := hDq) (hXH1 := hXH1)
+      (tubeForm_eq := tubeForm_eq) (reduction := reduction)).gramHypothesis
+
+/-- SSU contract through the legacy global-Step-5 `Hypothesis` route. -/
+noncomputable def contract_legacy
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K td) td.T F =
+          ((∫ ξ in Set.Icc (-(1 / td.H)) (1 / td.H),
+                (Khat td ξ) * (‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2)) : ℂ))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        td
+        (K td)) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  (hypothesis
+      (FB := FB) (td := td)
+      (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+      (hDq := hDq) (hXH1 := hXH1)
+      (tubeForm_eq := tubeForm_eq) (reduction := reduction)).contract
+
+/-- Same as `contract`, but through the uniform use-site Step-5 bridge route. -/
+noncomputable def contract_uniform
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K td) td.T F =
+          ((∫ ξ in Set.Icc (-(1 / td.H)) (1 / td.H),
+                (Khat td ξ) * (‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2)) : ℂ))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        td
+        (K td)) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  SSU.Instances.FejerBankedTypeIIBridgeTeX.contract_of_box_geometry
+    (FB := FB) (td := td)
+    (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+    (hDq := hDq) (hXH1 := hXH1)
+    (tubeForm_eq := tubeForm_eq) (reduction := reduction)
 
 end BoxFallback
 

@@ -100,10 +100,10 @@ open Khat
 
 namespace Arc
 
-open FejerBankedTypeIIToeplitzBandMap
+open SSU.Torus.BandMap
 
 abbrev arcAtBand (X H : ℝ) : Set UC :=
-  FejerBankedTypeIIToeplitzBandMap.arc (-(1 / H) / X) ((1 / H) / X)
+  SSU.Torus.BandMap.arc (-(1 / H) / X) ((1 / H) / X)
 
 end Arc
 
@@ -185,7 +185,7 @@ noncomputable def toBandHypothesis :
           =
         ∫ z : UC, (arcAtBand h.Dpacket.X h.Dpacket.H).indicator g z := by
       -- `one_div_X_smul_integral_band_eval_eq_integral_indicator_arc`.
-      simpa [Arc.arcAtBand, FejerBankedTypeIIToeplitzBandMap.arc, g, div_eq_mul_inv, mul_assoc] using
+      simpa [Arc.arcAtBand, SSU.Torus.BandMap.arc, g, div_eq_mul_inv, mul_assoc] using
         (SSU.Instances.FejerBankedTypeIIToeplitzBandToArc.one_div_X_smul_integral_band_eval_eq_integral_indicator_arc
           (X := h.Dpacket.X) (H := h.Dpacket.H) (hX := h.hX) (hH := h.hH) (hsmall := h.hsmall) g)
     -- So the arc integral equals the band integral.

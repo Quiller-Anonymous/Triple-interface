@@ -51,9 +51,13 @@ abbrev reductionTorus :
 
 noncomputable def hypothesis (hN : ∀ j : ℤ, 2 ≤ P.N j) :
     SSU.Instances.FejerBankedTypeIIToeplitzBridge.Hypothesis (κ (Q := Q)) (_root_.SSU.Torus.Bank.RatCenter Q) :=
-  SSU.Instances.FejerBankedTypeIIToeplitzBridge.mk_trivialStep34
-    (FB := FB (P := P) hN) (hX := P.hX) (hH := P.hH) (tube := tube0)
-    (reductionTorus := reductionTorus (P := P))
+by
+  refine
+    SSU.Instances.FejerBankedTypeIIToeplitzBridge.mk_trivialStep34
+      (FB := FB (P := P) hN) (hX := P.hX) (hH := P.hH)
+      (tube := tube0) (reductionTorus := ?_)
+  simpa [FB, reductionTorus, SSU.Instances.FejerBankedPlatinumConcrete.Platinum.texHypothesis]
+    using (reductionTorus (P := P))
 
 noncomputable def gramHypothesis (hN : ∀ j : ℤ, 2 ≤ P.N j) :
     SSU.Interzone.GramHypothesis
@@ -73,4 +77,3 @@ end
 end FejerBankedPlatinumTypeIIToeplitzToy
 end Instances
 end SSU
-

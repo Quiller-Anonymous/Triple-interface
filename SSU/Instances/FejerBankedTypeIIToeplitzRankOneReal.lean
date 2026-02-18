@@ -680,7 +680,7 @@ theorem inner_eq_arcIntegral_rankOne
       ∫ z : UC,
         (SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcHypothesis.Arc.arcAtBand D.X D.H).indicator g z := by
     simpa [SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcHypothesis.Arc.arcAtBand,
-      SSU.Instances.FejerBankedTypeIIToeplitzBandMap.arc, g, div_eq_mul_inv, mul_assoc] using
+      SSU.Torus.BandMap.arc, g, div_eq_mul_inv, mul_assoc] using
       (SSU.Instances.FejerBankedTypeIIToeplitzBandToArc.one_div_X_smul_integral_band_eval_eq_integral_indicator_arc
         (X := D.X) (H := D.H) (hX := hX) (hH := hH) (hsmall := hsmall) g)
   have hbandToArcC :

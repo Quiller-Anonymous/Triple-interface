@@ -1,5 +1,6 @@
 import SSU.Engines.LargeSieve.TypeIIStep3Reduce
 import SSU.Engines.LargeSieve.RankOneShearLargeSieveTeX
+import SSU.Engines.LargeSieve.TypeIIIndexBounds
 
 /-!
 Apply MV large sieve to TeX Step 3 **assuming rank-one shear coefficients**.
@@ -137,6 +138,38 @@ theorem norm_typeIISum_sq_le_one_add_log_of_rankOne_innerSumUZ
         (∑ u ∈ uSet td, ‖β u‖ ^ 2) *
           ((N : ℝ) + (1 / |(ξ / td.X)|) * (1 + Real.log R)) *
           (∑ k ∈ (Finset.univ : Finset (Fin N)), ‖α (a + (k : ℕ))‖ ^ 2) := hMV
+
+/-- Geometry-specialized variant of
+`norm_typeIISum_sq_le_one_add_log_of_rankOne_innerSumUZ`, using the deterministic diameter bound
+on `uSet td`. -/
+theorem norm_typeIISum_sq_le_one_add_log_of_rankOne_innerSumUZ_geom
+    (td : TubeData) (ξ : ℝ) (F : TubePoint → ℂ)
+    (a : ℤ) (N : ℕ) (α β : ℤ → ℂ)
+    (hU0 : 0 ≤ td.U)
+    (ht :
+      |(ξ / td.X)| * (2 * Int.toNat (Int.ceil td.U) : ℝ) ≤ (1 / 2 : ℝ))
+    (ht0 : ξ / td.X ≠ 0)
+    (hRankOne :
+      ∀ u : ℤ, u ∈ uSet td →
+        innerSumUZ td ξ F u
+          =
+        β u * (∑ z ∈ (Finset.Icc a (a + (N : ℤ) - 1)),
+          α z * e ((ξ / td.X) * (u : ℝ) * (z : ℝ)))) :
+    ‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2
+      ≤
+    (∑ u ∈ uSet td, ‖β u‖ ^ 2) *
+      ((N : ℝ) + (1 / |(ξ / td.X)|) * (1 + Real.log (2 * Int.toNat (Int.ceil td.U)))) *
+      (∑ k ∈ (Finset.univ : Finset (Fin N)), ‖α (a + (k : ℕ))‖ ^ 2) := by
+  let R : ℕ := 2 * Int.toNat (Int.ceil td.U)
+  have hDist : ∀ i ∈ uSet td, ∀ j ∈ uSet td, SSU.Hilbert.distZ i j ≤ R := by
+    intro i hi j hj
+    simpa [R] using
+      (IndexBounds.distZ_le_two_mul_toNat_ceilU_on_uSet (td := td) (hU0 := hU0) i hi j hj)
+  simpa [R] using
+    (norm_typeIISum_sq_le_one_add_log_of_rankOne_innerSumUZ
+      (td := td) (ξ := ξ) (F := F) (a := a) (N := N) (α := α) (β := β)
+      (R := R) (hDist := hDist) (ht := by simpa [R] using ht) (ht0 := ht0)
+      (hRankOne := hRankOne))
 
 end Step3RankOne
 

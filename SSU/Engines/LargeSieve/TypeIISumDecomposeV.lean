@@ -61,6 +61,27 @@ def zSetV (td : TubeData) (v : ℤ) : Finset ℤ :=
 def fiberVZ (td : TubeData) (v z : ℤ) : Finset TubePoint :=
   (fiberV td v).filter fun p => zCoordV td v p = z
 
+/-!
+### Support lemmas for `zSetV`
+
+Step 4 analogue of `TypeIISumDecompose.sum_fiberUZ_eq_zero_of_not_mem_zSet`.
+-/
+
+theorem sum_fiberVZ_eq_zero_of_not_mem_zSetV (td : TubeData) (F : TubePoint → ℂ)
+    (v z : ℤ) (hz : z ∉ zSetV td v) :
+    (∑ p ∈ fiberVZ td v z, F p) = 0 := by
+  classical
+  have hempty : fiberVZ td v z = ∅ := by
+    refine Finset.eq_empty_iff_forall_notMem.2 ?_
+    intro p hp
+    have hpV : p ∈ fiberV td v := (Finset.mem_filter.mp hp).1
+    have hpz : zCoordV td v p = z := (Finset.mem_filter.mp hp).2
+    have : z ∈ zSetV td v := by
+      refine Finset.mem_image.2 ?_
+      exact ⟨p, hpV, by simpa [hpz]⟩
+    exact hz this
+  simp [hempty]
+
 theorem sum_fiberV_eq_sum_z (td : TubeData) (ξ : ℝ) (v : ℤ) (F : TubePoint → ℂ) :
     (∑ p ∈ fiberV td v,
         F p * e (ξ * (zCoordV td v p : ℝ) * (v : ℝ) / td.X))

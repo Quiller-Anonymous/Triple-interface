@@ -115,6 +115,27 @@ theorem norm_typeIISum_sq_le_one_add_log_Icc
   rw [hdecomp]
   simpa using h
 
+theorem norm_typeIISum_sq_le_one_add_log_Icc_outerGeom
+    (X ξ : ℝ) (A B : ℤ) (a : ℤ) (N : ℕ) (α β : ℤ → ℂ)
+    (ht : |(ξ / X)| * (Int.toNat (B - A) : ℝ) ≤ (1 / 2 : ℝ)) (ht0 : ξ / X ≠ 0) :
+    ‖typeIISum (a := (0 : ℤ)) (q := (1 : ℤ)) X ξ
+        ((Finset.Icc a (a + (N : ℤ) - 1)).product (Finset.Icc A B))
+        (fun p => α p.1 * β p.2)‖ ^ 2
+      ≤
+    (∑ u ∈ (Finset.Icc A B), ‖β u‖ ^ 2) *
+      ((N : ℝ) + (1 / |(ξ / X)|) * (1 + Real.log (Int.toNat (B - A)))) *
+      (∑ k ∈ (Finset.univ : Finset (Fin N)), ‖α (a + (k : ℕ))‖ ^ 2) := by
+  let U : Finset ℤ := Finset.Icc A B
+  let R : ℕ := Int.toNat (B - A)
+  have hDist : ∀ i ∈ U, ∀ j ∈ U, SSU.Hilbert.distZ i j ≤ R := by
+    intro i hi j hj
+    simpa [U, R] using
+      (SSU.Hilbert.distZ_le_toNat_sub_of_mem_Icc (A := A) (B := B) (i := i) (j := j) hi hj)
+  simpa [U, R] using
+    (norm_typeIISum_sq_le_one_add_log_Icc
+      (X := X) (ξ := ξ) (U := U) (a := a) (N := N) (α := α) (β := β)
+      (R := R) (hDist := hDist) (ht := by simpa [R] using ht) (ht0 := ht0))
+
 end RankOneProductToy
 
 end

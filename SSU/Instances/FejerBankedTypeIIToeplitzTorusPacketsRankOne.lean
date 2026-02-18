@@ -2,6 +2,7 @@ import SSU.Instances.FejerBankedPartition
 import SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcProof
 import SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcHypothesis
 import SSU.Engines.BGTypeIIRankOneSignal
+import SSU.Torus.AddCircleMeasurability
 
 /-!
 Fejér-banked packets: **torus-side** TT* bridge for rank-one Type–II input.
@@ -53,31 +54,14 @@ generic lemma `measurable_of_continuousOn_compl_singleton`.
 
 private theorem measurable_equivIoc (p a : ℝ) [Fact (0 < p)] :
     Measurable (AddCircle.equivIoc (p := p) a) := by
-  classical
-  -- `equivIoc` is continuous on `{a}ᶜ`.
-  have hcont : ContinuousOn (AddCircle.equivIoc (p := p) a) ({(a : AddCircle p)}ᶜ) := by
-    intro x hx
-    have hx' : x ≠ (a : AddCircle p) := by
-      simpa [Set.mem_compl_iff, Set.mem_singleton_iff] using hx
-    exact (AddCircle.continuousAt_equivIoc (p := p) (a := a) (x := x) hx').continuousWithinAt
-  -- A single-point discontinuity is measurable.
-  simpa using (measurable_of_continuousOn_compl_singleton (a := (a : AddCircle p)) hcont)
+  simpa using SSU.Torus.AddCircleMeasurability.measurable_equivIoc (p := p) (a := a)
 
 private theorem measurable_liftIoc {B : Type*} [TopologicalSpace B] [MeasurableSpace B] [BorelSpace B]
     (p a : ℝ) [Fact (0 < p)] [Archimedean ℝ]
     (f : ℝ → B) (hf : Measurable f) :
     Measurable (AddCircle.liftIoc (p := p) (a := a) f) := by
-  classical
-  -- Expand `liftIoc` and prove measurability by composition.
-  -- `liftIoc p a f = (fun y : Ioc a (a+p) => f y.1) ∘ equivIoc p a`.
-  have hrep : Measurable fun y : Set.Ioc a (a + p) => f (y : ℝ) :=
-    hf.comp measurable_subtype_coe
-  have hEq : AddCircle.liftIoc (p := p) (a := a) f =
-      (fun x : AddCircle p => f ((AddCircle.equivIoc (p := p) a x : Set.Ioc a (a + p)) : ℝ)) := by
-    rfl
-  -- Use the helper measurability of `equivIoc`.
-  have he : Measurable (AddCircle.equivIoc (p := p) a) := measurable_equivIoc (p := p) (a := a)
-  simpa [hEq] using (hrep.comp he)
+  simpa using
+    SSU.Torus.AddCircleMeasurability.measurable_liftIoc (p := p) (a := a) (f := f) hf
 
 end Helpers
 
@@ -125,7 +109,7 @@ private theorem measurable_KhatTorus : Measurable (Khat.KhatTorus D.X D.H) := by
 private theorem measurable_arc : MeasurableSet (arc (D := D)) := by
   classical
   -- `arcAtBand` is a compact image of `Icc`, hence closed, hence measurable.
-  dsimp [arc, Arc.arcAtBand, FejerBankedTypeIIToeplitzBandMap.arc]
+  dsimp [arc, Arc.arcAtBand, SSU.Torus.BandMap.arc]
   have hcont : Continuous (fun x : ℝ => (x : UC)) := by
     simpa using (continuous_quotient_mk' : Continuous fun x : ℝ => (x : UC))
   have hcomp :

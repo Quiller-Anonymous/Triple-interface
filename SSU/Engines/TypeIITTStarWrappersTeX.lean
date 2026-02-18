@@ -179,10 +179,6 @@ theorem singleTubeSSUStatement_of_step2ToTubeForm_teX
           by_cases hξ : ξ = 0 <;> simp [hξ]
         simpa [hset] using hnull
       filter_upwards [ae_restrict_mem hs, hne0] with ξ hξs hξ0
-      have hξabs : |ξ| ≤ (1 / td.H) := by
-        have hle : (-(1 / td.H) : ℝ) ≤ ξ ∧ ξ ≤ (1 / td.H) := by
-          simpa [s, Set.mem_Icc] using hξs
-        exact abs_le.2 hle
       have hinv : invAbs ξ = 1 / |ξ| := invAbs_eq_one_div_abs (ξ := ξ) hξ0
       have hS :
           ‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2
@@ -190,9 +186,9 @@ theorem singleTubeSSUStatement_of_step2ToTubeForm_teX
           h34.C *
             Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
               Real.sqrt (td.U + td.X / |ξ|) *
-                Real.sqrt (td.D + td.X / |ξ|) *
-                  tubeEnergy td.T F :=
-        h34.bound ξ hξ0 hξabs F
+              Real.sqrt (td.D + td.X / |ξ|) *
+                tubeEnergy td.T F :=
+        h34.bound_outerGeom ξ hξ0 (by simpa [s] using hξs) F
       -- Rewrite `/|ξ|` in terms of `invAbs`.
       have hS' :
           ‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2
