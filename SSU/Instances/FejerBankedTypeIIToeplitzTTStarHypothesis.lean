@@ -156,6 +156,73 @@ theorem inner_eq_toeplitzFormTeXC
 
 end Hypothesis
 
+namespace HypothesisFor
+
+variable (h : HypothesisFor (κ := κ))
+
+/--
+Deterministic consequence in the fixed-signal (`HypothesisFor`) setting:
+the packet Gram entry equals the TeX `k,k'` Toeplitz form `ProductToeplitz.toeplitzFormTeXC`
+with the induced complex kernel `K_{i,j}`.
+-/
+theorem inner_eq_toeplitzFormTeXC
+    (i : ℤ) (hi : i ∈ h.Dpacket.J) (j : ℤ) (hj : j ∈ h.Dpacket.J) :
+    inner ℂ (((h.Dpacket.toMultiplierModel).packetOpUnnormalized i) h.f)
+        (((h.Dpacket.toMultiplierModel).packetOpUnnormalized j) h.f)
+      =
+    (1 / h.Dpacket.X) *
+      SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+        (K := fun t =>
+          SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+            (D := h.Dpacket) h.Dpacket.X h.Dpacket.H i j t)
+        (T := h.Dtype.tube)
+        (F := h.Dtype.F h.f i j) := by
+  classical
+  have h0 := h.inner_eq_weightedIntegral (i := i) hi (j := j) hj
+  have hToeplitz :
+      ((1 / h.Dpacket.X) *
+        ∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band h.Dpacket.H,
+            (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+                (D := h.Dpacket) h.Dpacket.X h.Dpacket.H i j ξ) *
+              (h.Dtype.prodSumRealByProd h.Dpacket.X ξ h.f i j) *
+                star (h.Dtype.prodSumRealByProd h.Dpacket.X ξ h.f i j))
+        =
+      (1 / h.Dpacket.X) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+              (D := h.Dpacket) h.Dpacket.X h.Dpacket.H i j t)
+          (T := h.Dtype.tube)
+          (F := h.Dtype.F h.f i j) := by
+    have hDet :=
+      (SSU.Instances.FejerBankedTypeIIToeplitzKernel.integral_weight_mul_prodSumRealByProd_mul_star_eq_toeplitzFormTeXC_auto
+          (Dpacket := h.Dpacket) (D := h.Dtype) (X := h.Dpacket.X) (H := h.Dpacket.H)
+          (f := h.f) (i := i) (j := j) (hH := h.hH) (hX := h.hX))
+    let c : ℂ := ((1 / h.Dpacket.X : ℝ) : ℂ)
+    have := congrArg (fun z : ℂ => c * z) hDet
+    simpa [c, mul_assoc] using this
+  calc
+    inner ℂ (((h.Dpacket.toMultiplierModel).packetOpUnnormalized i) h.f)
+        (((h.Dpacket.toMultiplierModel).packetOpUnnormalized j) h.f)
+        =
+      (1 / h.Dpacket.X) *
+        ∫ ξ in SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.band h.Dpacket.H,
+          (SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.wLean
+              (D := h.Dpacket) h.Dpacket.X h.Dpacket.H i j ξ) *
+            (h.Dtype.prodSumRealByProd h.Dpacket.X ξ h.f i j) *
+              star (h.Dtype.prodSumRealByProd h.Dpacket.X ξ h.f i j) := by
+              simpa using h0
+    _ =
+      (1 / h.Dpacket.X) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+              (D := h.Dpacket) h.Dpacket.X h.Dpacket.H i j t)
+          (T := h.Dtype.tube)
+          (F := h.Dtype.F h.f i j) := hToeplitz
+
+end HypothesisFor
+
 end
 
 end FejerBankedTypeIIToeplitzTTStarHypothesis

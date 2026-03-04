@@ -240,6 +240,174 @@ def trivial (X H : ℝ) (T : Finset TubePoint) (hX : 0 < X) (hH : 0 < H) : Step3
         _ = (T.card : ℝ) := by simp [hmul_sqrt]
     simpa [mul_assoc, hC] using hsq
 
+/--
+Product-grouped Cauchy–Schwarz bound with an explicit bound on the size of each product fiber.
+
+If every product value `k = d n` occurs at most `M` times on `T`, then the trivial
+`card(T)`-bound can be sharpened to `card(image prod) * M`. This is still deterministic, but it
+is a genuinely product-side global `Step34ProdSum` for a broader non-box class than the full-box
+specialization.
+-/
+def of_prodFiberCardBound
+    (X H : ℝ) (T : Finset TubePoint) (hX : 0 < X) (hH : 0 < H)
+    (M : ℕ)
+    (hM : ∀ k : ℤ, k ∈ T.image PT.prod →
+      (T.filter fun p => PT.prod p = k).card ≤ M) :
+    Step34ProdSum X H T where
+  C := (((T.image PT.prod).card : ℝ) * M) * Real.sqrt (X / H)
+  C_nonneg := by positivity
+  bound := by
+    classical
+    intro ξ _hξ F
+    have hgroup :
+        PT.prodSum X ξ T F
+          =
+        ∑ k ∈ T.image PT.prod, PT.coeffByProd T F k * e (ξ * (k : ℝ) / X) :=
+      PT.prodSum_eq_sum_image_prod X ξ T F
+    have hnorm :
+        ‖PT.prodSum X ξ T F‖ ≤ ∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖ := by
+      calc
+        ‖PT.prodSum X ξ T F‖
+            = ‖∑ k ∈ T.image PT.prod, PT.coeffByProd T F k * e (ξ * (k : ℝ) / X)‖ := by
+                simp [hgroup]
+        _ ≤ ∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k * e (ξ * (k : ℝ) / X)‖ := by
+              simpa using
+                (norm_sum_le (T.image PT.prod)
+                  (fun k => PT.coeffByProd T F k * e (ξ * (k : ℝ) / X)))
+        _ = ∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖ := by
+              refine Finset.sum_congr rfl ?_
+              intro k hk
+              have he : ‖e (ξ * (k : ℝ) / X)‖ = 1 := by
+                simpa using (norm_e (ξ * (k : ℝ) / X))
+              simp [norm_mul, he, mul_assoc]
+    have hsq1 :
+        ‖PT.prodSum X ξ T F‖ ^ 2 ≤ (∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖) ^ 2 := by
+      exact pow_le_pow_left₀ (by positivity) hnorm 2
+    have hsq2 :
+        (∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖) ^ 2
+          ≤
+        ((T.image PT.prod).card : ℝ) *
+          ∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖ ^ 2 := by
+      simpa using
+        (sq_sum_le_card_mul_sum_sq (s := T.image PT.prod)
+          (f := fun k => ‖PT.coeffByProd T F k‖))
+    have hcoeff_sq :
+        ∀ k : ℤ, k ∈ T.image PT.prod →
+          ‖PT.coeffByProd T F k‖ ^ 2
+            ≤
+          (M : ℝ) * ∑ p ∈ T with PT.prod p = k, ‖F p‖ ^ 2 := by
+      intro k hk
+      let s : Finset TubePoint := T.filter fun p => PT.prod p = k
+      have hcoeff :
+          PT.coeffByProd T F k = ∑ p ∈ s, F p := by
+        simp [s, SSU.Engines.TypeII.ProductToeplitz.coeffByProd_eq_sum_filter]
+      have hnorms :
+          ‖∑ p ∈ s, F p‖ ≤ ∑ p ∈ s, ‖F p‖ := by
+        simpa using (norm_sum_le s (fun p => F p))
+      have hsqA :
+          ‖∑ p ∈ s, F p‖ ^ 2 ≤ (∑ p ∈ s, ‖F p‖) ^ 2 := by
+        exact pow_le_pow_left₀ (by positivity) hnorms 2
+      have hsqB :
+          (∑ p ∈ s, ‖F p‖) ^ 2 ≤ (s.card : ℝ) * ∑ p ∈ s, ‖F p‖ ^ 2 := by
+        simpa using (sq_sum_le_card_mul_sum_sq (s := s) (f := fun p => ‖F p‖))
+      have hsqC :
+          ‖PT.coeffByProd T F k‖ ^ 2 ≤ (s.card : ℝ) * ∑ p ∈ s, ‖F p‖ ^ 2 := by
+        simpa [hcoeff] using (le_trans hsqA hsqB)
+      have hsM : (s.card : ℝ) ≤ M := by
+        exact_mod_cast hM k hk
+      have hs0 : 0 ≤ ∑ p ∈ s, ‖F p‖ ^ 2 := by
+        exact Finset.sum_nonneg (fun _ _ => by positivity)
+      have hmul :
+          (s.card : ℝ) * ∑ p ∈ s, ‖F p‖ ^ 2
+            ≤
+          (M : ℝ) * ∑ p ∈ s, ‖F p‖ ^ 2 :=
+        mul_le_mul_of_nonneg_right hsM hs0
+      exact le_trans hsqC (by simpa [s])
+    have hsumCoeffSq :
+        ∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖ ^ 2
+          ≤
+        (M : ℝ) * tubeEnergy T F := by
+      have hsumFib :
+          ∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖ ^ 2
+            ≤
+          ∑ k ∈ T.image PT.prod, (M : ℝ) * ∑ p ∈ T with PT.prod p = k, ‖F p‖ ^ 2 := by
+        refine Finset.sum_le_sum ?_
+        intro k hk
+        exact hcoeff_sq k hk
+      have hfiber :
+          (∑ k ∈ T.image PT.prod, ∑ p ∈ T with PT.prod p = k, ‖F p‖ ^ 2)
+            =
+          ∑ p ∈ T, ‖F p‖ ^ 2 := by
+        simpa using
+          (Finset.sum_fiberwise_of_maps_to
+            (s := T) (t := T.image PT.prod) (g := PT.prod)
+            (h := fun p hp => Finset.mem_image_of_mem PT.prod hp)
+            (f := fun p => ‖F p‖ ^ 2))
+      calc
+        ∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖ ^ 2
+            ≤
+          ∑ k ∈ T.image PT.prod, (M : ℝ) * ∑ p ∈ T with PT.prod p = k, ‖F p‖ ^ 2 := hsumFib
+        _ = (M : ℝ) * (∑ k ∈ T.image PT.prod, ∑ p ∈ T with PT.prod p = k, ‖F p‖ ^ 2) := by
+              simp [Finset.mul_sum]
+        _ = (M : ℝ) * ∑ p ∈ T, ‖F p‖ ^ 2 := by rw [hfiber]
+        _ = (M : ℝ) * tubeEnergy T F := by simp [tubeEnergy]
+    have hsq :
+        ‖PT.prodSum X ξ T F‖ ^ 2
+          ≤
+        (((T.image PT.prod).card : ℝ) * M) * tubeEnergy T F := by
+      calc
+        ‖PT.prodSum X ξ T F‖ ^ 2
+            ≤ (∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖) ^ 2 := hsq1
+        _ ≤ ((T.image PT.prod).card : ℝ) *
+              ∑ k ∈ T.image PT.prod, ‖PT.coeffByProd T F k‖ ^ 2 := hsq2
+        _ ≤ ((T.image PT.prod).card : ℝ) * ((M : ℝ) * tubeEnergy T F) := by
+              gcongr
+        _ = (((T.image PT.prod).card : ℝ) * M) * tubeEnergy T F := by ring
+    have hx0 : X ≠ 0 := ne_of_gt hX
+    have hH0 : H ≠ 0 := ne_of_gt hH
+    have hmul_sqrt :
+        Real.sqrt (X / H) * Real.sqrt (H / X) = 1 := by
+      have hpos1 : 0 ≤ X / H := by exact le_of_lt (div_pos hX hH)
+      calc
+        Real.sqrt (X / H) * Real.sqrt (H / X)
+            = Real.sqrt ((X / H) * (H / X)) := (Real.sqrt_mul hpos1 (H / X)).symm
+        _ = Real.sqrt (1 : ℝ) := by
+              congr 1
+              field_simp [hx0, hH0]
+        _ = 1 := by simp
+    have hC :
+        ((((T.image PT.prod).card : ℝ) * M) * Real.sqrt (X / H)) * Real.sqrt (H / X)
+          =
+        (((T.image PT.prod).card : ℝ) * M) := by
+      calc
+        ((((T.image PT.prod).card : ℝ) * M) * Real.sqrt (X / H)) * Real.sqrt (H / X)
+            = (((T.image PT.prod).card : ℝ) * M) *
+                (Real.sqrt (X / H) * Real.sqrt (H / X)) := by ring
+        _ = (((T.image PT.prod).card : ℝ) * M) := by simp [hmul_sqrt]
+    have hCmul :
+        ((((T.image PT.prod).card : ℝ) * M) * Real.sqrt (X / H)) *
+            Real.sqrt (H / X) * tubeEnergy T F
+          =
+        (((T.image PT.prod).card : ℝ) * M) * tubeEnergy T F := by
+      calc
+        ((((T.image PT.prod).card : ℝ) * M) * Real.sqrt (X / H)) *
+              Real.sqrt (H / X) * tubeEnergy T F
+            =
+          (((((T.image PT.prod).card : ℝ) * M) * Real.sqrt (X / H)) *
+              Real.sqrt (H / X)) * tubeEnergy T F := by ring
+        _ = ((((T.image PT.prod).card : ℝ) * M)) * tubeEnergy T F := by rw [hC]
+    calc
+      ‖PT.prodSum X ξ T F‖ ^ 2
+          ≤ (((T.image PT.prod).card : ℝ) * M) * tubeEnergy T F := hsq
+      _ = ((((T.image PT.prod).card : ℝ) * M) * Real.sqrt (X / H)) *
+            Real.sqrt (H / X) * tubeEnergy T F := by
+              symm
+              exact hCmul
+      _ = ((((T.image PT.prod).card : ℝ) * M) * Real.sqrt (X / H)) *
+            (Real.sqrt (H / X) * tubeEnergy T F) := by ring
+      _ = ((((T.image PT.prod).card : ℝ) * M) * Real.sqrt (X / H)) *
+            Real.sqrt (H / X) * tubeEnergy T F := by ring
+
 end Step34ProdSum
 
 /-!

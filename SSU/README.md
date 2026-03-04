@@ -19,6 +19,17 @@ Current status:
   the single-tube SSU heart), rather than assuming it.
 - See `SSU/STATUS.md` for the rolling, line-referenced proof status.
 
+Canonical flagship API surface:
+
+- Downstream projects should import `SSU.Instances.Basic` and use
+  `SSU.Instances.Flagship`.
+- Route-parametric selector endpoints are exposed for all three tiers:
+  - `hypothesisStep34ForUniform_select_ofIndexWitness...`
+  - `gramHypothesis_select_ofIndexWitness...`
+  - `contract_select_ofIndexWitness...`
+- Default route aliases (`.nonFallback`) and both fallback route aliases are also
+  exposed at the same parity (`from_hF`, extracted-constancy, `autoTubeForm`).
+
 Suggested layout (mirrors the “Layer 0–3” plan):
 
 - `SSU/Hilbert/` — pure almost-orthogonality / Cotlar–Stein / Gram ledger.

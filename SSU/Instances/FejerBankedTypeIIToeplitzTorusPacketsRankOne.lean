@@ -775,37 +775,47 @@ theorem inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne_boxData_onJ
       (hU := hU) (hX := hX) (hH := hH) (hsmall := hsmall) i j
 
 /-!
-## Fixed-signal TT* Toeplitz hypothesis (rank-one, box-data)
+## Fixed-signal TT* hypotheses (rank-one, box-data)
 
-This packages the proved rank-one TT* identity into the fixed-signal hypothesis interface, which
-is the natural use-site form for the flagship extracted coefficients.
+This packages the proved rank-one TT* identity into the fixed-signal hypothesis interfaces. The
+weighted-band form is taken as the primitive production extraction endpoint; the Toeplitz-form
+interface is then obtained by the deterministic ξ-band → Toeplitz conversion.
 -/
 
-noncomputable def ttStarToeplitzHypothesisFor_rankOne_boxData
+noncomputable def ttStarBandHypothesisFor_rankOne_boxData
     (hU : 2 * P.N ≤ P.U)
     (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ)) :
-    SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis.HypothesisFor (κ := κ) where
+    SSU.Instances.FejerBankedTypeIIToeplitzTTStarHypothesis.HypothesisFor (κ := κ) where
   Dpacket := D
   Dtype := I.boxData (H0 := SSU.Torus.L2) (P := P) hU W
   f := fTT (D := D) (P := P) (W := W) (I := I) hH
   hH := hH
   hX := ne_of_gt hX
-  inner_eq_toeplitzFormTeXC := by
+  inner_eq_weightedIntegral := by
     intro i hi j hj
     simpa using
-      inner_packetOpUnnormalized_eq_toeplitzFormTeXC_rankOne_boxData_onJ
+      inner_packetOpUnnormalized_eq_weightedIntegral_rankOne_boxData_onJ
         (D := D) (P := P) (W := W) (I := I)
         (hU := hU) (hX := hX) (hH := hH) (hsmall := hsmall)
         (i := i) (j := j) hi hj
 
-noncomputable def ttStarBandHypothesisFor_rankOne_boxData
+noncomputable def ttStarToeplitzHypothesisFor_rankOne_boxData
     (hU : 2 * P.N ≤ P.U)
     (hX : 0 < D.X) (hH : 0 < D.H) (hsmall : (1 / D.H) / D.X < (1 / 2 : ℝ)) :
-    SSU.Instances.FejerBankedTypeIIToeplitzTTStarHypothesis.HypothesisFor (κ := κ) :=
-  (SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis.HypothesisFor.toBandHypothesis
-      (h := ttStarToeplitzHypothesisFor_rankOne_boxData
-        (D := D) (P := P) (W := W) (I := I)
-        (hU := hU) (hX := hX) (hH := hH) (hsmall := hsmall)))
+    SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis.HypothesisFor (κ := κ) := by
+  let hBand :=
+    ttStarBandHypothesisFor_rankOne_boxData
+      (D := D) (P := P) (W := W) (I := I)
+      (hU := hU) (hX := hX) (hH := hH) (hsmall := hsmall)
+  exact
+    { Dpacket := hBand.Dpacket
+      Dtype := hBand.Dtype
+      f := hBand.f
+      hH := hBand.hH
+      hX := hBand.hX
+      inner_eq_toeplitzFormTeXC := by
+        intro i hi j hj
+        simpa using hBand.inner_eq_toeplitzFormTeXC (i := i) hi (j := j) hj }
 
 end RankOne
 

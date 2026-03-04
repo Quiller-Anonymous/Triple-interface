@@ -1,13 +1,12 @@
 # SSU status (rolling)
 
-Last updated: 2026-02-18
+Last updated: 2026-03-04
 
 Estimated “status bar” (**TeX-strength**, end-to-end SSU as in TeX): ~64%
 
-Internal micro-bar (Type–II large sieve stage): ~93%
+Internal micro-bar (Type–II large sieve stage): ~100%
 
-Secondary bar (**plumbing + weak fallbacks**, end-to-end objects exist but with crude CS/geometry
-surrogates standing in for real large-sieve input): ~80%
+Secondary bar (**plumbing + weak fallbacks**, end-to-end objects exist but with crude CS/geometry surrogates standing in for real large-sieve input): ~100%
 
 ## What’s next (major remaining steps)
 
@@ -17,20 +16,43 @@ Step-3 status (split):
   `FejerBankedTypeIIBridgeTeXBGRankOne`).
 - ✅ `hF`-plumbing improved: new coefficient-form constructors can now discharge `hF`
   definitionally once inner/energy reduction identities are supplied in rank-one coefficient form.
-- ⏳ Flagship-instance discharge pending: we still need extraction-side proofs that the concrete
-  flagship extracted coefficients satisfy the required input hypotheses (`hF`/constancy/modEq
-  family), so Step 3 is not yet “assumption-free” at the final instance layer.
+- ✅ Flagship-instance extraction discharge complete for the non-fallback route: concrete
+  auto-Step-2 flagship wrappers now prove extraction-side constancy internally (no external
+  `hF0`/`hαconst`/`hβconst` family on the canonical flagship surface).
 
-1) Discharge extraction-side constancy inputs used by the proved Step-3/Step-4 routes.
-- Target output: replace application-facing `hαconst`/`hβconst` and residue-index constancy
-  assumptions with proved lemmas from the flagship extraction map.
+1) ✅ Discharge extraction-side constancy inputs used by the proved Step-3/Step-4 routes.
+- Completed on the canonical flagship path via concrete auto-Step-2 wrappers.
 
-2) Finish the non-toy extraction bridge to Toeplitz form for the frozen Fejér-banked packets.
-- Target output: production `inner_eq_toeplitzForm` path used by the main instance.
+2) ✅ Finish the non-toy extraction bridge to Toeplitz form for the frozen Fejér-banked packets.
+- Completed: the production `inner_eq_toeplitzForm` path is now packaged for the main instance.
+- Progress: the non-toy frozen-packet Step-2 extraction is now packaged as a canonical
+  pair-dependent Toeplitz-form interface (`PairHypothesis.ofFrozenPackets` in
+  `SSU/Instances/FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis.lean`), and the extracted
+  higher bridge routes through that package. The honest extracted TeX-facing bridge is now
+  **Toeplitz-first**: `Extracted.ToeplitzInput` packages a `ToeplitzPairHypothesis` together with
+  `Step34ProdSum`, and `Extracted.Input.toTTStarInput` is derived through this Toeplitz package
+  rather than starting from a legacy reduction witness. The remaining gap is the *legacy
+  operator-global* reduction surface (`ReductionToTubeForm` for arbitrary `f`), not the honest
+  extracted signal.
+- New extension: there is now also a **general extracted-signal** higher bridge (global in the
+  coefficient input `f : H0`) that uses the proved extraction theorem and non-fallback Step 3–4
+  directly, with no supplied reduction witness on that surface.
+- New non-extracted extension: there is now a **reduction-free operator-global Toeplitz surface**
+  (`ToeplitzOperatorInput` in `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean`) that splits
+  the old `ReductionToTubeFormProd` seam into:
+  - a TT*-native Toeplitz identity (`ToeplitzPairHypothesis` with the honest global signal),
+  - and a separate tube-energy comparison.
+  This gives a new canonical non-extracted TeX-facing bridge object without a bundled
+  `reductionTorus` field, although the legacy `Hypothesis` / `HypothesisFor` compatibility
+  records still remain.
 
 3) Discharge flagship instance assumptions (especially `tubeForm_eq` + reduction plumbing) by proof.
 - Target output: bridge constructors for the flagship instance require no application-facing
   hypothesis placeholders.
+- Progress: the TeX box-fallback bridge now has proof-driven `autoStep2` constructors, so callers
+  can provide `Step2ToTubeForm` and get `tubeForm_eq` derived automatically (no raw
+  `tubeForm_eq` argument). Remaining work is the reduction side (`ReductionToTubeForm`) on legacy
+  non-extracted routes.
 
 4) Close the SSU heart for the flagship packet family and expose the final contract.
 - Target output: proved `GramHypothesis`/ledger contract from the full proved chain above.
@@ -38,7 +60,837 @@ Step-3 status (split):
 These four steps are the main remaining path from current ~64% TeX-strength to an end-to-end
 proved SSU apparatus for the flagship instance.
 
+## Secondary-bar closure substeps (closed)
+
+1) ✅ Selector migration at use sites completed.
+- Selector-path APIs are canonical (`...flagship_select_ofIndexWitness...`), with route-specific
+  wrappers kept as compatibility shims.
+
+2) ✅ Endpoint surface normalized.
+- Full parity is present across `uniform` / `gram` / `contract` for each route tier
+  (`from_hF`, extracted-constancy, `autoTubeForm`) on default and fallback routes.
+
+3) ✅ Direct hypothesis seams eliminated on selector surfaces.
+- Geometry-input and auto-Step-2 selector paths are the canonical route; raw
+  `tubeForm_eq`-style seams are no longer exposed on the flagship selector surface.
+
+4) ✅ Validation lock completed.
+- Bridge/importer build checks pass after migration batches, and status now tracks major
+  remaining work outside secondary-bar plumbing.
+
+## Broad roadmap (finish line)
+
+A) **Flagship extraction discharge**
+- Prove the flagship extracted coefficients satisfy the required `hF`/constancy/modEq hypotheses.
+- Remove the last application-facing placeholder assumptions from flagship constructor endpoints.
+
+B) **Production Toeplitz extraction**
+- Complete the non-toy `inner_eq_toeplitzForm` path for the frozen Fejér-banked packet family.
+- Wire it as the canonical Step-2 reduction path used by flagship contracts.
+
+C) **Flagship TeX Step 3/4 closure**
+- Keep the non-fallback Step-3/Step-4 route as default for the extracted Type–II signal.
+- Ensure fallback-only routes are optional compatibility paths, not required in flagship usage.
+
+D) **SSU-heart integration**
+- Route the proved extraction + Step-3/4 chain into final `GramHypothesis` and ledger contract.
+- Expose one stable, minimal flagship API for Goldbach/Twin/Alt-Zeta consumption.
+
+E) **Hard-analysis replacement pass**
+- Replace any remaining weak/geometry surrogates with full TeX-strength large-sieve/Type-II proofs.
+- Recheck constants and assumptions once the analytic replacement is complete.
+
+## Current step breakdown (Step 2: production Toeplitz extraction)
+
+1. Freeze the canonical extracted Type–II coefficient map for the flagship packet family.
+2. Prove the non-toy `inner_eq_toeplitzForm` bridge for that extracted map.
+3. Refactor the higher flagship surface to a TT*-native pair-dependent interface and route callers
+   through it (remove placeholder reduction seams on the honest extracted-signal path).
+4. Validate with
+   `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+5. Shift to Step 3 discharge (`tubeForm_eq` + reduction plumbing fully proved).
+
 Latest microstep:
+- Added proof-driven rank-one selector constructors that internalize reduction assembly in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData`
+  - `gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData`
+  - `contract_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData`
+  These derive the `ReductionToTubeForm` witness from explicit
+  `Cenergy + inner_eq_coeff + energy_le_coeff` data via
+  `SSU.Instances.FejerBankedTypeIIBridgeTeX.reduction_of_data`, instead of requiring callers to
+  pre-assemble a reduction record.
+- Validation:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added proof-driven Step-2 discharge endpoints:
+  - in `SSU/Instances/FejerBankedTypeIIBridgeTeX.lean`, added
+    `tubeForm_eq_of_step2ToTubeForm` plus
+    `gramHypothesis_of_box_geometry_autoStep2` and
+    `contract_of_box_geometry_autoStep2`;
+  - in `SSU/Instances/FejerBankedTypeIIBridgeTeXBoxFallback.lean`, added
+    `..._autoStep2` variants across the fallback bridge wrappers
+    (`hypothesisMVKhat`, `hypothesisKhat`, `hypothesis`, uniform/gram/contract paths), each
+    deriving `tubeForm_eq` from a supplied `Step2ToTubeForm`.
+- Validation:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeX
+  SSU.Instances.FejerBankedTypeIIBridgeTeXBoxFallback SSU.Instances.Basic`.
+- Added a reduction-free **non-extracted** TeX-facing bridge surface in
+  `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean`:
+  - `ToeplitzOperatorInput` packages the operator-global TT* identity as a
+    `ToeplitzPairHypothesis` on torus `L²`, together with a separate `energy_le` field, instead
+    of a single bundled `ReductionToTubeFormProd`;
+  - `ToeplitzOperatorInput.norm_inner_packetOpUnnormalized_le` gives the honest operator-global
+    torus packet Gram bound directly from the Toeplitz-first Step-2/Step-3–4 route;
+  - `ToeplitzOperatorInput.gramHypothesisTorusUnnormalized` turns that into a torus-side
+    `GramHypothesis` for the unnormalized packet family, with no reduction object involved.
+- Re-exported this surface in `SSU/Instances/Basic.lean` as
+  `SSU.Instances.Flagship.ToeplitzOperatorInput`.
+- This still does **not** remove the legacy `reductionTorus` seam from the full core-facing
+  `Hypothesis` / `HypothesisFor` records.
+- The stable reduction-free non-extracted surface currently stops at the torus-side TT* bound:
+  - `ToeplitzOperatorInput.norm_inner_packetOpUnnormalized_le`
+  - public aliases `SSU.Instances.Flagship.toeplitzOperatorNormInnerPacketOpUnnormalizedLe`
+    and `SSU.Instances.Flagship.OperatorGlobal.Input / normInnerPacketOpUnnormalizedLe`
+- The attempted direct core-facing Gram/contract promotion through `ToeplitzOperatorInput` hit a
+  Lean elaboration bottleneck and was rolled back, so the core-facing non-extracted path still runs
+  through the legacy reduction-based records for now.
+- Stopped treating the legacy reduction-based surface as primary in the remaining TeX-facing
+  selector layer for the honest extracted path:
+  - in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`, added
+    `toeplitzInput_flagship_select_ofIndexWitness_extracted`, and rewired
+    `ttStarInput_flagship_select_ofIndexWitness_extracted` plus its packet-Gram theorem to take
+    `Extracted.ToeplitzInput` directly (the TT* layer is now obtained from the Toeplitz-first
+    package, not passed in as the first-class input);
+  - in `SSU/Instances/Basic.lean`, added public Toeplitz-first selector aliases
+    `SSU.Instances.Flagship.Extracted.toeplitzInputSelect` / `toeplitzInput` and fallback
+    companions.
+- This makes the remaining TeX-facing extracted selector surface explicitly consume the honest
+  `ToeplitzPairHypothesis`-based package before entering the TT* wrapper layer.
+- Re-centered the remaining TeX-facing extracted higher bridge layers around the honest
+  Toeplitz-form package instead of treating reduction-based surfaces as primary:
+  - in `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean`, added
+    `Extracted.TTStarInput.ofToeplitzPairHypothesis` and the new record
+    `Extracted.ToeplitzInput`, which packages
+    `ToeplitzPairHypothesis + Step34ProdSum` and derives the TT*-native bridge object from that
+    pair;
+  - added `Extracted.Input.toToeplitzInput`, and rewired
+    `Extracted.Input.toTTStarInput` to route through `toToeplitzInput.toTTStarInput`;
+  - re-exported the new canonical public alias in `SSU/Instances/Basic.lean` as
+    `SSU.Instances.Flagship.Extracted.ToeplitzInput`.
+- This means the honest extracted path is now explicitly
+  `ToeplitzPairHypothesis → ToeplitzInput → TTStarInput`, while the old reduction-based
+  operator-global surfaces remain compatibility layers only.
+- Validation: `SSU.Instances.FejerBankedTypeIIToeplitzBridge` builds cleanly; no `error:` entries
+  were produced in the combined bridge/basic build log.
+- Extended the fixed-rank-one `...from_hF` layer with **promotion endpoints** so the old
+  one-sided fallback-shaped BG one-add-log families are no longer the strongest route there:
+  - in `GeometryInputConstStep3Step4`, added
+    `ofGeometryInputBGConstOnUIndexOneAddLogStep3FallbackStep4OfModEq_promote_from_hF` and
+    `ofGeometryInputBGConstOnVIndexOneAddLogStep4FallbackStep3OfModEq_promote_from_hF`,
+    both of which route directly to the full non-fallback
+    `ofGeometryInputBGConstOnIndexOneAddLogOfModEq_from_hF` path when both residue-index witness
+    families are available.
+  - in the one-record fixed-rank-one layer, added matching promoted
+    `hypothesis/gram/contract ..._promote_from_hF` endpoints for both U-side and V-side
+    fallback-shaped families; these now delegate straight to the full non-fallback
+    `...BGConstOnIndex_oneAddLog_ofModEq_from_hF` flagship path.
+- This makes the old one-sided `...step3_fallback_step4...from_hF` /
+  `...step4_fallback_step3...from_hF` families explicit compatibility surfaces rather than the
+  strongest available route once both witness sets are present.
+- Tightened one remaining helper family by removing redundant route-by-route fallback branching in
+  `gramHypothesis_flagship_select_ofIndexWitness_from_hF` and
+  `contract_flagship_select_ofIndexWitness_from_hF`; both now derive directly from the already
+  collapsed non-fallback selector theorem
+  `hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF`.
+- Validation: incremental build log for
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne` shows no `error:` entries.
+- Strengthened the remaining mathematically fallback-shaped **modEq helper families** in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` by adding promotion wrappers that
+  accept both residue-index witness families and route directly to the full non-fallback
+  const-on-index path:
+  - `GeometryInput.*_step3_fallback_step4_ofModEq_promote` upgrades the U-side fallback-shaped
+    BG helpers to the two-sided non-fallback route once `v`-side witnesses are available.
+  - `GeometryInput.*_step4_fallback_step3_ofModEq_promote` does the symmetric V-side upgrade.
+  - matching `GeometryInputConst` one-record promotion wrappers now expose the same stronger path
+    at the constant-input insertion layer.
+- This does not prove a new large-sieve estimate, but it removes another class of
+  fallback-only *mathematical* helper surfaces by making their honest two-sided route explicit
+  wherever both witness families are present.
+- Validation: no `error:` entries in an incremental
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne` pass.
+- Removed the last fallback-backed proof production from the **selector-first BG higher bridge**
+  where both residue-index witnesses are already available.
+  In `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`,
+  `hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF` and
+  `hypothesisStep34ForUniform_flagship_select_ofIndexWitness` now collapse all selector routes
+  (`nonFallback`, `step3FallbackStep4`, `step4FallbackStep3`) onto the proved non-fallback
+  production path internally. The route argument remains only for API compatibility.
+- This means the selector-first BG higher bridge no longer assembles fallback Step-3/Step-4
+  packages on those flagship surfaces; fallback route names are now compatibility wrappers around
+  the same non-fallback proof object whenever the stronger witness set is already present.
+- Validation passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Retired the remaining *canonical* public references to the reduction-based
+  `uniform/gram/contract` selector family in `SSU/Instances/Basic.lean` by demoting them to
+  explicit legacy aliases:
+  - added `...autoTubeForm_fromReductionLegacy` selector/default/fallback surfaces,
+  - kept the old `...autoTubeForm_fromReduction` names only as compatibility aliases.
+  This makes the reduction-based family visibly non-canonical at the public re-export layer.
+- Extended the TT*-native extracted selector surface so fallback-route consumers no longer need to
+  touch the legacy reduction-based family:
+  - added
+    `norm_inner_packetOpUnnormalized_le_flagship_default_step3_fallback_step4_ofIndexWitness_extracted`
+    and
+    `norm_inner_packetOpUnnormalized_le_flagship_default_step4_fallback_step3_ofIndexWitness_extracted`
+    in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`,
+  - re-exported them in `SSU/Instances/Basic.lean` as
+    `SSU.Instances.Flagship.Extracted.normInnerPacketOpUnnormalizedLeStep3FallbackStep4`
+    and
+    `SSU.Instances.Flagship.Extracted.normInnerPacketOpUnnormalizedLeStep4FallbackStep3`.
+  Both currently route to the same proved non-fallback extracted TT* chain.
+- Validation passes:
+  `lake build SSU.Instances.Basic`.
+- Added TT*-native selector-first higher-wrapper endpoints in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `ttStarInput_flagship_select_ofIndexWitness_extracted`,
+  - `norm_inner_packetOpUnnormalized_le_flagship_select_ofIndexWitness_extracted`,
+  plus default/fallback aliases.
+  These are selector-surface companions to the older
+  `..._autoTubeForm_fromReduction` family, but they route through the honest extracted TT* bridge
+  (`Extracted.Input.toTTStarInput`) instead of presenting the reduction-based family as canonical.
+- Re-exported the new higher-layer TT*-native selector endpoints from `SSU/Instances/Basic.lean`
+  under `SSU.Instances.Flagship.Extracted`:
+  - `inputSelect`, `input`,
+  - `normInnerPacketOpUnnormalizedLeSelect`, `normInnerPacketOpUnnormalizedLe`,
+  together with route-compatible fallback aliases.
+- Validation passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Added a TT*-native pair-dependent extracted-signal bridge surface in
+  `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean`:
+  - `Extracted.TTStarInput`,
+  - `Extracted.TTStarInput.step34For`,
+  - `Extracted.TTStarInput.inner_eq_toeplitzFormTeXC_onJ`,
+  - `Extracted.TTStarInput.norm_inner_packetOpUnnormalized_le`,
+  - `Extracted.Input.toTTStarInput`,
+  and kept
+  - `Extracted.Input`,
+  - `Extracted.Input.step34For`,
+  - `Extracted.Input.norm_inner_packetOpUnnormalized_le`,
+  - `Extracted.Input.norm_inner_packetOpUnnormalized_le_onJ`.
+  This makes the canonical higher extracted route explicit in the honest TT* form: a signal
+  `signal f i j : L²(𝕋)` depending on the packet pair, together with the theorem
+  `inner = (1/X) * toeplitzFormTeXC` on `J × J`.
+- Added the generic Step 3–4 wrapper theorem
+  `FejerBankedTypeIIToeplitzTorusPacketsStep34Bound.norm_inner_packetOpUnnormalized_le_of_toeplitz`,
+  so the non-fallback Step 3–4 chain now runs from an abstract TT* Toeplitz identity instead of
+  only the hard-coded canonical `fTT`.
+- Re-exported the TT*-native record from `SSU/Instances/Basic.lean` as
+  `SSU.Instances.Flagship.Extracted.TTStarInput`, and switched
+  `SSU.Instances.Flagship.Extracted.Input` to the TT*-native surface. The constructor record is
+  retained as `SSU.Instances.Flagship.Extracted.LegacyInput`.
+- The canonical constructor `Extracted.Input.toTTStarInput` uses the production theorem from
+  `FejerBankedTypeIIToeplitzTorusPackets.General` together with
+  `FejerBankedTypeIIToeplitzTorusPackets.General.inner_packetOpUnnormalized_eq_toeplitzFormTeXC_onJ`,
+  so the extracted-signal route now has **no supplied `ReductionToTubeFormProd` witness** and no
+  need to force the pair-dependent `fTT(f,i,j)` into a single-operator abstraction.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIToeplitzBridge SSU.Instances.Basic`.
+- Important boundary: the original `Hypothesis` / `HypothesisFor` records in the higher bridge
+  still retain `reductionTorus` on the fully operator-global surface, because their abstraction is
+  stronger than the current production theorem supports. The extracted torus TT* input is
+  pair-dependent (`fTT(f,i,j)`), so the new proved route removes the seam on the honest
+  extracted-signal flagship surface rather than by pretending we already have an operator-global
+  `ReductionToTubeFormProd`.
+- Connected the higher Toeplitz bridge layer to the now-canonical production extraction on the
+  honest fixed-signal flagship route.
+  Concretely, `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean` now contains
+  `RankOne.FixedSignalInput`, which packages:
+  - the canonical extracted box-data array,
+  - the production Step-2 weighted-band / Toeplitzized TT* hypotheses,
+  - the non-fallback Step 3–4 specialization for that extracted array, and
+  - the resulting higher-layer packet Gram bound
+    `FixedSignalInput.norm_inner_packetOpUnnormalized_le`.
+  This removes any application-supplied reduction witness from the *fixed-signal* flagship use-site
+  API while staying mathematically honest about the fact that the current production extraction is
+  not yet a global `ReductionToTubeForm`.
+- Re-exported that fixed-signal higher bridge route from `SSU/Instances/Basic.lean` under
+  `SSU.Instances.Flagship.FixedSignalRankOne`, so the strongest fully proved flagship path is now
+  reachable from the public instance surface.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIToeplitzBridge SSU.Instances.Basic`.
+- Rewired the canonical rank-one production extraction in
+  `SSU/Instances/FejerBankedTypeIIToeplitzTorusPacketsRankOne.lean` so the weighted-band TT*
+  hypothesis is now the primitive endpoint, and the Toeplitz-form TT* hypothesis is derived from it
+  via the deterministic fixed-signal ξ-band → Toeplitz conversion (`inner_eq_toeplitzFormTeXC`).
+- This means the newly packaged fixed-signal Step-2 Toeplitzization theorem is now part of the
+  actual flagship rank-one extraction path, rather than just an unused side interface.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIToeplitzTorusPacketsRankOne`.
+- Added a fixed-signal deterministic Step-2 Toeplitzization bridge:
+  - `SSU/Instances/FejerBankedTypeIIToeplitzTTStarHypothesis.lean` now includes
+    `HypothesisFor.inner_eq_toeplitzFormTeXC`, the fixed-signal analogue of the global
+    weighted-band TT* → Toeplitz-form theorem.
+  - `SSU/Instances/FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis.lean` now includes
+    `SSU.Instances.FejerBankedTypeIIToeplitzTTStarHypothesis.HypothesisFor.toToeplitzHypothesis`,
+    so a fixed-signal weighted-band TT* witness upgrades directly to the fixed-signal Toeplitz
+    hypothesis interface.
+  - This closes a real Step-2 proof gap in the extracted-signal setting: fixed-signal callers can
+    now reuse the deterministic ξ-band → Toeplitz conversion instead of reproving it locally.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIToeplitzTTStarHypothesis SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis SSU.Instances.FejerBankedTypeIIToeplitzTorusPacketsRankOne`.
+- Extended the reduction-based auto-Step-2 flagship surface to full default/fallback parity.
+  Concretely:
+  - `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` now includes canonical
+    default-route wrappers and both fallback-route wrappers for
+    `..._ofIndexWitness_autoTubeForm_fromReduction` across `uniform` / `gram` / `contract`,
+    matching the older `from_hF`, extracted-constancy, and `autoTubeForm` families.
+  - `SSU/Instances/Basic.lean` now re-exports the same reduction-based family on both fallback
+    routes via
+    `..._step3FallbackStep4_ofIndexWitness_autoTubeForm_fromReduction` and
+    `..._step4FallbackStep3_ofIndexWitness_autoTubeForm_fromReduction`.
+  - This closes the remaining surface mismatch in the reduction-based Step-2 API layer, so every
+    flagship route tier now has uniform default/fallback coverage in `SSU.Instances.Flagship`.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Added a new reduction-based auto-Step-2 flagship surface in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `GeometryInput.ofBGGeometryReduction_autoTubeForm`,
+  - `GeometryInput.ofBGGeometryReduction_rankOne_autoTubeForm_from_hF`,
+  - selector endpoints
+    `..._select_ofIndexWitness_autoTubeForm_fromReduction`
+    for `uniform` / `gram` / `contract`.
+  This removes the raw `inner_eq_coeff` / `energy_le_coeff` family from one additional flagship
+  Step-2 call surface when a packaged `ReductionToTubeForm` is already available.
+- Re-exported those reduction-based selector endpoints through `SSU.Instances.Flagship` in
+  `SSU/Instances/Basic.lean` via
+  `..._ofIndexWitness_autoTubeForm_fromReduction` and the matching route-selectors.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Documented the canonical flagship API surface in `SSU/README.md` so downstream use is centered on
+  `SSU.Instances.Basic` / `SSU.Instances.Flagship` selector-first endpoints.
+- Marked the secondary bar as closed (`~100%`) after completing selector-surface normalization and
+  fallback parity in `SSU.Instances.Flagship`.
+- Updated status tracking to switch active work from Step 1 extraction-side discharge to
+  Step 2 production Toeplitz extraction (`inner_eq_toeplitzForm` path).
+- Extended `SSU/Instances/Basic.lean` with explicit fallback-route re-exports for all three
+  index-witness wrapper tiers (`from_hF`, extracted-constancy, `autoTubeForm`) across
+  `uniform` / `gram` / `contract`, via:
+  - `step3FallbackStep4Route`,
+  - `step4FallbackStep3Route`,
+  and corresponding `..._step3FallbackStep4_...` / `..._step4FallbackStep3_...` aliases.
+- Build check passes:
+  `lake build SSU.Instances.Basic`.
+- Extended `SSU/Instances/Basic.lean` with canonical route-selector re-exports in
+  `SSU.Instances.Flagship` for all three index-witness wrapper tiers:
+  - `..._select_ofIndexWitness_from_hF`,
+  - `..._select_ofIndexWitness`,
+  - `..._select_ofIndexWitness_autoTubeForm`,
+  each with `uniform` / `gram` / `contract` parity.
+- Rewired existing default-route aliases in `SSU/Instances/Basic.lean` to call those selector
+  re-exports at `defaultRoute`, so downstream default usage and explicit-route usage now share one
+  surface path.
+- Build checks pass:
+  `lake build SSU.Instances.Basic SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a selector-first default-route API layer in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `flagshipSelectorDefaultRoute : FlagshipIndexRoute := .nonFallback`,
+  - canonical selector-default aliases for all three wrapper tiers (`from_hF`,
+    extracted-constancy, `autoTubeForm`) across `hypothesisStep34ForUniform` /
+    `gramHypothesis` / `contract`.
+- Extended `SSU/Instances/Basic.lean` with `SSU.Instances.Flagship` aliases that re-export these
+  selector-first default endpoints as the recommended downstream surface.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Selector call-site migration completed for flagship index-witness surfaces in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - rewired all selector `gramHypothesis`/`contract` endpoints
+    (`..._select_ofIndexWitness...`, `..._select_ofIndexWitness_from_hF...`,
+    `..._select_ofIndexWitness_autoTubeForm...`)
+    to consume route-specific hypothesis endpoints directly in each route branch.
+  - net effect: selector wrappers now consistently flow through hypothesis packaging before
+    projecting to Gram/contract, reducing duplicated route-level call plumbing.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`,
+  `lake build SSU.Instances.Basic`.
+- Added fallback selector/default compatibility lemmas in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` for both fallback families
+  (step3-fallback-step4 and step4-fallback-step3), covering all three wrapper tiers:
+  `from_hF`, extracted-constancy, and `autoTubeForm`, across
+  `hypothesisStep34ForUniform` / `gramHypothesis` / `contract`.
+  This mirrors the existing non-fallback compatibility shim and completes default-vs-legacy
+  simp coverage across all flagship routes.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Extended the same “default implementation + thin compatibility alias” pattern to both fallback
+  families in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - renamed fallback implementation bodies to canonical
+    `...flagship_default_step3_fallback_step4...` and
+    `...flagship_default_step4_fallback_step3...` definitions,
+  - restored legacy fallback names as thin `abbrev` compatibility aliases.
+- Retargeted selector fallback branches to canonical default fallback definitions (not legacy
+  compatibility names), completing the selector/default split consistently across all three routes.
+- Retargeted all non-fallback branches in selector endpoints to call canonical default endpoints
+  directly (instead of legacy non-fallback wrappers) in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF`,
+  - `hypothesisStep34ForUniform_flagship_select_ofIndexWitness`,
+  - `gramHypothesis_flagship_select_ofIndexWitness`,
+  - `contract_flagship_select_ofIndexWitness`,
+  - `gramHypothesis_flagship_select_ofIndexWitness_from_hF`,
+  - `contract_flagship_select_ofIndexWitness_from_hF`,
+  - `hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm`,
+  - `gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm`,
+  - `contract_flagship_select_ofIndexWitness_autoTubeForm`.
+  This completes the “legacy wrappers as thin aliases” direction for the non-fallback path while
+  leaving fallback routes intact as compatibility branches.
+- Converted legacy non-fallback index-witness wrapper families into thin aliases over canonical
+  default endpoints in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_flagship_ofIndexWitness_from_hF`,
+  - `hypothesisStep34ForUniform_flagship_ofIndexWitness`,
+  - `gramHypothesis_flagship_ofIndexWitness_from_hF`,
+  - `gramHypothesis_flagship_ofIndexWitness`,
+  - `contract_flagship_ofIndexWitness_from_hF`,
+  - `contract_flagship_ofIndexWitness`,
+  - `hypothesisStep34ForUniform_flagship_ofIndexWitness_autoTubeForm`,
+  - `gramHypothesis_flagship_ofIndexWitness_autoTubeForm`,
+  - `contract_flagship_ofIndexWitness_autoTubeForm`.
+  Their former bodies now live in corresponding `..._flagship_default_...` definitions.
+- Added selector/default compatibility lemmas in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` tying canonical default aliases to
+  legacy non-fallback wrappers (uniform/Gram/contract at `from_hF`, extracted-constancy, and
+  auto-Step-2 tiers):
+  - `..._default_ofIndexWitness_from_hF_eq_legacy`,
+  - `..._default_ofIndexWitness_eq_legacy`,
+  - `..._default_ofIndexWitness_autoTubeForm_eq_legacy`.
+  This gives a proof-level shim that call-site migration can rely on without changing behavior.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`,
+  `lake build SSU.Instances.Basic`.
+- Added canonical non-fallback selector aliases in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF`,
+  - `gramHypothesis_flagship_default_ofIndexWitness_from_hF`,
+  - `contract_flagship_default_ofIndexWitness_from_hF`,
+  - `hypothesisStep34ForUniform_flagship_default_ofIndexWitness`,
+  - `gramHypothesis_flagship_default_ofIndexWitness`,
+  - `contract_flagship_default_ofIndexWitness`,
+  - `hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm`,
+  - `gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm`,
+  - `contract_flagship_default_ofIndexWitness_autoTubeForm`.
+  These make selector routing the canonical non-fallback surface while preserving existing
+  route-specific wrappers for compatibility.
+- Added selector-path flagship endpoints at the **geometry-input** layer in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF`,
+  - `gramHypothesis_flagship_select_ofIndexWitness_from_hF`,
+  - `contract_flagship_select_ofIndexWitness_from_hF`,
+  - `hypothesisStep34ForUniform_flagship_select_ofIndexWitness`,
+  - `gramHypothesis_flagship_select_ofIndexWitness`,
+  - `contract_flagship_select_ofIndexWitness`.
+  These route by `FlagshipIndexRoute` across non-fallback and both fallback families while
+  staying on geometry-input APIs; this gives a canonical selector surface where Step-2 tube-form
+  plumbing is already discharged via `GeometryInput.reduction`/`hF0` instead of raw
+  `tubeForm_eq` assumptions.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Completed the three pending flagship-surface plumbing items:
+  1) `SSU/Instances/Basic.lean` now re-exports the flagship/fallback index-witness API module
+     (`FejerBankedTypeIIBridgeTeXBGRankOne`);
+  2) added a canonical route selector in
+     `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+     `FlagshipIndexRoute` with selector endpoints
+     `hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm`,
+     `gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm`,
+     `contract_flagship_select_ofIndexWitness_autoTubeForm`;
+  3) selector endpoints are routed through the auto-Step-2 flagship wrappers, so this top-level
+     surface no longer asks for direct `tubeForm_eq` / `reduction` hypotheses.
+- Build checks pass:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Extended canonical **index-witness flagship simplification** to both fallback families in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - Step-3-proved/Step-4-fallback flagship index-witness wrappers
+    (`...flagship_step3_fallback_step4_ofIndexWitness...`) added for
+    uniform/Gram/contract, including `from_hF` and `autoTubeForm` variants.
+  - Step-4-proved/Step-3-fallback flagship index-witness wrappers
+    (`...flagship_step4_fallback_step3_ofIndexWitness...`) added for
+    uniform/Gram/contract, including `from_hF` and `autoTubeForm` variants.
+  - Net effect: canonical flagship surfaces are now uniform across non-fallback and fallback
+    families at the index-witness level.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a new canonical flagship endpoint family for the non-fallback route that uses
+  **index witnesses** (rather than class witnesses) in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_flagship_ofIndexWitness_from_hF`,
+  - `gramHypothesis_flagship_ofIndexWitness_from_hF`,
+  - `contract_flagship_ofIndexWitness_from_hF`,
+  - `hypothesisStep34ForUniform_flagship_ofIndexWitness`,
+  - `gramHypothesis_flagship_ofIndexWitness`,
+  - `contract_flagship_ofIndexWitness`,
+  - `hypothesisStep34ForUniform_flagship_ofIndexWitness_autoTubeForm`,
+  - `gramHypothesis_flagship_ofIndexWitness_autoTubeForm`,
+  - `contract_flagship_ofIndexWitness_autoTubeForm`.
+  These wrappers remove the class-witness requirement from canonical flagship call-sites while
+  preserving the same non-fallback Step-3/Step-4 bridge route.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Completed the internal micro-bar target by adding concrete auto-Step-2 flagship wrappers that
+  discharge extraction-side constancy by proof in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_flagship_ofClassWitness_autoTubeForm`,
+  - `gramHypothesis_flagship_ofClassWitness_autoTubeForm`,
+  - `contract_flagship_ofClassWitness_autoTubeForm`.
+  These instantiate `g := GeometryInput.ofBGGeometryCoeffReduction_rankOne_autoTubeForm ...` and
+  derive required extracted constancy using:
+  `GeometryInput.hαconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm`,
+  `GeometryInput.hβconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm`.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Eliminated the remaining flagship `hF0` family from the canonical API surface by adding
+  proof-based flagship wrappers in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_flagship_ofClassWitness`,
+  - `gramHypothesis_flagship_ofClassWitness`,
+  - `contract_flagship_ofClassWitness`.
+  These route through the existing rank-one modEq class-witness proof path using extracted
+  constancy (`hαconst`/`hβconst`) instead of taking a direct `hF0` witness.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Revalidated flagship bridge build after the current wrapper pass:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne` (passes; warnings only).
+- Added canonical flagship alias endpoints in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_flagship_ofClassWitness_from_hF`,
+  - `gramHypothesis_flagship_ofClassWitness_from_hF`,
+  - `contract_flagship_ofClassWitness_from_hF`.
+  These pin a single non-fallback “rank-one + modEq + class-witness + fixed-`hF`” route as the
+  default top-level interface for downstream usage.
+- Removed explicit class-constancy assumptions from the flagship `from_hF` class-witness fallback
+  endpoint families in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - rank-one U-side (`...BGConstOnUIndex...ofClassWitness_from_hF`, uniform/Gram/contract),
+  - rank-one V-side (`...BGConstOnVIndex...ofClassWitness_from_hF`, uniform/Gram/contract),
+  - constant-input insertion aliases for both U/V families.
+  These now derive class constancy directly from modEq + class-witness membership as geometry
+  lemmas inside the wrappers, instead of requiring external `hβconst_class` / `hαconst_class`
+  hypotheses at call sites.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added new **one-record insertion constructors** for the BG const-on-index modEq class-witness
+  route in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `GeometryInputConstStep3Step4.ofBGConstOnIndexOneAddLogOfModEqOfClassWitness`,
+  - `GeometryInputConstStep3Step4.ofGeometryInputBGConstOnIndexOneAddLogOfModEqOfClassWitness_from_hF`.
+  These derive index references (`mRefU`, `mRefV`) from class witnesses
+  (`uRef ∈ uClass(r)`, `vRef ∈ vClass(r)`) and route through the existing modEq insertion
+  constructor, so class-witness call-sites can now land directly at the insertion layer.
+- Added top-level insertion aliases and rewired endpoints to consume them:
+  - `inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF`,
+  - `inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF`.
+  The corresponding `hypothesisStep34ForUniform` / `gramHypothesis` / `contract` wrappers for both
+  families now route through these insertion records (`.toHypothesisStep34ForUniform`,
+  `.gramHypothesis`, `.contract`) instead of bypassing the insertion tier.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added missing modEq-derived fallback insertion constructors in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `GeometryInputConstStep3Step4.ofBGConstOnUIndexOneAddLogStep3FallbackStep4OfModEq`,
+  - `GeometryInputConstStep3Step4.ofBGConstOnVIndexOneAddLogStep4FallbackStep3OfModEq`,
+  - plus `...ofGeometryInput...OfModEq_from_hF` companions for both U/V fallback routes.
+  Then rewired the six constant-input fallback `...ofModEq_from_hF` endpoint wrappers to consume
+  these direct insertion constructors (`.toHypothesisStep34ForUniform` / `.gramHypothesis` /
+  `.contract`), restoring direct insertion-layer routing with modEq auto-derivation.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Fixed and stabilized the new constant-input fallback `from_hF` wrappers in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` (U-index Step-3 fallback + V-index
+  Step-4 fallback families): these now route via
+  `GeometryInputConst.ofGeometryInput_from_hF` into the existing constant-input `...ofModEq`
+  endpoints, eliminating the intermediate arity mismatch introduced by direct insertion-record
+  calls.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added four new `GeometryInputConstStep3Step4` constructors in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` that build BG const-on-index
+  Step-3/Step-4 insertion records directly from a fixed rank-one witness `hF0`
+  (via `GeometryInputConst.ofGeometryInput_from_hF`):
+  - `ofGeometryInputBGConstOnIndexOneAddLogOfModEq_from_hF`,
+  - `ofGeometryInputBGConstOnIndexOneAddLog_from_hF`,
+  - `ofGeometryInputBGConstOnUIndexOneAddLogStep3FallbackStep4_from_hF`,
+  - `ofGeometryInputBGConstOnVIndexOneAddLogStep4FallbackStep3_from_hF`.
+  This removes another extraction-constancy seam (`hαconst_extr` / `hβconst_extr`) at the
+  insertion-record layer on both non-fallback and fallback BG const-on-index routes.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Tightened the constant-input `from_hF` routing in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` so
+  `inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF`
+  now calls the tight insertion endpoint (`...step3step4_tight_ofModEq`) directly.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added missing tight-constant wrappers for the **constant-input coeff-reduction (modEq)**
+  insertion tier in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - inside `GeometryInputConst`:
+    `toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq`,
+    `toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq`,
+    `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq`,
+    `contract_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq`;
+  - top-level insertion aliases:
+    `inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq`,
+    `hypothesisStep34ForUniform_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq`,
+    `gramHypothesis_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq`,
+    `contract_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq`.
+  This closes the remaining naming/parity gap between supplied-Step-3/4 and tight-constant
+  insertion endpoints on the constant-input coeff-reduction path.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added missing constant-input insertion-layer tight `from_hF` wrappers for the direct non-fallback
+  rank-one/modEq coefficient-reduction route in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF`,
+  - `hypothesisStep34ForUniform_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF`,
+  - `gramHypothesis_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF`,
+  - `contract_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF`.
+  These route through `GeometryInputConst.ofGeometryInput_from_hF` and the
+  `...const_input_coeffReduction_rankOne_step3step4_tight_ofModEq` insertion endpoint.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added missing tight-constant `from_hF` endpoint wrappers for the direct non-fallback
+  rank-one/modEq coefficient-reduction route in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF`,
+  - `gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF`,
+  - `contract_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF`.
+  These route through the existing
+  `geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF`
+  constructor, so tight Step-3/Step-4 call-sites can now consume a single fixed-rank-one `hF`
+  witness instead of separate coefficient-reduction identities.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a reusable extraction helper in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hF_eq_rankOne_of_extractedConst`.
+  This theorem packages the repeated derivation
+  `g.reduction.F = RankOneShear.coeff ... α0 β0` from extracted coefficient constancy
+  (`hαconst`/`hβconst`).
+- Rewired the three constant-input coeff-reduction auto routes to use that helper:
+  - `hypothesisStep34ForUniform_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq`,
+  - `gramHypothesis_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq`,
+  - `contract_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq`.
+  Net effect: less duplicated extraction-side plumbing, and one canonical proof path for the
+  fixed-rank-one `hF` identity in this insertion layer.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added the missing **auto-Step-2 + class-witness companions** for the non-modEq
+  BG const-on-index rank-one route in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness_autoTubeForm`,
+  - `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness_autoTubeForm`,
+  - `contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness_autoTubeForm`.
+  These wrappers take `Step2ToTubeForm` (`h2`, `hKhat`) and derive `tubeForm_eq` internally via
+  `GeometryInputConst.tubeForm_eq_of_step2ToTubeForm`, removing one more manual Step-2 seam on
+  flagship class-witness paths.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added the missing **auto-Step-2 + class-witness companions** for the BG const-on-index
+  rank-one modEq route in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_autoTubeForm`,
+  - `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_autoTubeForm`,
+  - `contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_autoTubeForm`.
+  These wrappers consume `Step2ToTubeForm` (`h2`, `hKhat`) and derive `tubeForm_eq` via
+  `GeometryInputConst.tubeForm_eq_of_step2ToTubeForm`, giving class-witness parity with the new
+  auto non-class-witness endpoints.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added new auto-Step-2 endpoint family for the BG const-on-index (modEq) route in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_autoTubeForm`,
+  - `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_autoTubeForm`,
+  - `contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_autoTubeForm`.
+  These consume a packaged `Step2ToTubeForm` witness (`h2`, `hKhat`) and discharge
+  `tubeForm_eq` automatically via `GeometryInputConst.tubeForm_eq_of_step2ToTubeForm`, removing
+  one more manual Step-2 hypothesis from this flagship endpoint family.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added extraction-side constancy lemmas for the **auto Step-2 rank-one constructor** in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `hαconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm`,
+  - `hβconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm`.
+  These prove (definitionally) that extracted `α`/`β` for
+  `GeometryInput.ofBGGeometryCoeffReduction_rankOne_autoTubeForm` are independent of `(f,i,j)`
+  and equal to the fixed rank-one input coefficients (`I0.α`, `I0.β`), closing a remaining
+  extraction-side constancy gap on the auto Step-2 pathway.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added missing **combined-index const-input class-witness wrappers** in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `...input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`
+    (uniform/Gram/contract, non-`from_hF`),
+  - routes use `GeometryInputConst.ofGeometryInput` and forward directly to
+    `...const_input_BGConstOnIndex...ofClassWitness`.
+  This closes another API-parity gap between const-input and rank-one wrappers and removes a
+  remaining call-site need to manually introduce index-reference maps when class witnesses are
+  available.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added missing **combined-index rank-one class-witness wrappers** in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` for both direct and `from_hF` routes:
+  - `...input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`
+    (uniform/Gram/contract),
+  - `...input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF`
+    (uniform/Gram/contract).
+  These derive `mRefU`/`mRefV` from `uRef`/`vRef` via `uIndex`/`vIndex` plus
+  `Finset.mem_image.mpr`, then route to the existing combined-index rank-one endpoints.
+  Net effect: combined-index rank-one APIs now have class-witness parity with the U/V fallback
+  families and no longer require manual index-reference plumbing at call sites.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added `ofModEq_ofClassWitness_from_hF` wrappers for the **U/V fallback rank-one routes** in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `...BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF`
+    (rank-one + constant-input insertion layers; uniform/Gram/contract),
+  - `...BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF`
+    (rank-one + constant-input insertion layers; uniform/Gram/contract).
+  These derive index representatives from class witnesses (`uRef/huRef`, `vRef/hvRef`) and then
+  route through existing modEq `from_hF` endpoints, so class-witness call-sites no longer need
+  separate class-constancy assumptions.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added constant-input insertion-layer aliases for the BG class-witness fallback routes in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `...input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF`
+    (uniform/Gram/contract),
+  - `...input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF`
+    (uniform/Gram/contract).
+  These consume `(hβmod, hαmod, hF0)` and route through the existing rank-one class-witness
+  fallback constructors, so the constant-input insertion tier now has the same `from_hF`
+  class-witness entrypoints as the modEq tier.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added `from_hF` wrappers for the **BG class-witness fallback routes** in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `...BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF`
+    (uniform/Gram/contract),
+  - `...BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF`
+    (uniform/Gram/contract).
+  These wrappers consume `(hβmod, hαmod, hF0)` and discharge coefficient-reduction identities
+  from `g.reduction` definitionally, then route through the existing coefficient-form class-witness
+  constructors.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added `from_hF` wrappers for the **BG const-on-index fallback routes** in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`, so these endpoint families no longer
+  require extracted `hαconst`/`hβconst` assumptions when a fixed rank-one witness is already
+  available:
+  - `...BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_from_hF` (uniform/Gram/contract),
+  - `...BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_from_hF` (uniform/Gram/contract).
+  These route through `GeometryInputConst.ofGeometryInput_from_hF` using `(hβmod, hαmod, hF0)`.
+  Net effect: more of the fallback insertion layer now consumes the same `hF`-first plumbing used
+  by the non-fallback rank-one/modEq APIs.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a new fixed-rank-one conversion helper in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `GeometryInputConst.ofGeometryInput_from_hF`.
+  This builds `GeometryInputConst` directly from a packaged `GeometryInput` plus a single
+  rank-one coefficient witness
+  `hF0 : reduction.F = RankOneShear.coeff ... I0.α I0.β`, avoiding separate extracted
+  `hαconst`/`hβconst` assumptions.
+- Added new geometry-input endpoint families that consume the same `hF0` witness directly for the
+  BG const-on-index one-add-log modEq routes:
+  - `hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF`,
+  - `gramHypothesis_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF`,
+  - `contract_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF`,
+  - `hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF`,
+  - `gramHypothesis_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF`,
+  - `contract_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF`.
+  These route through the new conversion helper and remove duplicated constancy plumbing at this
+  insertion layer.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added one-record convenience wrappers for the constant-input coefficient-reduction path in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `GeometryInputConst.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_ofModEq`,
+  - top-level wrappers
+    `inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_ofModEq` and
+    `inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq`.
+  Also rewired auto and supplied endpoint wrappers to consume these one-record builders directly.
+  This further consolidates routing through `GeometryInputConstStep3Step4` and removes duplicated
+  endpoint plumbing.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added explicit one-record autoTubeForm entrypoints in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm`,
+  - `inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm`.
+  Rewired the corresponding auto hypothesis/Gram/contract endpoints to consume these one-record
+  builders directly (`.toHypothesisStep34ForUniform` / `.gramHypothesis` / `.contract`), so the
+  Step-2 auto path now has a single insertion point shared across endpoint tiers.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Rewired the two flagship **Step-2 autoTubeForm** endpoint families to route through the new
+  one-record insertion constructors in `GeometryInputConstStep3Step4`:
+  - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm`,
+  - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm`.
+  This removes duplicated direct plumbing in those auto routes and makes them consume the same
+  one-record insertion layer now used elsewhere.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a new **one-record Step-2 auto constructor layer** for constant-input non-fallback
+  insertion records in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `GeometryInputConstStep3Step4.ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm`,
+  - `GeometryInputConstStep3Step4.ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm`.
+  These constructors consume a packaged `Step2ToTubeForm` witness (`h2` + `hKhat`) and route to:
+  - auto BG modEq one-add-log Step-3/Step-4 insertion (`ofBGModEqOneAddLog`), or
+  - supplied tight Step-3/Step-4 insertion (`step3`, `step4`) with `C3 := step3.C`, `C4 := step4.C`.
+  Net effect: Step-2 auto tube-form wiring now lands directly in `GeometryInputConstStep3Step4`
+  (the one-record non-fallback insertion point), not only hypothesis/Gram/contract endpoints.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added **Step-2-based auto tube-form constructor family** in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` to reduce manual
+  `tubeForm_eq` plumbing:
+  - `GeometryInput.tubeForm_eq_of_step2ToTubeForm`,
+  - `GeometryInput.ofBGGeometryCoeffReduction_autoTubeForm`,
+  - `GeometryInput.ofBGGeometryCoeffReduction_rankOne_autoTubeForm`,
+  - `GeometryInputConst.tubeForm_eq_of_step2ToTubeForm`,
+  - `GeometryInputConst.ofBGGeometryCoeffReduction_autoTubeForm`,
+  - `GeometryInputConst.ofBGGeometryCoeffReduction_rankOne_autoTubeForm`.
+  These endpoints take a packaged `Step2ToTubeForm` witness (plus `hKhat` identification) and
+  derive the required `tubeForm_eq` field automatically before routing into existing BG
+  coefficient-reduction constructors.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a new **tight-constant non-fallback API tier** (for supplied Step-3/Step-4 bounds) in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - geometry-input direct coeff-reduction insertions:
+    - `geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq`,
+    - `hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq`,
+    - `gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq`,
+    - `contract_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq`;
+  - top-level coefficient-reduction endpoints:
+    - `hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq`,
+    - `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq`,
+    - `contract_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq`.
+  These constructors set `C3 := step3.C`, `C4 := step4.C` internally (with `hC3/hC4 := le_rfl`),
+  so non-fallback use-sites no longer need to pass envelope constants manually.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added a dedicated **one-record insertion constructor** for the constant-input, supplied
+  non-fallback Step-3/Step-4 rank-one coeff-reduction route in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  - `GeometryInputConst.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq`.
+  It packages `step3`/`step4` directly into `GeometryInputConstStep3Step4`, with per-`(f,i,j)`
+  `step3For`/`step4For` built by rewriting via `g.hF`.
+- Rewired the matching `GeometryInputConst` endpoints to consume that insertion record:
+  - `toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq`,
+  - `gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq`,
+  - `contract_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq`.
+  This removes duplicated coefficient-reduction plumbing in those endpoint definitions.
+- Build check passes:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
 - Added a **rank-one convenience constructor** for BG geometry inputs with constant coefficients
   (no explicit `hαconst`/`hβconst` plumbing) in
   `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
@@ -2035,17 +2887,171 @@ Where the bar is “sticky” right now:
      `SSU/Instances/FejerBankedTypeIIToeplitzTorusPackets.lean:425`
    - Step 3–4 (`Step34ProdSum`) ⇒ torus packet Gram bound (general Type–II array):
      `SSU/Instances/FejerBankedTypeIIToeplitzTorusPacketsStep34Bound.lean:44`
+   - the fixed-rank-one `from_hF` coefficient-reduction path now has a direct theorem-producing
+     constant-input builder:
+     `inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF`
+     in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`; the older
+     `..._ofModEq_from_hF` entrypoint is now just a compatibility alias to that direct route.
+   - matching direct
+     `hypothesis/gram/contract ..._direct_ofModEq_from_hF` endpoints now exist at the same layer.
+   - matching direct class-witness
+     `hypothesis/gram/contract ...BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF`
+     endpoints now exist in
+     `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`, so the class-witness layer also
+     has a genuine non-fallback `step3step4` route (not just the older one-add-log packaging).
+   - the extracted `ToeplitzInput` breakage in
+     `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` is repaired; the constant-input
+     promotion wrappers, the fixed-rank-one coefficient-reduction helper, and the `from_hF`
+     selector endpoints all build again.
+  - the reduction-free operator-global route now has a stable core-facing promotion:
+    `SSU.Instances.FejerBankedTypeIIToeplitzBridge.ToeplitzOperatorInput.gramHypothesis`
+    and `.contract` compile, and the public endpoints
+    `Flagship.toeplitzOperatorGramHypothesis`,
+    `Flagship.toeplitzOperatorContract`,
+    `Flagship.OperatorGlobal.gramHypothesis`, and
+    `Flagship.OperatorGlobal.contract`
+    are live again in `SSU/Instances/Basic.lean`.
 - TeX-faithful rank-one Type–II input (`α⊗β`) on the dyadic box is now a *definitionally frozen*
   object (independent of packets), with the TeX-ordered Toeplitz regrouping lemma proved:
   `SSU/Engines/BGTypeIIRankOne.lean:1`
 - The corresponding torus-side Type–II signal `f(x) = ∑ A_k fourier k x` (and real-frequency
   normalization `f(ξ/X) = ∑ A_k e(ξk/X)`) is now defined and bridged deterministically:
   `SSU/Engines/BGTypeIIRankOneSignal.lean:1`
+- The constant-input BG modEq + class-witness layer now has a direct non-fallback `step3step4`
+  family, so this helper surface no longer forces the one-add-log packaging when explicit
+  `Step3LargeSieveOuterUFor` / `Step4LargeSieveOuterVFor` theorem objects are available:
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean:6980`
+- The Step-3 chain now has a direct theorem-producing U-side **box-geometry** route on the frozen
+  rank-one constant-input path:
+  - `UniformInputStep3Step4.ofBoxGeometryStep3FallbackStep4`,
+  - `GeometryInput.step3For_ofBoxGeometry`,
+  - `GeometryInputConstStep3Step4.ofBoxGeometryStep3FallbackStep4`,
+  - and public constant-input wrappers `...toInput / ...toHypothesis / ...gram / ...contract`
+    `...ofBoxGeometryStep3FallbackStep4`
+    in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`.
+- The older U-side fallback helper
+  `GeometryInputConstStep3Step4.ofBGConstOnUIndexOneAddLogStep3FallbackStep4`
+  now resolves to that direct box-geometry theorem route, so this helper no longer depends on the
+  intermediate one-add-log Step-3 construction for its U-side bound.
+- The Step-4 chain now has the analogous direct theorem-producing V-side **box-geometry** route on
+  the frozen rank-one constant-input path:
+  - `UniformInputStep3Step4.ofBoxGeometryStep4FallbackStep3`,
+  - `GeometryInput.step4For_ofBoxGeometry`,
+  - `GeometryInputConstStep3Step4.ofBoxGeometryStep4FallbackStep3`,
+  - and public constant-input wrappers `...toInput / ...toHypothesis / ...gram / ...contract`
+    `...ofBoxGeometryStep4FallbackStep3`
+    in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`.
+- The older V-side fallback helper
+  `GeometryInputConstStep3Step4.ofBGConstOnVIndexOneAddLogStep4FallbackStep3`
+  now resolves to that direct box-geometry theorem route, so this helper no longer depends on the
+  intermediate one-add-log Step-4 construction for its V-side bound.
+- `SSU/Engines/BGTypeIIRankOneToyMV.lean` now packages the first **actual analytic Step-5-style
+  theorem object** for the frozen rank-one box model:
+  - `Input.step4LargeSieveOuterVFor_box_rankOne_geom` proves a genuine non-fallback
+    `Step4LargeSieveOuterVFor` on the trivial box-as-tube geometry `(a,q,s) = (0,1,0)`,
+    using the direct product-phase MV estimate rather than the older box-geometry fallback wrapper.
+  - `Input.step34LargeSieveTeXFor_box_rankOne_geom` then combines:
+    - the existing deterministic box-geometry `Step3LargeSieveOuterUFor`, and
+    - that proved Step-4 theorem,
+    into a compiled `Step34LargeSieveTeXFor` object for the rank-one dyadic box.
+  - `Input.step34ProdSumFor_box_rankOne_uniform` now upgrades that same rank-one box model to a
+    **uniform fixed-signal** `Step34ProdSumFor` by splitting the ξ-band at `|ξ| = 1 / (2H)`:
+    - the small-ξ regime is patched with `Step34ProdSum.trivial`,
+    - the large-ξ regime uses `step34LargeSieveTeXFor_box_rankOne_geom` plus the geometric bound
+      `X / |ξ| ≤ 2 X H`.
+    This removes the `X / |ξ|` singularity for the frozen array `F = α⊗β` on the dyadic box.
+  - That fixed-signal theorem now reaches the flagship extracted rank-one path:
+    - `FejerBankedTypeIIToeplitzStep34Proof`,
+      `FejerBankedTypeIIToeplitzStep34ToeplitzBound`, and
+      `FejerBankedTypeIIToeplitzTorusPacketsRankOneBound` all accept `Step34ProdSumFor` directly,
+    - `FejerBankedTypeIIToeplitzBridge.RankOne.FixedSignalInput` now has a direct
+      `norm_inner_packetOpUnnormalized_le_box_rankOne_uniform` theorem which pushes the proved
+      box-model `Step34ProdSumFor` through the extracted flagship route once the `Dpacket.X/H`
+      and `P.X/H` parameters are identified.
+  - The general extracted TT*-native path now has an honest use-site Step 3–4 surface beyond the
+    frozen rank-one box model:
+    - `FejerBankedTypeIIToeplitzTorusPacketsStep34Bound` exposes
+      `norm_inner_packetOpUnnormalized_le_of_toeplitzFor`,
+    - `FejerBankedTypeIIToeplitzBridge.Extracted` now includes `TTStarInputFor`,
+      `ToeplitzInputFor`, and `InputFor`,
+    - the first actual non-rank-one extracted `Step34ProdSumFor` families are now instantiated on
+      that surface:
+      - the deterministic fallback family
+        `FejerBankedTypeIIToeplitzBridge.Extracted.InputFor.trivial`,
+      - and the first nontrivial flagship family (compatibility name preserved)
+        `FejerBankedTypeIIToeplitzBridge.Extracted.InputFor.boxGeometryOneAddLog`,
+        exposed publicly as
+        `SSU.Instances.Flagship.Extracted.boxGeometryOneAddLogInputFor`,
+    - so the canonical extracted TT* bridge now carries a genuine theorem-producing `InputFor`
+      path for arbitrary extracted coefficient arrays, with both a trivial fallback and a first
+      nontrivial route.
+  - The first **nontrivial** extracted `InputFor` family now exists:
+    `FejerBankedTypeIIToeplitzBridge.Extracted.InputFor.boxGeometryOneAddLog`, with public alias
+    `SSU.Instances.Flagship.Extracted.boxGeometryOneAddLogInputFor`.
+    This compatibility-named constructor now routes through the product-side
+    `tubeWindowInputOfProdFiberCardBound` on the box-as-tube geometry, so the canonical extracted
+    TT* bridge is no longer limited to the trivial deterministic `InputFor` family and no longer
+    needs the skew-side one-add-log wrapper at this first concrete instance.
+  - The extracted flagship theorem surface now has the matching dedicated nontrivial packet bound
+    endpoint:
+    `SSU.Instances.Flagship.Extracted.normInnerPacketOpUnnormalizedLeBoxGeometryOneAddLog`.
+    Internal extracted-path call sites no longer depend on the trivial `InputFor` route; the only
+    remaining trivial references are the explicit public fallback aliases kept for compatibility.
+  - The extracted use-site family now also exposes the broader direct endpoint
+    `FejerBankedTypeIIToeplitzBridge.Extracted.InputFor.norm_inner_packetOpUnnormalized_le_ofInput`,
+    with public alias
+    `SSU.Instances.Flagship.Extracted.normInnerPacketOpUnnormalizedLeOfInput`.
+    This promotes any global extracted `Input` to the use-site extracted theorem surface, so the
+    broadest current nontrivial route is no longer tied to full-box geometry.
+  - The bridge now also has an honest **non-box extracted one-add-log TeX route** on the
+    physical-side tube form:
+    `FejerBankedTypeIIToeplitzBridge.Extracted.TubeFormInputFor`.
+    This packages a global extracted `Step34LargeSieveTeXFor` family built from
+    `of_sumFiber_ref_on_zSet_oneAddLog` and feeds it to the packet bound without pretending it is
+    a product-side `Step34ProdSumFor`; public aliases are
+    `SSU.Instances.Flagship.Extracted.tubeFormInputForOfSumFiberRefOnZSetOneAddLog` and
+    `SSU.Instances.Flagship.Extracted.normInnerPacketOpUnnormalizedLeTubeForm`.
+  - On the product-side Toeplitz path, there is now a broader deterministic non-box global
+    `Step34ProdSum` class:
+    `Step34ProdSum.of_prodFiberCardBound`.
+    It assumes only a uniform bound on product-fiber multiplicity
+    `card {p ∈ T : prod p = k} ≤ M` and sharpens the trivial `card(T)` envelope to
+    `card(T.image prod) * M`.
+    The extracted bridge exposes this as
+    `FejerBankedTypeIIToeplitzBridge.Extracted.Input.ofProdFiberCardBound`, with public alias
+    `SSU.Instances.Flagship.Extracted.inputOfProdFiberCardBound`.
+    It also now has a first concrete extracted-box specialization,
+    `SSU.Instances.Flagship.Extracted.boxInputOfProdFiberCardBound`, using the proved bound
+    `card {p ∈ box : prod p = k} ≤ min(|dRange|, |nRange|)`.
+    It also now has a sharper arithmetic specialization for a more structured extracted class:
+    `SSU.Instances.Flagship.Extracted.constShearInputOfProdFiberCardBound`.
+    This applies when the extracted support lies on a single exact BG shear level inside a dyadic
+    box; then each product fiber `dn = k` has cardinality `≤ 2`, because the fixed-shear and
+    fixed-product constraints force a quadratic equation in `d`.
+    More generally, it now has a bounded-union version
+    `SSU.Instances.Flagship.Extracted.shearLevelSetInputOfProdFiberCardBound`:
+    if the extracted support lies in `P.box` and its shear values lie in a finite set `levels`,
+    then each product fiber has cardinality `≤ 2 * levels.card`, by splitting into exact-shear
+    fibers and applying the same quadratic `≤ 2` bound on each shear slice.
+    For the actual BG tube geometry, this no longer requires a user-supplied `levels` set:
+    `SSU.Instances.Flagship.Extracted.tubeWindowInputOfProdFiberCardBound` derives the canonical
+    interval `levels = Icc (-U) U` directly from membership in `BGTube.tubeFinset P a q s`, so
+    the constructor now carries the shear-window side condition from tube geometry itself.
+    There are currently no internal call sites still using the explicit `levels` route when the
+    stronger tube-window hypothesis is already available; the remaining `shearLevelSet...` alias
+    is kept only as the generic finite-level interface.
+  - The one-add-log TeX route is still not itself a global product-side `Step34ProdSum`: it
+    lives on the skew/use-site side. The new `of_prodFiberCardBound` theorem is the current
+    broadest honest **global product-side** deterministic class, but it is still not the full
+    nontrivial large-sieve theorem one ultimately wants.
 2. Prove (i.e. *discharge*) `Step34ProdSum` for the first meaningful class of Type–II arrays
    (start with the rank-one `α⊗β` box model; then the shear-tube restriction), matching the TeX
    “square-root gain” with the right scale `(H/X)^{1/2}` (polylog losses OK).
 3. Use (2) inside the Fejér-banked torus packet Gram bound, then wire the resulting Gram control
    into the SSU interzone hypotheses for the already-summed shell packets and run the SSU ledger.
+   - Note: some one-sided fallback-shaped `...from_hF` wrappers still remain by design because
+     their signatures carry only one residue-index witness family; they cannot be honestly
+     redirected to the newer two-sided promoted endpoints without changing those APIs.
 
 ## Note on TeX faithfulness (current bottleneck)
 

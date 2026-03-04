@@ -32,10 +32,10 @@ variable (P : SSU.Engines.BGTube.Params)
 variable (W : SSU.Engines.TFA.SeparableWeight)
 variable (I : SSU.Engines.BGTypeIIRankOne.Input)
 
-theorem norm_toeplitzFormTeXC_rankOne_le
+theorem norm_toeplitzFormTeXC_rankOne_le_of_step34For
     (hU : 2 * P.N ≤ P.U)
     (hX : 0 < D.X) (hH : 0 < D.H)
-    (step34 : Step34ProdSum D.X D.H P.box)
+    (step34 : Step34ProdSumFor D.X D.H P.box (fun p => I.F P W p))
     (i j : ℤ) :
     ‖((1 / D.X : ℝ) : ℂ) *
         SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
@@ -47,7 +47,8 @@ theorem norm_toeplitzFormTeXC_rankOne_le
     ((1 / D.X) * ((D.M * D.Φmax) ^ 2) *
         (step34.C * Real.sqrt (D.H / D.X) * tubeEnergy P.box (fun p => I.F P W p))) *
       (2 * (D.H)⁻¹) := by
-  -- Rewrite the normalized Toeplitz form as the TT* Gram entry, then apply the Step 3–4 bound.
+  -- Rewrite the normalized Toeplitz form as the TT* Gram entry, then apply the fixed-signal
+  -- Step 3–4 bound.
   have htoe :
       inner ℂ
           (SSU.Instances.FejerBankedTypeIIToeplitzRealTTStar.Model.packetOp
@@ -82,7 +83,7 @@ theorem norm_toeplitzFormTeXC_rankOne_le
       ((1 / D.X) * ((D.M * D.Φmax) ^ 2) *
           (step34.C * Real.sqrt (D.H / D.X) * tubeEnergy P.box (fun p => I.F P W p))) *
         (2 * (D.H)⁻¹) :=
-    (SSU.Instances.FejerBankedTypeIIToeplitzStep34Proof.norm_inner_packetOp_rankOne_le
+    (SSU.Instances.FejerBankedTypeIIToeplitzStep34Proof.norm_inner_packetOp_rankOne_le_of_step34For
       (D := D) (P := P) (W := W) (I := I) (hU := hU) (hX := hX) (hH := hH)
       (step34 := step34) (i := i) (j := j))
   have hnorm :
@@ -103,10 +104,30 @@ theorem norm_toeplitzFormTeXC_rankOne_le
             (SSU.Instances.FejerBankedTypeIIToeplitzRankOneReal.RankOne.S
               (D := D) (I := I) (P := P) (W := W) D.X D.H))‖ := by
     simpa [htoe] using congrArg (fun z : ℂ => ‖z‖) htoe.symm
-  -- Rewrite by `hnorm` and apply the Step 3–4 bound.
-  -- (Use `rw` rather than `simp` to avoid expanding the LHS norm.)
   rw [hnorm]
   exact hStep34
+
+theorem norm_toeplitzFormTeXC_rankOne_le
+    (hU : 2 * P.N ≤ P.U)
+    (hX : 0 < D.X) (hH : 0 < D.H)
+    (step34 : Step34ProdSum D.X D.H P.box)
+    (i j : ℤ) :
+    ‖((1 / D.X : ℝ) : ℂ) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean (D := D) D.X D.H i j t)
+          (T := P.box)
+          (F := fun p => I.F (P := P) (W := W) p)‖
+      ≤
+    ((1 / D.X) * ((D.M * D.Φmax) ^ 2) *
+        (step34.C * Real.sqrt (D.H / D.X) * tubeEnergy P.box (fun p => I.F P W p))) *
+      (2 * (D.H)⁻¹) := by
+  exact
+    norm_toeplitzFormTeXC_rankOne_le_of_step34For
+      (D := D) (P := P) (W := W) (I := I)
+      (hU := hU) (hX := hX) (hH := hH)
+      (step34 := Step34ProdSumFor.of_global D.X D.H P.box step34 (fun p => I.F P W p))
+      (i := i) (j := j)
 
 end
 

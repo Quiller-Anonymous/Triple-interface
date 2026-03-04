@@ -720,6 +720,44 @@ uniform Step-5 hypothesis object.
 
 variable {κ ι : Type*} [DecidableEq κ]
 
+/-- Extract the Step-2 tube-form identity from a packaged `Step2ToTubeForm` witness. -/
+theorem tubeForm_eq_of_step2ToTubeForm
+    (td : TubeData)
+    (h2 : SSU.Engines.TypeII.Step2ToTubeForm td (K td))
+    (hKhat : h2.Khat = Khat td) :
+    ∀ F : TubePoint → ℂ,
+      tubeForm (K td) td.T F =
+        ((∫ ξ in Set.Icc (-(1 / td.H)) (1 / td.H),
+              (Khat td ξ) * (‖typeIISum td.a td.q td.X ξ td.T F‖ ^ 2)) : ℂ) := by
+  intro F
+  simpa [hKhat] using (h2.tubeForm_eq F)
+
+/-- Assemble a `ReductionToTubeForm` witness from explicit TT*/energy fields. -/
+noncomputable def reduction_of_data
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (F : SSU.Global.Signal → ℤ → ℤ → TubePoint → ℂ)
+    (inner_eq :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K td) td.T (F f i j))
+    (energy_le :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy td.T (F f i j) ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    ReductionToTubeForm
+      (H := SSU.Global.Signal)
+      (J := (FB.data).J)
+      (T := ((FB.data).corePacketFamily.T))
+      td
+      (K td) :=
+  { Cenergy := Cenergy
+    Cenergy_nonneg := Cenergy_nonneg
+    F := F
+    inner_eq := inner_eq
+    energy_le := energy_le }
+
 /-- Build the SSU Gram hypothesis directly from box-geometry assumptions plus Step 2/reduction. -/
 noncomputable def gramHypothesis_of_box_geometry
     (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
@@ -797,6 +835,134 @@ noncomputable def contract_of_box_geometry
       (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
       (hDq := hDq) (hXH1 := hXH1)
       (tubeForm_eq := tubeForm_eq) (reduction := reduction))
+
+/-- `gramHypothesis_of_box_geometry` with Step 2 supplied as `Step2ToTubeForm` instead of a raw
+`tubeForm_eq` hypothesis. -/
+noncomputable def gramHypothesis_of_box_geometry_autoStep2
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (h2 : SSU.Engines.TypeII.Step2ToTubeForm td (K td))
+    (hKhat : h2.Khat = Khat td)
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        td
+        (K td)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  gramHypothesis_of_box_geometry
+    (FB := FB) (td := td)
+    (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+    (hDq := hDq) (hXH1 := hXH1)
+    (tubeForm_eq := tubeForm_eq_of_step2ToTubeForm (td := td) h2 hKhat)
+    (reduction := reduction)
+
+/-- `gramHypothesis_of_box_geometry_autoStep2` with reduction assembled from explicit fields. -/
+noncomputable def gramHypothesis_of_box_geometry_autoStep2_ofReductionData
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (h2 : SSU.Engines.TypeII.Step2ToTubeForm td (K td))
+    (hKhat : h2.Khat = Khat td)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (F : SSU.Global.Signal → ℤ → ℤ → TubePoint → ℂ)
+    (inner_eq :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K td) td.T (F f i j))
+    (energy_le :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy td.T (F f i j) ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  gramHypothesis_of_box_geometry_autoStep2
+    (FB := FB) (td := td)
+    (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+    (hDq := hDq) (hXH1 := hXH1)
+    (h2 := h2) (hKhat := hKhat)
+    (reduction := reduction_of_data
+      (FB := FB) (td := td)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (F := F) (inner_eq := inner_eq) (energy_le := energy_le))
+
+/-- `contract_of_box_geometry` with Step 2 supplied as `Step2ToTubeForm` instead of a raw
+`tubeForm_eq` hypothesis. -/
+noncomputable def contract_of_box_geometry_autoStep2
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (h2 : SSU.Engines.TypeII.Step2ToTubeForm td (K td))
+    (hKhat : h2.Khat = Khat td)
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        td
+        (K td)) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  contract_of_box_geometry
+    (FB := FB) (td := td)
+    (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+    (hDq := hDq) (hXH1 := hXH1)
+    (tubeForm_eq := tubeForm_eq_of_step2ToTubeForm (td := td) h2 hKhat)
+    (reduction := reduction)
+
+/-- `contract_of_box_geometry_autoStep2` with reduction assembled from explicit fields. -/
+noncomputable def contract_of_box_geometry_autoStep2_ofReductionData
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (td : TubeData)
+    (hX : 0 < td.X)
+    (hH1 : 1 < td.H)
+    (hU : 1 ≤ td.U)
+    (hD : 1 ≤ td.D)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hXH1 : 1 ≤ td.X * td.H)
+    (h2 : SSU.Engines.TypeII.Step2ToTubeForm td (K td))
+    (hKhat : h2.Khat = Khat td)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (F : SSU.Global.Signal → ℤ → ℤ → TubePoint → ℂ)
+    (inner_eq :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K td) td.T (F f i j))
+    (energy_le :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy td.T (F f i j) ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  contract_of_box_geometry_autoStep2
+    (FB := FB) (td := td)
+    (hX := hX) (hH1 := hH1) (hU := hU) (hD := hD)
+    (hDq := hDq) (hXH1 := hXH1)
+    (h2 := h2) (hKhat := hKhat)
+    (reduction := reduction_of_data
+      (FB := FB) (td := td)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (F := F) (inner_eq := inner_eq) (energy_le := energy_le))
 
 namespace Hypothesis
 

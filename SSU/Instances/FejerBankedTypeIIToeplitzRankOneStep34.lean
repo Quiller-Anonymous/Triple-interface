@@ -65,9 +65,9 @@ private theorem prodSum_eq_signalRealDN (ξ : ℝ) :
 Pointwise large sieve bound for the explicit rank-one signal `Sfun(ξ)` on the ξ-band, expressed in
 terms of the dyadic box coefficient array `F(d,n)`.
 -/
-theorem norm_Sfun_sq_le_of_step34
+theorem norm_Sfun_sq_le_of_step34For
     (hX : 0 < D.X) (hH : 0 < D.H)
-    (step34 : Step34ProdSum D.X D.H P.box)
+    (step34 : Step34ProdSumFor D.X D.H P.box (fun p => I.F P W p))
     (ξ : ℝ) (hξ : ξ ∈ Weight.band D.H) :
     ‖RankOne.Sfun (D := D) (I := I) (P := P) (W := W) ξ‖ ^ 2
       ≤
@@ -96,10 +96,24 @@ theorem norm_Sfun_sq_le_of_step34
       ‖SSU.Engines.TypeII.ProductToeplitz.prodSum D.X ξ P.box (fun p => I.F P W p)‖ ^ 2
         ≤
       step34.C * Real.sqrt (D.H / D.X) * tubeEnergy P.box (fun p => I.F P W p) := by
-    simpa [Step34ProdSum] using (step34.bound ξ hAbs (fun p => I.F P W p))
+    simpa using (step34.bound ξ hAbs)
   -- Finish.
   -- Rewrite the LHS into `prodSum` using `hSfun` and `hprod`.
   simpa [hSfun, hprod] using h34
+
+theorem norm_Sfun_sq_le_of_step34
+    (hX : 0 < D.X) (hH : 0 < D.H)
+    (step34 : Step34ProdSum D.X D.H P.box)
+    (ξ : ℝ) (hξ : ξ ∈ Weight.band D.H) :
+    ‖RankOne.Sfun (D := D) (I := I) (P := P) (W := W) ξ‖ ^ 2
+      ≤
+    step34.C * Real.sqrt (D.H / D.X) * tubeEnergy P.box (fun p => I.F P W p) := by
+  exact
+    norm_Sfun_sq_le_of_step34For
+      (D := D) (P := P) (W := W) (I := I)
+      (hX := hX) (hH := hH)
+      (step34 := Step34ProdSumFor.of_global D.X D.H P.box step34 (fun p => I.F P W p))
+      (ξ := ξ) (hξ := hξ)
 
 end RankOne
 
@@ -112,10 +126,10 @@ bound on the underlying product sum.
 This is the “replace Cauchy–Schwarz with large sieve” milestone: the constant depends on the
 packet overlap only through the crude `‖ψ‖_∞ ≤ M * Φmax` bound.
 -/
-theorem norm_inner_packetOp_rankOne_le
+theorem norm_inner_packetOp_rankOne_le_of_step34For
     (hU : 2 * P.N ≤ P.U)
     (hX : 0 < D.X) (hH : 0 < D.H)
-    (step34 : Step34ProdSum D.X D.H P.box)
+    (step34 : Step34ProdSumFor D.X D.H P.box (fun p => I.F P W p))
     (i j : ℤ) :
     ‖inner ℂ
         (Model.packetOp (D := D) (X := D.X) (H := D.H) hH hX i
@@ -207,7 +221,8 @@ theorem norm_inner_packetOp_rankOne_le
       have hSfun :
           ‖RankOne.Sfun (D := D) (I := I) (P := P) (W := W) ξ‖ ^ 2
             ≤ step34.C * Real.sqrt (D.H / D.X) * tubeEnergy P.box (fun p => I.F P W p) :=
-        RankOne.norm_Sfun_sq_le_of_step34 (D := D) (P := P) (W := W) (I := I) hX hH step34 ξ hξ
+        RankOne.norm_Sfun_sq_le_of_step34For
+          (D := D) (P := P) (W := W) (I := I) hX hH step34 ξ hξ
       simpa [hS] using hSfun
     -- Rewrite the LHS norm.
     -- `‖w * S * star S‖ ≤ ‖w‖ * ‖S‖ * ‖star S‖ = ‖w‖ * ‖S‖^2`.
@@ -437,6 +452,27 @@ theorem norm_inner_packetOp_rankOne_le
 
   have hfinal := le_trans hstart (le_trans hle2 hle3)
   simpa [habsX] using hfinal
+
+theorem norm_inner_packetOp_rankOne_le
+    (hU : 2 * P.N ≤ P.U)
+    (hX : 0 < D.X) (hH : 0 < D.H)
+    (step34 : Step34ProdSum D.X D.H P.box)
+    (i j : ℤ) :
+    ‖inner ℂ
+        (Model.packetOp (D := D) (X := D.X) (H := D.H) hH hX i
+          (RankOne.S (D := D) (I := I) (P := P) (W := W) D.X D.H))
+        (Model.packetOp (D := D) (X := D.X) (H := D.H) hH hX j
+          (RankOne.S (D := D) (I := I) (P := P) (W := W) D.X D.H))‖
+      ≤
+    ((1 / D.X) * ((D.M * D.Φmax) ^ 2) *
+        (step34.C * Real.sqrt (D.H / D.X) * tubeEnergy P.box (fun p => I.F P W p))) *
+      (2 * (D.H)⁻¹) := by
+  exact
+    norm_inner_packetOp_rankOne_le_of_step34For
+      (D := D) (P := P) (W := W) (I := I)
+      (hU := hU) (hX := hX) (hH := hH)
+      (step34 := Step34ProdSumFor.of_global D.X D.H P.box step34 (fun p => I.F P W p))
+      (i := i) (j := j)
 
 end Gram
 

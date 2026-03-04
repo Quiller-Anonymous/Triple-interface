@@ -42,32 +42,15 @@ variable {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
 variable (D : SSU.Engines.BGTypeIIArray.Data H0)
 
 set_option maxHeartbeats 800000 in
-theorem norm_inner_packetOpUnnormalized_le
+theorem norm_inner_packetOpUnnormalized_le_of_toeplitzFor
+    (signal : H0 → ℤ → ℤ → SSU.Torus.L2)
     (f : H0) (i j : ℤ)
     (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
     (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
-    (step34 : Step34ProdSum Dpacket.X Dpacket.H D.tube) :
-    ‖inner ℂ
-        (((Dpacket.toMultiplierModel).packetOpUnnormalized i)
-          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
-            (Dpacket := Dpacket) (D := D) f i j hH))
-        (((Dpacket.toMultiplierModel).packetOpUnnormalized j)
-          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
-            (Dpacket := Dpacket) (D := D) f i j hH))‖
-      ≤
-    ((1 / Dpacket.X) * ((Dpacket.M * Dpacket.Φmax) ^ 2) *
-        (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j))) *
-      (2 * (Dpacket.H)⁻¹) := by
-  classical
-  -- 1) Rewrite the inner product as `(1/X) * toeplitzFormTeXC`.
-  have hToe :
+    (hToe :
       inner ℂ
-          (((Dpacket.toMultiplierModel).packetOpUnnormalized i)
-            (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
-              (Dpacket := Dpacket) (D := D) f i j hH))
-          (((Dpacket.toMultiplierModel).packetOpUnnormalized j)
-            (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
-              (Dpacket := Dpacket) (D := D) f i j hH))
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (signal f i j))
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (signal f i j))
         =
       ((1 / Dpacket.X : ℝ) : ℂ) *
         SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
@@ -75,13 +58,17 @@ theorem norm_inner_packetOpUnnormalized_le
             SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
               (D := Dpacket) Dpacket.X Dpacket.H i j t)
           (T := D.tube)
-          (F := D.F f i j) := by
-    simpa using
-      (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.inner_packetOpUnnormalized_eq_toeplitzFormTeXC
-        (Dpacket := Dpacket) (D := D) (f := f) (i := i) (j := j)
-        (hX := hX) (hH := hH) (hsmall := hsmall))
-
-  -- 2) Bound the RHS by turning `toeplitzFormTeXC` into the weighted band integral.
+          (F := D.F f i j))
+    (step34 : Step34ProdSumFor Dpacket.X Dpacket.H D.tube (D.F f i j)) :
+    ‖inner ℂ
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (signal f i j))
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (signal f i j))‖
+      ≤
+    ((1 / Dpacket.X) * ((Dpacket.M * Dpacket.Φmax) ^ 2) *
+        (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j))) *
+      (2 * (Dpacket.H)⁻¹) := by
+  classical
+  -- Bound the RHS by turning `toeplitzFormTeXC` into the weighted band integral.
   have hX0 : (Dpacket.X : ℝ) ≠ 0 := ne_of_gt hX
   have htoepInt :
       SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
@@ -226,13 +213,13 @@ theorem norm_inner_packetOpUnnormalized_le
         ‖D.prodSumRealByProd Dpacket.X ξ f i j‖ ^ 2
           ≤
         step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j) := by
-      have h34 :
+        have h34 :
           ‖SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ D.tube (D.F f i j)‖ ^ 2
             ≤
           step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j) := by
-        have hAbs : |ξ| ≤ (1 / Dpacket.H) := hξabs
-        simpa using (step34.bound ξ hAbs (D.F f i j))
-      simpa [hprod] using h34
+          have hAbs : |ξ| ≤ (1 / Dpacket.H) := hξabs
+          simpa using (step34.bound ξ hAbs)
+        simpa [hprod] using h34
     -- Bound `‖wLean‖` using `‖ψ‖ ≤ M*Φmax` and `KhatTorus_eval_eq_Khat_on_band`.
     have hKhat :
         SSU.Instances.FejerBankedTypeIIToeplitzTTStarArcHypothesis.Khat.KhatTorus Dpacket.X Dpacket.H ((ξ / Dpacket.X : ℝ) : UC)
@@ -417,12 +404,8 @@ theorem norm_inner_packetOpUnnormalized_le
   -- 6) Combine all pieces.
   have hnormInner :
       ‖inner ℂ
-          (((Dpacket.toMultiplierModel).packetOpUnnormalized i)
-            (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
-              (Dpacket := Dpacket) (D := D) f i j hH))
-          (((Dpacket.toMultiplierModel).packetOpUnnormalized j)
-            (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
-              (Dpacket := Dpacket) (D := D) f i j hH))‖
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (signal f i j))
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (signal f i j))‖
         =
       ‖((1 / Dpacket.X : ℝ) : ℂ) *
         SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
@@ -436,12 +419,8 @@ theorem norm_inner_packetOpUnnormalized_le
   -- Keep everything on the `ℝ` side; cast/`simp` is handled earlier.
   calc
     ‖inner ℂ
-        (((Dpacket.toMultiplierModel).packetOpUnnormalized i)
-          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
-            (Dpacket := Dpacket) (D := D) f i j hH))
-        (((Dpacket.toMultiplierModel).packetOpUnnormalized j)
-          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
-            (Dpacket := Dpacket) (D := D) f i j hH))‖
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (signal f i j))
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (signal f i j))‖
         =
       (1 / Dpacket.X) *
         ‖SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
@@ -480,6 +459,88 @@ theorem norm_inner_packetOpUnnormalized_le
           (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j))) *
           (2 * (Dpacket.H)⁻¹) := by
           ring
+
+set_option maxHeartbeats 800000 in
+theorem norm_inner_packetOpUnnormalized_le
+    (f : H0) (i j : ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (step34 : Step34ProdSum Dpacket.X Dpacket.H D.tube) :
+    ‖inner ℂ
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := Dpacket) (D := D) f i j hH))
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := Dpacket) (D := D) f i j hH))‖
+      ≤
+    ((1 / Dpacket.X) * ((Dpacket.M * Dpacket.Φmax) ^ 2) *
+        (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j))) *
+      (2 * (Dpacket.H)⁻¹) := by
+  have hToe :
+      inner ℂ
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized i)
+            (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+              (Dpacket := Dpacket) (D := D) f i j hH))
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized j)
+            (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+              (Dpacket := Dpacket) (D := D) f i j hH))
+        =
+      ((1 / Dpacket.X : ℝ) : ℂ) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+              (D := Dpacket) Dpacket.X Dpacket.H i j t)
+          (T := D.tube)
+          (F := D.F f i j) := by
+    simpa using
+      (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.inner_packetOpUnnormalized_eq_toeplitzFormTeXC
+        (Dpacket := Dpacket) (D := D) (f := f) (i := i) (j := j)
+        (hX := hX) (hH := hH) (hsmall := hsmall))
+  exact
+    norm_inner_packetOpUnnormalized_le_of_toeplitzFor
+      (Dpacket := Dpacket) (D := D)
+      (signal := fun f i j =>
+        SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+          (Dpacket := Dpacket) (D := D) f i j hH)
+      (f := f) (i := i) (j := j)
+      (hX := hX) (hH := hH) (hsmall := hsmall)
+      (hToe := hToe)
+      (step34 := Step34ProdSumFor.of_global Dpacket.X Dpacket.H D.tube step34 (D.F f i j))
+
+set_option maxHeartbeats 800000 in
+theorem norm_inner_packetOpUnnormalized_le_of_toeplitz
+    (signal : H0 → ℤ → ℤ → SSU.Torus.L2)
+    (f : H0) (i j : ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hToe :
+      inner ℂ
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (signal f i j))
+          (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (signal f i j))
+        =
+      ((1 / Dpacket.X : ℝ) : ℂ) *
+        SSU.Engines.TypeII.ProductToeplitz.toeplitzFormTeXC
+          (K := fun t =>
+            SSU.Instances.FejerBankedTypeIIToeplitzKernel.Weight.KLean
+              (D := Dpacket) Dpacket.X Dpacket.H i j t)
+          (T := D.tube)
+          (F := D.F f i j))
+    (step34 : Step34ProdSum Dpacket.X Dpacket.H D.tube) :
+    ‖inner ℂ
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized i) (signal f i j))
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized j) (signal f i j))‖
+      ≤
+    ((1 / Dpacket.X) * ((Dpacket.M * Dpacket.Φmax) ^ 2) *
+        (step34.C * Real.sqrt (Dpacket.H / Dpacket.X) * tubeEnergy D.tube (D.F f i j))) *
+      (2 * (Dpacket.H)⁻¹) := by
+  simpa using
+    (norm_inner_packetOpUnnormalized_le_of_toeplitzFor
+      (signal := signal)
+      (f := f) (i := i) (j := j)
+      (hX := hX) (hH := hH) (hsmall := hsmall)
+      (hToe := hToe)
+      (step34 := Step34ProdSumFor.of_global Dpacket.X Dpacket.H D.tube step34 (D.F f i j)))
 
 end
 

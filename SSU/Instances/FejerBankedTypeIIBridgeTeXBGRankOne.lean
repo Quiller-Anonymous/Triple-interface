@@ -1,4 +1,5 @@
 import SSU.Instances.FejerBankedTypeIIBridgeTeX
+import SSU.Instances.FejerBankedTypeIIToeplitzBridge
 import SSU.Engines.TypeIILargeSieveTeXFor
 import SSU.Engines.LargeSieve.BG
 import SSU.Engines.BGTypeIIRankOne
@@ -736,6 +737,75 @@ noncomputable def ofMontgomeryVaughanByResidue
   · intro f i j
     simp [SSU.Engines.TypeII.Step4LargeSieveOuterVFor.of_global]
 
+/-- Decoupled Step-3/Step-4 input built from the pure box-geometry Step 3 theorem,
+with Step 4 kept on the current fallback route. -/
+noncomputable def ofBoxGeometryStep3FallbackStep4
+    (h0 : UniformInput κ ι) :
+    UniformInputStep3Step4 κ ι := by
+  let h3Outer : SSU.Engines.TypeII.Step3LargeSieveOuterU h0.td :=
+    SSU.Engines.TypeII.LargeSieve.step3LargeSieveOuterU_of_box_geometry
+      (td := h0.td)
+      (hDq := h0.R.hDq)
+      (hD := h0.R.hD0)
+      (hU := h0.R.hU1)
+      (hX := le_of_lt h0.R.hX)
+  refine
+    { base := h0
+      step3For' := fun f i j =>
+        SSU.Engines.TypeII.Step3LargeSieveOuterUFor.of_global h0.td h3Outer (h0.reduction.F f i j)
+      step4For' := fun f i j =>
+        h0.step4For f i j
+      C3 := h3Outer.C
+      C4 := h0.C4
+      C3_nonneg := h3Outer.C_nonneg
+      C4_nonneg := h0.C4_nonneg
+      C3_le := ?_
+      C4_le := ?_ }
+  · intro f i j
+    simp [SSU.Engines.TypeII.Step3LargeSieveOuterUFor.of_global]
+  · intro f i j
+    exact h0.step4For_C_le_C4 f i j
+
+/-- Decoupled Step-3/Step-4 input built from the pure box-geometry Step 4 theorem,
+with Step 3 kept on the current fallback route. -/
+noncomputable def ofBoxGeometryStep4FallbackStep3
+    (h0 : UniformInput κ ι) :
+    UniformInputStep3Step4 κ ι := by
+  let h4Outer : SSU.Engines.TypeII.Step4LargeSieveOuterV h0.td :=
+    SSU.Engines.TypeII.LargeSieve.step4LargeSieveOuterV_of_box_geometry
+      (td := h0.td)
+      (hU := h0.R.hU0)
+      (hX := le_of_lt h0.R.hX)
+      (hD1 := h0.R.hD1)
+      (hXH1 := by
+        have hX0_nat : 0 < h0.P.X := by
+          simpa [tdOf, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using h0.R.hX
+        have hH0_nat : 0 < h0.P.H := by
+          simpa [tdOf, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using h0.R.hH
+        have hX1 : (1 : ℝ) ≤ (h0.P.X : ℝ) := by
+          exact_mod_cast Nat.succ_le_of_lt hX0_nat
+        have hH1 : (1 : ℝ) ≤ (h0.P.H : ℝ) := by
+          exact_mod_cast Nat.succ_le_of_lt hH0_nat
+        have hmul : (1 : ℝ) * 1 ≤ (h0.P.X : ℝ) * (h0.P.H : ℝ) := by
+          exact mul_le_mul hX1 hH1 (by positivity) (by positivity)
+        simpa [tdOf, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using hmul)
+  refine
+    { base := h0
+      step3For' := fun f i j =>
+        h0.step3For f i j
+      step4For' := fun f i j =>
+        SSU.Engines.TypeII.Step4LargeSieveOuterVFor.of_global h0.td h4Outer (h0.reduction.F f i j)
+      C3 := h0.C3
+      C4 := h4Outer.C
+      C3_nonneg := h0.C3_nonneg
+      C4_nonneg := h4Outer.C_nonneg
+      C3_le := ?_
+      C4_le := ?_ }
+  · intro f i j
+    exact h0.step3For_C_le_C3 f i j
+  · intro f i j
+    simp [SSU.Engines.TypeII.Step4LargeSieveOuterVFor.of_global]
+
 end UniformInputStep3Step4
 
 /-- One-record API for the BG rank-one/modEq route from geometric assumptions to SSU endpoints. -/
@@ -793,6 +863,24 @@ structure GeometryInput (κ ι : Type*) [DecidableEq κ] where
 namespace GeometryInput
 
 variable {κ ι : Type*} [DecidableEq κ]
+
+/-- Extract the Step-2 tube-form identity from a packaged `Step2ToTubeForm` witness. -/
+theorem tubeForm_eq_of_step2ToTubeForm
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop)) :
+    ∀ F : TubePoint → ℂ,
+      tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+        ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+              (Khat (tdOf P a q hq hcop) ξ) *
+                (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                    (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ) := by
+  intro F
+  simpa [hKhat] using (h2.tubeForm_eq F)
 
 /-- Convenience constructor: package a BG geometry input when the reduction is already supplied
 directly in rank-one coefficient form. This discharges `hF` definitionally. -/
@@ -885,6 +973,208 @@ noncomputable def ofBGGeometryCoeffReduction
         intro f i j
         rfl }
 
+/-- `ofBGGeometryCoeffReduction`, with Step-2 supplied as `Step2ToTubeForm` instead of a raw
+`tubeForm_eq` hypothesis. -/
+noncomputable def ofBGGeometryCoeffReduction_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (α : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (β : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (hβmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → β f i j u₁ = β f i j u₂)
+    (hαmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → α f i j v₁ = α f i j v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) (α f i j) (β f i j)))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) (α f i j) (β f i j))
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    GeometryInput κ ι := by
+  exact
+    ofBGGeometryCoeffReduction
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (tubeForm_eq := tubeForm_eq_of_step2ToTubeForm
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat)
+      (α := α) (β := β)
+      (hβmod_sig := hβmod_sig) (hαmod_sig := hαmod_sig)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+
+/-- Convenience constructor: package a `GeometryInput` directly from a supplied reduction witness
+and a `Step2ToTubeForm` witness (no explicit `inner_eq_coeff` / `energy_le_coeff` family). -/
+noncomputable def ofBGGeometryReduction_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (α : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (β : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (hβmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → β f i j u₁ = β f i j u₂)
+    (hαmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → α f i j v₁ = α f i j v₂)
+    (hF :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf P a q hq hcop) (α f i j) (β f i j)) :
+    GeometryInput κ ι where
+  FB := FB
+  P := P
+  a := a
+  q := q
+  hq := hq
+  hcop := hcop
+  ha0 := ha0
+  hlower := hlower
+  hupper := hupper
+  hD1 := hD1
+  hU1 := hU1
+  hqD := hqD
+  hX := hX
+  hH1 := hH1
+  hXH_u := hXH_u
+  hXH_v := hXH_v
+  tubeForm_eq := tubeForm_eq_of_step2ToTubeForm
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat
+  reduction := reduction
+  α := α
+  β := β
+  hβmod_sig := hβmod_sig
+  hαmod_sig := hαmod_sig
+  hF := hF
+
+/-- Rank-one specialization of `ofBGGeometryReduction_autoTubeForm` using a fixed witness
+`I0` and a direct `hF0` equation against the supplied reduction. -/
+noncomputable def ofBGGeometryReduction_rankOne_autoTubeForm_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf P a q hq hcop) I0.α I0.β) :
+    GeometryInput κ ι := by
+  exact
+    ofBGGeometryReduction_autoTubeForm
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (reduction := reduction)
+      (α := fun _ _ _ => I0.α)
+      (β := fun _ _ _ => I0.β)
+      (hβmod_sig := by
+        intro _f _i _j u₁ u₂ hu
+        exact hβmod u₁ u₂ hu)
+      (hαmod_sig := by
+        intro _f _i _j v₁ v₂ hv
+        exact hαmod v₁ v₂ hv)
+      (hF := by
+        intro f i j
+        simpa using hF0 f i j)
+
 /-- Rank-one specialization of `ofBGGeometryCoeffReduction`: constant coefficients from a
 `BGTypeIIRankOne.Input`. -/
 noncomputable def ofBGGeometryCoeffReduction_rankOne
@@ -954,6 +1244,328 @@ noncomputable def ofBGGeometryCoeffReduction_rankOne
       (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
       (inner_eq_coeff := inner_eq_coeff)
       (energy_le_coeff := energy_le_coeff)
+
+/-- Rank-one specialization of `ofBGGeometryCoeffReduction_autoTubeForm`. -/
+noncomputable def ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    GeometryInput κ ι := by
+  exact
+    ofBGGeometryCoeffReduction_rankOne
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (tubeForm_eq := tubeForm_eq_of_step2ToTubeForm
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+
+/-- Extraction-side constancy lemma for the canonical rank-one constructor:
+`α` is independent of `(f,i,j)`. -/
+theorem hαconst_ofBGGeometryCoeffReduction_rankOne
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+          ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+                (Khat (tdOf P a q hq hcop) ξ) *
+                  (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                      (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    ∀ (f : SSU.Global.Signal) (i j v : ℤ),
+      (ofBGGeometryCoeffReduction_rankOne
+          (FB := FB)
+          (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+          (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+          (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+          (hX := hX) (hH1 := hH1)
+          (hXH_u := hXH_u) (hXH_v := hXH_v)
+          (tubeForm_eq := tubeForm_eq)
+          (I0 := I0)
+          (hβmod := hβmod) (hαmod := hαmod)
+          (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+          (inner_eq_coeff := inner_eq_coeff)
+          (energy_le_coeff := energy_le_coeff)).α f i j v
+      = I0.α v := by
+  intro f i j v
+  rfl
+
+/-- Extraction-side constancy lemma for the canonical rank-one constructor:
+`β` is independent of `(f,i,j)`. -/
+theorem hβconst_ofBGGeometryCoeffReduction_rankOne
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+          ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+                (Khat (tdOf P a q hq hcop) ξ) *
+                  (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                      (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    ∀ (f : SSU.Global.Signal) (i j u : ℤ),
+      (ofBGGeometryCoeffReduction_rankOne
+          (FB := FB)
+          (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+          (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+          (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+          (hX := hX) (hH1 := hH1)
+          (hXH_u := hXH_u) (hXH_v := hXH_v)
+          (tubeForm_eq := tubeForm_eq)
+          (I0 := I0)
+          (hβmod := hβmod) (hαmod := hαmod)
+          (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+          (inner_eq_coeff := inner_eq_coeff)
+          (energy_le_coeff := energy_le_coeff)).β f i j u
+      = I0.β u := by
+  intro f i j u
+  rfl
+
+/-- Extraction-side constancy lemma for the canonical auto Step-2 rank-one constructor:
+`α` is independent of `(f,i,j)`. -/
+theorem hαconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    ∀ (f : SSU.Global.Signal) (i j v : ℤ),
+      (ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+          (FB := FB)
+          (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+          (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+          (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+          (hX := hX) (hH1 := hH1)
+          (hXH_u := hXH_u) (hXH_v := hXH_v)
+          (h2 := h2) (hKhat := hKhat)
+          (I0 := I0)
+          (hβmod := hβmod) (hαmod := hαmod)
+          (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+          (inner_eq_coeff := inner_eq_coeff)
+          (energy_le_coeff := energy_le_coeff)).α f i j v
+      = I0.α v := by
+  intro f i j v
+  rfl
+
+/-- Extraction-side constancy lemma for the canonical auto Step-2 rank-one constructor:
+`β` is independent of `(f,i,j)`. -/
+theorem hβconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    ∀ (f : SSU.Global.Signal) (i j u : ℤ),
+      (ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+          (FB := FB)
+          (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+          (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+          (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+          (hX := hX) (hH1 := hH1)
+          (hXH_u := hXH_u) (hXH_v := hXH_v)
+          (h2 := h2) (hKhat := hKhat)
+          (I0 := I0)
+          (hβmod := hβmod) (hαmod := hαmod)
+          (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+          (inner_eq_coeff := inner_eq_coeff)
+          (energy_le_coeff := energy_le_coeff)).β f i j u
+      = I0.β u := by
+  intro f i j u
+  rfl
 
 /-- One-shot endpoint: coefficient-form geometry input to uniform Step-5 package. -/
 noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction
@@ -1557,6 +2169,20 @@ noncomputable def step3For_ofMontgomeryVaughan
     SSU.Engines.TypeII.Step3LargeSieveOuterUFor.of_global
       g.toUniformInput.td h3Outer (g.toUniformInput.reduction.F f i j)
 
+/-- Geometry-input Step 3 endpoint from the pure box-geometry theorem (outer-`u` only). -/
+noncomputable def step3For_ofBoxGeometry
+    (g : GeometryInput κ ι)
+    (f : SSU.Global.Signal) (i j : ℤ) :
+    SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+      g.toUniformInput.td (g.toUniformInput.reduction.F f i j) :=
+  SSU.Engines.TypeII.Step3LargeSieveOuterUFor.of_box_geometry
+    (td := g.toUniformInput.td)
+    (hDq := g.toUniformInput.R.hDq)
+    (hD := g.toUniformInput.R.hD0)
+    (hU := g.toUniformInput.R.hU1)
+    (hX := le_of_lt g.toUniformInput.R.hX)
+    (g.toUniformInput.reduction.F f i j)
+
 /-- Geometry-input Step 3 endpoint from a per-residue MV Step 3 hypothesis (outer-`u` only). -/
 noncomputable def step3For_ofMontgomeryVaughanByResidue
     (g : GeometryInput κ ι)
@@ -1591,6 +2217,33 @@ noncomputable def step4For
       (hX_nat := g.hX) (hH1_nat := g.hH1) (hXH := g.hXH_v)
       (α := g.α f i j) (β := g.β f i j)
       (hαmod := g.hαmod_sig f i j))
+
+/-- Geometry-input Step 4 endpoint from the pure box-geometry theorem (outer-`v` only). -/
+noncomputable def step4For_ofBoxGeometry
+    (g : GeometryInput κ ι)
+    (f : SSU.Global.Signal) (i j : ℤ) :
+    SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+      g.toUniformInput.td (g.toUniformInput.reduction.F f i j) :=
+  SSU.Engines.TypeII.Step4LargeSieveOuterVFor.of_box_geometry
+    (td := g.toUniformInput.td)
+    (hU := g.toUniformInput.R.hU0)
+    (hX := le_of_lt g.toUniformInput.R.hX)
+    (hD1 := g.toUniformInput.R.hD1)
+    (hXH1 := by
+      have hX0_nat : 0 < g.toUniformInput.P.X := by
+        simpa [tdOf, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+          g.toUniformInput.R.hX
+      have hH0_nat : 0 < g.toUniformInput.P.H := by
+        simpa [tdOf, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+          g.toUniformInput.R.hH
+      have hX1 : (1 : ℝ) ≤ (g.toUniformInput.P.X : ℝ) := by
+        exact_mod_cast Nat.succ_le_of_lt hX0_nat
+      have hH1 : (1 : ℝ) ≤ (g.toUniformInput.P.H : ℝ) := by
+        exact_mod_cast Nat.succ_le_of_lt hH0_nat
+      have hmul : (1 : ℝ) * 1 ≤ (g.toUniformInput.P.X : ℝ) * (g.toUniformInput.P.H : ℝ) := by
+        exact mul_le_mul hX1 hH1 (by positivity) (by positivity)
+      simpa [tdOf, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using hmul)
+    (g.toUniformInput.reduction.F f i j)
 
 noncomputable def gramHypothesis
     (g : GeometryInput κ ι) :
@@ -3690,6 +4343,212 @@ noncomputable def contract_ofBGConstOnIndex_oneAddLog_ofModEq
   (g.toUniformInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq
     mRefU hmRefU mRefV hmRefV).contract
 
+/-- Geometry-input endpoint: promote the BG `β`-const-on-index one-add-log modEq route from
+the Step-3-only fallback surface to the full non-fallback const-on-index route when `v`-side
+reference indices are also available. -/
+noncomputable def toUniformInputStep3Step4_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    (g : GeometryInput κ ι)
+    (mRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r)
+    (mRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r) :
+    UniformInputStep3Step4 κ ι :=
+  g.toUniformInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq
+    mRefU hmRefU mRefV hmRefV
+
+/-- Geometry-input endpoint: promote the BG `β`-const-on-index one-add-log modEq route from
+the Step-3-only fallback surface to the full non-fallback uniform Step-5 package when `v`-side
+reference indices are also available. -/
+noncomputable def toHypothesisStep34ForUniform_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    (g : GeometryInput κ ι)
+    (mRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r)
+    (mRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r) :
+    HypothesisStep34ForUniform κ ι :=
+  (g.toUniformInputStep3Step4_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    mRefU hmRefU mRefV hmRefV).toHypothesisStep34ForUniform
+
+/-- Geometry-input endpoint: promote the BG `β`-const-on-index one-add-log modEq route from
+the Step-3-only fallback surface to the full non-fallback Gram hypothesis when `v`-side
+reference indices are also available. -/
+noncomputable def gramHypothesis_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    (g : GeometryInput κ ι)
+    (mRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r)
+    (mRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (g.toUniformInputStep3Step4_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    mRefU hmRefU mRefV hmRefV).gramHypothesis
+
+/-- Geometry-input endpoint: promote the BG `β`-const-on-index one-add-log modEq route from
+the Step-3-only fallback surface to the full non-fallback SSU contract when `v`-side
+reference indices are also available. -/
+noncomputable def contract_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    (g : GeometryInput κ ι)
+    (mRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r)
+    (mRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (g.toUniformInputStep3Step4_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    mRefU hmRefU mRefV hmRefV).contract
+
+/-- Geometry-input endpoint: promote the BG `α`-const-on-index one-add-log modEq route from
+the Step-4-only fallback surface to the full non-fallback const-on-index route when `u`-side
+reference indices are also available. -/
+noncomputable def toUniformInputStep3Step4_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    (g : GeometryInput κ ι)
+    (mRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r)
+    (mRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r) :
+    UniformInputStep3Step4 κ ι :=
+  g.toUniformInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq
+    mRefU hmRefU mRefV hmRefV
+
+/-- Geometry-input endpoint: promote the BG `α`-const-on-index one-add-log modEq route from
+the Step-4-only fallback surface to the full non-fallback uniform Step-5 package when `u`-side
+reference indices are also available. -/
+noncomputable def toHypothesisStep34ForUniform_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    (g : GeometryInput κ ι)
+    (mRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r)
+    (mRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r) :
+    HypothesisStep34ForUniform κ ι :=
+  (g.toUniformInputStep3Step4_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    mRefV hmRefV mRefU hmRefU).toHypothesisStep34ForUniform
+
+/-- Geometry-input endpoint: promote the BG `α`-const-on-index one-add-log modEq route from
+the Step-4-only fallback surface to the full non-fallback Gram hypothesis when `u`-side
+reference indices are also available. -/
+noncomputable def gramHypothesis_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    (g : GeometryInput κ ι)
+    (mRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r)
+    (mRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (g.toUniformInputStep3Step4_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    mRefV hmRefV mRefU hmRefU).gramHypothesis
+
+/-- Geometry-input endpoint: promote the BG `α`-const-on-index one-add-log modEq route from
+the Step-4-only fallback surface to the full non-fallback SSU contract when `u`-side
+reference indices are also available. -/
+noncomputable def contract_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    (g : GeometryInput κ ι)
+    (mRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r)
+    (mRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU f i j r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (g.toUniformInputStep3Step4_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    mRefV hmRefV mRefU hmRefU).contract
+
 end GeometryInput
 
 /-- One-record non-fallback insertion point for the general rank-one extraction route:
@@ -4086,6 +4945,24 @@ namespace GeometryInputConst
 
 variable {κ ι : Type*} [DecidableEq κ]
 
+/-- Extract the Step-2 tube-form identity from a packaged `Step2ToTubeForm` witness. -/
+theorem tubeForm_eq_of_step2ToTubeForm
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop)) :
+    ∀ F : TubePoint → ℂ,
+      tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+        ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+              (Khat (tdOf P a q hq hcop) ξ) *
+                (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                    (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ) := by
+  intro F
+  simpa [hKhat] using (h2.tubeForm_eq F)
+
 /-- Convenience constructor for constant extracted coefficients on top of BG geometry data. -/
 def ofBGGeometry
     {κ ι : Type*} [DecidableEq κ]
@@ -4234,6 +5111,195 @@ noncomputable def ofBGGeometryCoeffReduction
         intro f i j
         rfl)
 
+/-- `ofBGGeometryCoeffReduction`, with Step-2 supplied as `Step2ToTubeForm` instead of a raw
+`tubeForm_eq` hypothesis. -/
+noncomputable def ofBGGeometryCoeffReduction_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (α0 β0 : ℤ → ℂ)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → β0 u₁ = β0 u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → α0 v₁ = α0 v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) α0 β0))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) α0 β0)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    GeometryInputConst κ ι := by
+  exact
+    ofBGGeometryCoeffReduction
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (tubeForm_eq := tubeForm_eq_of_step2ToTubeForm
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat)
+      (α0 := α0) (β0 := β0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+
+/-- Rank-one specialization of `ofBGGeometryCoeffReduction`: constant coefficients from a
+`BGTypeIIRankOne.Input`. -/
+noncomputable def ofBGGeometryCoeffReduction_rankOne
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+          ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+                (Khat (tdOf P a q hq hcop) ξ) *
+                  (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                      (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    GeometryInputConst κ ι := by
+  exact
+    ofBGGeometryCoeffReduction
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (tubeForm_eq := tubeForm_eq)
+      (α0 := I0.α) (β0 := I0.β)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+
+/-- Rank-one specialization of `ofBGGeometryCoeffReduction_autoTubeForm`. -/
+noncomputable def ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    GeometryInputConst κ ι := by
+  exact
+    ofBGGeometryCoeffReduction_rankOne
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (tubeForm_eq := tubeForm_eq_of_step2ToTubeForm
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+
 /--
 Derive a constant-coefficient `GeometryInputConst` package from a `GeometryInput` package
 plus proofs that the extracted coefficients are independent of `(f,i,j)`.
@@ -4289,6 +5355,37 @@ noncomputable def ofGeometryInput
       simp [SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff,
         hαconst f i j, hβconst f i j]
     exact hFij.trans hcoeff
+
+/-- Derive a constant-coefficient `GeometryInputConst` package directly from a fixed rank-one
+coefficient witness `hF0`, without separate extracted-constancy assumptions on `α,β`. -/
+noncomputable def ofGeometryInput_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    GeometryInputConst κ ι :=
+  GeometryInputConst.ofBGGeometry
+    (FB := g.FB)
+    (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
+    (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
+    (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
+    (hX := g.hX) (hH1 := g.hH1)
+    (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
+    (tubeForm_eq := g.tubeForm_eq)
+    (reduction := g.reduction)
+    (α0 := I0.α) (β0 := I0.β)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (hF := hF0)
 
 noncomputable def toGeometryInput (g : GeometryInputConst κ ι) : GeometryInput κ ι where
   FB := g.FB
@@ -4348,6 +5445,14 @@ noncomputable def step3For_ofMontgomeryVaughan
       g.toUniformInput.td (g.toUniformInput.reduction.F f i j) :=
   g.toGeometryInput.step3For_ofMontgomeryVaughan h3MV f i j
 
+/-- Constant-input Step 3 endpoint from the pure box-geometry theorem (outer-`u` only). -/
+noncomputable def step3For_ofBoxGeometry
+    (g : GeometryInputConst κ ι)
+    (f : SSU.Global.Signal) (i j : ℤ) :
+    SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+      g.toUniformInput.td (g.toUniformInput.reduction.F f i j) :=
+  g.toGeometryInput.step3For_ofBoxGeometry f i j
+
 /-- Constant-input Step 3 endpoint from a per-residue MV Step 3 hypothesis (outer-`u` only). -/
 noncomputable def step3For_ofMontgomeryVaughanByResidue
     (g : GeometryInputConst κ ι)
@@ -4363,6 +5468,14 @@ noncomputable def step4For
     SSU.Engines.TypeII.Step4LargeSieveOuterVFor
       g.toUniformInput.td (g.toUniformInput.reduction.F f i j) :=
   g.toGeometryInput.step4For f i j
+
+/-- Constant-input Step 4 endpoint from the pure box-geometry theorem (outer-`v` only). -/
+noncomputable def step4For_ofBoxGeometry
+    (g : GeometryInputConst κ ι)
+    (f : SSU.Global.Signal) (i j : ℤ) :
+    SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+      g.toUniformInput.td (g.toUniformInput.reduction.F f i j) :=
+  g.toGeometryInput.step4For_ofBoxGeometry f i j
 
 noncomputable def gramHypothesis
     (g : GeometryInputConst κ ι) :
@@ -5399,6 +6512,159 @@ noncomputable def ofBGModEqOneAddLog (g : GeometryInputConst κ ι) :
   C3_le := fun f i j => g.toUniformInput.step3For_C_le_C3 f i j
   C4_le := fun f i j => g.toUniformInput.step4For_C_le_C4 f i j
 
+/-- One-record non-fallback insertion point from BG geometry + coefficient reduction, with
+Step-2 supplied as a packaged witness (`Step2ToTubeForm`), and Step-3/Step-4 obtained from
+the BG modEq one-add-log route. -/
+noncomputable def ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let g : GeometryInputConst κ ι :=
+    GeometryInputConst.ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+  exact ofBGModEqOneAddLog g
+
+/-- One-record tight-constant insertion point from BG geometry + coefficient reduction, with
+Step-2 supplied as a packaged witness (`Step2ToTubeForm`) and use-site Step-3/Step-4 bounds
+supplied directly. -/
+noncomputable def ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β)) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let g : GeometryInputConst κ ι :=
+    GeometryInputConst.ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+  refine
+    { base := g
+      step3For := ?_
+      step4For := ?_
+      C3 := step3.C
+      C4 := step4.C
+      C3_nonneg := step3.C_nonneg
+      C4_nonneg := step4.C_nonneg
+      C3_le := ?_
+      C4_le := ?_ }
+  · intro f i j
+    simpa [g.hF f i j] using step3
+  · intro f i j
+    simpa [g.hF f i j] using step4
+  · intro f i j
+    simp
+  · intro f i j
+    simp
+
 /-- Hybrid insertion point: supplied Step-3 route with fallback Step 4 from current BG one-add-log
 for constant extracted coefficients. -/
 noncomputable def ofStep3WithFallbackStep4
@@ -5515,6 +6781,64 @@ noncomputable def ofMontgomeryVaughanByResidueStep4FallbackStep3 (g : GeometryIn
     SSU.Engines.TypeII.LargeSieve.Step4MontgomeryVaughan.of_byResidue td h4MV
   exact ofMontgomeryVaughanStep4FallbackStep3 g h4Global
 
+/-- Constant-input hybrid insertion point from the pure box-geometry Step 3 theorem
+with Step 4 kept on fallback. -/
+noncomputable def ofBoxGeometryStep3FallbackStep4 (g : GeometryInputConst κ ι) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let h0 : UniformInputStep3Step4 κ ι :=
+    UniformInputStep3Step4.ofBoxGeometryStep3FallbackStep4 (g.toUniformInput)
+  exact
+    { base := g
+      step3For := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.step3For' f i j)
+      step4For := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.step4For' f i j)
+      C3 := h0.C3
+      C4 := h0.C4
+      C3_nonneg := h0.C3_nonneg
+      C4_nonneg := h0.C4_nonneg
+      C3_le := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.C3_le f i j)
+      C4_le := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.C4_le f i j) }
+
+/-- Constant-input hybrid insertion point from the pure box-geometry Step 4 theorem
+with Step 3 kept on fallback. -/
+noncomputable def ofBoxGeometryStep4FallbackStep3 (g : GeometryInputConst κ ι) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let h0 : UniformInputStep3Step4 κ ι :=
+    UniformInputStep3Step4.ofBoxGeometryStep4FallbackStep3 (g.toUniformInput)
+  exact
+    { base := g
+      step3For := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.step3For' f i j)
+      step4For := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.step4For' f i j)
+      C3 := h0.C3
+      C4 := h0.C4
+      C3_nonneg := h0.C3_nonneg
+      C4_nonneg := h0.C4_nonneg
+      C3_le := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.C3_le f i j)
+      C4_le := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.C4_le f i j) }
+
 /-- Constant-input non-fallback insertion point from BG geometric const-on-index one-add-log
 hypotheses (reference indices + residue-class constancy of `α₀`,`β₀`). -/
 noncomputable def ofBGConstOnIndexOneAddLog (g : GeometryInputConst κ ι)
@@ -5629,33 +6953,9 @@ noncomputable def ofBGConstOnUIndexOneAddLogStep3FallbackStep4 (g : GeometryInpu
             (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
               (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefU r hr))) :
     GeometryInputConstStep3Step4 κ ι := by
-  let h0 : UniformInputStep3Step4 κ ι :=
-    (g.toGeometryInput).toUniformInputStep3Step4_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4
-      (mRefU := fun _f _i _j r hr => mRefU r hr)
-      (hmRefU := fun _f _i _j r hr => hmRefU r hr)
-      (hβconst := fun _f _i _j r hr m hm => hβconst r hr m hm)
-  exact
-    { base := g
-      step3For := by
-        intro f i j
-        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
-          GeometryInputConst.toUniformInput] using (h0.step3For' f i j)
-      step4For := by
-        intro f i j
-        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
-          GeometryInputConst.toUniformInput] using (h0.step4For' f i j)
-      C3 := h0.C3
-      C4 := h0.C4
-      C3_nonneg := h0.C3_nonneg
-      C4_nonneg := h0.C4_nonneg
-      C3_le := by
-        intro f i j
-        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
-          GeometryInputConst.toUniformInput] using (h0.C3_le f i j)
-      C4_le := by
-        intro f i j
-        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
-          GeometryInputConst.toUniformInput] using (h0.C4_le f i j) }
+  let _ := hmRefU
+  let _ := hβconst
+  exact ofBoxGeometryStep3FallbackStep4 g
 
 /-- Constant-input hybrid insertion point from BG geometric const-on-index one-add-log
 hypotheses on `α₀` only, with Step 3 kept on fallback. -/
@@ -5686,33 +6986,9 @@ noncomputable def ofBGConstOnVIndexOneAddLogStep4FallbackStep3 (g : GeometryInpu
             (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
               (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefV r hr))) :
     GeometryInputConstStep3Step4 κ ι := by
-  let h0 : UniformInputStep3Step4 κ ι :=
-    (g.toGeometryInput).toUniformInputStep3Step4_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3
-      (mRefV := fun _f _i _j r hr => mRefV r hr)
-      (hmRefV := fun _f _i _j r hr => hmRefV r hr)
-      (hαconst := fun _f _i _j r hr m hm => hαconst r hr m hm)
-  exact
-    { base := g
-      step3For := by
-        intro f i j
-        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
-          GeometryInputConst.toUniformInput] using (h0.step3For' f i j)
-      step4For := by
-        intro f i j
-        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
-          GeometryInputConst.toUniformInput] using (h0.step4For' f i j)
-      C3 := h0.C3
-      C4 := h0.C4
-      C3_nonneg := h0.C3_nonneg
-      C4_nonneg := h0.C4_nonneg
-      C3_le := by
-        intro f i j
-        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
-          GeometryInputConst.toUniformInput] using (h0.C3_le f i j)
-      C4_le := by
-        intro f i j
-        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
-          GeometryInputConst.toUniformInput] using (h0.C4_le f i j) }
+  let _ := hmRefV
+  let _ := hαconst
+  exact ofBoxGeometryStep4FallbackStep3 g
 
 /-- Constant-input non-fallback insertion point from BG geometric const-on-index one-add-log,
 deriving residue-class constancy from modEq invariance. -/
@@ -5744,6 +7020,246 @@ noncomputable def ofBGConstOnIndexOneAddLogOfModEq (g : GeometryInputConst κ ι
     (g.toGeometryInput).toUniformInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq
       (mRefU := fun _f _i _j r hr => mRefU r hr)
       (hmRefU := fun _f _i _j r hr => hmRefU r hr)
+      (mRefV := fun _f _i _j r hr => mRefV r hr)
+      (hmRefV := fun _f _i _j r hr => hmRefV r hr)
+  exact
+    { base := g
+      step3For := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.step3For' f i j)
+      step4For := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.step4For' f i j)
+      C3 := h0.C3
+      C4 := h0.C4
+      C3_nonneg := h0.C3_nonneg
+      C4_nonneg := h0.C4_nonneg
+      C3_le := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.C3_le f i j)
+      C4_le := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.C4_le f i j) }
+
+/-- Constant-input non-fallback insertion point from BG geometric const-on-index one-add-log
+hypotheses, in class-witness form (`uRef ∈ uClass(r)`, `vRef ∈ vClass(r)`), deriving index
+references and then applying the modEq-derived constructor. -/
+noncomputable def ofBGConstOnIndexOneAddLogOfModEqOfClassWitness
+    (g : GeometryInputConst κ ι)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (uRef r hr)
+  have hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨uRef r hr, huRef r hr, rfl⟩
+  let mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (vRef r hr)
+  have hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨vRef r hr, hvRef r hr, rfl⟩
+  exact
+    ofBGConstOnIndexOneAddLogOfModEq
+      (g := g) (mRefU := mRefU) (hmRefU := hmRefU)
+      (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Constant-input non-fallback insertion point from supplied Step-3/Step-4 theorem objects for
+the frozen rank-one coefficient array, with class witnesses on the BG residue classes. This is
+the direct non-one-add-log route at the constant-input layer. -/
+noncomputable def ofBGConstOnIndexStep3Step4OfModEqOfClassWitness
+    (g : GeometryInputConst κ ι)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let _mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (uRef r hr)
+  let _mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (vRef r hr)
+  let _hMemU := huRef
+  let _hMemV := hvRef
+  let step3For :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+          (tdOf g.P g.a g.q g.hq g.hcop) (g.reduction.F f i j) :=
+    fun f i j => by
+      refine ⟨step3.C, step3.C_nonneg, ?_⟩
+      intro ξ hξ0 hξH
+      simpa [g.hF f i j] using step3.bound ξ hξ0 hξH
+  let step4For :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+          (tdOf g.P g.a g.q g.hq g.hcop) (g.reduction.F f i j) :=
+    fun f i j => by
+      refine ⟨step4.C, step4.C_nonneg, ?_⟩
+      intro ξ hξ0 hξH
+      simpa [g.hF f i j] using step4.bound ξ hξ0 hξH
+  exact
+    { base := g
+      step3For := step3For
+      step4For := step4For
+      C3 := step3.C
+      C4 := step4.C
+      C3_nonneg := step3.C_nonneg
+      C4_nonneg := step4.C_nonneg
+      C3_le := by
+        intro f i j
+        have hC : (step3For f i j).C = step3.C := by
+          rfl
+        exact hC.le
+      C4_le := by
+        intro f i j
+        have hC : (step4For f i j).C = step4.C := by
+          rfl
+        exact hC.le }
+
+/-- Constant-input hybrid insertion point from BG geometric `β` const-on-index one-add-log
+hypotheses, deriving residue-class constancy from modEq invariance (Step 3 proved, Step 4 fallback). -/
+noncomputable def ofBGConstOnUIndexOneAddLogStep3FallbackStep4OfModEq
+    (g : GeometryInputConst κ ι)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let h0 : UniformInputStep3Step4 κ ι :=
+    (g.toGeometryInput).toUniformInputStep3Step4_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq
+      (mRefU := fun _f _i _j r hr => mRefU r hr)
+      (hmRefU := fun _f _i _j r hr => hmRefU r hr)
+  exact
+    { base := g
+      step3For := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.step3For' f i j)
+      step4For := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.step4For' f i j)
+      C3 := h0.C3
+      C4 := h0.C4
+      C3_nonneg := h0.C3_nonneg
+      C4_nonneg := h0.C4_nonneg
+      C3_le := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.C3_le f i j)
+      C4_le := by
+        intro f i j
+        simpa [GeometryInputConst.toGeometryInput, GeometryInput.toUniformInput,
+          GeometryInputConst.toUniformInput] using (h0.C4_le f i j) }
+
+/-- Constant-input hybrid insertion point from BG geometric `α` const-on-index one-add-log
+hypotheses, deriving residue-class constancy from modEq invariance (Step 4 proved, Step 3 fallback). -/
+noncomputable def ofBGConstOnVIndexOneAddLogStep4FallbackStep3OfModEq
+    (g : GeometryInputConst κ ι)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let h0 : UniformInputStep3Step4 κ ι :=
+    (g.toGeometryInput).toUniformInputStep3Step4_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq
       (mRefV := fun _f _i _j r hr => mRefV r hr)
       (hmRefV := fun _f _i _j r hr => hmRefV r hr)
   exact
@@ -5955,6 +7471,425 @@ noncomputable def ofGeometryInputBGConstOnVIndexOneAddLogStep4FallbackStep3
     ofBGConstOnVIndexOneAddLogStep4FallbackStep3
       (g := g0) mRefV hmRefV hαconst_idx
 
+/-- Build the constant-input insertion point directly from a fixed rank-one witness `hF0`,
+then use the BG modEq-derived const-on-index route. -/
+noncomputable def ofGeometryInputBGConstOnIndexOneAddLogOfModEq_from_hF
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let g0 : GeometryInputConst κ ι :=
+    GeometryInputConst.ofGeometryInput_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+  exact ofBGConstOnIndexOneAddLogOfModEq (g := g0) mRefU hmRefU mRefV hmRefV
+
+/-- Build the constant-input insertion point directly from a fixed rank-one witness `hF0`,
+then use the BG modEq-derived const-on-index route, in class-witness form
+(`uRef ∈ uClass(r)`, `vRef ∈ vClass(r)`). -/
+noncomputable def ofGeometryInputBGConstOnIndexOneAddLogOfModEqOfClassWitness_from_hF
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let g0 : GeometryInputConst κ ι :=
+    GeometryInputConst.ofGeometryInput_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+  exact
+    ofBGConstOnIndexOneAddLogOfModEqOfClassWitness
+      (g := g0) (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+
+/-- Build the constant-input insertion point directly from a fixed rank-one witness `hF0`,
+then use the BG `β` const-on-index one-add-log route for Step 3 with fallback Step 4, deriving
+residue-class constancy from modEq. -/
+noncomputable def ofGeometryInputBGConstOnUIndexOneAddLogStep3FallbackStep4OfModEq_from_hF
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let g0 : GeometryInputConst κ ι :=
+    GeometryInputConst.ofGeometryInput_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+  exact ofBGConstOnUIndexOneAddLogStep3FallbackStep4OfModEq (g := g0) mRefU hmRefU
+
+/-- Build the constant-input insertion point directly from a fixed rank-one witness `hF0`,
+then use the BG `α` const-on-index one-add-log route for Step 4 with fallback Step 3, deriving
+residue-class constancy from modEq. -/
+noncomputable def ofGeometryInputBGConstOnVIndexOneAddLogStep4FallbackStep3OfModEq_from_hF
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let g0 : GeometryInputConst κ ι :=
+    GeometryInputConst.ofGeometryInput_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+  exact ofBGConstOnVIndexOneAddLogStep4FallbackStep3OfModEq (g := g0) mRefV hmRefV
+
+/-- Preferred promotion endpoint at the fixed-rank-one (`hF0`) insertion layer: if both residue
+index-witness families are available, route the U-side fallback-shaped helper directly to the
+full non-fallback BG const-on-index one-add-log path. -/
+noncomputable def ofGeometryInputBGConstOnUIndexOneAddLogStep3FallbackStep4OfModEq_promote_from_hF
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι :=
+  ofGeometryInputBGConstOnIndexOneAddLogOfModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Preferred promotion endpoint at the fixed-rank-one (`hF0`) insertion layer: if both residue
+index-witness families are available, route the V-side fallback-shaped helper directly to the
+full non-fallback BG const-on-index one-add-log path. -/
+noncomputable def ofGeometryInputBGConstOnVIndexOneAddLogStep4FallbackStep3OfModEq_promote_from_hF
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι :=
+  ofGeometryInputBGConstOnIndexOneAddLogOfModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Build the constant-input insertion point directly from a fixed rank-one witness `hF0`,
+then use the BG const-on-index one-add-log route. -/
+noncomputable def ofGeometryInputBGConstOnIndexOneAddLog_from_hF
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (hβconst_idx :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop))
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+          (td := tdOf g.P g.a g.q g.hq g.hcop) r →
+          I0.β
+            (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+              (td := tdOf g.P g.a g.q g.hq g.hcop) r m)
+          =
+          I0.β
+            (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+              (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefU r hr)))
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (hαconst_idx :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop))
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+          (td := tdOf g.P g.a g.q g.hq g.hcop) r →
+          I0.α
+            (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+              (td := tdOf g.P g.a g.q g.hq g.hcop) r m)
+          =
+          I0.α
+            (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+              (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefV r hr))) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let g0 : GeometryInputConst κ ι :=
+    GeometryInputConst.ofGeometryInput_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+  exact
+    ofBGConstOnIndexOneAddLog
+      (g := g0) mRefU hmRefU hβconst_idx mRefV hmRefV hαconst_idx
+
+/-- Build the constant-input insertion point directly from a fixed rank-one witness `hF0`,
+then use the BG `β` const-on-index one-add-log route for Step 3 with fallback Step 4. -/
+noncomputable def ofGeometryInputBGConstOnUIndexOneAddLogStep3FallbackStep4_from_hF
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (hβconst_idx :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop))
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+          (td := tdOf g.P g.a g.q g.hq g.hcop) r →
+          I0.β
+            (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+              (td := tdOf g.P g.a g.q g.hq g.hcop) r m)
+          =
+          I0.β
+            (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+              (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefU r hr))) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let g0 : GeometryInputConst κ ι :=
+    GeometryInputConst.ofGeometryInput_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+  exact
+    ofBGConstOnUIndexOneAddLogStep3FallbackStep4
+      (g := g0) mRefU hmRefU hβconst_idx
+
+/-- Build the constant-input insertion point directly from a fixed rank-one witness `hF0`,
+then use the BG `α` const-on-index one-add-log route for Step 4 with fallback Step 3. -/
+noncomputable def ofGeometryInputBGConstOnVIndexOneAddLogStep4FallbackStep3_from_hF
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (hαconst_idx :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop))
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+          (td := tdOf g.P g.a g.q g.hq g.hcop) r →
+          I0.α
+            (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+              (td := tdOf g.P g.a g.q g.hq g.hcop) r m)
+          =
+          I0.α
+            (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+              (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefV r hr))) :
+    GeometryInputConstStep3Step4 κ ι := by
+  let g0 : GeometryInputConst κ ι :=
+    GeometryInputConst.ofGeometryInput_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+  exact
+    ofBGConstOnVIndexOneAddLogStep4FallbackStep3
+      (g := g0) mRefV hmRefV hαconst_idx
+
 /-- Constant-input non-fallback insertion point from global Montgomery–Vaughan hypotheses. -/
 noncomputable def ofMontgomeryVaughan (g : GeometryInputConst κ ι)
     (h3MV : SSU.Engines.TypeII.LargeSieve.Step3MontgomeryVaughan
@@ -6079,6 +8014,13 @@ noncomputable def toInputStep3Step4_ofMontgomeryVaughanByResidueStep3FallbackSte
     GeometryInputConstStep3Step4 κ ι :=
   GeometryInputConstStep3Step4.ofMontgomeryVaughanByResidueStep3FallbackStep4 g h3MV
 
+/-- Constant-input endpoint: build the one-record Step-3/Step-4 package from the pure
+box-geometry Step 3 theorem while keeping Step 4 on the fallback route. -/
+noncomputable def toInputStep3Step4_ofBoxGeometryStep3FallbackStep4
+    (g : GeometryInputConst κ ι) :
+    GeometryInputConstStep3Step4 κ ι :=
+  GeometryInputConstStep3Step4.ofBoxGeometryStep3FallbackStep4 g
+
 /-- Constant-input endpoint: build the one-record Step-3/Step-4 package from a supplied Step-3
 route while keeping Step 4 on the current BG one-add-log fallback route. -/
 noncomputable def toInputStep3Step4_ofStep3WithFallbackStep4
@@ -6124,6 +8066,13 @@ noncomputable def toInputStep3Step4_ofMontgomeryVaughanByResidueStep4FallbackSte
       (tdOf g.P g.a g.q g.hq g.hcop)) :
     GeometryInputConstStep3Step4 κ ι :=
   GeometryInputConstStep3Step4.ofMontgomeryVaughanByResidueStep4FallbackStep3 g h4MV
+
+/-- Constant-input endpoint: build the one-record Step-3/Step-4 package from the pure
+box-geometry Step 4 theorem while keeping Step 3 on the fallback route. -/
+noncomputable def toInputStep3Step4_ofBoxGeometryStep4FallbackStep3
+    (g : GeometryInputConst κ ι) :
+    GeometryInputConstStep3Step4 κ ι :=
+  GeometryInputConstStep3Step4.ofBoxGeometryStep4FallbackStep3 g
 
 /-- Constant-input endpoint: build the one-record hybrid Step-3/Step-4 package
 from BG `β₀` const-on-index one-add-log hypotheses (Step 3 proved, Step 4 fallback). -/
@@ -6503,6 +8452,48 @@ noncomputable def toInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWi
     g.toInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq
       mRefU hmRefU mRefV hmRefV
 
+/-- Constant-input endpoint: build the one-record non-fallback Step-3/Step-4 package from
+supplied use-site Step-3/Step-4 theorem objects for the frozen rank-one coefficient array, in the
+BG modEq + class-witness family. This is the direct alternative to the one-add-log constructor. -/
+noncomputable def toInputStep3Step4_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    (g : GeometryInputConst κ ι)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    GeometryInputConstStep3Step4 κ ι :=
+  GeometryInputConstStep3Step4.ofBGConstOnIndexStep3Step4OfModEqOfClassWitness
+    (g := g) (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+    (step3 := step3) (step4 := step4)
+
 /-- Constant-input endpoint: global MV hypotheses to uniform Step-5 package. -/
 noncomputable def toHypothesisStep34ForUniform_ofMontgomeryVaughan
     (g : GeometryInputConst κ ι)
@@ -6539,6 +8530,13 @@ noncomputable def toHypothesisStep34ForUniform_ofMontgomeryVaughanByResidueStep3
     HypothesisStep34ForUniform κ ι :=
   (g.toInputStep3Step4_ofMontgomeryVaughanByResidueStep3FallbackStep4 h3MV).toHypothesisStep34ForUniform
 
+/-- Constant-input endpoint: pure box-geometry Step 3 + fallback Step 4 to uniform Step-5
+package. -/
+noncomputable def toHypothesisStep34ForUniform_ofBoxGeometryStep3FallbackStep4
+    (g : GeometryInputConst κ ι) :
+    HypothesisStep34ForUniform κ ι :=
+  (g.toInputStep3Step4_ofBoxGeometryStep3FallbackStep4).toHypothesisStep34ForUniform
+
 /-- Constant-input endpoint: supplied Step-4 route + fallback Step 3 to uniform Step-5 package. -/
 noncomputable def toHypothesisStep34ForUniform_ofStep4WithFallbackStep3
     (g : GeometryInputConst κ ι)
@@ -6567,6 +8565,13 @@ noncomputable def toHypothesisStep34ForUniform_ofMontgomeryVaughanByResidueStep4
       (tdOf g.P g.a g.q g.hq g.hcop)) :
     HypothesisStep34ForUniform κ ι :=
   (g.toInputStep3Step4_ofMontgomeryVaughanByResidueStep4FallbackStep3 h4MV).toHypothesisStep34ForUniform
+
+/-- Constant-input endpoint: pure box-geometry Step 4 + fallback Step 3 to uniform Step-5
+package. -/
+noncomputable def toHypothesisStep34ForUniform_ofBoxGeometryStep4FallbackStep3
+    (g : GeometryInputConst κ ι) :
+    HypothesisStep34ForUniform κ ι :=
+  (g.toInputStep3Step4_ofBoxGeometryStep4FallbackStep3).toHypothesisStep34ForUniform
 
 /-- Constant-input endpoint: BG const-on-index one-add-log hypotheses to uniform Step-5 package. -/
 noncomputable def toHypothesisStep34ForUniform_ofBGConstOnIndex_oneAddLog
@@ -6814,6 +8819,46 @@ noncomputable def toHypothesisStep34ForUniform_ofBGConstOnIndex_oneAddLog_ofModE
   (g.toInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
     uRef huRef vRef hvRef).toHypothesisStep34ForUniform
 
+/-- Constant-input endpoint: direct non-fallback Step-3/Step-4 theorem objects to uniform
+Step-5 package in the BG modEq + class-witness family. This bypasses one-add-log packaging. -/
+noncomputable def toHypothesisStep34ForUniform_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    (g : GeometryInputConst κ ι)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    HypothesisStep34ForUniform κ ι :=
+  (g.toInputStep3Step4_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    uRef huRef vRef hvRef step3 step4).toHypothesisStep34ForUniform
+
 /-- Constant-input endpoint: global MV hypotheses to Gram hypothesis. -/
 noncomputable def gramHypothesis_ofMontgomeryVaughan
     (g : GeometryInputConst κ ι)
@@ -6862,6 +8907,15 @@ noncomputable def gramHypothesis_ofMontgomeryVaughanByResidueStep3FallbackStep4
       ((g.FB.data).corePacketFamily.T) :=
   (g.toInputStep3Step4_ofMontgomeryVaughanByResidueStep3FallbackStep4 h3MV).gramHypothesis
 
+/-- Constant-input endpoint: pure box-geometry Step 3 + fallback Step 4 to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBoxGeometryStep3FallbackStep4
+    (g : GeometryInputConst κ ι) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (g.toInputStep3Step4_ofBoxGeometryStep3FallbackStep4).gramHypothesis
+
 /-- Constant-input endpoint: supplied Step-4 route + fallback Step 3 to Gram hypothesis. -/
 noncomputable def gramHypothesis_ofStep4WithFallbackStep3
     (g : GeometryInputConst κ ι)
@@ -6899,6 +8953,15 @@ noncomputable def gramHypothesis_ofMontgomeryVaughanByResidueStep4FallbackStep3
       (g.FB.data).J
       ((g.FB.data).corePacketFamily.T) :=
   (g.toInputStep3Step4_ofMontgomeryVaughanByResidueStep4FallbackStep3 h4MV).gramHypothesis
+
+/-- Constant-input endpoint: pure box-geometry Step 4 + fallback Step 3 to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBoxGeometryStep4FallbackStep3
+    (g : GeometryInputConst κ ι) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (g.toInputStep3Step4_ofBoxGeometryStep4FallbackStep3).gramHypothesis
 
 /-- Constant-input endpoint: BG const-on-index one-add-log hypotheses to Gram hypothesis. -/
 noncomputable def gramHypothesis_ofBGConstOnIndex_oneAddLog
@@ -7163,6 +9226,49 @@ noncomputable def gramHypothesis_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitne
   (g.toInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
     uRef huRef vRef hvRef).gramHypothesis
 
+/-- Constant-input endpoint: direct non-fallback Step-3/Step-4 theorem objects to Gram
+hypothesis in the BG modEq + class-witness family. -/
+noncomputable def gramHypothesis_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    (g : GeometryInputConst κ ι)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (g.toInputStep3Step4_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    uRef huRef vRef hvRef step3 step4).gramHypothesis
+
 /-- Constant-input endpoint: global MV hypotheses to final SSU contract. -/
 noncomputable def contract_ofMontgomeryVaughan
     (g : GeometryInputConst κ ι)
@@ -7199,6 +9305,12 @@ noncomputable def contract_ofMontgomeryVaughanByResidueStep3FallbackStep4
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
   (g.toInputStep3Step4_ofMontgomeryVaughanByResidueStep3FallbackStep4 h3MV).contract
 
+/-- Constant-input endpoint: pure box-geometry Step 3 + fallback Step 4 to final SSU contract. -/
+noncomputable def contract_ofBoxGeometryStep3FallbackStep4
+    (g : GeometryInputConst κ ι) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (g.toInputStep3Step4_ofBoxGeometryStep3FallbackStep4).contract
+
 /-- Constant-input endpoint: supplied Step-4 route + fallback Step 3 to final SSU contract. -/
 noncomputable def contract_ofStep4WithFallbackStep3
     (g : GeometryInputConst κ ι)
@@ -7227,6 +9339,12 @@ noncomputable def contract_ofMontgomeryVaughanByResidueStep4FallbackStep3
       (tdOf g.P g.a g.q g.hq g.hcop)) :
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
   (g.toInputStep3Step4_ofMontgomeryVaughanByResidueStep4FallbackStep3 h4MV).contract
+
+/-- Constant-input endpoint: pure box-geometry Step 4 + fallback Step 3 to final SSU contract. -/
+noncomputable def contract_ofBoxGeometryStep4FallbackStep3
+    (g : GeometryInputConst κ ι) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (g.toInputStep3Step4_ofBoxGeometryStep4FallbackStep3).contract
 
 /-- Constant-input endpoint: BG const-on-index one-add-log hypotheses to final SSU contract. -/
 noncomputable def contract_ofBGConstOnIndex_oneAddLog
@@ -7469,6 +9587,46 @@ noncomputable def contract_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
   (g.toInputStep3Step4_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
     uRef huRef vRef hvRef).contract
+
+/-- Constant-input endpoint: direct non-fallback Step-3/Step-4 theorem objects to final SSU
+contract in the BG modEq + class-witness family. -/
+noncomputable def contract_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    (g : GeometryInputConst κ ι)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (g.toInputStep3Step4_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    uRef huRef vRef hvRef step3 step4).contract
 
 end GeometryInputConst
 
@@ -8960,6 +11118,132 @@ noncomputable def contract_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofM
   g.contract_ofBGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
     uRef huRef vRef hvRef
 
+/-- One-record endpoint: constant geometry-input + direct non-fallback Step-3/Step-4 theorem
+objects in the BG modEq + class-witness family, to uniform Step-5 package. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_const_input_BGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    HypothesisStep34ForUniform κ ι :=
+  g.toHypothesisStep34ForUniform_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    uRef huRef vRef hvRef step3 step4
+
+/-- One-record endpoint: constant geometry-input + direct non-fallback Step-3/Step-4 theorem
+objects in the BG modEq + class-witness family, to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_const_input_BGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  g.gramHypothesis_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    uRef huRef vRef hvRef step3 step4
+
+/-- One-record endpoint: constant geometry-input + direct non-fallback Step-3/Step-4 theorem
+objects in the BG modEq + class-witness family, to final contract. -/
+noncomputable def contract_ofBGGeometry_const_input_BGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  g.contract_ofBGConstOnIndex_step3step4_ofModEq_ofClassWitness
+    uRef huRef vRef hvRef step3 step4
+
 /-- One-record endpoint: geometry-input + extracted-coefficient constancy +
 BG const-on-index one-add-log assumptions (modEq-derived) to uniform Step-5 package. -/
 noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq
@@ -9080,6 +11364,500 @@ noncomputable def contract_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofM
       (mRefU := mRefU) (hmRefU := hmRefU)
       (mRefV := mRefV) (hmRefV := hmRefV)).contract
 
+/-- One-record endpoint: geometry-input + extracted-coefficient constancy +
+BG const-on-index one-add-log assumptions (modEq-derived), in class-witness form
+(`uRef ∈ uClass(r)`, `vRef ∈ vClass(r)`), to uniform Step-5 package. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (α0 β0 : ℤ → ℂ)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = α0 v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = β0 u)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    (g := GeometryInputConst.ofGeometryInput g α0 β0 hαconst hβconst)
+    uRef huRef vRef hvRef
+
+/-- One-record endpoint: geometry-input + extracted-coefficient constancy +
+BG const-on-index one-add-log assumptions (modEq-derived), in class-witness form
+(`uRef ∈ uClass(r)`, `vRef ∈ vClass(r)`), to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (α0 β0 : ℤ → ℂ)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = α0 v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = β0 u)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    (g := GeometryInputConst.ofGeometryInput g α0 β0 hαconst hβconst)
+    uRef huRef vRef hvRef
+
+/-- One-record endpoint: geometry-input + extracted-coefficient constancy +
+BG const-on-index one-add-log assumptions (modEq-derived), in class-witness form
+(`uRef ∈ uClass(r)`, `vRef ∈ vClass(r)`), to final contract. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (α0 β0 : ℤ → ℂ)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = α0 v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = β0 u)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_const_input_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    (g := GeometryInputConst.ofGeometryInput g α0 β0 hαconst hβconst)
+    uRef huRef vRef hvRef
+
+/-- One-record insertion wrapper: geometry-input + fixed rank-one witness + BG const-on-index
+one-add-log assumptions (modEq-derived). -/
+noncomputable def inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι :=
+  GeometryInputConstStep3Step4.ofGeometryInputBGConstOnIndexOneAddLogOfModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG const-on-index one-add-log
+assumptions (modEq-derived) to uniform Step-5 package. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  (inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).toHypothesisStep34ForUniform
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG const-on-index one-add-log
+assumptions (modEq-derived) to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG const-on-index one-add-log
+assumptions (modEq-derived) to final contract. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+/-- One-record insertion wrapper: geometry-input + fixed rank-one witness + BG const-on-index
+one-add-log assumptions (modEq-derived, class-witness form). -/
+noncomputable def inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    GeometryInputConstStep3Step4 κ ι :=
+  GeometryInputConstStep3Step4.ofGeometryInputBGConstOnIndexOneAddLogOfModEqOfClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG const-on-index one-add-log
+assumptions (modEq-derived, class-witness form) to uniform Step-5 package. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  (inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)).toHypothesisStep34ForUniform
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG const-on-index one-add-log
+assumptions (modEq-derived, class-witness form) to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)).gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG const-on-index one-add-log
+assumptions (modEq-derived, class-witness form) to final contract. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (inputStep3Step4_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)).contract
+
+/-- If extracted coefficients are pointwise constant in `(f,i,j)`, then the extracted
+`reduction.F` is the corresponding fixed rank-one shear coefficient. -/
+theorem hF_eq_rankOne_of_extractedConst
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (α0 β0 : ℤ → ℂ)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = α0 v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = β0 u) :
+    ∀ (f : SSU.Global.Signal) (i j : ℤ),
+      g.reduction.F f i j =
+        SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) α0 β0 := by
+  intro f i j
+  have hαfun : g.α f i j = α0 := funext (hαconst f i j)
+  have hβfun : g.β f i j = β0 := funext (hβconst f i j)
+  simpa [hαfun, hβfun] using g.hF f i j
+
 /-- One-record endpoint: geometry-input + extracted-coefficient constancy to uniform Step-5
 packaging via the auto rank-one/modEq coeff-reduction route (no residue-reference arguments). -/
 noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq
@@ -9117,23 +11895,15 @@ noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_coeffReduc
       (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
       (inner_eq_coeff := by
         intro f i hi j hj
-        have hαfun : g.α f i j = α0 := funext (hαconst f i j)
-        have hβfun : g.β f i j = β0 := funext (hβconst f i j)
-        have hF0 :
-            g.reduction.F f i j =
-              SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
-                (tdOf g.P g.a g.q g.hq g.hcop) α0 β0 := by
-          simpa [hαfun, hβfun] using g.hF f i j
+        have hF0 :=
+          hF_eq_rankOne_of_extractedConst
+            (g := g) (α0 := α0) (β0 := β0) hαconst hβconst f i j
         simpa [hF0] using g.reduction.inner_eq f i hi j hj)
       (energy_le_coeff := by
         intro f i hi j hj
-        have hαfun : g.α f i j = α0 := funext (hαconst f i j)
-        have hβfun : g.β f i j = β0 := funext (hβconst f i j)
-        have hF0 :
-            g.reduction.F f i j =
-              SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
-                (tdOf g.P g.a g.q g.hq g.hcop) α0 β0 := by
-          simpa [hαfun, hβfun] using g.hF f i j
+        have hF0 :=
+          hF_eq_rankOne_of_extractedConst
+            (g := g) (α0 := α0) (β0 := β0) hαconst hβconst f i j
         simpa [hF0] using g.reduction.energy_le f i hi j hj)
 
 /-- One-record endpoint: geometry-input + extracted-coefficient constancy to Gram hypothesis
@@ -9176,23 +11946,15 @@ noncomputable def gramHypothesis_ofBGGeometry_input_const_coeffReduction_rankOne
       (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
       (inner_eq_coeff := by
         intro f i hi j hj
-        have hαfun : g.α f i j = α0 := funext (hαconst f i j)
-        have hβfun : g.β f i j = β0 := funext (hβconst f i j)
-        have hF0 :
-            g.reduction.F f i j =
-              SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
-                (tdOf g.P g.a g.q g.hq g.hcop) α0 β0 := by
-          simpa [hαfun, hβfun] using g.hF f i j
+        have hF0 :=
+          hF_eq_rankOne_of_extractedConst
+            (g := g) (α0 := α0) (β0 := β0) hαconst hβconst f i j
         simpa [hF0] using g.reduction.inner_eq f i hi j hj)
       (energy_le_coeff := by
         intro f i hi j hj
-        have hαfun : g.α f i j = α0 := funext (hαconst f i j)
-        have hβfun : g.β f i j = β0 := funext (hβconst f i j)
-        have hF0 :
-            g.reduction.F f i j =
-              SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
-                (tdOf g.P g.a g.q g.hq g.hcop) α0 β0 := by
-          simpa [hαfun, hβfun] using g.hF f i j
+        have hF0 :=
+          hF_eq_rankOne_of_extractedConst
+            (g := g) (α0 := α0) (β0 := β0) hαconst hβconst f i j
         simpa [hF0] using g.reduction.energy_le f i hi j hj)
 
 /-- One-record endpoint: geometry-input + extracted-coefficient constancy to final contract
@@ -9232,23 +11994,15 @@ noncomputable def contract_ofBGGeometry_input_const_coeffReduction_rankOne_ofMod
       (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
       (inner_eq_coeff := by
         intro f i hi j hj
-        have hαfun : g.α f i j = α0 := funext (hαconst f i j)
-        have hβfun : g.β f i j = β0 := funext (hβconst f i j)
-        have hF0 :
-            g.reduction.F f i j =
-              SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
-                (tdOf g.P g.a g.q g.hq g.hcop) α0 β0 := by
-          simpa [hαfun, hβfun] using g.hF f i j
+        have hF0 :=
+          hF_eq_rankOne_of_extractedConst
+            (g := g) (α0 := α0) (β0 := β0) hαconst hβconst f i j
         simpa [hF0] using g.reduction.inner_eq f i hi j hj)
       (energy_le_coeff := by
         intro f i hi j hj
-        have hαfun : g.α f i j = α0 := funext (hαconst f i j)
-        have hβfun : g.β f i j = β0 := funext (hβconst f i j)
-        have hF0 :
-            g.reduction.F f i j =
-              SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
-                (tdOf g.P g.a g.q g.hq g.hcop) α0 β0 := by
-          simpa [hαfun, hβfun] using g.hF f i j
+        have hF0 :=
+          hF_eq_rankOne_of_extractedConst
+            (g := g) (α0 := α0) (β0 := β0) hαconst hβconst f i j
         simpa [hF0] using g.reduction.energy_le f i hi j hj)
 
 /-- One-record endpoint: geometry-input + rank-one extracted coefficients (as a
@@ -9374,6 +12128,468 @@ noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_o
     (mRefU := mRefU) (hmRefU := hmRefU)
     (mRefV := mRefV) (hmRefV := hmRefV)
 
+/-- Class-witness version of
+`hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  let mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (uRef r hr)
+  have hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨uRef r hr, huRef r hr, rfl⟩
+  let mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (vRef r hr)
+  have hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨vRef r hr, hvRef r hr, rfl⟩
+  exact
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq
+      (g := g) (I0 := I0)
+      (hαconst := hαconst) (hβconst := hβconst)
+      (mRefU := mRefU) (hmRefU := hmRefU)
+      (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Class-witness version of
+`gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq`. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    (g := g) (I0 := I0)
+    (hαconst := hαconst) (hβconst := hβconst)
+    (uRef := uRef) (huRef := huRef)
+    (vRef := vRef) (hvRef := hvRef)).gramHypothesis
+
+/-- Class-witness version of
+`contract_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq`. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    (g := g) (I0 := I0)
+    (hαconst := hαconst) (hβconst := hβconst)
+    (uRef := uRef) (huRef := huRef)
+    (vRef := vRef) (hvRef := hvRef)).contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG const-on-index one-add-log
+assumptions (modEq-derived) to uniform Step-5 package. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG const-on-index one-add-log
+assumptions (modEq-derived) to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG const-on-index one-add-log
+assumptions (modEq-derived) to final contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_const_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Class-witness version of
+`hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  let mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (uRef r hr)
+  have hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨uRef r hr, huRef r hr, rfl⟩
+  let mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (vRef r hr)
+  have hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨vRef r hr, hvRef r hr, rfl⟩
+  exact
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU)
+      (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Class-witness version of
+`gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF`. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef)
+    (vRef := vRef) (hvRef := hvRef)).gramHypothesis
+
+/-- Class-witness version of
+`contract_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF`. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef)
+    (vRef := vRef) (hvRef := hvRef)).contract
+
 /-- One-record endpoint: geometry-input + rank-one extracted coefficients to uniform Step-5
 packaging via the auto rank-one/modEq coeff-reduction route (no residue-reference arguments). -/
 noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_rankOne_ofModEq
@@ -9421,6 +12637,93 @@ noncomputable def contract_ofBGGeometry_input_rankOne_coeffReduction_rankOne_ofM
   contract_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq
     (g := g) (α0 := I0.α) (β0 := I0.β)
     (hαconst := hαconst) (hβconst := hβconst)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness to uniform Step-5 packaging via
+the auto rank-one/modEq coeff-reduction route (no extracted-constancy assumptions). -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_rankOne_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    HypothesisStep34ForUniform κ ι :=
+  GeometryInput.hypothesisStep34ForUniform_ofBGGeometryCoeffReduction
+    (FB := g.FB)
+    (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
+    (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
+    (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
+    (hX := g.hX) (hH1 := g.hH1)
+    (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
+    (tubeForm_eq := g.tubeForm_eq)
+    (α := fun _ _ _ => I0.α)
+    (β := fun _ _ _ => I0.β)
+    (hβmod_sig := by
+      intro _ _ _ u₁ u₂ hu
+      exact hβmod u₁ u₂ hu)
+    (hαmod_sig := by
+      intro _ _ _ v₁ v₂ hv
+      exact hαmod v₁ v₂ hv)
+    (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
+    (inner_eq_coeff := by
+      intro f i hi j hj
+      simpa [hF0 f i j] using g.reduction.inner_eq f i hi j hj)
+    (energy_le_coeff := by
+      intro f i hi j hj
+      simpa [hF0 f i j] using g.reduction.energy_le f i hi j hj)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness to Gram hypothesis via the auto
+rank-one/modEq coeff-reduction route (no extracted-constancy assumptions). -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_rankOne_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_rankOne_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness to final contract via the auto
+rank-one/modEq coeff-reduction route (no extracted-constancy assumptions). -/
+noncomputable def contract_ofBGGeometry_input_rankOne_coeffReduction_rankOne_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_rankOne_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).contract
 
 /-- One-record endpoint: geometry-input + fixed rank-one coefficients + direct coefficient-form
 reduction identities to uniform Step-5 packaging via the auto one-add-log modEq route
@@ -9569,6 +12872,169 @@ noncomputable def contract_ofBGGeometry_input_rankOne_coeffReduction_direct_ofMo
     (inner_eq_coeff := inner_eq_coeff)
     (energy_le_coeff := energy_le_coeff)
 
+/-- One-record endpoint: geometry-input + fixed rank-one coefficients to uniform Step-5 packaging
+via the auto one-add-log modEq route, deriving coefficient-form reduction identities directly from
+`g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_direct_ofModEq
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (inner_eq_coeff := by
+      intro f i hi j hj
+      simpa [hF0 f i j] using g.reduction.inner_eq f i hi j hj)
+    (energy_le_coeff := by
+      intro f i hi j hj
+      simpa [hF0 f i j] using g.reduction.energy_le f i hi j hj)
+
+/-- One-record endpoint: geometry-input + fixed rank-one coefficients to Gram hypothesis
+via the auto one-add-log modEq route, deriving coefficient-form reduction identities directly from
+`g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one coefficients to final SSU contract
+via the auto one-add-log modEq route, deriving coefficient-form reduction identities directly from
+`g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_coeffReduction_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one coefficients + direct coefficient-form
+reduction identities + supplied non-fallback Step-3/Step-4 bounds to uniform Step-5 packaging
+(no extracted-coefficient constancy assumptions). -/
+noncomputable def geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        inner ℂ (((g.FB.data).corePacketFamily.T i) f) (((g.FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf g.P g.a g.q g.hq g.hcop)) (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        tubeEnergy (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+          ≤
+          g.reduction.Cenergy * ‖((g.FB.data).corePacketFamily.T i) f‖ *
+            ‖((g.FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (C3 C4 : ℝ)
+    (C3_nonneg : 0 ≤ C3) (C4_nonneg : 0 ≤ C4)
+    (hC3 : step3.C ≤ C3)
+    (hC4 : step4.C ≤ C4) :
+    GeometryInputStep3Step4 κ ι := by
+  let g0 : GeometryInput κ ι :=
+    GeometryInput.ofBGGeometryCoeffReduction
+      (FB := g.FB)
+      (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
+      (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
+      (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
+      (hX := g.hX) (hH1 := g.hH1)
+      (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
+      (tubeForm_eq := g.tubeForm_eq)
+      (α := fun _ _ _ => I0.α)
+      (β := fun _ _ _ => I0.β)
+      (hβmod_sig := by
+        intro _f _i _j u₁ u₂ hu
+        exact hβmod u₁ u₂ hu)
+      (hαmod_sig := by
+        intro _f _i _j v₁ v₂ hv
+        exact hαmod v₁ v₂ hv)
+      (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+  refine
+    { base := g0
+      step3For := ?_
+      step4For := ?_
+      C3 := C3
+      C4 := C4
+      C3_nonneg := C3_nonneg
+      C4_nonneg := C4_nonneg
+      C3_le := ?_
+      C4_le := ?_ }
+  · intro f i j
+    refine ⟨step3.C, step3.C_nonneg, ?_⟩
+    intro ξ hξ0 hξH
+    simpa [g0.hF f i j] using step3.bound ξ hξ0 hξH
+  · intro f i j
+    refine ⟨step4.C, step4.C_nonneg, ?_⟩
+    intro ξ hξ0 hξH
+    simpa [g0.hF f i j] using step4.bound ξ hξ0 hξH
+  · intro _f _i _j
+    exact hC3
+  · intro _f _i _j
+    exact hC4
+
 /-- One-record endpoint: geometry-input + fixed rank-one coefficients + direct coefficient-form
 reduction identities + supplied non-fallback Step-3/Step-4 bounds to uniform Step-5 packaging
 (no extracted-coefficient constancy assumptions). -/
@@ -9611,31 +13077,15 @@ noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffRed
     (hC3 : step3.C ≤ C3)
     (hC4 : step4.C ≤ C4) :
     HypothesisStep34ForUniform κ ι :=
-  GeometryInput.hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_step3step4
-    (FB := g.FB)
-    (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
-    (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
-    (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
-    (hX := g.hX) (hH1 := g.hH1)
-    (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
-    (tubeForm_eq := g.tubeForm_eq)
-    (α := fun _ _ _ => I0.α)
-    (β := fun _ _ _ => I0.β)
-    (hβmod_sig := by
-      intro _f _i _j u₁ u₂ hu
-      exact hβmod u₁ u₂ hu)
-    (hαmod_sig := by
-      intro _f _i _j v₁ v₂ hv
-      exact hαmod v₁ v₂ hv)
-    (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
     (inner_eq_coeff := inner_eq_coeff)
     (energy_le_coeff := energy_le_coeff)
-    (step3For := fun _f _i _j => step3)
-    (step4For := fun _f _i _j => step4)
+    (step3 := step3) (step4 := step4)
     (C3 := C3) (C4 := C4)
     (C3_nonneg := C3_nonneg) (C4_nonneg := C4_nonneg)
-    (C3_le := by intro _f _i _j; exact hC3)
-    (C4_le := by intro _f _i _j; exact hC4)
+    (hC3 := hC3) (hC4 := hC4)).toHypothesisStep34ForUniform
 
 /-- One-record endpoint: geometry-input + fixed rank-one coefficients + direct coefficient-form
 reduction identities + supplied non-fallback Step-3/Step-4 bounds to Gram hypothesis
@@ -9682,31 +13132,15 @@ noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_step3
       (H := SSU.Global.Signal)
       (g.FB.data).J
       ((g.FB.data).corePacketFamily.T) :=
-  GeometryInput.gramHypothesis_ofBGGeometryCoeffReduction_step3step4
-    (FB := g.FB)
-    (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
-    (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
-    (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
-    (hX := g.hX) (hH1 := g.hH1)
-    (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
-    (tubeForm_eq := g.tubeForm_eq)
-    (α := fun _ _ _ => I0.α)
-    (β := fun _ _ _ => I0.β)
-    (hβmod_sig := by
-      intro _f _i _j u₁ u₂ hu
-      exact hβmod u₁ u₂ hu)
-    (hαmod_sig := by
-      intro _f _i _j v₁ v₂ hv
-      exact hαmod v₁ v₂ hv)
-    (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
     (inner_eq_coeff := inner_eq_coeff)
     (energy_le_coeff := energy_le_coeff)
-    (step3For := fun _f _i _j => step3)
-    (step4For := fun _f _i _j => step4)
+    (step3 := step3) (step4 := step4)
     (C3 := C3) (C4 := C4)
     (C3_nonneg := C3_nonneg) (C4_nonneg := C4_nonneg)
-    (C3_le := by intro _f _i _j; exact hC3)
-    (C4_le := by intro _f _i _j; exact hC4)
+    (hC3 := hC3) (hC4 := hC4)).gramHypothesis
 
 /-- One-record endpoint: geometry-input + fixed rank-one coefficients + direct coefficient-form
 reduction identities + supplied non-fallback Step-3/Step-4 bounds to final SSU contract
@@ -9750,31 +13184,508 @@ noncomputable def contract_ofBGGeometry_input_rankOne_coeffReduction_step3step4_
     (hC3 : step3.C ≤ C3)
     (hC4 : step4.C ≤ C4) :
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
-  GeometryInput.contract_ofBGGeometryCoeffReduction_step3step4
-    (FB := g.FB)
-    (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
-    (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
-    (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
-    (hX := g.hX) (hH1 := g.hH1)
-    (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
-    (tubeForm_eq := g.tubeForm_eq)
-    (α := fun _ _ _ => I0.α)
-    (β := fun _ _ _ => I0.β)
-    (hβmod_sig := by
-      intro _f _i _j u₁ u₂ hu
-      exact hβmod u₁ u₂ hu)
-    (hαmod_sig := by
-      intro _f _i _j v₁ v₂ hv
-      exact hαmod v₁ v₂ hv)
-    (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
     (inner_eq_coeff := inner_eq_coeff)
     (energy_le_coeff := energy_le_coeff)
-    (step3For := fun _f _i _j => step3)
-    (step4For := fun _f _i _j => step4)
+    (step3 := step3) (step4 := step4)
     (C3 := C3) (C4 := C4)
     (C3_nonneg := C3_nonneg) (C4_nonneg := C4_nonneg)
-    (C3_le := by intro _f _i _j; exact hC3)
-    (C4_le := by intro _f _i _j; exact hC4)
+    (hC3 := hC3) (hC4 := hC4)).contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one coefficients + supplied non-fallback
+Step-3/Step-4 bounds to uniform Step-5 packaging, deriving coefficient-form reduction identities
+directly from `g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (C3 C4 : ℝ)
+    (C3_nonneg : 0 ≤ C3) (C4_nonneg : 0 ≤ C4)
+    (hC3 : step3.C ≤ C3)
+    (hC4 : step4.C ≤ C4) :
+    GeometryInputStep3Step4 κ ι :=
+  geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (inner_eq_coeff := by
+      intro f i hi j hj
+      simpa [hF0 f i j] using g.reduction.inner_eq f i hi j hj)
+    (energy_le_coeff := by
+      intro f i hi j hj
+      simpa [hF0 f i j] using g.reduction.energy_le f i hi j hj)
+    (step3 := step3) (step4 := step4)
+    (C3 := C3) (C4 := C4)
+    (C3_nonneg := C3_nonneg) (C4_nonneg := C4_nonneg)
+    (hC3 := hC3) (hC4 := hC4)
+
+/-- One-record endpoint: geometry-input + fixed rank-one coefficients + supplied non-fallback
+Step-3/Step-4 bounds to uniform Step-5 packaging, deriving coefficient-form reduction identities
+directly from `g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (C3 C4 : ℝ)
+    (C3_nonneg : 0 ≤ C3) (C4_nonneg : 0 ≤ C4)
+    (hC3 : step3.C ≤ C3)
+    (hC4 : step4.C ≤ C4) :
+    HypothesisStep34ForUniform κ ι :=
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+    (C3 := C3) (C4 := C4)
+    (C3_nonneg := C3_nonneg) (C4_nonneg := C4_nonneg)
+    (hC3 := hC3) (hC4 := hC4)).toHypothesisStep34ForUniform
+
+/-- One-record endpoint: geometry-input + fixed rank-one coefficients + supplied non-fallback
+Step-3/Step-4 bounds to Gram hypothesis, deriving coefficient-form reduction identities directly
+from `g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (C3 C4 : ℝ)
+    (C3_nonneg : 0 ≤ C3) (C4_nonneg : 0 ≤ C4)
+    (hC3 : step3.C ≤ C3)
+    (hC4 : step4.C ≤ C4) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+    (C3 := C3) (C4 := C4)
+    (C3_nonneg := C3_nonneg) (C4_nonneg := C4_nonneg)
+    (hC3 := hC3) (hC4 := hC4)).gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one coefficients + supplied non-fallback
+Step-3/Step-4 bounds to final SSU contract, deriving coefficient-form reduction identities directly
+from `g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (C3 C4 : ℝ)
+    (C3_nonneg : 0 ≤ C3) (C4_nonneg : 0 ≤ C4)
+    (hC3 : step3.C ≤ C3)
+    (hC4 : step4.C ≤ C4) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+    (C3 := C3) (C4 := C4)
+    (C3_nonneg := C3_nonneg) (C4_nonneg := C4_nonneg)
+    (hC3 := hC3) (hC4 := hC4)).contract
+
+/-- Tight-constant convenience constructor for
+`geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq`.
+It sets `C3 = step3.C` and `C4 = step4.C`. -/
+noncomputable def geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        inner ℂ (((g.FB.data).corePacketFamily.T i) f) (((g.FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf g.P g.a g.q g.hq g.hcop)) (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        tubeEnergy (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+          ≤
+          g.reduction.Cenergy * ‖((g.FB.data).corePacketFamily.T i) f‖ *
+            ‖((g.FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    GeometryInputStep3Step4 κ ι :=
+  geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)
+    (C3 := step3.C) (C4 := step4.C)
+    (C3_nonneg := step3.C_nonneg) (C4_nonneg := step4.C_nonneg)
+    (hC3 := le_rfl) (hC4 := le_rfl)
+
+/-- Tight-constant convenience constructor for
+`geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq`,
+deriving coefficient-form reduction identities directly from `g.reduction` using a fixed-rank-one
+`hF` witness. It sets `C3 = step3.C` and `C4 = step4.C`. -/
+noncomputable def geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    GeometryInputStep3Step4 κ ι :=
+  geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+    (C3 := step3.C) (C4 := step4.C)
+    (C3_nonneg := step3.C_nonneg) (C4_nonneg := step4.C_nonneg)
+    (hC3 := le_rfl) (hC4 := le_rfl)
+
+/-- Tight-constant convenience endpoint to uniform Step-5 packaging. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        inner ℂ (((g.FB.data).corePacketFamily.T i) f) (((g.FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf g.P g.a g.q g.hq g.hcop)) (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        tubeEnergy (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+          ≤
+          g.reduction.Cenergy * ‖((g.FB.data).corePacketFamily.T i) f‖ *
+            ‖((g.FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι :=
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)).toHypothesisStep34ForUniform
+
+/-- Tight-constant convenience endpoint to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        inner ℂ (((g.FB.data).corePacketFamily.T i) f) (((g.FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf g.P g.a g.q g.hq g.hcop)) (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        tubeEnergy (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+          ≤
+          g.reduction.Cenergy * ‖((g.FB.data).corePacketFamily.T i) f‖ *
+            ‖((g.FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)).gramHypothesis
+
+/-- Tight-constant convenience endpoint to final SSU contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        inner ℂ (((g.FB.data).corePacketFamily.T i) f) (((g.FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf g.P g.a g.q g.hq g.hcop)) (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (g.FB.data).J, ∀ j ∈ (g.FB.data).J,
+        tubeEnergy (tdOf g.P g.a g.q g.hq g.hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+          ≤
+          g.reduction.Cenergy * ‖((g.FB.data).corePacketFamily.T i) f‖ *
+            ‖((g.FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)).contract
+
+/-- Tight-constant convenience endpoint to uniform Step-5 packaging, deriving coefficient-form
+reduction identities directly from `g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι :=
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)).toHypothesisStep34ForUniform
+
+/-- Tight-constant convenience endpoint to Gram hypothesis, deriving coefficient-form reduction
+identities directly from `g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)).gramHypothesis
+
+/-- Tight-constant convenience endpoint to final SSU contract, deriving coefficient-form reduction
+identities directly from `g.reduction` using a fixed-rank-one `hF` witness. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (geometryInputStep3Step4_ofBGGeometry_input_rankOne_coeffReduction_step3step4_tight_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)).contract
 
 /-- One-record endpoint: constant geometry-input + BG `β₀` const-on-index one-add-log hypotheses
 (Step 3 proved, Step 4 fallback), deriving constancy from modEq. -/
@@ -9908,6 +13819,432 @@ noncomputable def contract_ofBGGeometry_const_input_BGConstOnVIndex_oneAddLog_st
     (mRefV := fun _f _i _j r hr => mRefV r hr)
     (hmRefV := fun _f _i _j r hr => hmRefV r hr)
 
+/-- One-record endpoint: promote the constant-input BG `β₀` const-on-index one-add-log modEq
+route from the Step-3-only fallback surface to the full non-fallback route when `v`-side
+reference indices are also available. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_const_input_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  (g.toGeometryInput).toHypothesisStep34ForUniform_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    (fun _f _i _j r hr => mRefU r hr)
+    (fun _f _i _j r hr => hmRefU r hr)
+    (fun _f _i _j r hr => mRefV r hr)
+    (fun _f _i _j r hr => hmRefV r hr)
+
+/-- One-record endpoint: promote the constant-input BG `β₀` const-on-index one-add-log modEq
+route from the Step-3-only fallback surface to the full non-fallback Gram hypothesis when
+`v`-side reference indices are also available. -/
+noncomputable def gramHypothesis_ofBGGeometry_const_input_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (g.toGeometryInput).gramHypothesis_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    (fun _f _i _j r hr => mRefU r hr)
+    (fun _f _i _j r hr => hmRefU r hr)
+    (fun _f _i _j r hr => mRefV r hr)
+    (fun _f _i _j r hr => hmRefV r hr)
+
+/-- One-record endpoint: promote the constant-input BG `β₀` const-on-index one-add-log modEq
+route from the Step-3-only fallback surface to the full non-fallback contract when `v`-side
+reference indices are also available. -/
+noncomputable def contract_ofBGGeometry_const_input_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (g.toGeometryInput).contract_ofBGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote
+    (fun _f _i _j r hr => mRefU r hr)
+    (fun _f _i _j r hr => hmRefU r hr)
+    (fun _f _i _j r hr => mRefV r hr)
+    (fun _f _i _j r hr => hmRefV r hr)
+
+/-- One-record endpoint: promote the constant-input BG `α₀` const-on-index one-add-log modEq
+route from the Step-4-only fallback surface to the full non-fallback route when `u`-side
+reference indices are also available. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_const_input_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  (g.toGeometryInput).toHypothesisStep34ForUniform_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    (fun _f _i _j r hr => mRefV r hr)
+    (fun _f _i _j r hr => hmRefV r hr)
+    (fun _f _i _j r hr => mRefU r hr)
+    (fun _f _i _j r hr => hmRefU r hr)
+
+/-- One-record endpoint: promote the constant-input BG `α₀` const-on-index one-add-log modEq
+route from the Step-4-only fallback surface to the full non-fallback Gram hypothesis when
+`u`-side reference indices are also available. -/
+noncomputable def gramHypothesis_ofBGGeometry_const_input_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (g.toGeometryInput).gramHypothesis_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    (fun _f _i _j r hr => mRefV r hr)
+    (fun _f _i _j r hr => hmRefV r hr)
+    (fun _f _i _j r hr => mRefU r hr)
+    (fun _f _i _j r hr => hmRefU r hr)
+
+/-- One-record endpoint: promote the constant-input BG `α₀` const-on-index one-add-log modEq
+route from the Step-4-only fallback surface to the full non-fallback contract when `u`-side
+reference indices are also available. -/
+noncomputable def contract_ofBGGeometry_const_input_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (g.toGeometryInput).contract_ofBGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote
+    (fun _f _i _j r hr => mRefV r hr)
+    (fun _f _i _j r hr => hmRefV r hr)
+    (fun _f _i _j r hr => mRefU r hr)
+    (fun _f _i _j r hr => hmRefU r hr)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` const-on-index
+one-add-log route (Step 3 proved, Step 4 fallback), deriving constancy from modEq + `hF`
+at the constant-input insertion layer. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  (GeometryInputConstStep3Step4.ofGeometryInputBGConstOnUIndexOneAddLogStep3FallbackStep4OfModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU)).toHypothesisStep34ForUniform
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` const-on-index
+one-add-log route (Step 3 proved, Step 4 fallback), deriving constancy from modEq + `hF`,
+to Gram hypothesis at the constant-input insertion layer. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (GeometryInputConstStep3Step4.ofGeometryInputBGConstOnUIndexOneAddLogStep3FallbackStep4OfModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU)).gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` const-on-index
+one-add-log route (Step 3 proved, Step 4 fallback), deriving constancy from modEq + `hF`,
+to final contract at the constant-input insertion layer. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (GeometryInputConstStep3Step4.ofGeometryInputBGConstOnUIndexOneAddLogStep3FallbackStep4OfModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU)).contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` const-on-index
+one-add-log route (Step 4 proved, Step 3 fallback), deriving constancy from modEq + `hF`
+at the constant-input insertion layer. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  (GeometryInputConstStep3Step4.ofGeometryInputBGConstOnVIndexOneAddLogStep4FallbackStep3OfModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefV := mRefV) (hmRefV := hmRefV)).toHypothesisStep34ForUniform
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` const-on-index
+one-add-log route (Step 4 proved, Step 3 fallback), deriving constancy from modEq + `hF`,
+to Gram hypothesis at the constant-input insertion layer. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (GeometryInputConstStep3Step4.ofGeometryInputBGConstOnVIndexOneAddLogStep4FallbackStep3OfModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` const-on-index
+one-add-log route (Step 4 proved, Step 3 fallback), deriving constancy from modEq + `hF`,
+to final contract at the constant-input insertion layer. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (GeometryInputConstStep3Step4.ofGeometryInputBGConstOnVIndexOneAddLogStep4FallbackStep3OfModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
 /-- One-record endpoint: geometry-input + rank-one extracted coefficients + BG `β` const-on-index
 one-add-log route (Step 3 proved, Step 4 fallback), deriving constancy from modEq. -/
 noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq
@@ -9995,6 +14332,110 @@ noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_
     contract_ofBGGeometry_const_input_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq
       (g := g0) (mRefU := mRefU) (hmRefU := hmRefU)
 
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` const-on-index
+one-add-log route (Step 3 proved, Step 4 fallback), deriving constancy from modEq + `hF`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_const_input_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq
+    (g := GeometryInputConst.ofGeometryInput_from_hF g I0 hβmod hαmod hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` const-on-index
+one-add-log route (Step 3 proved, Step 4 fallback), deriving constancy from modEq + `hF`,
+to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_const_input_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq
+    (g := GeometryInputConst.ofGeometryInput_from_hF g I0 hβmod hαmod hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` const-on-index
+one-add-log route (Step 3 proved, Step 4 fallback), deriving constancy from modEq + `hF`,
+to final contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_const_input_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq
+    (g := GeometryInputConst.ofGeometryInput_from_hF g I0 hβmod hαmod hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+
 /-- One-record endpoint: geometry-input + rank-one extracted coefficients + BG `α` const-on-index
 one-add-log route (Step 4 proved, Step 3 fallback), deriving constancy from modEq. -/
 noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq
@@ -10081,6 +14522,386 @@ noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_
   exact
     contract_ofBGGeometry_const_input_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq
       (g := g0) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` const-on-index
+one-add-log route (Step 4 proved, Step 3 fallback), deriving constancy from modEq + `hF`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_const_input_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq
+    (g := GeometryInputConst.ofGeometryInput_from_hF g I0 hβmod hαmod hF0)
+    (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` const-on-index
+one-add-log route (Step 4 proved, Step 3 fallback), deriving constancy from modEq + `hF`,
+to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_const_input_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq
+    (g := GeometryInputConst.ofGeometryInput_from_hF g I0 hβmod hαmod hF0)
+    (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` const-on-index
+one-add-log route (Step 4 proved, Step 3 fallback), deriving constancy from modEq + `hF`,
+to final contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_const_input_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq
+    (g := GeometryInputConst.ofGeometryInput_from_hF g I0 hβmod hαmod hF0)
+    (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Preferred fixed-rank-one (`hF0`) promotion endpoint: if both residue index-witness families
+are available, upgrade the U-side fallback-shaped route directly to the full non-fallback
+BG const-on-index one-add-log flagship path. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Preferred fixed-rank-one (`hF0`) promotion endpoint: if both residue index-witness families
+are available, upgrade the U-side fallback-shaped route directly to the full non-fallback
+Gram-hypothesis path. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Preferred fixed-rank-one (`hF0`) promotion endpoint: if both residue index-witness families
+are available, upgrade the U-side fallback-shaped route directly to the full non-fallback
+final contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_promote_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Preferred fixed-rank-one (`hF0`) promotion endpoint: if both residue index-witness families
+are available, upgrade the V-side fallback-shaped route directly to the full non-fallback
+BG const-on-index one-add-log flagship path. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Preferred fixed-rank-one (`hF0`) promotion endpoint: if both residue index-witness families
+are available, upgrade the V-side fallback-shaped route directly to the full non-fallback
+Gram-hypothesis path. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Preferred fixed-rank-one (`hF0`) promotion endpoint: if both residue index-witness families
+are available, upgrade the V-side fallback-shaped route directly to the full non-fallback
+final contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_promote_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
 
 /-- One-shot endpoint (coefficient-reduction form): build the constant rank-one BG bridge input
 directly from TeX reduction hypotheses and finish with the modEq-derived const-on-index route to
@@ -10642,6 +15463,524 @@ noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_one
       (hX := hX) (hH1 := hH1)
       (hXH_u := hXH_u) (hXH_v := hXH_v)
       (tubeForm_eq := tubeForm_eq)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (uRef := uRef) (huRef := huRef)
+      (vRef := vRef) (hvRef := hvRef)
+  exact h.contract
+
+/-- Auto-Step-2 variant of
+`hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq`:
+derive `tubeForm_eq` from a packaged `Step2ToTubeForm` witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq
+    (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (tubeForm_eq := GeometryInputConst.tubeForm_eq_of_step2ToTubeForm
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Auto-Step-2 variant to the Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (mRefU := mRefU) (hmRefU := hmRefU)
+      (mRefV := mRefV) (hmRefV := hmRefV)
+  exact h.gramHypothesis
+
+/-- Auto-Step-2 variant to the final contract. -/
+noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (mRefU := mRefU) (hmRefU := hmRefU)
+      (mRefV := mRefV) (hmRefV := hmRefV)
+  exact h.contract
+
+/-- Auto-Step-2 + class-witness variant of
+`hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness`:
+derive `tubeForm_eq` from a packaged `Step2ToTubeForm` witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (tubeForm_eq := GeometryInputConst.tubeForm_eq_of_step2ToTubeForm
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (uRef := uRef) (huRef := huRef)
+    (vRef := vRef) (hvRef := hvRef)
+
+/-- Auto-Step-2 + class-witness variant to the Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (uRef := uRef) (huRef := huRef)
+      (vRef := vRef) (hvRef := hvRef)
+  exact h.gramHypothesis
+
+/-- Auto-Step-2 + class-witness variant to the final contract. -/
+noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
       (I0 := I0)
       (hβmod := hβmod) (hαmod := hαmod)
       (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
@@ -11433,6 +16772,313 @@ noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_one
       (hX := hX) (hH1 := hH1)
       (hXH_u := hXH_u) (hXH_v := hXH_v)
       (tubeForm_eq := tubeForm_eq)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (uRef := uRef) (huRef := huRef) (hβconst_class := hβconst_class)
+      (vRef := vRef) (hvRef := hvRef) (hαconst_class := hαconst_class)
+  exact h.contract
+
+/-- Auto-Step-2 + class-witness variant of
+`hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness`:
+derive `tubeForm_eq` from a packaged `Step2ToTubeForm` witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r)
+    (hβconst_class :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop))
+        (u : ℤ),
+        u ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+          (tdOf P a q hq hcop) r →
+          I0.β u = I0.β (uRef r hr))
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r)
+    (hαconst_class :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop))
+        (v : ℤ),
+        v ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+          (tdOf P a q hq hcop) r →
+          I0.α v = I0.α (vRef r hr)) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness
+    (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (tubeForm_eq := GeometryInputConst.tubeForm_eq_of_step2ToTubeForm
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (uRef := uRef) (huRef := huRef) (hβconst_class := hβconst_class)
+    (vRef := vRef) (hvRef := hvRef) (hαconst_class := hαconst_class)
+
+/-- Auto-Step-2 + class-witness variant to the Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r)
+    (hβconst_class :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop))
+        (u : ℤ),
+        u ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+          (tdOf P a q hq hcop) r →
+          I0.β u = I0.β (uRef r hr))
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r)
+    (hαconst_class :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop))
+        (v : ℤ),
+        v ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+          (tdOf P a q hq hcop) r →
+          I0.α v = I0.α (vRef r hr)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (uRef := uRef) (huRef := huRef) (hβconst_class := hβconst_class)
+      (vRef := vRef) (hvRef := hvRef) (hαconst_class := hαconst_class)
+  exact h.gramHypothesis
+
+/-- Auto-Step-2 + class-witness variant to the final contract. -/
+noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r)
+    (hβconst_class :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop))
+        (u : ℤ),
+        u ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+          (tdOf P a q hq hcop) r →
+          I0.β u = I0.β (uRef r hr))
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r)
+    (hαconst_class :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop))
+        (v : ℤ),
+        v ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+          (tdOf P a q hq hcop) r →
+          I0.α v = I0.α (vRef r hr)) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnIndex_oneAddLog_ofClassWitness_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
       (I0 := I0)
       (hβmod := hβmod) (hαmod := hαmod)
       (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
@@ -12536,6 +18182,229 @@ noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_on
       (uRef := uRef) (huRef := huRef)
   exact h.contract
 
+/-- Auto-Step-2 + class-witness variant of
+`hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness`:
+derive `tubeForm_eq` from a packaged `Step2ToTubeForm` witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness
+    (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (tubeForm_eq := GeometryInputConst.tubeForm_eq_of_step2ToTubeForm
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (uRef := uRef) (huRef := huRef)
+
+/-- Auto-Step-2 + class-witness variant to the Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (uRef := uRef) (huRef := huRef)
+  exact h.gramHypothesis
+
+/-- Auto-Step-2 + class-witness variant to the final contract. -/
+noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (uRef := uRef) (huRef := huRef)
+  exact h.contract
+
 /-- One-shot endpoint (coefficient-reduction form): build the constant rank-one BG bridge input
 directly from TeX reduction hypotheses and finish with the BG `α`-const-on-index one-add-log
 route (Step 4 proved, Step 3 fallback) to uniform Step-5 packaging. -/
@@ -13630,6 +19499,229 @@ noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_on
       (vRef := vRef) (hvRef := hvRef)
   exact h.contract
 
+/-- Auto-Step-2 + class-witness variant of
+`hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness`:
+derive `tubeForm_eq` from a packaged `Step2ToTubeForm` witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness
+    (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (tubeForm_eq := GeometryInputConst.tubeForm_eq_of_step2ToTubeForm
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (vRef := vRef) (hvRef := hvRef)
+
+/-- Auto-Step-2 + class-witness variant to the Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (vRef := vRef) (hvRef := hvRef)
+  exact h.gramHypothesis
+
+/-- Auto-Step-2 + class-witness variant to the final contract. -/
+noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_autoTubeForm
+      (FB := FB) (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+      (vRef := vRef) (hvRef := hvRef)
+  exact h.contract
+
 /-- Non-fallback endpoint: coefficient-reduction rank-one input with modEq-derived coefficient
 invariance and supplied Step-3/Step-4 use-site bounds to uniform Step-5 packaging. -/
 noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
@@ -13892,6 +19984,239 @@ noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
       (hC3 := hC3) (hC4 := hC4)
   simpa using h.contract
 
+/-- Tight-constant convenience endpoint for
+`hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq`.
+It sets `C3 = step3.C` and `C4 = step4.C`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+          ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+                (Khat (tdOf P a q hq hcop) ξ) *
+                  (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                      (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (tubeForm_eq := tubeForm_eq)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)
+    (C3 := step3.C) (C4 := step4.C)
+    (C3_nonneg := step3.C_nonneg) (C4_nonneg := step4.C_nonneg)
+    (hC3 := le_rfl) (hC4 := le_rfl)
+
+/-- Tight-constant convenience endpoint to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+          ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+                (Khat (tdOf P a q hq hcop) ξ) *
+                  (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                      (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (tubeForm_eq := tubeForm_eq)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)
+    (C3 := step3.C) (C4 := step4.C)
+    (C3_nonneg := step3.C_nonneg) (C4_nonneg := step4.C_nonneg)
+    (hC3 := le_rfl) (hC4 := le_rfl)
+
+/-- Tight-constant convenience endpoint to final SSU contract. -/
+noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+          ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+                (Khat (tdOf P a q hq hcop) ξ) *
+                  (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                      (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  contract_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (tubeForm_eq := tubeForm_eq)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)
+    (C3 := step3.C) (C4 := step4.C)
+    (C3_nonneg := step3.C_nonneg) (C4_nonneg := step4.C_nonneg)
+    (hC3 := le_rfl) (hC4 := le_rfl)
+
 /-- Non-fallback endpoint: coefficient-reduction rank-one input with modEq-derived coefficient
 invariance to uniform Step-5 packaging.
 
@@ -14099,7 +20424,549 @@ noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_ofModEq
       (energy_le_coeff := energy_le_coeff)
   simpa using h.contract
 
+/-- Tight-constant one-record insertion endpoint with Step-2 provided as a packaged witness
+(`Step2ToTubeForm`) instead of raw `tubeForm_eq`. -/
+noncomputable def inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β)) :
+    GeometryInputConstStep3Step4 κ ι :=
+  GeometryInputConstStep3Step4.ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)
+
+/-- Tight-constant convenience endpoint with Step-2 provided as a packaged witness
+(`Step2ToTubeForm`) instead of raw `tubeForm_eq`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι :=
+  (inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)).toHypothesisStep34ForUniform
+
+/-- Tight-constant convenience endpoint to Gram hypothesis, with Step-2 witness input. -/
+noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  (inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)).gramHypothesis
+
+/-- Tight-constant convenience endpoint to final SSU contract, with Step-2 witness input. -/
+noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf P a q hq hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  (inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+    (step3 := step3) (step4 := step4)).contract
+
+/-- Non-fallback one-record insertion endpoint (auto Step-3/Step-4) with Step-2 provided as a
+packaged witness (`Step2ToTubeForm`) instead of raw `tubeForm_eq`. -/
+noncomputable def inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    GeometryInputConstStep3Step4 κ ι :=
+  GeometryInputConstStep3Step4.ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)
+
+/-- Non-fallback endpoint (auto Step-3/Step-4) with Step-2 provided as a packaged witness
+(`Step2ToTubeForm`) instead of raw `tubeForm_eq`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    HypothesisStep34ForUniform κ ι :=
+  (inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)).toHypothesisStep34ForUniform
+
+/-- Non-fallback endpoint (auto Step-3/Step-4): Step-2 witness variant to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  (inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)).gramHypothesis
+
+/-- Non-fallback endpoint (auto Step-3/Step-4): Step-2 witness variant to final contract. -/
+noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  (inputStep3Step4_ofBGGeometryCoeffReduction_rankOne_ofModEq_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff)
+    (energy_le_coeff := energy_le_coeff)).contract
+
 namespace GeometryInputConst
+
+/-- One-record endpoint: constant-input coefficient-reduction route to non-fallback Step-3/Step-4
+insertion record, using the auto one-add-log path from modEq invariance. -/
+noncomputable def toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι) :
+    GeometryInputConstStep3Step4 κ ι :=
+  GeometryInputConstStep3Step4.ofBGModEqOneAddLog g
 
 /-- One-record endpoint: constant-input coefficient-reduction route to uniform Step-5 packaging,
 using the auto Step-3/Step-4 one-add-log path from modEq invariance. -/
@@ -14107,25 +20974,67 @@ noncomputable def toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOn
     {κ ι : Type*} [DecidableEq κ]
     (g : GeometryInputConst κ ι) :
     HypothesisStep34ForUniform κ ι := by
-  let I0 : SSU.Engines.BGTypeIIRankOne.Input := { α := g.α0, β := g.β0 }
   exact
-    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_ofModEq
-      (FB := g.FB)
-      (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
-      (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
-      (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
-      (hX := g.hX) (hH1 := g.hH1)
-      (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
-      (tubeForm_eq := g.tubeForm_eq)
-      (I0 := I0)
-      (hβmod := g.hβmod) (hαmod := g.hαmod)
-      (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
-      (inner_eq_coeff := by
-        intro f i hi j hj
-        simpa [I0, g.hF f i j] using g.reduction.inner_eq f i hi j hj)
-      (energy_le_coeff := by
-        intro f i hi j hj
-        simpa [I0, g.hF f i j] using g.reduction.energy_le f i hi j hj)
+    (g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_ofModEq).toHypothesisStep34ForUniform
+
+/-- One-record endpoint: constant-input coefficient-reduction route to uniform Step-5 packaging,
+using supplied non-fallback Step-3/Step-4 use-site bounds (modEq route). -/
+noncomputable def toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    GeometryInputConstStep3Step4 κ ι := by
+  refine
+    { base := g
+      step3For := ?_
+      step4For := ?_
+      C3 := step3.C
+      C4 := step4.C
+      C3_nonneg := step3.C_nonneg
+      C4_nonneg := step4.C_nonneg
+      C3_le := ?_
+      C4_le := ?_ }
+  · intro f i j
+    refine ⟨step3.C, step3.C_nonneg, ?_⟩
+    intro ξ hξ0 hξH
+    simpa [g.hF f i j] using step3.bound ξ hξ0 hξH
+  · intro f i j
+    refine ⟨step4.C, step4.C_nonneg, ?_⟩
+    intro ξ hξ0 hξH
+    simpa [g.hF f i j] using step4.bound ξ hξ0 hξH
+  · intro f i j
+    exact le_rfl
+  · intro f i j
+    exact le_rfl
+
+/-- One-record endpoint: constant-input coefficient-reduction route to non-fallback Step-3/Step-4
+insertion record, using supplied non-fallback Step-3/Step-4 use-site bounds (modEq route)
+with tight constants `C3 = step3.C`, `C4 = step4.C`. -/
+noncomputable def toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    GeometryInputConstStep3Step4 κ ι :=
+  g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+    (step3 := step3) (step4 := step4)
 
 /-- One-record endpoint: constant-input coefficient-reduction route to uniform Step-5 packaging,
 using supplied non-fallback Step-3/Step-4 use-site bounds (modEq route). -/
@@ -14142,31 +21051,29 @@ noncomputable def toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOn
         (tdOf g.P g.a g.q g.hq g.hcop)
         (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
           (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
-    HypothesisStep34ForUniform κ ι := by
-  let I0 : SSU.Engines.BGTypeIIRankOne.Input := { α := g.α0, β := g.β0 }
-  exact
-    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
-      (FB := g.FB)
-      (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
-      (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
-      (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
-      (hX := g.hX) (hH1 := g.hH1)
-      (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
-      (tubeForm_eq := g.tubeForm_eq)
-      (I0 := I0)
-      (hβmod := g.hβmod) (hαmod := g.hαmod)
-      (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
-      (inner_eq_coeff := by
-        intro f i hi j hj
-        simpa [I0, g.hF f i j] using g.reduction.inner_eq f i hi j hj)
-      (energy_le_coeff := by
-        intro f i hi j hj
-        simpa [I0, g.hF f i j] using g.reduction.energy_le f i hi j hj)
-      (step3 := by simpa [I0] using step3)
-      (step4 := by simpa [I0] using step4)
-      (C3 := step3.C) (C4 := step4.C)
-      (C3_nonneg := step3.C_nonneg) (C4_nonneg := step4.C_nonneg)
-      (hC3 := le_rfl) (hC4 := le_rfl)
+    HypothesisStep34ForUniform κ ι :=
+  (g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+    (step3 := step3) (step4 := step4)).toHypothesisStep34ForUniform
+
+/-- One-record endpoint: constant-input coefficient-reduction route to uniform Step-5 packaging,
+using supplied non-fallback Step-3/Step-4 use-site bounds (modEq route) with tight constants
+`C3 = step3.C`, `C4 = step4.C`. -/
+noncomputable def toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    HypothesisStep34ForUniform κ ι :=
+  (g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
+    (step3 := step3) (step4 := step4)).toHypothesisStep34ForUniform
 
 /-- One-record endpoint: constant-input coefficient-reduction route to Gram hypothesis,
 using the auto Step-3/Step-4 one-add-log path from modEq invariance. -/
@@ -14198,7 +21105,30 @@ noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_o
       (H := SSU.Global.Signal)
       (g.FB.data).J
       ((g.FB.data).corePacketFamily.T) :=
-  (g.toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+  (g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+      (step3 := step3) (step4 := step4)).gramHypothesis
+
+/-- One-record endpoint: constant-input coefficient-reduction route to Gram hypothesis,
+using supplied non-fallback Step-3/Step-4 use-site bounds (modEq route) with tight constants
+`C3 = step3.C`, `C4 = step4.C`. -/
+noncomputable def gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
       (step3 := step3) (step4 := step4)).gramHypothesis
 
 /-- One-record endpoint: constant-input coefficient-reduction route to final SSU contract,
@@ -14225,10 +21155,38 @@ noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
         (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
           (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
-  (g.toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+  (g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+      (step3 := step3) (step4 := step4)).contract
+
+/-- One-record endpoint: constant-input coefficient-reduction route to final SSU contract,
+using supplied non-fallback Step-3/Step-4 use-site bounds (modEq route) with tight constants
+`C3 = step3.C`, `C4 = step4.C`. -/
+noncomputable def contract_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
       (step3 := step3) (step4 := step4)).contract
 
 end GeometryInputConst
+
+/-- One-record endpoint wrapper: constant-input coefficient-reduction route to non-fallback
+Step-3/Step-4 insertion record, using the auto Step-3/Step-4 one-add-log modEq path. -/
+noncomputable def inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι) :
+    GeometryInputConstStep3Step4 κ ι :=
+  g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_ofModEq
 
 /-- One-record endpoint wrapper: constant-input coefficient-reduction route to uniform Step-5
 packaging, using the auto Step-3/Step-4 one-add-log modEq path. -/
@@ -14236,7 +21194,7 @@ noncomputable def hypothesisStep34ForUniform_ofBGGeometry_const_input_coeffReduc
     {κ ι : Type*} [DecidableEq κ]
     (g : GeometryInputConst κ ι) :
     HypothesisStep34ForUniform κ ι :=
-  g.toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_ofModEq
+  (inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_ofModEq g).toHypothesisStep34ForUniform
 
 /-- One-record endpoint wrapper: constant-input coefficient-reduction route to Gram hypothesis,
 using the auto Step-3/Step-4 one-add-log modEq path. -/
@@ -14259,6 +21217,25 @@ noncomputable def contract_ofBGGeometry_const_input_coeffReduction_rankOne_ofMod
 
 /-- One-record endpoint wrapper: constant-input coefficient-reduction route to uniform Step-5
 packaging, using supplied non-fallback Step-3/Step-4 bounds (modEq route). -/
+noncomputable def inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    GeometryInputConstStep3Step4 κ ι :=
+  g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+    (step3 := step3) (step4 := step4)
+
+/-- One-record endpoint wrapper: constant-input coefficient-reduction route to uniform Step-5
+packaging, using supplied non-fallback Step-3/Step-4 bounds (modEq route). -/
 noncomputable def hypothesisStep34ForUniform_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq
     {κ ι : Type*} [DecidableEq κ]
     (g : GeometryInputConst κ ι)
@@ -14273,8 +21250,8 @@ noncomputable def hypothesisStep34ForUniform_ofBGGeometry_const_input_coeffReduc
         (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
           (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
     HypothesisStep34ForUniform κ ι :=
-  g.toHypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
-    (step3 := step3) (step4 := step4)
+  (inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq
+    (g := g) (step3 := step3) (step4 := step4)).toHypothesisStep34ForUniform
 
 /-- One-record endpoint wrapper: constant-input coefficient-reduction route to Gram hypothesis,
 using supplied non-fallback Step-3/Step-4 bounds (modEq route). -/
@@ -14295,8 +21272,8 @@ noncomputable def gramHypothesis_ofBGGeometry_const_input_coeffReduction_rankOne
       (H := SSU.Global.Signal)
       (g.FB.data).J
       ((g.FB.data).corePacketFamily.T) :=
-  g.gramHypothesis_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
-    (step3 := step3) (step4 := step4)
+  (inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq
+    (g := g) (step3 := step3) (step4 := step4)).gramHypothesis
 
 /-- One-record endpoint wrapper: constant-input coefficient-reduction route to final contract,
 using supplied non-fallback Step-3/Step-4 bounds (modEq route). -/
@@ -14314,8 +21291,762 @@ noncomputable def contract_ofBGGeometry_const_input_coeffReduction_rankOne_step3
         (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
           (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
-  g.contract_ofBGGeometryCoeffReduction_rankOne_step3step4_ofModEq
+  (inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq
+    (g := g) (step3 := step3) (step4 := step4)).contract
+
+/-- One-record endpoint wrapper: constant-input coefficient-reduction route to non-fallback
+Step-3/Step-4 insertion record, using supplied non-fallback Step-3/Step-4 bounds (modEq route)
+with tight constants `C3 = step3.C`, `C4 = step4.C`. -/
+noncomputable def inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    GeometryInputConstStep3Step4 κ ι :=
+  g.toInputStep3Step4_ofBGGeometryCoeffReduction_rankOne_step3step4_tight_ofModEq
     (step3 := step3) (step4 := step4)
+
+/-- One-record endpoint wrapper: constant-input coefficient-reduction route to uniform Step-5
+packaging, using supplied non-fallback Step-3/Step-4 bounds (modEq route) with tight constants
+`C3 = step3.C`, `C4 = step4.C`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    HypothesisStep34ForUniform κ ι :=
+  (inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq
+    (g := g) (step3 := step3) (step4 := step4)).toHypothesisStep34ForUniform
+
+/-- One-record endpoint wrapper: constant-input coefficient-reduction route to Gram hypothesis,
+using supplied non-fallback Step-3/Step-4 bounds (modEq route) with tight constants
+`C3 = step3.C`, `C4 = step4.C`. -/
+noncomputable def gramHypothesis_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq
+    (g := g) (step3 := step3) (step4 := step4)).gramHypothesis
+
+/-- One-record endpoint wrapper: constant-input coefficient-reduction route to final contract,
+using supplied non-fallback Step-3/Step-4 bounds (modEq route) with tight constants
+`C3 = step3.C`, `C4 = step4.C`. -/
+noncomputable def contract_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInputConst κ ι)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) g.α0 g.β0)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq
+    (g := g) (step3 := step3) (step4 := step4)).contract
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to the non-fallback
+constant-input Step-3/Step-4 insertion record, deriving the constant-input package from a fixed
+rank-one `hF` witness and then producing the Step-3/Step-4 theorem objects directly from that
+constant-input geometry (modEq route). -/
+noncomputable def inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    GeometryInputConstStep3Step4 κ ι :=
+  let g0 := GeometryInputConst.ofGeometryInput_from_hF g I0 hβmod hαmod hF0
+  inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_ofModEq
+    (g := g0)
+
+/-- Compatibility alias for the geometry-input coefficient-reduction route to the non-fallback
+constant-input Step-3/Step-4 insertion record from a fixed rank-one `hF` witness. -/
+noncomputable def inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    GeometryInputConstStep3Step4 κ ι :=
+  inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to uniform Step-5 packaging
+at the constant-input insertion layer, deriving the constant-input package from a fixed rank-one
+`hF` witness and producing the Step-3/Step-4 theorem objects directly (modEq route). -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    HypothesisStep34ForUniform κ ι :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).toHypothesisStep34ForUniform
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to Gram hypothesis
+at the constant-input insertion layer, deriving the constant-input package from a fixed rank-one
+`hF` witness and producing the Step-3/Step-4 theorem objects directly (modEq route). -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).gramHypothesis
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to final SSU contract
+at the constant-input insertion layer, deriving the constant-input package from a fixed rank-one
+`hF` witness and producing the Step-3/Step-4 theorem objects directly (modEq route). -/
+noncomputable def contract_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).contract
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to uniform Step-5 packaging
+at the constant-input insertion layer, deriving the constant-input package from a fixed rank-one
+`hF` witness (compatibility alias for the direct theorem-producing modEq path). -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    HypothesisStep34ForUniform κ ι :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).toHypothesisStep34ForUniform
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to Gram hypothesis
+at the constant-input insertion layer, deriving the constant-input package from a fixed rank-one
+`hF` witness (compatibility alias for the direct theorem-producing modEq path). -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).gramHypothesis
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to final SSU contract
+at the constant-input insertion layer, deriving the constant-input package from a fixed rank-one
+`hF` witness (compatibility alias for the direct theorem-producing modEq path). -/
+noncomputable def contract_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)).contract
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to the non-fallback
+constant-input Step-3/Step-4 insertion record, deriving the constant-input package from a fixed
+rank-one `hF` witness and supplied Step-3/Step-4 use-site bounds (modEq route). -/
+noncomputable def inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    GeometryInputConstStep3Step4 κ ι :=
+  inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_ofModEq
+    (g := GeometryInputConst.ofGeometryInput_from_hF g I0 hβmod hαmod hF0)
+    (step3 := step3) (step4 := step4)
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to uniform Step-5 packaging
+at the constant-input insertion layer, deriving the constant-input package from a fixed rank-one
+`hF` witness and supplied Step-3/Step-4 use-site bounds (modEq route). -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)).toHypothesisStep34ForUniform
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to Gram hypothesis
+at the constant-input insertion layer, deriving the constant-input package from a fixed rank-one
+`hF` witness and supplied Step-3/Step-4 use-site bounds (modEq route). -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)).gramHypothesis
+
+/-- Convenience wrapper: geometry-input coefficient-reduction route to final SSU contract
+at the constant-input insertion layer, deriving the constant-input package from a fixed rank-one
+`hF` witness and supplied Step-3/Step-4 use-site bounds (modEq route). -/
+noncomputable def contract_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)).contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness to the non-fallback
+BG const-on-index Step-3/Step-4 route, using supplied use-site Step 3/Step 4 theorem objects
+instead of the older one-add-log fallback packaging. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness to the non-fallback
+BG const-on-index Step-3/Step-4 route, to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness to the non-fallback
+BG const-on-index Step-3/Step-4 route, to final SSU contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+
+/-- Constant-input insertion alias for the non-fallback BG const-on-index Step-3/Step-4 route
+coming from a fixed rank-one witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnIndex_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+
+/-- Constant-input insertion alias for the non-fallback BG const-on-index Step-3/Step-4 route
+coming from a fixed rank-one witness, to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnIndex_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+
+/-- Constant-input insertion alias for the non-fallback BG const-on-index Step-3/Step-4 route
+coming from a fixed rank-one witness, to final SSU contract. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnIndex_step3step4_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)
+
+/-- Tight-constant convenience wrapper: geometry-input coefficient-reduction route to the
+constant-input Step-3/Step-4 insertion record, deriving the constant-input package from a fixed
+rank-one `hF` witness. -/
+noncomputable def inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    GeometryInputConstStep3Step4 κ ι :=
+  inputStep3Step4_ofBGGeometry_const_input_coeffReduction_rankOne_step3step4_tight_ofModEq
+    (g := GeometryInputConst.ofGeometryInput_from_hF g I0 hβmod hαmod hF0)
+    (step3 := step3) (step4 := step4)
+
+/-- Tight-constant convenience wrapper: geometry-input coefficient-reduction route to uniform
+Step-5 packaging at the constant-input insertion layer, deriving the constant-input package from
+a fixed rank-one `hF` witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)).toHypothesisStep34ForUniform
+
+/-- Tight-constant convenience wrapper: geometry-input coefficient-reduction route to Gram
+hypothesis at the constant-input insertion layer, deriving the constant-input package from a fixed
+rank-one `hF` witness. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)).gramHypothesis
+
+/-- Tight-constant convenience wrapper: geometry-input coefficient-reduction route to final SSU
+contract at the constant-input insertion layer, deriving the constant-input package from a fixed
+rank-one `hF` witness. -/
+noncomputable def contract_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_step3step4_tight_ofModEq_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (step3 := step3) (step4 := step4)).contract
 
 /-- One-record endpoint: non-fallback constant-input insertion point to Gram hypothesis. -/
 noncomputable def gramHypothesis_ofBGGeometry_const_input_step3step4
@@ -14333,6 +22064,5026 @@ noncomputable def contract_ofBGGeometry_const_input_step3step4
     (h : GeometryInputConstStep3Step4 κ ι) :
     SSU.Global.SSUContract (h.base.FB.data).corePacketFamily :=
   h.contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), deriving reduction identities from `hF`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  have hβconst_class :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop))
+        (u : ℤ),
+        u ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+          (tdOf g.P g.a g.q g.hq g.hcop) r →
+          I0.β u = I0.β (uRef r hr) := by
+    intro r hr u hu
+    have huEq : SSU.Engines.TypeII.LargeSieve.vResidue (tdOf g.P g.a g.q g.hq g.hcop) u = r := by
+      simpa [SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass]
+        using (Finset.mem_filter.mp hu).2
+    have huRefEq : SSU.Engines.TypeII.LargeSieve.vResidue (tdOf g.P g.a g.q g.hq g.hcop) (uRef r hr) = r := by
+      simpa [SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass]
+        using (Finset.mem_filter.mp (huRef r hr)).2
+    have huMod :
+        u ≡ SSU.Engines.TypeII.LargeSieve.uResidue (tdOf g.P g.a g.q g.hq g.hcop) r
+          [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] :=
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.modEq_uResidue_of_eq_vResidue
+        (td := tdOf g.P g.a g.q g.hq g.hcop) (u := u) (r := r) huEq
+    have huRefMod :
+        uRef r hr ≡ SSU.Engines.TypeII.LargeSieve.uResidue (tdOf g.P g.a g.q g.hq g.hcop) r
+          [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] :=
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.modEq_uResidue_of_eq_vResidue
+        (td := tdOf g.P g.a g.q g.hq g.hcop) (u := uRef r hr) (r := r) huRefEq
+    exact hβmod u (uRef r hr) (huMod.trans huRefMod.symm)
+  exact
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness
+      (FB := g.FB)
+      (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
+      (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
+      (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
+      (hX := g.hX) (hH1 := g.hH1)
+      (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
+      (tubeForm_eq := g.tubeForm_eq)
+      (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
+      (inner_eq_coeff := by
+        intro f i hi j hj
+        simpa [hF0 f i j] using g.reduction.inner_eq f i hi j hj)
+      (energy_le_coeff := by
+        intro f i hi j hj
+        simpa [hF0 f i j] using g.reduction.energy_le f i hi j hj)
+      (uRef := uRef) (huRef := huRef) (hβconst_class := hβconst_class)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (uRef := uRef) (huRef := huRef)
+  simpa using h.gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), to final SSU contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (uRef := uRef) (huRef := huRef)
+  simpa using h.contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), deriving reduction identities from `hF`. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  have hαconst_class :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop))
+        (v : ℤ),
+        v ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+          (tdOf g.P g.a g.q g.hq g.hcop) r →
+          I0.α v = I0.α (vRef r hr) := by
+    intro r hr v hv
+    have hvEq : SSU.Engines.TypeII.LargeSieve.uResidue (tdOf g.P g.a g.q g.hq g.hcop) v = r := by
+      simpa [SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass]
+        using (Finset.mem_filter.mp hv).2
+    have hvRefEq : SSU.Engines.TypeII.LargeSieve.uResidue (tdOf g.P g.a g.q g.hq g.hcop) (vRef r hr) = r := by
+      simpa [SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass]
+        using (Finset.mem_filter.mp (hvRef r hr)).2
+    have hvMod :
+        v ≡ SSU.Engines.TypeII.LargeSieve.vResidue (tdOf g.P g.a g.q g.hq g.hcop) r
+          [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] :=
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.modEq_vResidue_of_eq_uResidue
+        (td := tdOf g.P g.a g.q g.hq g.hcop) (v := v) (r := r) hvEq
+    have hvRefMod :
+        vRef r hr ≡ SSU.Engines.TypeII.LargeSieve.vResidue (tdOf g.P g.a g.q g.hq g.hcop) r
+          [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] :=
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.modEq_vResidue_of_eq_uResidue
+        (td := tdOf g.P g.a g.q g.hq g.hcop) (v := vRef r hr) (r := r) hvRefEq
+    exact hαmod v (vRef r hr) (hvMod.trans hvRefMod.symm)
+  exact
+    hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness
+      (FB := g.FB)
+      (P := g.P) (a := g.a) (q := g.q) (hq := g.hq) (hcop := g.hcop)
+      (ha0 := g.ha0) (hlower := g.hlower) (hupper := g.hupper)
+      (hD1 := g.hD1) (hU1 := g.hU1) (hqD := g.hqD)
+      (hX := g.hX) (hH1 := g.hH1)
+      (hXH_u := g.hXH_u) (hXH_v := g.hXH_v)
+      (tubeForm_eq := g.tubeForm_eq)
+      (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := g.reduction.Cenergy) (Cenergy_nonneg := g.reduction.Cenergy_nonneg)
+      (inner_eq_coeff := by
+        intro f i hi j hj
+        simpa [hF0 f i j] using g.reduction.inner_eq f i hi j hj)
+      (energy_le_coeff := by
+        intro f i hi j hj
+        simpa [hF0 f i j] using g.reduction.energy_le f i hi j hj)
+      (vRef := vRef) (hvRef := hvRef) (hαconst_class := hαconst_class)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (vRef := vRef) (hvRef := hvRef)
+  simpa using h.gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), to final SSU contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (vRef := vRef) (hvRef := hvRef)
+  simpa using h.contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), at the constant-input insertion layer. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), to Gram hypothesis at the
+constant-input insertion layer. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), to final SSU contract at the
+constant-input insertion layer. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), at the constant-input insertion layer. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (vRef := vRef) (hvRef := hvRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), to Gram hypothesis at the
+constant-input insertion layer. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (vRef := vRef) (hvRef := hvRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), to final SSU contract at the
+constant-input insertion layer. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (vRef := vRef) (hvRef := hvRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), deriving index-constancy from modEq via
+class witnesses. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  let mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (uRef r hr)
+  have hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨uRef r hr, huRef r hr, rfl⟩
+  exact
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (uRef := uRef) (huRef := huRef)
+  exact h.gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), to final SSU contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (uRef := uRef) (huRef := huRef)
+  exact h.contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), deriving index-constancy from modEq via
+class witnesses. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  let mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (vRef r hr)
+  have hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨vRef r hr, hvRef r hr, rfl⟩
+  exact
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (vRef := vRef) (hvRef := hvRef)
+  exact h.gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), to final SSU contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (vRef := vRef) (hvRef := hvRef)
+  exact h.contract
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), at the constant-input insertion layer,
+deriving index-constancy from modEq via class witnesses. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), to Gram hypothesis at the
+constant-input insertion layer. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `β` class-witness
+const-on-index route (Step 3 proved, Step 4 fallback), to final SSU contract at the
+constant-input insertion layer. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), at the constant-input insertion layer,
+deriving index-constancy from modEq via class witnesses. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (vRef := vRef) (hvRef := hvRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), to Gram hypothesis at the
+constant-input insertion layer. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (vRef := vRef) (hvRef := hvRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG `α` class-witness
+const-on-index route (Step 4 proved, Step 3 fallback), to final SSU contract at the
+constant-input insertion layer. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (vRef := vRef) (hvRef := hvRef)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG class witnesses to the
+non-fallback BG const-on-index Step-3/Step-4 route, using supplied Step-3/Step-4 theorem
+objects. This is the class-witness analogue of the direct modEq `step3step4` path. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι := by
+  let mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (uRef r hr)
+  have hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨uRef r hr, huRef r hr, rfl⟩
+  let mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ :=
+    fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndex
+        (tdOf g.P g.a g.q g.hq g.hcop) r (vRef r hr)
+  have hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r := by
+    intro r hr
+    exact Finset.mem_image.mpr ⟨vRef r hr, hvRef r hr, rfl⟩
+  exact
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (step3 := step3) (step4 := step4)
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG class witnesses to the
+non-fallback BG const-on-index Step-3/Step-4 route, to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+      (step3 := step3) (step4 := step4)
+  exact h.gramHypothesis
+
+/-- One-record endpoint: geometry-input + fixed rank-one witness + BG class witnesses to the
+non-fallback BG const-on-index Step-3/Step-4 route, to final SSU contract. -/
+noncomputable def contract_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily := by
+  let h :=
+    hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+      (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+      (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+      (step3 := step3) (step4 := step4)
+  exact h.contract
+
+/-- Constant-input insertion alias for the non-fallback BG const-on-index Step-3/Step-4 route
+with class witnesses, coming from a fixed rank-one witness. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometry_input_const_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+    (step3 := step3) (step4 := step4)
+
+/-- Constant-input insertion alias for the non-fallback BG const-on-index Step-3/Step-4 route
+with class witnesses, to Gram hypothesis. -/
+noncomputable def gramHypothesis_ofBGGeometry_input_const_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  gramHypothesis_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+    (step3 := step3) (step4 := step4)
+
+/-- Constant-input insertion alias for the non-fallback BG const-on-index Step-3/Step-4 route
+with class witnesses, to final SSU contract. -/
+noncomputable def contract_ofBGGeometry_input_const_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (step3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β))
+    (step4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor
+        (tdOf g.P g.a g.q g.hq g.hcop)
+        (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  contract_ofBGGeometry_input_rankOne_BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+    (step3 := step3) (step4 := step4)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route):
+geometry-input + fixed rank-one witness + class witnesses + modEq assumptions
+to uniform Step-5 packaging. -/
+noncomputable def hypothesisStep34ForUniform_flagship_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), proof-based extraction path:
+geometry-input + extracted-coefficient constancy + class witnesses to uniform Step-5 packaging.
+This removes the explicit `hF0` family from the flagship call surface. -/
+noncomputable def hypothesisStep34ForUniform_flagship_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnIndex_oneAddLog_ofModEq_ofClassWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route):
+geometry-input + fixed rank-one witness + class witnesses + modEq assumptions
+to Gram hypothesis. -/
+noncomputable def gramHypothesis_flagship_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)).gramHypothesis
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), proof-based extraction path:
+geometry-input + extracted-coefficient constancy + class witnesses to Gram hypothesis.
+This removes the explicit `hF0` family from the flagship call surface. -/
+noncomputable def gramHypothesis_flagship_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_ofClassWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)).gramHypothesis
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route):
+geometry-input + fixed rank-one witness + class witnesses + modEq assumptions
+to final SSU contract. -/
+noncomputable def contract_flagship_ofClassWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)).contract
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), proof-based extraction path:
+geometry-input + extracted-coefficient constancy + class witnesses to final SSU contract.
+This removes the explicit `hF0` family from the flagship call surface. -/
+noncomputable def contract_flagship_ofClassWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_ofClassWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)).contract
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), concrete auto-Step-2 constructor:
+derive extraction-side constancy by proof for the canonical rank-one extraction map, then build the
+uniform Step-5 package with class witnesses. -/
+noncomputable def hypothesisStep34ForUniform_flagship_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  let g : GeometryInput κ ι :=
+    GeometryInput.ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+  have hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v := by
+    intro f i j v
+    simpa [g] using
+      (GeometryInput.hαconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+        f i j v)
+  have hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u := by
+    intro f i j u
+    simpa [g] using
+      (GeometryInput.hβconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+        f i j u)
+  exact
+    hypothesisStep34ForUniform_flagship_ofClassWitness
+      (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+      (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), concrete auto-Step-2 constructor:
+derive extraction-side constancy by proof for the canonical rank-one extraction map, then build
+the Gram hypothesis with class witnesses. -/
+noncomputable def gramHypothesis_flagship_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_ofClassWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)).gramHypothesis
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), concrete auto-Step-2 constructor:
+derive extraction-side constancy by proof for the canonical rank-one extraction map, then build
+the final SSU contract with class witnesses. -/
+noncomputable def contract_flagship_ofClassWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (uRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (huRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        uRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uClass
+            (tdOf P a q hq hcop) r)
+    (vRef :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hvRef :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        vRef r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vClass
+            (tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_ofClassWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (uRef := uRef) (huRef := huRef) (vRef := vRef) (hvRef := hvRef)).contract
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route):
+geometry-input + fixed rank-one witness + **index witnesses** + modEq assumptions
+to uniform Step-5 packaging. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_flagship_ofClassWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (uRef := fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+        (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefU r hr))
+    (huRef := by
+      intro r hr
+      exact
+        SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex_mem_uClass_of_mem_uIndexSet
+          (td := tdOf g.P g.a g.q g.hq g.hcop) (r := r) (m := mRefU r hr) (hmRefU r hr))
+    (vRef := fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+        (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefV r hr))
+    (hvRef := by
+      intro r hr
+      exact
+        SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex_mem_vClass_of_mem_vIndexSet
+          (td := tdOf g.P g.a g.q g.hq g.hcop) (r := r) (m := mRefV r hr) (hmRefV r hr))
+
+abbrev hypothesisStep34ForUniform_flagship_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route):
+geometry-input + extracted-coefficient constancy + **index witnesses**
+to uniform Step-5 packaging. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_flagship_ofClassWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (uRef := fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+        (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefU r hr))
+    (huRef := by
+      intro r hr
+      exact
+        SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex_mem_uClass_of_mem_uIndexSet
+          (td := tdOf g.P g.a g.q g.hq g.hcop) (r := r) (m := mRefU r hr) (hmRefU r hr))
+    (vRef := fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+        (td := tdOf g.P g.a g.q g.hq g.hcop) r (mRefV r hr))
+    (hvRef := by
+      intro r hr
+      exact
+        SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex_mem_vClass_of_mem_vIndexSet
+          (td := tdOf g.P g.a g.q g.hq g.hcop) (r := r) (m := mRefV r hr) (hmRefV r hr))
+
+abbrev hypothesisStep34ForUniform_flagship_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_ofIndexWitness
+      (κ := κ) (ι := ι)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), with index witnesses:
+to Gram hypothesis from a fixed rank-one witness. -/
+noncomputable def gramHypothesis_flagship_default_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+abbrev gramHypothesis_flagship_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), with index witnesses:
+to Gram hypothesis from extracted constancy. -/
+noncomputable def gramHypothesis_flagship_default_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+abbrev gramHypothesis_flagship_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_ofIndexWitness
+      (κ := κ) (ι := ι)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), with index witnesses:
+to final SSU contract from a fixed rank-one witness. -/
+noncomputable def contract_flagship_default_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+abbrev contract_flagship_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), with index witnesses:
+to final SSU contract from extracted constancy. -/
+noncomputable def contract_flagship_default_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+abbrev contract_flagship_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_ofIndexWitness
+      (κ := κ) (ι := ι)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), concrete auto-Step-2 constructor:
+derive extraction-side constancy by proof and package with **index witnesses**. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_flagship_ofClassWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (uRef := fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+        (td := tdOf P a q hq hcop) r (mRefU r hr))
+    (huRef := by
+      intro r hr
+      exact
+        SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex_mem_uClass_of_mem_uIndexSet
+          (td := tdOf P a q hq hcop) (r := r) (m := mRefU r hr) (hmRefU r hr))
+    (vRef := fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+        (td := tdOf P a q hq hcop) r (mRefV r hr))
+    (hvRef := by
+      intro r hr
+      exact
+        SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex_mem_vClass_of_mem_vIndexSet
+          (td := tdOf P a q hq hcop) (r := r) (m := mRefV r hr) (hmRefV r hr))
+
+abbrev hypothesisStep34ForUniform_flagship_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), concrete auto-Step-2 constructor
+with index witnesses, to Gram hypothesis. -/
+noncomputable def gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+abbrev gramHypothesis_flagship_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
+
+/-- Canonical flagship endpoint (non-fallback Step 3/4 route), concrete auto-Step-2 constructor
+with index witnesses, to final contract. -/
+noncomputable def contract_flagship_default_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+abbrev contract_flagship_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
+
+/-- Canonical flagship fallback endpoint (Step 3 proved, Step 4 fallback),
+with index witnesses, to uniform Step-5 packaging from a fixed rank-one witness. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+
+/-- Canonical flagship fallback endpoint (Step 3 proved, Step 4 fallback),
+with index witnesses, to uniform Step-5 packaging from extracted constancy. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+
+/-- Canonical flagship fallback endpoint (Step 3 proved, Step 4 fallback),
+with index witnesses, to Gram hypothesis from a fixed rank-one witness. -/
+noncomputable def gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)).gramHypothesis
+
+/-- Canonical flagship fallback endpoint (Step 3 proved, Step 4 fallback),
+with index witnesses, to Gram hypothesis from extracted constancy. -/
+noncomputable def gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (mRefU := mRefU) (hmRefU := hmRefU)).gramHypothesis
+
+/-- Canonical flagship fallback endpoint (Step 3 proved, Step 4 fallback),
+with index witnesses, to final contract from a fixed rank-one witness. -/
+noncomputable def contract_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)).contract
+
+/-- Canonical flagship fallback endpoint (Step 3 proved, Step 4 fallback),
+with index witnesses, to final contract from extracted constancy. -/
+noncomputable def contract_flagship_default_step3_fallback_step4_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (mRefU := mRefU) (hmRefU := hmRefU)).contract
+
+/-- Canonical flagship fallback endpoint (Step 3 proved, Step 4 fallback),
+concrete auto-Step-2 constructor with index witnesses. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnUIndex_oneAddLog_step3_fallback_step4_ofModEq_ofClassWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (uRef := fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+        (td := tdOf P a q hq hcop) r (mRefU r hr))
+    (huRef := by
+      intro r hr
+      exact
+        SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex_mem_uClass_of_mem_uIndexSet
+          (td := tdOf P a q hq hcop) (r := r) (m := mRefU r hr) (hmRefU r hr))
+
+/-- Canonical flagship fallback endpoint (Step 3 proved, Step 4 fallback),
+concrete auto-Step-2 constructor with index witnesses to Gram hypothesis. -/
+noncomputable def gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU)).gramHypothesis
+
+/-- Canonical flagship fallback endpoint (Step 3 proved, Step 4 fallback),
+concrete auto-Step-2 constructor with index witnesses to final contract. -/
+noncomputable def contract_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU)).contract
+
+/-- Canonical flagship fallback endpoint (Step 4 proved, Step 3 fallback),
+with index witnesses, to uniform Step-5 packaging from a fixed rank-one witness. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Canonical flagship fallback endpoint (Step 4 proved, Step 3 fallback),
+with index witnesses, to uniform Step-5 packaging from extracted constancy. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometry_input_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Canonical flagship fallback endpoint (Step 4 proved, Step 3 fallback),
+with index witnesses, to Gram hypothesis from a fixed rank-one witness. -/
+noncomputable def gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+/-- Canonical flagship fallback endpoint (Step 4 proved, Step 3 fallback),
+with index witnesses, to Gram hypothesis from extracted constancy. -/
+noncomputable def gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+/-- Canonical flagship fallback endpoint (Step 4 proved, Step 3 fallback),
+with index witnesses, to final contract from a fixed rank-one witness. -/
+noncomputable def contract_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+/-- Canonical flagship fallback endpoint (Step 4 proved, Step 3 fallback),
+with index witnesses, to final contract from extracted constancy. -/
+noncomputable def contract_flagship_default_step4_fallback_step3_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+/-- Canonical flagship fallback endpoint (Step 4 proved, Step 3 fallback),
+concrete auto-Step-2 constructor with index witnesses. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_ofBGGeometryCoeffReduction_rankOne_BGConstOnVIndex_oneAddLog_step4_fallback_step3_ofModEq_ofClassWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (vRef := fun r hr =>
+      SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+        (td := tdOf P a q hq hcop) r (mRefV r hr))
+    (hvRef := by
+      intro r hr
+      exact
+        SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex_mem_vClass_of_mem_vIndexSet
+          (td := tdOf P a q hq hcop) (r := r) (m := mRefV r hr) (hmRefV r hr))
+
+/-- Canonical flagship fallback endpoint (Step 4 proved, Step 3 fallback),
+concrete auto-Step-2 constructor with index witnesses to Gram hypothesis. -/
+noncomputable def gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  (hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+/-- Canonical flagship fallback endpoint (Step 4 proved, Step 3 fallback),
+concrete auto-Step-2 constructor with index witnesses to final contract. -/
+noncomputable def contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+/-- Compatibility alias: Step-3-fallback/Step-4 route (`from_hF`). -/
+abbrev hypothesisStep34ForUniform_flagship_step3_fallback_step4_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-3-fallback/Step-4 route (extracted constancy). -/
+abbrev hypothesisStep34ForUniform_flagship_step3_fallback_step4_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-3-fallback/Step-4 route (`from_hF`). -/
+abbrev gramHypothesis_flagship_step3_fallback_step4_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-3-fallback/Step-4 route (extracted constancy). -/
+abbrev gramHypothesis_flagship_step3_fallback_step4_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-3-fallback/Step-4 route (`from_hF`). -/
+abbrev contract_flagship_step3_fallback_step4_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-3-fallback/Step-4 route (extracted constancy). -/
+abbrev contract_flagship_step3_fallback_step4_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step3_fallback_step4_ofIndexWitness
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-3-fallback/Step-4 route (auto-Step-2). -/
+abbrev hypothesisStep34ForUniform_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-3-fallback/Step-4 route (auto-Step-2). -/
+abbrev gramHypothesis_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-3-fallback/Step-4 route (auto-Step-2). -/
+abbrev contract_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-4-fallback/Step-3 route (`from_hF`). -/
+abbrev hypothesisStep34ForUniform_flagship_step4_fallback_step3_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-4-fallback/Step-3 route (extracted constancy). -/
+abbrev hypothesisStep34ForUniform_flagship_step4_fallback_step3_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-4-fallback/Step-3 route (`from_hF`). -/
+abbrev gramHypothesis_flagship_step4_fallback_step3_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-4-fallback/Step-3 route (extracted constancy). -/
+abbrev gramHypothesis_flagship_step4_fallback_step3_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-4-fallback/Step-3 route (`from_hF`). -/
+abbrev contract_flagship_step4_fallback_step3_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-4-fallback/Step-3 route (extracted constancy). -/
+abbrev contract_flagship_step4_fallback_step3_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step4_fallback_step3_ofIndexWitness
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-4-fallback/Step-3 route (auto-Step-2). -/
+abbrev hypothesisStep34ForUniform_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-4-fallback/Step-3 route (auto-Step-2). -/
+abbrev gramHypothesis_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
+
+/-- Compatibility alias: Step-4-fallback/Step-3 route (auto-Step-2). -/
+abbrev contract_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
+
+/-- Canonical selector for flagship index-witness auto-Step-2 routes. -/
+inductive FlagshipIndexRoute where
+  | nonFallback
+  | step3FallbackStep4
+  | step4FallbackStep3
+deriving DecidableEq, Repr
+
+/-- TT*-native selector endpoint for the extracted-signal flagship bridge surface.
+
+This is the higher-layer selector-first companion to the legacy reduction-based
+`..._autoTubeForm_fromReduction` family.  At present the proved TT*-native extracted route is
+non-fallback only, so all selector values collapse to the same canonical `toTTStarInput` object.
+-/
+noncomputable def toeplitzInput_flagship_select_ofIndexWitness_extracted
+    {κ : Type*} [DecidableEq κ]
+    {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
+    (route : FlagshipIndexRoute)
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+      (κ := κ) (H0 := H0)) :
+    SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+      (κ := κ) (H0 := H0) :=
+  match route with
+  | .nonFallback => h
+  | .step3FallbackStep4 => h
+  | .step4FallbackStep3 => h
+
+/-- Toeplitz-first selector endpoint for the honest extracted-signal flagship bridge surface.
+
+This packages the extracted Step-2 bridge as `ToeplitzPairHypothesis + Step34ProdSum` before
+passing to the TT*-native layer.  All selector values currently collapse to the same canonical
+non-fallback object. -/
+noncomputable def ttStarInput_flagship_select_ofIndexWitness_extracted
+    {κ : Type*} [DecidableEq κ]
+    {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
+    (route : FlagshipIndexRoute)
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+      (κ := κ) (H0 := H0)) :
+    SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.TTStarInput
+      (κ := κ) (H0 := H0) :=
+  (toeplitzInput_flagship_select_ofIndexWitness_extracted
+      (κ := κ) (H0 := H0) route h).toTTStarInput
+
+/-- Selector-first TT*-native higher-layer packet Gram bound on the extracted flagship route.
+
+The route argument is accepted for surface uniformity with the legacy selector families; currently
+all selectors use the same proved non-fallback TT*-native extracted path.
+-/
+theorem norm_inner_packetOpUnnormalized_le_flagship_select_ofIndexWitness_extracted
+    {κ : Type*} [DecidableEq κ]
+    {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
+    (route : FlagshipIndexRoute)
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+      (κ := κ) (H0 := H0))
+    (f : H0) (i : ℤ) (hi : i ∈ h.toeplitz.Dpacket.J) (j : ℤ) (hj : j ∈ h.toeplitz.Dpacket.J) :
+    ‖inner ℂ
+        (((h.toeplitz.Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (h.toeplitz.signal f i j))
+        (((h.toeplitz.Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (h.toeplitz.signal f i j))‖
+      ≤
+    ((1 / h.toeplitz.Dpacket.X) * ((h.toeplitz.Dpacket.M * h.toeplitz.Dpacket.Φmax) ^ 2) *
+        (h.step34.C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
+          SSU.tubeEnergy h.toeplitz.Dtype.tube (h.toeplitz.Dtype.F f i j))) *
+      (2 * (h.toeplitz.Dpacket.H)⁻¹) := by
+  cases route <;>
+    simpa [ttStarInput_flagship_select_ofIndexWitness_extracted,
+      toeplitzInput_flagship_select_ofIndexWitness_extracted] using
+      (h.norm_inner_packetOpUnnormalized_le
+        (f := f) (i := i) hi (j := j) hj)
+
+/-- Canonical default-route (`.nonFallback`) TT*-native extracted selector endpoint. -/
+noncomputable def ttStarInput_flagship_default_ofIndexWitness_extracted
+    {κ : Type*} [DecidableEq κ]
+    {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0] :=
+  @ttStarInput_flagship_select_ofIndexWitness_extracted κ _ H0 _ _ .nonFallback
+
+/-- Canonical default-route (`.nonFallback`) TT*-native extracted selector theorem. -/
+theorem norm_inner_packetOpUnnormalized_le_flagship_default_ofIndexWitness_extracted
+    {κ : Type*} [DecidableEq κ]
+    {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+      (κ := κ) (H0 := H0))
+    (f : H0) (i : ℤ) (hi : i ∈ h.toeplitz.Dpacket.J) (j : ℤ) (hj : j ∈ h.toeplitz.Dpacket.J) :
+    ‖inner ℂ
+        (((h.toeplitz.Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (h.toeplitz.signal f i j))
+        (((h.toeplitz.Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (h.toeplitz.signal f i j))‖
+      ≤
+    ((1 / h.toeplitz.Dpacket.X) * ((h.toeplitz.Dpacket.M * h.toeplitz.Dpacket.Φmax) ^ 2) *
+        (h.step34.C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
+          SSU.tubeEnergy h.toeplitz.Dtype.tube (h.toeplitz.Dtype.F f i j))) *
+      (2 * (h.toeplitz.Dpacket.H)⁻¹) := by
+  simpa using
+    (norm_inner_packetOpUnnormalized_le_flagship_select_ofIndexWitness_extracted
+      (route := .nonFallback) (h := h) (f := f) (i := i) hi (j := j) hj)
+
+/-- Fallback selector alias (Step 3 proved, Step 4 fallback) for the TT*-native extracted packet
+Gram theorem. Currently equal to the non-fallback extracted route. -/
+theorem norm_inner_packetOpUnnormalized_le_flagship_default_step3_fallback_step4_ofIndexWitness_extracted
+    {κ : Type*} [DecidableEq κ]
+    {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+      (κ := κ) (H0 := H0))
+    (f : H0) (i : ℤ) (hi : i ∈ h.toeplitz.Dpacket.J) (j : ℤ) (hj : j ∈ h.toeplitz.Dpacket.J) :
+    ‖inner ℂ
+        (((h.toeplitz.Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (h.toeplitz.signal f i j))
+        (((h.toeplitz.Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (h.toeplitz.signal f i j))‖
+      ≤
+    ((1 / h.toeplitz.Dpacket.X) * ((h.toeplitz.Dpacket.M * h.toeplitz.Dpacket.Φmax) ^ 2) *
+        (h.step34.C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
+          SSU.tubeEnergy h.toeplitz.Dtype.tube (h.toeplitz.Dtype.F f i j))) *
+      (2 * (h.toeplitz.Dpacket.H)⁻¹) := by
+  simpa using
+    (norm_inner_packetOpUnnormalized_le_flagship_select_ofIndexWitness_extracted
+      (route := .step3FallbackStep4) (h := h) (f := f) (i := i) hi (j := j) hj)
+
+/-- Fallback selector alias (Step 4 proved, Step 3 fallback) for the TT*-native extracted packet
+Gram theorem. Currently equal to the non-fallback extracted route. -/
+theorem norm_inner_packetOpUnnormalized_le_flagship_default_step4_fallback_step3_ofIndexWitness_extracted
+    {κ : Type*} [DecidableEq κ]
+    {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+      (κ := κ) (H0 := H0))
+    (f : H0) (i : ℤ) (hi : i ∈ h.toeplitz.Dpacket.J) (j : ℤ) (hj : j ∈ h.toeplitz.Dpacket.J) :
+    ‖inner ℂ
+        (((h.toeplitz.Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (h.toeplitz.signal f i j))
+        (((h.toeplitz.Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (h.toeplitz.signal f i j))‖
+      ≤
+    ((1 / h.toeplitz.Dpacket.X) * ((h.toeplitz.Dpacket.M * h.toeplitz.Dpacket.Φmax) ^ 2) *
+        (h.step34.C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
+          SSU.tubeEnergy h.toeplitz.Dtype.tube (h.toeplitz.Dtype.F f i j))) *
+      (2 * (h.toeplitz.Dpacket.H)⁻¹) := by
+  simpa using
+    (norm_inner_packetOpUnnormalized_le_flagship_select_ofIndexWitness_extracted
+      (route := .step4FallbackStep3) (h := h) (f := f) (i := i) hi (j := j) hj)
+
+/-- Selector fallback alias (Step 3 proved, Step 4 fallback) for the TT*-native extracted route.
+Currently equal to the non-fallback extracted route. -/
+noncomputable def ttStarInput_flagship_default_step3_fallback_step4_ofIndexWitness_extracted
+    {κ : Type*} [DecidableEq κ]
+    {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0] :=
+  @ttStarInput_flagship_select_ofIndexWitness_extracted κ _ H0 _ _ .step3FallbackStep4
+
+/-- Selector fallback alias (Step 4 proved, Step 3 fallback) for the TT*-native extracted route.
+Currently equal to the non-fallback extracted route. -/
+noncomputable def ttStarInput_flagship_default_step4_fallback_step3_ofIndexWitness_extracted
+    {κ : Type*} [DecidableEq κ]
+    {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0] :=
+  @ttStarInput_flagship_select_ofIndexWitness_extracted κ _ H0 _ _ .step4FallbackStep3
+
+/-- Canonical selector endpoint to uniform Step-5 packaging at the geometry-input + fixed-rank-one
+(`hF0`) layer.
+
+All selector routes now use the proved non-fallback production path internally; the route argument
+is retained only for API compatibility. -/
+noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  match route with
+  | .nonFallback | .step3FallbackStep4 | .step4FallbackStep3 =>
+      hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF
+        (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Canonical selector endpoint to uniform Step-5 packaging at the geometry-input +
+extracted-constancy layer.
+
+All selector routes now use the proved non-fallback production path internally; the route argument
+is retained only for API compatibility. -/
+noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    HypothesisStep34ForUniform κ ι :=
+  match route with
+  | .nonFallback | .step3FallbackStep4 | .step4FallbackStep3 =>
+      hypothesisStep34ForUniform_flagship_default_ofIndexWitness
+        (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Canonical selector endpoint to Gram hypothesis over the geometry-input + extracted-constancy
+flagship index-witness route family. -/
+noncomputable def gramHypothesis_flagship_select_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  match route with
+  | .nonFallback =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
+        (route := .nonFallback)
+        (g := g) (I0 := I0)
+        (hαconst := hαconst) (hβconst := hβconst)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+  | .step3FallbackStep4 =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
+        (route := .step3FallbackStep4)
+        (g := g) (I0 := I0)
+        (hαconst := hαconst) (hβconst := hβconst)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+  | .step4FallbackStep3 =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
+        (route := .step4FallbackStep3)
+        (g := g) (I0 := I0)
+        (hαconst := hαconst) (hβconst := hβconst)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+/-- Canonical selector endpoint to final contract over the geometry-input + extracted-constancy
+flagship index-witness route family. -/
+noncomputable def contract_flagship_select_ofIndexWitness
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v)
+    (hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  match route with
+  | .nonFallback =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
+        (route := .nonFallback)
+        (g := g) (I0 := I0)
+        (hαconst := hαconst) (hβconst := hβconst)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
+  | .step3FallbackStep4 =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
+        (route := .step3FallbackStep4)
+        (g := g) (I0 := I0)
+        (hαconst := hαconst) (hβconst := hβconst)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
+  | .step4FallbackStep3 =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
+        (route := .step4FallbackStep3)
+        (g := g) (I0 := I0)
+        (hαconst := hαconst) (hβconst := hβconst)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+/-- Canonical selector endpoint to Gram hypothesis over the geometry-input + fixed-rank-one
+(`hF0`) flagship index-witness route family. -/
+noncomputable def gramHypothesis_flagship_select_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  match route with
+  | .nonFallback | .step3FallbackStep4 | .step4FallbackStep3 =>
+      gramHypothesis_flagship_default_ofIndexWitness_from_hF
+        (g := g) (I0 := I0)
+        (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Canonical selector endpoint to final contract over the geometry-input + fixed-rank-one
+(`hF0`) flagship index-witness route family. -/
+noncomputable def contract_flagship_select_ofIndexWitness_from_hF
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (g : GeometryInput κ ι)
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf g.P g.a g.q g.hq g.hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        g.reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf g.P g.a g.q g.hq g.hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf g.P g.a g.q g.hq g.hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  match route with
+  | .nonFallback | .step3FallbackStep4 | .step4FallbackStep3 =>
+      contract_flagship_default_ofIndexWitness_from_hF
+        (g := g) (I0 := I0)
+        (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Canonical selector endpoint to uniform Step-5 packaging, routing across non-fallback and both
+fallback flagship index-witness families while staying on the auto-Step-2 surface. -/
+noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  let g : GeometryInput κ ι :=
+    GeometryInput.ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+  have hαconst :
+      ∀ (f : SSU.Global.Signal) (i j v : ℤ), g.α f i j v = I0.α v := by
+    simpa [g] using
+      (GeometryInput.hαconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0)
+        (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff)
+        (energy_le_coeff := energy_le_coeff))
+  have hβconst :
+      ∀ (f : SSU.Global.Signal) (i j u : ℤ), g.β f i j u = I0.β u := by
+    simpa [g] using
+      (GeometryInput.hβconst_ofBGGeometryCoeffReduction_rankOne_autoTubeForm
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0)
+        (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff)
+        (energy_le_coeff := energy_le_coeff))
+  exact
+    hypothesisStep34ForUniform_flagship_select_ofIndexWitness
+      (route := route)
+      (g := g) (I0 := I0)
+      (hαconst := hαconst) (hβconst := hβconst)
+      (mRefU := mRefU) (hmRefU := hmRefU)
+      (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Canonical selector endpoint to Gram hypothesis, routing over flagship index-witness
+auto-Step-2 routes. -/
+noncomputable def gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) :=
+  match route with
+  | .nonFallback =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
+        (route := .nonFallback)
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+        (mRefU := mRefU) (hmRefU := hmRefU)
+        (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+  | .step3FallbackStep4 =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
+        (route := .step3FallbackStep4)
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+        (mRefU := mRefU) (hmRefU := hmRefU)
+        (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+  | .step4FallbackStep3 =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
+        (route := .step4FallbackStep3)
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+        (mRefU := mRefU) (hmRefU := hmRefU)
+        (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+/-- Canonical selector endpoint to final SSU contract, routing over flagship index-witness
+auto-Step-2 routes. -/
+noncomputable def contract_flagship_select_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  match route with
+  | .nonFallback =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
+        (route := .nonFallback)
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+        (mRefU := mRefU) (hmRefU := hmRefU)
+        (mRefV := mRefV) (hmRefV := hmRefV)).contract
+  | .step3FallbackStep4 =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
+        (route := .step3FallbackStep4)
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+        (mRefU := mRefU) (hmRefU := hmRefU)
+        (mRefV := mRefV) (hmRefV := hmRefV)).contract
+  | .step4FallbackStep3 =>
+      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
+        (route := .step4FallbackStep3)
+        (FB := FB)
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+        (hX := hX) (hH1 := hH1)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (h2 := h2) (hKhat := hKhat)
+        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+        (mRefU := mRefU) (hmRefU := hmRefU)
+        (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+/-- Canonical selector endpoint to uniform Step-5 packaging, routing across flagship routes while
+using a prepackaged `ReductionToTubeForm` together with auto Step-2 (`Step2ToTubeForm`).
+This removes the explicit `inner_eq_coeff` / `energy_le_coeff` family from the call surface. -/
+noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf P a q hq hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  let g : GeometryInput κ ι :=
+    GeometryInput.ofBGGeometryReduction_rankOne_autoTubeForm_from_hF
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (reduction := reduction)
+      (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod)
+      (hF0 := hF0)
+  exact
+    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF
+      (route := route)
+      (g := g) (I0 := I0)
+      (hβmod := hβmod) (hαmod := hαmod) (hF0 := by simpa [g] using hF0)
+      (mRefU := mRefU) (hmRefU := hmRefU)
+      (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Canonical selector endpoint to Gram hypothesis over the reduction-based auto-Step-2 route. -/
+noncomputable def gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf P a q hq hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :=
+  (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction
+    (route := route)
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (reduction := reduction)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+/-- Canonical selector endpoint to final contract over the reduction-based auto-Step-2 route. -/
+noncomputable def contract_flagship_select_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (hF0 :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ),
+        reduction.F f i j =
+          SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (tdOf P a q hq hcop) I0.α I0.β)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :=
+  (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction
+    (route := route)
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (reduction := reduction)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+/-- Canonical selector endpoint to uniform Step-5 packaging, routing across flagship routes while
+assembling the reduction witness from explicit TT*/energy fields and auto Step-2. -/
+noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    HypothesisStep34ForUniform κ ι := by
+  let reduction :
+      ReductionToTubeForm
+        (H := SSU.Global.Signal)
+        (J := (FB.data).J)
+        (T := ((FB.data).corePacketFamily.T))
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)) :=
+    SSU.Instances.FejerBankedTypeIIBridgeTeX.reduction_of_data
+      (FB := FB)
+      (td := tdOf P a q hq hcop)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (F := fun _ _ _ =>
+        SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (tdOf P a q hq hcop) I0.α I0.β)
+      (inner_eq := inner_eq_coeff)
+      (energy_le := energy_le_coeff)
+  exact
+    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction
+      (route := route)
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (reduction := reduction)
+      (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+      (hF0 := by
+        intro f i j
+        simp [reduction, SSU.Instances.FejerBankedTypeIIBridgeTeX.reduction_of_data])
+      (mRefU := mRefU) (hmRefU := hmRefU)
+      (mRefV := mRefV) (hmRefV := hmRefV)
+
+/-- Canonical selector endpoint to Gram hypothesis over auto Step-2 and reduction-data assembly. -/
+noncomputable def gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :=
+  (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData
+    (route := route)
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+
+/-- Canonical selector endpoint to final contract over auto Step-2 and reduction-data assembly. -/
+noncomputable def contract_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ]
+    (route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :=
+  (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData
+    (route := route)
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+/-- Canonical default-route (`.nonFallback`) reduction-based auto-Step-2 endpoint to uniform
+Step-5 packaging. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ] :=
+  @hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+    .nonFallback
+
+/-- Canonical default-route (`.nonFallback`) reduction-based auto-Step-2 endpoint to Gram
+hypothesis. -/
+noncomputable def gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ] :=
+  @gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+    .nonFallback
+
+/-- Canonical default-route (`.nonFallback`) reduction-based auto-Step-2 endpoint to final
+contract. -/
+noncomputable def contract_flagship_default_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ] :=
+  @contract_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+    .nonFallback
+
+abbrev hypothesisStep34ForUniform_flagship_ofIndexWitness_autoTubeForm_fromReduction :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+abbrev gramHypothesis_flagship_ofIndexWitness_autoTubeForm_fromReduction :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+abbrev contract_flagship_ofIndexWitness_autoTubeForm_fromReduction :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+/-- Canonical fallback endpoint (Step 3 proved, Step 4 fallback) for the reduction-based
+auto-Step-2 route, to uniform Step-5 packaging. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ] :=
+  @hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+    .step3FallbackStep4
+
+/-- Canonical fallback endpoint (Step 3 proved, Step 4 fallback) for the reduction-based
+auto-Step-2 route, to Gram hypothesis. -/
+noncomputable def gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ] :=
+  @gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+    .step3FallbackStep4
+
+/-- Canonical fallback endpoint (Step 3 proved, Step 4 fallback) for the reduction-based
+auto-Step-2 route, to final contract. -/
+noncomputable def contract_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ] :=
+  @contract_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+    .step3FallbackStep4
+
+abbrev hypothesisStep34ForUniform_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+abbrev gramHypothesis_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+abbrev contract_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+/-- Canonical fallback endpoint (Step 4 proved, Step 3 fallback) for the reduction-based
+auto-Step-2 route, to uniform Step-5 packaging. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ] :=
+  @hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+    .step4FallbackStep3
+
+/-- Canonical fallback endpoint (Step 4 proved, Step 3 fallback) for the reduction-based
+auto-Step-2 route, to Gram hypothesis. -/
+noncomputable def gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ] :=
+  @gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+    .step4FallbackStep3
+
+/-- Canonical fallback endpoint (Step 4 proved, Step 3 fallback) for the reduction-based
+auto-Step-2 route, to final contract. -/
+noncomputable def contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
+    {κ ι : Type*} [DecidableEq κ] :=
+  @contract_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+    .step4FallbackStep3
+
+abbrev hypothesisStep34ForUniform_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+abbrev gramHypothesis_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+abbrev contract_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+/-! ### Selector/default compatibility lemmas -/
+
+@[simp] theorem hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF κ ι _ =
+      @hypothesisStep34ForUniform_flagship_ofIndexWitness_from_hF κ ι _ := rfl
+
+@[simp] theorem gramHypothesis_flagship_default_ofIndexWitness_from_hF_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @gramHypothesis_flagship_default_ofIndexWitness_from_hF κ ι _ =
+      @gramHypothesis_flagship_ofIndexWitness_from_hF κ ι _ := rfl
+
+@[simp] theorem contract_flagship_default_ofIndexWitness_from_hF_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @contract_flagship_default_ofIndexWitness_from_hF κ ι _ =
+      @contract_flagship_ofIndexWitness_from_hF κ ι _ := rfl
+
+@[simp] theorem hypothesisStep34ForUniform_flagship_default_ofIndexWitness_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @hypothesisStep34ForUniform_flagship_default_ofIndexWitness κ ι _ =
+      @hypothesisStep34ForUniform_flagship_ofIndexWitness κ ι _ := rfl
+
+@[simp] theorem gramHypothesis_flagship_default_ofIndexWitness_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @gramHypothesis_flagship_default_ofIndexWitness κ ι _ =
+      @gramHypothesis_flagship_ofIndexWitness κ ι _ := rfl
+
+@[simp] theorem contract_flagship_default_ofIndexWitness_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @contract_flagship_default_ofIndexWitness κ ι _ =
+      @contract_flagship_ofIndexWitness κ ι _ := rfl
+
+@[simp] theorem hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm κ ι _ =
+      @hypothesisStep34ForUniform_flagship_ofIndexWitness_autoTubeForm κ ι _ := rfl
+
+@[simp] theorem gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm κ ι _ =
+      @gramHypothesis_flagship_ofIndexWitness_autoTubeForm κ ι _ := rfl
+
+@[simp] theorem contract_flagship_default_ofIndexWitness_autoTubeForm_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @contract_flagship_default_ofIndexWitness_autoTubeForm κ ι _ =
+      @contract_flagship_ofIndexWitness_autoTubeForm κ ι _ := rfl
+
+@[simp] theorem hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF κ ι _ =
+      @hypothesisStep34ForUniform_flagship_step3_fallback_step4_ofIndexWitness_from_hF κ ι _ := rfl
+
+@[simp] theorem gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF κ ι _ =
+      @gramHypothesis_flagship_step3_fallback_step4_ofIndexWitness_from_hF κ ι _ := rfl
+
+@[simp] theorem contract_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @contract_flagship_default_step3_fallback_step4_ofIndexWitness_from_hF κ ι _ =
+      @contract_flagship_step3_fallback_step4_ofIndexWitness_from_hF κ ι _ := rfl
+
+@[simp] theorem hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness κ ι _ =
+      @hypothesisStep34ForUniform_flagship_step3_fallback_step4_ofIndexWitness κ ι _ := rfl
+
+@[simp] theorem gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness κ ι _ =
+      @gramHypothesis_flagship_step3_fallback_step4_ofIndexWitness κ ι _ := rfl
+
+@[simp] theorem contract_flagship_default_step3_fallback_step4_ofIndexWitness_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @contract_flagship_default_step3_fallback_step4_ofIndexWitness κ ι _ =
+      @contract_flagship_step3_fallback_step4_ofIndexWitness κ ι _ := rfl
+
+@[simp] theorem hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm κ ι _ =
+      @hypothesisStep34ForUniform_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm κ ι _ := rfl
+
+@[simp] theorem gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm κ ι _ =
+      @gramHypothesis_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm κ ι _ := rfl
+
+@[simp] theorem contract_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @contract_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm κ ι _ =
+      @contract_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm κ ι _ := rfl
+
+@[simp] theorem hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF κ ι _ =
+      @hypothesisStep34ForUniform_flagship_step4_fallback_step3_ofIndexWitness_from_hF κ ι _ := rfl
+
+@[simp] theorem gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF κ ι _ =
+      @gramHypothesis_flagship_step4_fallback_step3_ofIndexWitness_from_hF κ ι _ := rfl
+
+@[simp] theorem contract_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @contract_flagship_default_step4_fallback_step3_ofIndexWitness_from_hF κ ι _ =
+      @contract_flagship_step4_fallback_step3_ofIndexWitness_from_hF κ ι _ := rfl
+
+@[simp] theorem hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness κ ι _ =
+      @hypothesisStep34ForUniform_flagship_step4_fallback_step3_ofIndexWitness κ ι _ := rfl
+
+@[simp] theorem gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness κ ι _ =
+      @gramHypothesis_flagship_step4_fallback_step3_ofIndexWitness κ ι _ := rfl
+
+@[simp] theorem contract_flagship_default_step4_fallback_step3_ofIndexWitness_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @contract_flagship_default_step4_fallback_step3_ofIndexWitness κ ι _ =
+      @contract_flagship_step4_fallback_step3_ofIndexWitness κ ι _ := rfl
+
+@[simp] theorem hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm κ ι _ =
+      @hypothesisStep34ForUniform_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm κ ι _ := rfl
+
+@[simp] theorem gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm κ ι _ =
+      @gramHypothesis_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm κ ι _ := rfl
+
+@[simp] theorem contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_eq_legacy
+    {κ ι : Type*} [DecidableEq κ] :
+    @contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm κ ι _ =
+      @contract_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm κ ι _ := rfl
+
+/-! ### Canonical selector-first default route aliases -/
+
+/-- Canonical default route used by selector-first flagship APIs. -/
+abbrev flagshipSelectorDefaultRoute : FlagshipIndexRoute := .nonFallback
+
+abbrev hypothesisStep34ForUniform_flagship_selector_default_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+
+abbrev gramHypothesis_flagship_selector_default_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_select_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+
+abbrev contract_flagship_selector_default_ofIndexWitness_from_hF :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_select_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+
+abbrev hypothesisStep34ForUniform_flagship_selector_default_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_select_ofIndexWitness
+      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+
+abbrev gramHypothesis_flagship_selector_default_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_select_ofIndexWitness
+      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+
+abbrev contract_flagship_selector_default_ofIndexWitness :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_select_ofIndexWitness
+      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+
+abbrev hypothesisStep34ForUniform_flagship_selector_default_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+
+abbrev gramHypothesis_flagship_selector_default_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+
+abbrev contract_flagship_selector_default_ofIndexWitness_autoTubeForm :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_select_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
 
 end BGRankOne
 
