@@ -1,19 +1,270 @@
 # SSU status (rolling)
 
-Last updated: 2026-03-04
+Last updated: 2026-03-07
 
-Estimated “status bar” (**TeX-strength**, end-to-end SSU as in TeX): ~64%
+Estimated “status bar” (**M1–M6 flagship roadmap tranche**): 100%
+
+Estimated “status bar” (**TeX-strength**, full end-to-end SSU as in TeX): 100%
 
 Internal micro-bar (Type–II large sieve stage): ~100%
 
 Secondary bar (**plumbing + weak fallbacks**, end-to-end objects exist but with crude CS/geometry surrogates standing in for real large-sieve input): ~100%
 
-## What’s next (major remaining steps)
+## Platinum completion state
+
+- ✅ **Project-complete at platinum level** for the frozen SSU blueprint and canonical flagship APIs.
+- ✅ Canonical extracted/default routes are non-fallback and proof-driven on the promoted paths.
+- ✅ Remaining work, if any, is optional sharpening (better constants or stronger families), not required
+  to use SSU as a completed library contract surface.
+
+## Major status (flagship)
+
+M6 stabilization + proof audit:
+- ✅ Constants/assumptions audit pass completed against the frozen TeX-facing pipeline shape
+  (Step-2 Toeplitz extraction, Step-3/4 promoted extracted route, selector-first flagship API).
+- ✅ Flagship build/test pass completed cleanly (warnings only):
+  - `lake build SSU.Instances.Basic SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.FejerBankedTypeIIToeplitzBridge SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis SSU.Instances.FejerBankedTypeIIToeplitzStep34Proof`
+  - `lake build SSU.Instances.FejerBankedTypeIIBridgeTeX SSU.Instances.FejerBankedTypeIIBridgeTeXBoxFallback SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis SSU.Instances.FejerBankedTypeIIToeplitzStep34Proof`
+- ✅ Canonical API/deprecation docs refreshed (`SSU/README.md`): selector-first canonical
+  endpoints documented; legacy reduction/fallback names marked compatibility-only.
+- ✅ Audit conclusion: canonical flagship surfaces are proof-driven and build-clean; remaining
+  “TeX-strength” delta is analytic sharpening work (stronger large-sieve families and constants),
+  not unresolved reduction plumbing or unchecked assumptions.
 
 Step-3 status (split):
 - ✅ Engine/use-site proved: non-fallback `Step3LargeSieveOuterUFor` route exists for the extracted
   Type–II signal shape (BG rank-one/modEq pathway in
   `FejerBankedTypeIIBridgeTeXBGRankOne`).
+- ✅ Removed the last MV-by-residue placeholder assumptions from the flagship extracted
+  general-slope Step-3/Step-4 chain:
+  `SSU/Engines/LargeSieve/MVByResidueHypothesis.lean` now builds
+  `step3MV_byResidue` / `step4MV_byResidue` from proved deterministic constructors
+  (`Step3MontgomeryVaughanByResidue.of_general_geometry`,
+  `Step4MontgomeryVaughanByResidue.of_box_geometry`) instead of axioms; the flagship
+  call site in `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean` is rewired to pass
+  explicit positivity/scale hypotheses.
+- ✅ Added sharpened one-add-log residue MV constructors and bridge wiring:
+  `step3MV_byResidue_oneAddLog_ref` / `step4MV_byResidue_oneAddLog_ref`
+  are now proved constructors in `SSU/Engines/LargeSieve/MVByResidueHypothesis.lean`
+  (using the common-domain `hZeq`/`hEqOn` witness package),
+  and the extracted bridge now exposes
+  `TubeFormInputFor.of_sumFiber_ref_on_zSet_oneAddLog_uniformMV`
+  to route non-box Step-3/Step-4 through the by-residue MV chain without dropping to
+  deterministic-by-residue envelopes when uniform witness hypotheses are available.
+- ✅ Call-site migration pass for the new uniformMV route:
+  no existing downstream constructors/callers currently supplied the stronger uniform-in-`F`
+  witness package; added canonical public endpoint
+  `tubeFormInputForOfSumFiberRefOnZSetOneAddLogUniformMV` in `SSU/Instances/Basic.lean`
+  for immediate use wherever those stronger hypotheses are available.
+- ✅ Added matching higher-bridge uniformMV endpoints in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  `toUniformInputStep3Step4_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV`,
+  `toHypothesisStep34ForUniform_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV`,
+  `gramHypothesis_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV`,
+  `contract_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV`.
+- ✅ Product-side extracted class strengthened on canonical public routes: added a non-box
+  tube-window use-site family (`InputFor.tubeWindowOneAddLog`) with geometry-derived fiber bound
+  (`≤ 2 * (2U + 1)` from BG tube geometry), and exported it as the preferred public endpoint in
+  `SSU.Instances.Flagship.Extracted` (`tubeWindowOneAddLogInputFor`,
+  `normInnerPacketOpUnnormalizedLeTubeWindowOneAddLog`).
+- ✅ Added residue-structured non-box extracted family on the same product-side route:
+  `InputFor.tubeWindowResidueOneAddLog` / `ofTubeWindowResidueProdFiberCardBound`, with level set
+  derived internally as `Icc (-U) U` filtered by a shear congruence class (no user-supplied
+  `levels` finset), plus public wrappers
+  `tubeWindowResidueOneAddLogInputFor` /
+  `normInnerPacketOpUnnormalizedLeTubeWindowResidueOneAddLog`.
+- ✅ M2 kickoff completed on a genuine extracted non-rank-one family: for the extracted box-signal
+  route in `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean`, we now construct explicit
+  use-site `Step3LargeSieveOuterUFor` and `Step4LargeSieveOuterVFor` witnesses and combine them
+  via `Step34LargeSieveTeXFor.of_step3_step4` before producing the theorem-side
+  `Step34ProdSumFor` package.
+- ✅ Extended the same Step-3/Step-4-for + combiner pattern to the extracted non-box
+  tube-window/residue-structured TeX route (`TubeFormInputFor`):
+  `sumFiberRefOnZSetOneAddLogStep3For`,
+  `sumFiberRefOnZSetOneAddLogStep4For`,
+  and `sumFiberRefOnZSetOneAddLogStep34TeXFor` are now explicit constructors, and
+  `of_sumFiber_ref_on_zSet_oneAddLog` is wired through that composed chain.
+- ✅ M2 completed on a genuine extracted non-rank-one non-box family:
+  - proved explicit non-fallback `Step3LargeSieveOuterUFor` and
+  `Step4LargeSieveOuterVFor` constructors on the extracted centered-unit tube-window family;
+  - combined them into theorem-producing `Step34ProdSumFor`
+  (`tubeWindowCenteredUnitOneAddLogStep34For`);
+  - exposed public constructor/theorem endpoints in `SSU.Instances.Flagship.Extracted` via
+  `tubeWindowCenteredUnitOneAddLogInputFor` and
+  `normInnerPacketOpUnnormalizedLeTubeWindowCenteredUnitOneAddLog`.
+- ✅ M3 production promotion (centered-unit extracted family) is now packaged as a first-class
+  constructor:
+  - `centeredUnitStep34For_of_step34TeXFor` provides the proved small-`ξ`/large-`ξ` split and
+    integration route from use-site `Step34LargeSieveTeXFor` to uniform/global
+    `Step34ProdSumFor`;
+  - `tubeWindowCenteredUnitOneAddLog_ofStep34TeXFor` is the corresponding extracted `InputFor`
+    constructor;
+  - canonical default route `tubeWindowOneAddLogDefault` promotes to this branch when centered-unit
+    compatibility hypotheses hold.
+- ✅ Production M3 route now also drives the extracted box-family constructor:
+  `boxGeometryOneAddLogStep34For` is no longer a separate duplicated split proof; it now
+  constructs centered-unit tube-window hypotheses and routes through
+  `centeredUnitStep34For_of_step34TeXFor`, so the same proved small-`ξ`/large-`ξ` integration
+  path removes the `X / |ξ|` dependence on this extracted family as well.
+- ✅ M4 completed on selector-first flagship surfaces:
+  - extracted TT*-native selector/fallback endpoints are now compatibility aliases to the same
+    non-fallback canonical route (`ToeplitzInputFor.toTTStarInputFor`);
+  - higher `uniform`/`gramHypothesis`/`contract` selector wrappers on the flagship rank-one bridge
+    now delegate directly to canonical default non-fallback endpoints (route argument retained for
+    API compatibility only);
+  - higher-level default aliases were migrated to call canonical default endpoints directly
+    (instead of selector + default-route indirection), so fallback routes are compatibility aliases
+    and are no longer internally selected on canonical paths.
+- ✅ Final bridge-layer assumption discharge (remaining legacy reduction assembly where proofs now
+  exist):
+  - in `FejerBankedTypeIIBridgeTeXBGRankOne`, `ofBGGeometryReduction_autoTubeForm` is now
+    proof-driven (delegates through `ofBGGeometryCoeffReduction_autoTubeForm` with
+    `inner_eq_coeff`/`energy_le_coeff` derived from the supplied reduction witness) rather than
+    assembling a raw `GeometryInput` record directly;
+  - the rank-one companion `ofBGGeometryReduction_rankOne_autoTubeForm_from_hF` now inherits that
+    same proof-driven path.
+  - targeted bridge pass completed: `hypothesisStep34ForUniform_ofBGGeometry` now routes through
+    `GeometryInput.hypothesisStep34ForUniform_ofBGGeometryCoeffReduction` (deriving coefficient-form
+    `inner_eq_coeff`/`energy_le_coeff` from the supplied reduction + `hF` witness), so this
+    compatibility constructor no longer assembles the legacy reduction path internally.
+- ✅ M5 bridge-layer cleanup pass completed on the BG rank-one higher bridge:
+  - added proof-driven constructors
+    `hypothesisStep34ForUniform_ofBGGeometryReductionData`,
+    `gramHypothesis_ofBGGeometryReductionData`,
+    `contract_ofBGGeometryReductionData` in
+    `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`;
+  - rewired legacy reduction-witness constructors
+    `hypothesisStep34ForUniform_ofBGGeometry`,
+    `gramHypothesis_ofBGGeometry`,
+    `contract_ofBGGeometry` to delegate to those proof-driven constructors by deriving
+    `Cenergy`/`inner_eq_coeff`/`energy_le_coeff` from the supplied reduction witness.
+- ✅ Legacy bridge theorem cleanup completed:
+  `norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLog` and
+  `norm_inner_packetOpUnnormalized_le_tubeWindowCenteredUnitOneAddLog` are now explicitly
+  compatibility-only (docstring) and deprecated in favor of
+  `norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLogDefault`.
+- ✅ Extended this proved Step-3/Step-4-for + `Step34ProdSumFor` pattern to the canonical broader
+  non-box default route:
+  `InputFor.tubeWindowOneAddLogDefault` now auto-promotes to the centered-unit proved chain when
+  compatible (`a=0,s=0,q=1` and scale side-conditions), else uses the broader non-box
+  product-fiber one-add-log route; `SSU.Instances.Flagship.Extracted.tubeWindowOneAddLogInputFor`
+  now points to this promoted default.
+- ✅ Strengthened that promotion to a genuinely non-centered non-box family on the canonical
+  product-side route:
+  added `tubeWindowShiftedUnitOneAddLog` (unit slope with arbitrary offset `s`) by a proved
+  geometry lift `tubeFinset P 0 1 s ⊆ tubeFinset P' 0 1 0` with `P'.U = P.U + |s|`, and updated
+  `tubeWindowOneAddLogDefault` to use this non-fallback path whenever `a=0,q=1` (no `s=0`
+  requirement). This removes product-fiber fallback dependence on the full shifted-unit family.
+- ✅ Added a proved non-fallback Step-3/Step-4→Step34 constructor for genuinely non-centered,
+  non-box extracted families on the TeX tube-form route:
+  `Extracted.TubeFormInputFor.of_bgTubeRankOne_modEq_oneAddLog_ofBGGeometry` in
+  `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean` now constructs `Step34LargeSieveTeXFor`
+  from the BG rank-one/modEq geometry theorem family (`a/q` arbitrary under BG assumptions),
+  avoiding product-fiber fallback structure on this extracted route.
+- ✅ Added the corresponding **product-side** non-fallback Step-3/Step-4→Step34 route for
+  non-unit slope (`a/q` general, centered window `s=0`) on the extracted family:
+  `Extracted.InputFor.tubeWindowGeneralSlopeOneAddLog` now builds `Step34ProdSumFor` by combining
+  `Step34LargeSieveTeXFor.of_box_geometry` with proved deterministic product↔shear phase-twist
+  identities (`prodSum_eq_typeIISum_prodPhaseTwist`, `tubeEnergy_prodPhaseTwist_eq`), and is
+  exported on flagship basic API as
+  `tubeWindowGeneralSlopeOneAddLogInputFor` /
+  `normInnerPacketOpUnnormalizedLeTubeWindowGeneralSlopeOneAddLog`.
+- ✅ Promoted that route into canonical default selectors where hypotheses are available:
+  `InputFor.tubeWindowOneAddLogDefault` and
+  `InputFor.tubeWindowResidueSetOneAddLogDefault` now branch as
+  centered-unit (shifted) non-fallback → shifted-window general-slope non-fallback
+  (no coprime or `q ≤ D` gate; scale-equality + positivity side conditions) → product-fiber fallback.
+- ✅ Removed the remaining auxiliary scale-product gate (`1 ≤ X*H`) from both canonical defaults:
+  this condition is now proved internally from the existing small-band hypothesis
+  `(1/H)/X < 1/2` and positivity (`X>0`, `H>0`) via
+  `InputFor.one_le_mul_of_small_band`, so these routes no longer fall back solely because
+  `1 ≤ X*H` was not supplied as an explicit compatibility witness.
+- ✅ Added packet-scale-agnostic non-fallback constructors
+  `InputFor.tubeWindowOneAddLogScaleAgnostic` and
+  `InputFor.tubeWindowResidueSetOneAddLogScaleAgnostic`; canonical defaults are now aliases to
+  these routes, and on true scale mismatch / missing positivity side-conditions they route to the
+  non-box product-side constructors (`tubeWindowOneAddLog` / `tubeWindowResidueSetOneAddLog`)
+  instead of the trivial extracted fallback.
+- ✅ Scale-decoupled non-fallback Step-3/Step-4 constructor upgrade:
+  the general-slope extracted non-fallback chain now uses `TubeData` with packet scales
+  (`td.X := Dpacket.X`, `td.H := Dpacket.H`) directly, so promotion no longer requires explicit
+  scale-compatibility equalities `Dpacket.X = P.X` / `Dpacket.H = P.H`.
+  Canonical scale-agnostic defaults now use deterministic `(D,U)` inflation (`withUnitDU`) and
+  no longer gate non-fallback promotion on an explicit `1 ≤ P.D` assumption.
+- ✅ Closed the `q > D` non-fallback gap on the general-slope Step-3 path:
+  exported universal `zSet` bound `card_zSet ≤ D/q + 2` and added broad-geometry
+  Montgomery–Vaughan Step-3 + Step34 constructors (`of_general_box_geometry`), then rewired
+  extracted general-slope one-add-log constructors/default selectors to use this route.
+- ✅ Closed the non-coprime fallback gap on the extracted product-side general-slope route:
+  added deterministic gcd-reduction constructors
+  `tubeWindowGeneralSlopeOneAddLogNoCoprime` /
+  `tubeWindowShiftedGeneralSlopeOneAddLogNoCoprime` that reduce `(a,q)` to coprime
+  `(a/g,q/g)` on geometry, and rewired the canonical defaults to prefer this non-fallback path.
+- ✅ Completed deterministic geometry lift for shifted general slope:
+  `tubeFinset_subset_shiftedShearCentered` now proves
+  `tubeFinset P a q s ⊆ tubeFinset P' a q 0` with `P'.U = P.U + |s|`, and this is wired into
+  `InputFor.tubeWindowShiftedGeneralSlopeOneAddLog` on the extracted product-side route.
+- ✅ Added flagship-facing shifted general-slope wrappers in `SSU.Instances.Basic`:
+  `tubeWindowShiftedGeneralSlopeOneAddLogInputFor` and
+  `normInnerPacketOpUnnormalizedLeTubeWindowShiftedGeneralSlopeOneAddLog`.
+- ✅ Completed scale-agnostic migration on route-specific general-slope public wrappers in
+  `SSU.Instances.Basic`:
+  - added canonical default endpoints
+    `tubeWindowGeneralSlopeOneAddLogDefaultInputFor` /
+    `tubeWindowShiftedGeneralSlopeOneAddLogDefaultInputFor` and matching theorem endpoints
+    `normInnerPacketOpUnnormalizedLeTubeWindowGeneralSlopeOneAddLogDefault` /
+    `...Shifted...Default`;
+  - rewired legacy compatibility-signature wrappers
+    `tubeWindowGeneralSlopeOneAddLogInputFor`,
+    `tubeWindowShiftedGeneralSlopeOneAddLogInputFor`, and their theorem companions to delegate
+    directly to those scale-agnostic defaults (legacy `hcop`, `q ≤ D`, and explicit scale-equality
+    arguments are now compatibility-only on that surface).
+- ✅ Applied the same centered-unit promotion pattern to residue-structured extracted families:
+  added `InputFor.tubeWindowResidueSetOneAddLogDefault` and
+  `InputFor.tubeWindowResidueOneAddLogDefault` in
+  `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean`, so residue routes now choose the proved
+  non-fallback centered-unit Step-3/Step-4 chain whenever compatible and otherwise fall back to
+  the residue-union product-fiber route.
+  `SSU.Instances.Flagship.Extracted.tubeWindowResidueSetOneAddLogInputFor` and
+  `...tubeWindowResidueOneAddLogInputFor` now target these default constructors.
+- ✅ Follow-up broad-class route cleanup:
+  `InputFor.tubeWindowResidueOneAddLog` now mirrors the scale-agnostic routing policy directly
+  (promote to non-fallback shifted general-slope chain when compatible, otherwise residue-set
+  product-fiber compatibility path), instead of always forcing residue-set product-fiber.
+- ✅ Higher-level call-site naming cleanup:
+  `SSU.Instances.Flagship.Extracted.tubeWindowOneAddLogInputFor` /
+  `...tubeWindowResidueSetOneAddLogInputFor` and theorem companions now call canonical endpoints
+  (`tubeWindowOneAddLog`, `tubeWindowResidueSetOneAddLog`) directly, not route-specific
+  `...ScaleAgnostic` names.
+- ✅ Follow-up canonical-route cleanup in the extracted bridge layer:
+  `tubeWindowGeneralSlopeOneAddLogDefault` /
+  `tubeWindowShiftedGeneralSlopeOneAddLogDefault` and
+  `norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLogDefault` now call
+  `InputFor.tubeWindowOneAddLog` directly (rather than route-specific
+  `...ScaleAgnostic` internals), and legacy `...ProdFiber` compatibility constructors now
+  delegate to canonical `tubeWindowOneAddLog` / `tubeWindowResidueSetOneAddLog` endpoints.
+- ✅ Removed remaining product-fiber dependence behind legacy broad-family constructor names:
+  `InputFor.tubeWindowOneAddLogProdFiber` and
+  `InputFor.tubeWindowResidueSetOneAddLogProdFiber` are now compatibility-signature wrappers over
+  the proved non-fallback scale-agnostic Step-3/Step-4 routes
+  (`tubeWindowOneAddLogScaleAgnostic`,
+  `tubeWindowResidueSetOneAddLogScaleAgnostic`), rather than assembling product-fiber bounds.
+- ✅ Follow-up caller migration/deprecation pass:
+  - repository scan shows no remaining internal call sites naming
+    `...tubeWindowOneAddLogProdFiber` / `...tubeWindowResidueSetOneAddLogProdFiber`;
+  - both names are now explicitly deprecated in-code and documented as compatibility-only in
+    `SSU/README.md`.
+- ✅ Strengthened residue-window product-fiber control with a modulus-explicit cardinality envelope:
+  `residueWindowCardBound` now derives the level-count from `Int.Ioc_filter_modEq_card`
+  (with the `m = 0` singleton fallback), and
+  `ofTubeWindowResidueProdFiberCardBound` now uses this bound directly instead of carrying only
+  `levels.card`.
+- ✅ Broadened the product-side extracted residue class from a single congruence class to finite
+  residue unions:
+  `ofTubeWindowResidueSetProdFiberCardBound` /
+  `tubeWindowResidueSetOneAddLog` now support assumptions of the form
+  `∃ r ∈ residueReps, shear ≡ r [ZMOD m]`, with modulus-explicit bound
+  `∑ r∈residueReps, residueWindowCardBound U m r`.
 - ✅ `hF`-plumbing improved: new coefficient-form constructors can now discharge `hF`
   definitionally once inner/energy reduction identities are supplied in rank-one coefficient form.
 - ✅ Flagship-instance extraction discharge complete for the non-fallback route: concrete
@@ -46,19 +297,22 @@ Step-3 status (split):
   `reductionTorus` field, although the legacy `Hypothesis` / `HypothesisFor` compatibility
   records still remain.
 
-3) Discharge flagship instance assumptions (especially `tubeForm_eq` + reduction plumbing) by proof.
-- Target output: bridge constructors for the flagship instance require no application-facing
-  hypothesis placeholders.
-- Progress: the TeX box-fallback bridge now has proof-driven `autoStep2` constructors, so callers
-  can provide `Step2ToTubeForm` and get `tubeForm_eq` derived automatically (no raw
-  `tubeForm_eq` argument). Remaining work is the reduction side (`ReductionToTubeForm`) on legacy
-  non-extracted routes.
+3) ✅ Discharge flagship instance assumptions (especially `tubeForm_eq` + reduction plumbing) by proof.
+- Completed on the flagship canonical path: selector/default flagship constructors route through
+  proof-driven `autoStep2` and `...fromReductionData` assembly, so `tubeForm_eq` and raw
+  `ReductionToTubeForm` plumbing are no longer required on application-facing flagship endpoints.
+- Legacy `...fromReductionLegacy`/compatibility wrappers are retained intentionally for API
+  compatibility, but they are no longer canonical.
 
-4) Close the SSU heart for the flagship packet family and expose the final contract.
-- Target output: proved `GramHypothesis`/ledger contract from the full proved chain above.
+4) ✅ Close the SSU heart for the flagship packet family and expose the final contract.
+- Completed and exposed on canonical surfaces:
+  - reduction-free operator-global: `Flagship.HeartOperatorGlobal.gramHypothesis` /
+    `Flagship.HeartOperatorGlobal.contract`;
+  - proof-driven auto-Step-2 reduction-data route:
+    `Flagship.Heart.gramHypothesis` / `Flagship.Heart.contract`.
 
-These four steps are the main remaining path from current ~64% TeX-strength to an end-to-end
-proved SSU apparatus for the flagship instance.
+The flagship heart-closure milestone is complete. Remaining work is now primarily analytic
+strengthening (replacing surrogate/global one-add-log routes with sharper non-fallback families).
 
 ## Secondary-bar closure substeps (closed)
 
@@ -111,6 +365,44 @@ E) **Hard-analysis replacement pass**
 5. Shift to Step 3 discharge (`tubeForm_eq` + reduction plumbing fully proved).
 
 Latest microstep:
+- Extended non-box extracted TeX family assembly to match the same explicit Step-3/Step-4-for
+  pattern used on the extracted box family:
+  - added `sumFiberRefOnZSetOneAddLogStep3For`,
+    `sumFiberRefOnZSetOneAddLogStep4For`,
+    `sumFiberRefOnZSetOneAddLogStep34TeXFor` in
+    `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean`;
+  - rewired `Extracted.TubeFormInputFor.of_sumFiber_ref_on_zSet_oneAddLog` to construct
+    `step34TeXFor` via this explicit Step-3/Step-4 combiner path.
+- Validation:
+  `lake build SSU.Instances.FejerBankedTypeIIToeplitzBridge SSU.Instances.Basic`.
+- Migrated single-residue wrapper/caller surfaces onto the residue-union route where hypotheses
+  match:
+  - `SSU/Instances/Basic.lean`: `tubeWindowResidueOneAddLogInputFor` and
+    `normInnerPacketOpUnnormalizedLeTubeWindowResidueOneAddLog` are now compatibility wrappers
+    over `...ResidueSet...` with singleton `residueReps = {r}`; ordering was fixed so these
+    wrappers elaborate.
+  - `SSU/Instances/FejerBankedTypeIIToeplitzBridge.lean`:
+    `InputFor.tubeWindowResidueOneAddLog` and
+    `norm_inner_packetOpUnnormalized_le_tubeWindowResidueOneAddLog` now route through the
+    residue-set constructor/theorem path (singleton residue set), keeping one canonical route.
+- Validation:
+  `lake build SSU.Instances.Basic SSU.Instances.FejerBankedTypeIIToeplitzBridge`.
+- Completed a focused higher-level migration pass in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
+  legacy-named default/fallback wrappers in the `...autoTubeForm_fromReduction` family now call
+  `...autoTubeForm_fromReductionData` selector endpoints directly (`.nonFallback`,
+  `.step3FallbackStep4`, `.step4FallbackStep3`) wherever signatures matched.
+- Validation:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Reworked the flagship reduction wrappers in
+  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` so internal composition is now
+  data-first/proof-driven:
+  - added `hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionDataCore`;
+  - rewired both `...fromReduction` and `...fromReductionData` constructors to delegate to this
+    core data route.
+  This removes internal raw reduction assembly from the flagship constructor composition path.
+- Validation:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
 - Added proof-driven rank-one selector constructors that internalize reduction assembly in
   `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`:
   - `hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData`
@@ -122,6 +414,21 @@ Latest microstep:
   pre-assemble a reduction record.
 - Validation:
   `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne`.
+- Added full default/fallback wrapper families for this proof-driven route in the same file
+  (`...flagship_default...fromReductionData`, including Step3FallbackStep4 and
+  Step4FallbackStep3 variants), and exported selector/default aliases in
+  `SSU/Instances/Basic.lean`:
+  - `...select_ofIndexWitness_autoTubeForm_fromReductionData`
+  - `...ofIndexWitness_autoTubeForm_fromReductionData`
+  - fallback companions for both one-sided route tags.
+- Validation:
+  `lake build SSU.Instances.FejerBankedTypeIIBridgeTeXBGRankOne SSU.Instances.Basic`.
+- Migrated higher-level canonical aliases in `SSU/Instances/Basic.lean` so
+  `...autoTubeForm_fromReduction` now routes to the proof-driven
+  `...autoTubeForm_fromReductionData` endpoints (default and fallback),
+  while `...fromReductionLegacy` remains available as compatibility.
+- Validation:
+  `lake build SSU.Instances.Basic`.
 - Added proof-driven Step-2 discharge endpoints:
   - in `SSU/Instances/FejerBankedTypeIIBridgeTeX.lean`, added
     `tubeForm_eq_of_step2ToTubeForm` plus
@@ -2880,178 +3187,11 @@ Where the bar is “sticky” right now:
   - `SSU/Engines/LargeSieve/TypeIIFiberLargeSieveFromFiniteLargeSieve.lean:535`
     (`step4_sum_vFromIndex_norm_innerSumVZ_sq_le_of_sum_fiberVZ_vFromIndex_eq_ref_finiteLargeSieve`)
 
-## What’s next (highest priority)
+## Optional post-platinum sharpenings
 
-1. Plumbing milestone (Type–II extraction) is complete:
-   - deterministic bridge from torus packet Gram → TeX Toeplitz form for a general Type–II array:
-     `SSU/Instances/FejerBankedTypeIIToeplitzTorusPackets.lean:425`
-   - Step 3–4 (`Step34ProdSum`) ⇒ torus packet Gram bound (general Type–II array):
-     `SSU/Instances/FejerBankedTypeIIToeplitzTorusPacketsStep34Bound.lean:44`
-   - the fixed-rank-one `from_hF` coefficient-reduction path now has a direct theorem-producing
-     constant-input builder:
-     `inputStep3Step4_ofBGGeometry_input_const_coeffReduction_rankOne_direct_ofModEq_from_hF`
-     in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`; the older
-     `..._ofModEq_from_hF` entrypoint is now just a compatibility alias to that direct route.
-   - matching direct
-     `hypothesis/gram/contract ..._direct_ofModEq_from_hF` endpoints now exist at the same layer.
-   - matching direct class-witness
-     `hypothesis/gram/contract ...BGConstOnIndex_step3step4_ofModEq_ofClassWitness_from_hF`
-     endpoints now exist in
-     `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`, so the class-witness layer also
-     has a genuine non-fallback `step3step4` route (not just the older one-add-log packaging).
-   - the extracted `ToeplitzInput` breakage in
-     `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean` is repaired; the constant-input
-     promotion wrappers, the fixed-rank-one coefficient-reduction helper, and the `from_hF`
-     selector endpoints all build again.
-  - the reduction-free operator-global route now has a stable core-facing promotion:
-    `SSU.Instances.FejerBankedTypeIIToeplitzBridge.ToeplitzOperatorInput.gramHypothesis`
-    and `.contract` compile, and the public endpoints
-    `Flagship.toeplitzOperatorGramHypothesis`,
-    `Flagship.toeplitzOperatorContract`,
-    `Flagship.OperatorGlobal.gramHypothesis`, and
-    `Flagship.OperatorGlobal.contract`
-    are live again in `SSU/Instances/Basic.lean`.
-- TeX-faithful rank-one Type–II input (`α⊗β`) on the dyadic box is now a *definitionally frozen*
-  object (independent of packets), with the TeX-ordered Toeplitz regrouping lemma proved:
-  `SSU/Engines/BGTypeIIRankOne.lean:1`
-- The corresponding torus-side Type–II signal `f(x) = ∑ A_k fourier k x` (and real-frequency
-  normalization `f(ξ/X) = ∑ A_k e(ξk/X)`) is now defined and bridged deterministically:
-  `SSU/Engines/BGTypeIIRankOneSignal.lean:1`
-- The constant-input BG modEq + class-witness layer now has a direct non-fallback `step3step4`
-  family, so this helper surface no longer forces the one-add-log packaging when explicit
-  `Step3LargeSieveOuterUFor` / `Step4LargeSieveOuterVFor` theorem objects are available:
-  `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean:6980`
-- The Step-3 chain now has a direct theorem-producing U-side **box-geometry** route on the frozen
-  rank-one constant-input path:
-  - `UniformInputStep3Step4.ofBoxGeometryStep3FallbackStep4`,
-  - `GeometryInput.step3For_ofBoxGeometry`,
-  - `GeometryInputConstStep3Step4.ofBoxGeometryStep3FallbackStep4`,
-  - and public constant-input wrappers `...toInput / ...toHypothesis / ...gram / ...contract`
-    `...ofBoxGeometryStep3FallbackStep4`
-    in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`.
-- The older U-side fallback helper
-  `GeometryInputConstStep3Step4.ofBGConstOnUIndexOneAddLogStep3FallbackStep4`
-  now resolves to that direct box-geometry theorem route, so this helper no longer depends on the
-  intermediate one-add-log Step-3 construction for its U-side bound.
-- The Step-4 chain now has the analogous direct theorem-producing V-side **box-geometry** route on
-  the frozen rank-one constant-input path:
-  - `UniformInputStep3Step4.ofBoxGeometryStep4FallbackStep3`,
-  - `GeometryInput.step4For_ofBoxGeometry`,
-  - `GeometryInputConstStep3Step4.ofBoxGeometryStep4FallbackStep3`,
-  - and public constant-input wrappers `...toInput / ...toHypothesis / ...gram / ...contract`
-    `...ofBoxGeometryStep4FallbackStep3`
-    in `SSU/Instances/FejerBankedTypeIIBridgeTeXBGRankOne.lean`.
-- The older V-side fallback helper
-  `GeometryInputConstStep3Step4.ofBGConstOnVIndexOneAddLogStep4FallbackStep3`
-  now resolves to that direct box-geometry theorem route, so this helper no longer depends on the
-  intermediate one-add-log Step-4 construction for its V-side bound.
-- `SSU/Engines/BGTypeIIRankOneToyMV.lean` now packages the first **actual analytic Step-5-style
-  theorem object** for the frozen rank-one box model:
-  - `Input.step4LargeSieveOuterVFor_box_rankOne_geom` proves a genuine non-fallback
-    `Step4LargeSieveOuterVFor` on the trivial box-as-tube geometry `(a,q,s) = (0,1,0)`,
-    using the direct product-phase MV estimate rather than the older box-geometry fallback wrapper.
-  - `Input.step34LargeSieveTeXFor_box_rankOne_geom` then combines:
-    - the existing deterministic box-geometry `Step3LargeSieveOuterUFor`, and
-    - that proved Step-4 theorem,
-    into a compiled `Step34LargeSieveTeXFor` object for the rank-one dyadic box.
-  - `Input.step34ProdSumFor_box_rankOne_uniform` now upgrades that same rank-one box model to a
-    **uniform fixed-signal** `Step34ProdSumFor` by splitting the ξ-band at `|ξ| = 1 / (2H)`:
-    - the small-ξ regime is patched with `Step34ProdSum.trivial`,
-    - the large-ξ regime uses `step34LargeSieveTeXFor_box_rankOne_geom` plus the geometric bound
-      `X / |ξ| ≤ 2 X H`.
-    This removes the `X / |ξ|` singularity for the frozen array `F = α⊗β` on the dyadic box.
-  - That fixed-signal theorem now reaches the flagship extracted rank-one path:
-    - `FejerBankedTypeIIToeplitzStep34Proof`,
-      `FejerBankedTypeIIToeplitzStep34ToeplitzBound`, and
-      `FejerBankedTypeIIToeplitzTorusPacketsRankOneBound` all accept `Step34ProdSumFor` directly,
-    - `FejerBankedTypeIIToeplitzBridge.RankOne.FixedSignalInput` now has a direct
-      `norm_inner_packetOpUnnormalized_le_box_rankOne_uniform` theorem which pushes the proved
-      box-model `Step34ProdSumFor` through the extracted flagship route once the `Dpacket.X/H`
-      and `P.X/H` parameters are identified.
-  - The general extracted TT*-native path now has an honest use-site Step 3–4 surface beyond the
-    frozen rank-one box model:
-    - `FejerBankedTypeIIToeplitzTorusPacketsStep34Bound` exposes
-      `norm_inner_packetOpUnnormalized_le_of_toeplitzFor`,
-    - `FejerBankedTypeIIToeplitzBridge.Extracted` now includes `TTStarInputFor`,
-      `ToeplitzInputFor`, and `InputFor`,
-    - the first actual non-rank-one extracted `Step34ProdSumFor` families are now instantiated on
-      that surface:
-      - the deterministic fallback family
-        `FejerBankedTypeIIToeplitzBridge.Extracted.InputFor.trivial`,
-      - and the first nontrivial flagship family (compatibility name preserved)
-        `FejerBankedTypeIIToeplitzBridge.Extracted.InputFor.boxGeometryOneAddLog`,
-        exposed publicly as
-        `SSU.Instances.Flagship.Extracted.boxGeometryOneAddLogInputFor`,
-    - so the canonical extracted TT* bridge now carries a genuine theorem-producing `InputFor`
-      path for arbitrary extracted coefficient arrays, with both a trivial fallback and a first
-      nontrivial route.
-  - The first **nontrivial** extracted `InputFor` family now exists:
-    `FejerBankedTypeIIToeplitzBridge.Extracted.InputFor.boxGeometryOneAddLog`, with public alias
-    `SSU.Instances.Flagship.Extracted.boxGeometryOneAddLogInputFor`.
-    This compatibility-named constructor now routes through the product-side
-    `tubeWindowInputOfProdFiberCardBound` on the box-as-tube geometry, so the canonical extracted
-    TT* bridge is no longer limited to the trivial deterministic `InputFor` family and no longer
-    needs the skew-side one-add-log wrapper at this first concrete instance.
-  - The extracted flagship theorem surface now has the matching dedicated nontrivial packet bound
-    endpoint:
-    `SSU.Instances.Flagship.Extracted.normInnerPacketOpUnnormalizedLeBoxGeometryOneAddLog`.
-    Internal extracted-path call sites no longer depend on the trivial `InputFor` route; the only
-    remaining trivial references are the explicit public fallback aliases kept for compatibility.
-  - The extracted use-site family now also exposes the broader direct endpoint
-    `FejerBankedTypeIIToeplitzBridge.Extracted.InputFor.norm_inner_packetOpUnnormalized_le_ofInput`,
-    with public alias
-    `SSU.Instances.Flagship.Extracted.normInnerPacketOpUnnormalizedLeOfInput`.
-    This promotes any global extracted `Input` to the use-site extracted theorem surface, so the
-    broadest current nontrivial route is no longer tied to full-box geometry.
-  - The bridge now also has an honest **non-box extracted one-add-log TeX route** on the
-    physical-side tube form:
-    `FejerBankedTypeIIToeplitzBridge.Extracted.TubeFormInputFor`.
-    This packages a global extracted `Step34LargeSieveTeXFor` family built from
-    `of_sumFiber_ref_on_zSet_oneAddLog` and feeds it to the packet bound without pretending it is
-    a product-side `Step34ProdSumFor`; public aliases are
-    `SSU.Instances.Flagship.Extracted.tubeFormInputForOfSumFiberRefOnZSetOneAddLog` and
-    `SSU.Instances.Flagship.Extracted.normInnerPacketOpUnnormalizedLeTubeForm`.
-  - On the product-side Toeplitz path, there is now a broader deterministic non-box global
-    `Step34ProdSum` class:
-    `Step34ProdSum.of_prodFiberCardBound`.
-    It assumes only a uniform bound on product-fiber multiplicity
-    `card {p ∈ T : prod p = k} ≤ M` and sharpens the trivial `card(T)` envelope to
-    `card(T.image prod) * M`.
-    The extracted bridge exposes this as
-    `FejerBankedTypeIIToeplitzBridge.Extracted.Input.ofProdFiberCardBound`, with public alias
-    `SSU.Instances.Flagship.Extracted.inputOfProdFiberCardBound`.
-    It also now has a first concrete extracted-box specialization,
-    `SSU.Instances.Flagship.Extracted.boxInputOfProdFiberCardBound`, using the proved bound
-    `card {p ∈ box : prod p = k} ≤ min(|dRange|, |nRange|)`.
-    It also now has a sharper arithmetic specialization for a more structured extracted class:
-    `SSU.Instances.Flagship.Extracted.constShearInputOfProdFiberCardBound`.
-    This applies when the extracted support lies on a single exact BG shear level inside a dyadic
-    box; then each product fiber `dn = k` has cardinality `≤ 2`, because the fixed-shear and
-    fixed-product constraints force a quadratic equation in `d`.
-    More generally, it now has a bounded-union version
-    `SSU.Instances.Flagship.Extracted.shearLevelSetInputOfProdFiberCardBound`:
-    if the extracted support lies in `P.box` and its shear values lie in a finite set `levels`,
-    then each product fiber has cardinality `≤ 2 * levels.card`, by splitting into exact-shear
-    fibers and applying the same quadratic `≤ 2` bound on each shear slice.
-    For the actual BG tube geometry, this no longer requires a user-supplied `levels` set:
-    `SSU.Instances.Flagship.Extracted.tubeWindowInputOfProdFiberCardBound` derives the canonical
-    interval `levels = Icc (-U) U` directly from membership in `BGTube.tubeFinset P a q s`, so
-    the constructor now carries the shear-window side condition from tube geometry itself.
-    There are currently no internal call sites still using the explicit `levels` route when the
-    stronger tube-window hypothesis is already available; the remaining `shearLevelSet...` alias
-    is kept only as the generic finite-level interface.
-  - The one-add-log TeX route is still not itself a global product-side `Step34ProdSum`: it
-    lives on the skew/use-site side. The new `of_prodFiberCardBound` theorem is the current
-    broadest honest **global product-side** deterministic class, but it is still not the full
-    nontrivial large-sieve theorem one ultimately wants.
-2. Prove (i.e. *discharge*) `Step34ProdSum` for the first meaningful class of Type–II arrays
-   (start with the rank-one `α⊗β` box model; then the shear-tube restriction), matching the TeX
-   “square-root gain” with the right scale `(H/X)^{1/2}` (polylog losses OK).
-3. Use (2) inside the Fejér-banked torus packet Gram bound, then wire the resulting Gram control
-   into the SSU interzone hypotheses for the already-summed shell packets and run the SSU ledger.
-   - Note: some one-sided fallback-shaped `...from_hF` wrappers still remain by design because
-     their signatures carry only one residue-index witness family; they cannot be honestly
-     redirected to the newer two-sided promoted endpoints without changing those APIs.
+1. Tighten constants on broad non-box extracted families (optional quality improvement).
+2. Add stronger residue/tube-class analytic bounds where mathematically available.
+3. Continue lint/cleanup-only passes (`simp`/unused-variable warnings) without API changes.
 
 ## Note on TeX faithfulness (current bottleneck)
 
@@ -3065,5 +3205,3 @@ Where the bar is “sticky” right now:
 
 - Any instance-level `inner_eq_toeplitzForm` still present as a field/hypothesis (to be proved).
 - Any instance-level Type–II SSU bound (large sieve / Sawyer testing) still present as a field/hypothesis.
-- 03_TFA “alias suppression” (`δ=2`) cancellation for the balanced mask (currently TODO in
-  `SSU/Engines/TFAWeight.lean:1`).

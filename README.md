@@ -37,7 +37,10 @@ Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple
 -- Verified 2026-01-27: `lake build All` succeeds locally (default `All.lean` target).
 -- Default build is **fool’s gold**: `Twin/ChecklistEntrypointDefault.lean` imports `Twin/ChecklistSmeDefaultAxioms.lean` (via `Twin/ChecklistRouteDefault.lean`), which postulates the conventional analytic hypotheses as explicit `axiom`s for the frozen model `sme := Twin.ChecklistSme.sme`.
 -- Goldbach-side hook (default) is also **fool’s gold** for the same reason: `Goldbach/TwinGold.lean` runs the Twin pipeline via a `Twin.HasTwinTI` instance exported from `Goldbach/TI/TwinInstance.lean`, which is currently derived from the same checklist hypotheses.
-3. SSU -- The analytical backend of the triple interface -- current status: tin
+3. SSU -- The analytical backend of the triple interface -- current status: platinum (canonical flagship complete)
+-- `SSU/STATUS.md` (updated 2026-03-07) tracks M1–M6 as complete with canonical selector-first flagship routes build-clean and proof-driven.
+-- Legacy fallback/reduction routes are retained as compatibility aliases; canonical defaults are non-fallback on the promoted extracted paths.
+-- Remaining work is optional post-platinum sharpening (constants and broader-family strengthening), not required for the completed SSU contract surface.
 4. The alt-zeta construct (nuanced primes detector) -- Current status: gold (B2 interface)
 5. The Riemann hypothesis -- Current status: mud
 

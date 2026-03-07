@@ -1,0 +1,1562 @@
+Yes — with what’s currently in your repo, the clean way to close this gap without inventing new “mysterious fallback branches” is to package (i) a precise quantified family of extracted coefficient arrays and (ii) an MV-type per-residue large sieve hypothesis/theorem that feeds directly into your existing constructors (via the …of_fiberLargeSieveByResidueFor path, not the hZeq+hEqOn path).
+
+Below is the “math package” in the exact shape you asked for, aligned to:
+
+Step3LargeSieveOuterUFor.of_sumFiberUZ_uFromIndex_eq_ref_on_zSet_oneAddLog (TypeIILargeSieveTeXFor.lean:1263)
+
+Step4LargeSieveOuterVFor.of_sumFiberVZ_vFromIndex_eq_ref_on_zSetV_oneAddLog (…:2804)
+
+but using the alternative MV-by-residue route that your file already supports.
+
+0) Target extracted family (quantified class)
+Tube-window family (no BG-compatibility, no coprimality assumed)
+
+Fix BG tube parameters P : BGTube.Params, integers a s : ℤ, and q : ℕ with 1 ≤ q.
+
+Define the tube window (your BGTube.tubeFinset)
+
+𝑇
+(
+𝑃
+;
+𝑎
+,
+𝑞
+,
+𝑠
+)
+:
+=
+{
+𝑝
+=
+(
+𝑑
+,
+𝑛
+)
+∈
+𝑃
+.
+b
+o
+x
+:
+∣
+ 
+s
+h
+e
+a
+r
+(
+𝑎
+,
+𝑞
+,
+𝑠
+,
+𝑝
+)
+ 
+∣
+≤
+𝑃
+.
+𝑈
+}
+.
+T(P;a,q,s):={p=(d,n)∈P.box:∣shear(a,q,s,p)∣≤P.U}.
+
+Extracted family (quantify over this class):
+
+𝐹
+(
+𝑃
+;
+𝑎
+,
+𝑞
+,
+𝑠
+)
+:
+=
+{
+ 
+𝐹
+:
+TubePoint
+→
+𝐶
+∣
+s
+u
+p
+p
+(
+𝐹
+)
+⊆
+𝑇
+(
+𝑃
+;
+𝑎
+,
+𝑞
+,
+𝑠
+)
+ 
+}
+.
+F(P;a,q,s):={F:TubePoint→C∣supp(F)⊆T(P;a,q,s)}.
+
+In your use site, the concrete instance is always
+
+𝐹
+=
+𝐷
+𝑡
+𝑦
+𝑝
+𝑒
+.
+𝐹
+ 
+𝑓
+ 
+𝑖
+ 
+𝑗
+∈
+𝐹
+(
+𝑃
+;
+𝑎
+,
+𝑞
+,
+𝑠
+)
+F=Dtype.F f i j∈F(P;a,q,s)
+
+via the hypothesis hsubTube : Dtype.tube ⊆ tubeFinset P a q s.
+
+Residue-union refinement (optional)
+
+Fix modulus m : ℤ with m ≠ 0 and a finite set R ⊆ ℤ of residue reps. Define
+
+𝐹
+𝑅
+(
+𝑃
+;
+𝑎
+,
+𝑞
+,
+𝑠
+;
+𝑚
+,
+𝑅
+)
+:
+=
+{
+𝐹
+∈
+𝐹
+(
+𝑃
+;
+𝑎
+,
+𝑞
+,
+𝑠
+)
+:
+∀
+𝑝
+∈
+s
+u
+p
+p
+(
+𝐹
+)
+,
+ 
+s
+h
+e
+a
+r
+(
+𝑎
+,
+𝑞
+,
+𝑠
+,
+𝑝
+)
+ 
+m
+o
+d
+ 
+𝑚
+∈
+𝑅
+ 
+m
+o
+d
+ 
+𝑚
+}
+.
+F
+R
+	​
+
+(P;a,q,s;m,R):={F∈F(P;a,q,s):∀p∈supp(F), shear(a,q,s,p)modm∈Rmodm}.
+
+This matches your existing “residueReps” API.
+
+1) Deterministic reduction to a coprime TubeData (removes the coprime gate cleanly)
+
+Your TubeData requires Nat.Coprime a.natAbs q, because the residue partitions use aInv. So for non-coprime (a,q) you must reduce.
+
+Let
+
+𝑔
+:
+=
+gcd
+⁡
+(
+𝑎
+,
+𝑞
+)
+,
+𝑎
+=
+𝑔
+𝑎
+0
+,
+𝑞
+=
+𝑔
+𝑞
+0
+,
+gcd
+⁡
+(
+𝑎
+0
+,
+𝑞
+0
+)
+=
+1.
+g:=gcd(a,q),a=ga
+0
+	​
+
+,q=gq
+0
+	​
+
+,gcd(a
+0
+	​
+
+,q
+0
+	​
+
+)=1.
+
+Also perform your standard shift-to-centered step (already in your bridge):
+
+replace P by P₁ := shiftedShearParams P s so the tube is centered (s = 0) and the window inflates by |s|.
+
+Then for the centered tube, shear(a,q,0,p)= qn-ad is automatically a multiple of g, and
+
+∣
+𝑞
+𝑛
+−
+𝑎
+𝑑
+∣
+≤
+𝑈
+⇒
+∣
+𝑞
+0
+𝑛
+−
+𝑎
+0
+𝑑
+∣
+≤
+𝑈
+0
+,
+∣qn−ad∣≤U⇒∣q
+0
+	​
+
+n−a
+0
+	​
+
+d∣≤U
+0
+	​
+
+,
+
+with an explicit integer window
+
+𝑈
+0
+:
+=
+⌈
+𝑈
+𝑔
+⌉
+.
+U
+0
+	​
+
+:=⌈
+g
+U
+	​
+
+⌉.
+
+So you get a deterministic inclusion
+
+𝑇
+(
+𝑃
+1
+;
+𝑎
+,
+𝑞
+,
+0
+)
+⊆
+𝑇
+(
+𝑃
+2
+;
+𝑎
+0
+,
+𝑞
+0
+,
+0
+)
+,
+T(P
+1
+	​
+
+;a,q,0)⊆T(P
+2
+	​
+
+;a
+0
+	​
+
+,q
+0
+	​
+
+,0),
+
+where P₂ is P₁ but with U := U0 (and the same D,N,X,H).
+
+This is the precise reduction you need so you can build:
+
+td0 := tubeDataOfBGTube P₂ a0 q0 … with Nat.Coprime a0.natAbs q0 automatically,
+
+and transport the support hypothesis for every extracted F.
+
+Constant policy note: You should treat everything after reduction as depending on q0 (the true modulus). If you insist on rewriting into the original q, you pay an explicit factor g (since D/q0 = g·D/q).
+
+2) The U-side theorem package you need (Step 3 outer-u)
+What you should ask the mathematician to give you (or what you can encode as the final analytic lemma)
+
+For the reduced coprime TubeData td0 as above, you want a theorem that directly produces a Step3FiberLargeSieveByResidueFor (or, equivalently, a Step3MontgomeryVaughanByResidue).
+
+The clean statement is:
+
+(MV Step 3, per residue class; parameter-only constant)
+There exists an absolute constant 
+𝐶
+3
+>
+0
+C
+3
+	​
+
+>0 such that for every reduced td0 and every 
+𝐹
+:
+TubePoint
+→
+𝐶
+F:TubePoint→C, for every real 
+𝜉
+ξ with 
+0
+<
+∣
+𝜉
+∣
+≤
+1
+/
+𝐻
+0<∣ξ∣≤1/H, and every residue 
+𝑟
+∈
+[
+0
+,
+𝑞
+0
+)
+r∈[0,q
+0
+	​
+
+),
+
+∑
+𝑢
+∈
+𝑢
+𝐶
+𝑙
+𝑎
+𝑠
+𝑠
+(
+𝑟
+)
+∥
+i
+n
+n
+e
+r
+S
+u
+m
+U
+Z
+(
+𝑡
+𝑑
+0
+,
+𝜉
+,
+𝐹
+,
+𝑢
+)
+∥
+2
+  
+≤
+  
+𝐶
+3
+⋅
+𝐷
+𝑞
+0
+(
+𝑈
+0
++
+𝑋
+∣
+𝜉
+∣
+)
+⋅
+∑
+𝑢
+∈
+𝑢
+𝐶
+𝑙
+𝑎
+𝑠
+𝑠
+(
+𝑟
+)
+∑
+𝑧
+∈
+𝑧
+𝑆
+𝑒
+𝑡
+(
+𝑢
+)
+∥
+∑
+𝑝
+∈
+𝑓
+𝑖
+𝑏
+𝑒
+𝑟
+𝑈
+𝑍
+(
+𝑢
+,
+𝑧
+)
+𝐹
+(
+𝑝
+)
+∥
+2
+.
+u∈uClass(r)
+∑
+	​
+
+	​
+
+innerSumUZ(td0,ξ,F,u)
+	​
+
+2
+≤C
+3
+	​
+
+⋅
+q
+0
+	​
+
+D
+	​
+
+(U
+0
+	​
+
++
+∣ξ∣
+X
+	​
+
+)⋅
+u∈uClass(r)
+∑
+	​
+
+z∈zSet(u)
+∑
+	​
+
+	​
+
+p∈fiberUZ(u,z)
+∑
+	​
+
+F(p)
+	​
+
+2
+.
+
+Constant dependence: 
+𝐶
+3
+C
+3
+	​
+
+ is absolute (or depends only on your chosen “MV constant”), and does not depend on 
+𝐹
+,
+𝑓
+,
+𝑖
+,
+𝑗
+,
+𝜉
+,
+𝑟
+F,f,i,j,ξ,r.
+
+Why this matches your Lean constructors: this is exactly the Step3MontgomeryVaughanByResidue td0 interface in Engines/LargeSieve/MontgomeryVaughanTypeII.lean. From it, your pipeline is purely deterministic:
+
+Step3FiberLargeSieveByResidueFor.of_montgomeryVaughanByResidue
+
+then Step3LargeSieveOuterUFor.of_fiberLargeSieveByResidueFor
+
+So you do not need hZeq/hEqOn for the broad extracted family.
+
+Regime assumptions (explicit, minimal)
+
+To run the Step 3 → Step34 pipeline in your repo, the required numeric side is:
+
+𝑞
+0
+≥
+1
+q
+0
+	​
+
+≥1 (automatic),
+
+𝐷
+>
+0
+,
+ 
+𝑈
+0
+>
+0
+,
+ 
+𝑋
+>
+0
+,
+ 
+𝐻
+>
+0
+D>0, U
+0
+	​
+
+>0, X>0, H>0,
+
+frequency band: 
+0
+<
+∣
+𝜉
+∣
+≤
+1
+/
+𝐻
+0<∣ξ∣≤1/H.
+
+You do not need q ≤ D for this MV statement; if your current deterministic geometry lemmas still assume 1 ≤ D/q, you can absorb the small-D/q regime into the constant (the standard fix is to use a D/q + 2-type bound rather than 3·D/q).
+
+3) The V-side theorem package you need (Step 4 outer-v)
+
+Analogously, for the same reduced td0:
+
+(MV Step 4, per residue class; parameter-only constant)
+There exists an absolute constant 
+𝐶
+4
+>
+0
+C
+4
+	​
+
+>0 such that for every 
+𝐹
+F, every 
+0
+<
+∣
+𝜉
+∣
+≤
+1
+/
+𝐻
+0<∣ξ∣≤1/H, every residue 
+𝑟
+∈
+[
+0
+,
+𝑞
+0
+)
+r∈[0,q
+0
+	​
+
+),
+
+∑
+𝑣
+∈
+𝑣
+𝐶
+𝑙
+𝑎
+𝑠
+𝑠
+(
+𝑟
+)
+∥
+i
+n
+n
+e
+r
+S
+u
+m
+V
+Z
+(
+𝑡
+𝑑
+0
+,
+𝜉
+,
+𝐹
+,
+𝑣
+)
+∥
+2
+  
+≤
+  
+𝐶
+4
+⋅
+𝐷
+(
+𝑈
+0
+𝑞
+0
++
+𝑋
+∣
+𝜉
+∣
+)
+⋅
+∑
+𝑣
+∈
+𝑣
+𝐶
+𝑙
+𝑎
+𝑠
+𝑠
+(
+𝑟
+)
+∑
+𝑧
+∈
+𝑧
+𝑆
+𝑒
+𝑡
+𝑉
+(
+𝑣
+)
+∥
+∑
+𝑝
+∈
+𝑓
+𝑖
+𝑏
+𝑒
+𝑟
+𝑉
+𝑍
+(
+𝑣
+,
+𝑧
+)
+𝐹
+(
+𝑝
+)
+∥
+2
+.
+v∈vClass(r)
+∑
+	​
+
+	​
+
+innerSumVZ(td0,ξ,F,v)
+	​
+
+2
+≤C
+4
+	​
+
+⋅D(
+q
+0
+	​
+
+U
+0
+	​
+
+	​
+
++
+∣ξ∣
+X
+	​
+
+)⋅
+v∈vClass(r)
+∑
+	​
+
+z∈zSetV(v)
+∑
+	​
+
+	​
+
+p∈fiberVZ(v,z)
+∑
+	​
+
+F(p)
+	​
+
+2
+.
+
+Constant dependence: 
+𝐶
+4
+C
+4
+	​
+
+ absolute / parameter-only, independent of 
+𝐹
+,
+𝑓
+,
+𝑖
+,
+𝑗
+,
+𝜉
+,
+𝑟
+F,f,i,j,ξ,r.
+
+This is the Step4MontgomeryVaughanByResidue td0 interface, feeding:
+
+Step4FiberLargeSieveByResidueFor.of_montgomeryVaughanByResidue
+
+then Step4LargeSieveOuterVFor.of_fiberLargeSieveByResidueFor.
+
+4) Step34 (what you get “for free” once Step3+Step4 exist)
+
+Once you have Step3LargeSieveOuterUFor td0 F and Step4LargeSieveOuterVFor td0 F, your repo already combines them via:
+
+Step34LargeSieveTeXFor.of_step3_step4
+
+and the constant policy is already explicit in your code:
+
+𝐶
+34
+  
+=
+  
+𝐶
+3
+𝐶
+4
+⋅
+𝐷
+/
+𝑈
+0
+⋅
+max
+⁡
+(
+𝑈
+0
+/
+(
+𝑞
+0
+𝐷
+)
+,
+1
+)
+.
+C
+34
+	​
+
+=
+C
+3
+	​
+
+C
+4
+	​
+
+	​
+
+⋅
+D/U
+0
+	​
+
+	​
+
+⋅
+max(U
+0
+	​
+
+/(q
+0
+	​
+
+D),1)
+	​
+
+.
+
+So 
+𝐶
+34
+C
+34
+	​
+
+ depends only on 
+(
+𝐶
+3
+,
+𝐶
+4
+)
+(C
+3
+	​
+
+,C
+4
+	​
+
+) and the tube parameters 
+(
+𝐷
+,
+𝑈
+0
+,
+𝑞
+0
+)
+(D,U
+0
+	​
+
+,q
+0
+	​
+
+), and is independent of 
+𝐹
+,
+𝑓
+,
+𝑖
+,
+𝑗
+,
+𝜉
+F,f,i,j,ξ.
+
+5) Residue-union variant (explicit dependence on 
+𝑚
+m and 
+∣
+𝑅
+∣
+∣R∣)
+
+If you also assume shear(a,q,s,p) mod m ∈ R, then the effective number of admissible shear values in the window is
+
+𝑈
+e
+f
+f
+:
+=
+#
+{
+𝑢
+∈
+𝑍
+:
+ 
+∣
+𝑢
+∣
+≤
+𝑈
+0
+,
+ 
+𝑢
+ 
+m
+o
+d
+ 
+𝑚
+∈
+𝑅
+ 
+m
+o
+d
+ 
+𝑚
+}
+  
+≤
+  
+∣
+𝑅
+∣
+(
+⌊
+2
+𝑈
+0
+𝑚
+⌋
++
+1
+)
+  
+≤
+  
+∣
+𝑅
+∣
+(
+2
+𝑈
+0
+𝑚
++
+1
+)
+.
+U
+eff
+	​
+
+:=#{u∈Z: ∣u∣≤U
+0
+	​
+
+, umodm∈Rmodm}≤∣R∣(⌊
+m
+2U
+0
+	​
+
+	​
+
+⌋+1)≤∣R∣(
+m
+2U
+0
+	​
+
+	​
+
++1).
+
+The most useful packaged statement is:
+
+the same Step 3/4 MV-by-residue inequalities hold with 
+𝑈
+0
+U
+0
+	​
+
+ replaced by 
+𝑈
+e
+f
+f
+U
+eff
+	​
+
+ (or by the explicit upper bound above), with the same constants 
+𝐶
+3
+,
+𝐶
+4
+C
+3
+	​
+
+,C
+4
+	​
+
+.
+
+This gives you a clean explicit dependence on 
+𝑚
+,
+∣
+𝑅
+∣
+m,∣R∣ without reverting to product-fiber cardinality fallback.
+
+6) Exactly how this wires into your two cited constructors
+
+You asked for matching the …of_sumFiberUZ… and …of_sumFiberVZ… shapes. Here’s the key point:
+
+For the broad extracted family, you should not aim to produce hZeq+hEqOn. Those encode “reference fiber equalities” which are far stronger than general extraction gives you.
+
+Instead, you provide the MV-by-residue theorems above, which instantiate:
+
+Step3MontgomeryVaughanByResidue td0
+
+Step4MontgomeryVaughanByResidue td0
+
+and then the existing deterministic wrappers give you:
+
+Step3LargeSieveOuterUFor via …of_fiberLargeSieveByResidueFor
+
+Step4LargeSieveOuterVFor via …of_fiberLargeSieveByResidueFor
+
+Step34LargeSieveTeXFor via …of_step3_step4
+
+All constants are parameter-only, and you can route the non-coprime default branch through gcd reduction → MV-by-residue → Step34, with no remaining fallbacks.
+
+Below are the two analytic inputs in exact Step3MontgomeryVaughanByResidue / Step4MontgomeryVaughanByResidue form, with parameter-only constants (i.e. depend only on td, hence only on tube parameters), and independent of F, f, i, j, ξ, r.
+
+You can paste this as a new file, e.g.
+SSU/Engines/LargeSieve/MVByResidueHypothesis.lean
+and import it where you want the non-fallback route to fire.
+
+import SSU.Engines.LargeSieve.MontgomeryVaughanTypeII
+
+/-!
+MV-by-residue analytic inputs.
+
+These are the only remaining “hard” analytic hypotheses needed to run the non-fallback Step 3/4
+route for broad extracted families (after any gcd-reduction needed to build a `TubeData`).
+
+Constant policy:
+* `C3 td` and `C4 td` depend only on the tube parameters packaged in `td`;
+* they are independent of `F, f, i, j, ξ, r`.
+-/
+
+namespace SSU
+namespace Engines
+namespace TypeII
+namespace LargeSieve
+
+open scoped BigOperators
+
+noncomputable section
+
+/-- **Analytic input (Step 3, per-residue MV).**
+
+For every `td : TubeData`, we assume a Montgomery–Vaughan large sieve bound restricted to each
+residue class `uClass td r`, with a parameter-only constant `C = C3 td`. -/
+axiom step3MV_byResidue (td : TubeData) : Step3MontgomeryVaughanByResidue td
+
+/-- **Analytic input (Step 4, per-residue MV).**
+
+For every `td : TubeData`, we assume a Montgomery–Vaughan large sieve bound restricted to each
+residue class `vClass td r`, with a parameter-only constant `C = C4 td`. -/
+axiom step4MV_byResidue (td : TubeData) : Step4MontgomeryVaughanByResidue td
+
+/-- Parameter-only Step 3 MV constant. -/
+noncomputable def C3 (td : TubeData) : ℝ :=
+  (step3MV_byResidue td).C
+
+/-- Parameter-only Step 4 MV constant. -/
+noncomputable def C4 (td : TubeData) : ℝ :=
+  (step4MV_byResidue td).C
+
+theorem C3_nonneg (td : TubeData) : 0 ≤ C3 td :=
+  (step3MV_byResidue td).C_nonneg
+
+theorem C4_nonneg (td : TubeData) : 0 ≤ C4 td :=
+  (step4MV_byResidue td).C_nonneg
+
+/-- Expanded Step 3 per-residue bound, in the exact shape your constructors consume. -/
+theorem step3MV_byResidue_bound (td : TubeData) :
+    ∀ ξ : ℝ, ξ ≠ 0 → |ξ| ≤ (1 / td.H) →
+      ∀ F : TubePoint → ℂ,
+        ∀ r ∈ ResiduePartition.residuesU td,
+          (∑ u ∈ ResiduePartition.uClass td r, ‖innerSumUZ td ξ F u‖ ^ 2)
+            ≤
+          (C3 td) * ((td.D / (td.q : ℝ)) * (td.U + td.X / |ξ|) *
+            (∑ u ∈ ResiduePartition.uClass td r,
+              ∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2)) :=
+  (step3MV_byResidue td).bound
+
+/-- Expanded Step 4 per-residue bound, in the exact shape your constructors consume. -/
+theorem step4MV_byResidue_bound (td : TubeData) :
+    ∀ ξ : ℝ, ξ ≠ 0 → |ξ| ≤ (1 / td.H) →
+      ∀ F : TubePoint → ℂ,
+        ∀ r ∈ ResiduePartitionV.residuesV td,
+          (∑ v ∈ ResiduePartitionV.vClass td r, ‖innerSumVZ td ξ F v‖ ^ 2)
+            ≤
+          (C4 td) * (td.D * (td.U / (td.q : ℝ) + td.X / |ξ|) *
+            (∑ v ∈ ResiduePartitionV.vClass td r,
+              ∑ z ∈ zSetV td v, ‖∑ p ∈ fiberVZ td v z, F p‖ ^ 2)) :=
+  (step4MV_byResidue td).bound
+
+end LargeSieve
+end TypeII
+end Engines
+end SSU
+
+That’s all you need as “formal statement form”:
+
+step3MV_byResidue td : Step3MontgomeryVaughanByResidue td
+
+step4MV_byResidue td : Step4MontgomeryVaughanByResidue td
+
+and the constants are automatically parameter-only via C3 td := (…).C and C4 td := (…).C, with the bound quantifying over ξ F r exactly as required.
+
+You’ve identified the right “last mile.” The good news is: (Step3/Step4) MV-by-residue can be discharged deterministically in your current framework (no new analytic machinery) by copying the existing global Cauchy–Schwarz/cardinality proofs, but restricted to a single residue class. The only genuinely new deterministic work is the gcd-reduction transport (since TubeData bakes in coprimality).
+
+Below are the two formal statement packages you asked for, plus the gcd transport lemma in a form that matches your SSU code.
+
+1) Step 3 MV-by-residue (proved deterministically from card(zSet))
+A. Minimal “constructor” you can add (proved, not assumed)
+
+Add this to SSU/Engines/LargeSieve/MontgomeryVaughanTypeII.lean (or a sibling file importing it). It is literally the global Step3MontgomeryVaughan.of_card_zSet proof with uSet replaced by uClass td r.
+
+namespace SSU.Engines.TypeII.LargeSieve
+
+open scoped BigOperators
+noncomputable section
+open SSU.Engines.TypeII
+
+/-- Per-residue Step 3 from a `zSet` cardinality envelope (Cauchy–Schwarz). -/
+def Step3MontgomeryVaughanByResidue.of_card_zSet
+    (td : TubeData) (Cz : ℝ)
+    (hCz : 0 ≤ Cz)
+    (hcard : ∀ u : ℤ, ((zSet td u).card : ℝ) ≤ Cz * (td.D / (td.q : ℝ)))
+    (hD : 0 ≤ td.D) (hU : 1 ≤ td.U) (hX : 0 ≤ td.X) :
+    Step3MontgomeryVaughanByResidue td :=
+by
+  classical
+  refine ⟨Cz, hCz, ?_⟩
+  intro ξ hξ0 _hξH F r hr
+
+  -- Pointwise `u`: Cauchy–Schwarz in the inner `z`-sum.
+  have hinner (u : ℤ) :
+      ‖innerSumUZ td ξ F u‖ ^ 2
+        ≤
+      ((zSet td u).card : ℝ) *
+        (∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2) := by
+    have hcs :=
+      (norm_sum_sq_le_card_mul_sum_norm_sq (s := zSet td u)
+        (f := fun z : ℤ =>
+          (∑ p ∈ fiberUZ td u z, F p) * e (ξ * (u : ℝ) * (z : ℝ) / td.X)))
+    have hsimp :
+        (∑ z ∈ zSet td u,
+            (‖∑ p ∈ fiberUZ td u z, F p‖ * ‖e (ξ * (u : ℝ) * (z : ℝ) / td.X)‖) ^ 2)
+          =
+        ∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2 := by
+      refine Finset.sum_congr rfl ?_
+      intro z hz
+      simp [norm_e]
+    simpa [innerSumUZ, hsimp] using hcs
+
+  -- Sum over the residue class `uClass td r`.
+  have hsum :
+      (∑ u ∈ ResiduePartition.uClass td r, ‖innerSumUZ td ξ F u‖ ^ 2)
+        ≤
+      ∑ u ∈ ResiduePartition.uClass td r,
+        ((zSet td u).card : ℝ) *
+          (∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2) := by
+    refine Finset.sum_le_sum ?_
+    intro u hu
+    exact hinner u
+
+  -- Replace `card(zSet)` by `Cz*(D/q)` and factor constants.
+  have hsum' :
+      (∑ u ∈ ResiduePartition.uClass td r, ‖innerSumUZ td ξ F u‖ ^ 2)
+        ≤
+      (Cz * (td.D / (td.q : ℝ))) *
+        (∑ u ∈ ResiduePartition.uClass td r,
+          ∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2) := by
+    have hq : 0 < (td.q : ℝ) := by exact_mod_cast td.q_pos
+    have hDq : 0 ≤ td.D / (td.q : ℝ) := div_nonneg hD (le_of_lt hq)
+    have hcoeff_nonneg (u : ℤ) :
+        0 ≤ (∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2 : ℝ) := by
+      refine Finset.sum_nonneg ?_
+      intro z hz
+      positivity
+    have hpoint (u : ℤ) :
+        ((zSet td u).card : ℝ) *
+            (∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2)
+          ≤
+        (Cz * (td.D / (td.q : ℝ))) *
+            (∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2) := by
+      exact mul_le_mul_of_nonneg_right (hcard u) (hcoeff_nonneg u)
+    calc
+      (∑ u ∈ ResiduePartition.uClass td r, ‖innerSumUZ td ξ F u‖ ^ 2)
+          ≤
+        ∑ u ∈ ResiduePartition.uClass td r,
+          ((zSet td u).card : ℝ) *
+            (∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2) := hsum
+      _ ≤
+        ∑ u ∈ ResiduePartition.uClass td r,
+          (Cz * (td.D / (td.q : ℝ))) *
+            (∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2) := by
+          refine Finset.sum_le_sum ?_
+          intro u hu
+          exact hpoint u
+      _ =
+        (Cz * (td.D / (td.q : ℝ))) *
+          (∑ u ∈ ResiduePartition.uClass td r,
+            ∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2) := by
+          simp [Finset.mul_sum, mul_assoc]
+
+  -- Insert the TeX factor `(U + X/|ξ|)` using `1 ≤ U` and `X/|ξ| ≥ 0`.
+  have hUx : 1 ≤ td.U + td.X / |ξ| := by
+    have hx : 0 ≤ td.X / |ξ| := div_nonneg hX (abs_nonneg ξ)
+    nlinarith [hU, hx]
+  have hq : 0 < (td.q : ℝ) := by exact_mod_cast td.q_pos
+  have hDq : 0 ≤ td.D / (td.q : ℝ) := div_nonneg hD (le_of_lt hq)
+  have hcoeff_nonneg :
+      0 ≤ (∑ u ∈ ResiduePartition.uClass td r,
+            ∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2 : ℝ) := by
+    refine Finset.sum_nonneg ?_
+    intro u hu
+    refine Finset.sum_nonneg ?_
+    intro z hz
+    positivity
+
+  -- Final monotonicity step.
+  have :
+      (Cz * (td.D / (td.q : ℝ))) *
+          (∑ u ∈ ResiduePartition.uClass td r,
+            ∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2)
+        ≤
+      Cz * ((td.D / (td.q : ℝ)) * (td.U + td.X / |ξ|) *
+          (∑ u ∈ ResiduePartition.uClass td r,
+            ∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2)) := by
+    -- multiply RHS by `≥ 1`
+    have hmono :
+        (Cz * (td.D / (td.q : ℝ))) *
+            (∑ u ∈ ResiduePartition.uClass td r,
+              ∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2)
+          ≤
+        (Cz * (td.D / (td.q : ℝ))) * ((td.U + td.X / |ξ|) *
+            (∑ u ∈ ResiduePartition.uClass td r,
+              ∑ z ∈ zSet td u, ‖∑ p ∈ fiberUZ td u z, F p‖ ^ 2)) := by
+      refine mul_le_mul_of_nonneg_left ?_ (mul_nonneg hCz hDq)
+      -- `A ≤ (U+X/|ξ|)*A` since `1 ≤ U+...` and `A ≥ 0`.
+      simpa [mul_assoc] using
+        (le_mul_of_one_le_left hcoeff_nonneg hUx)
+    -- reassociate to match the target formatting
+    simpa [mul_assoc, mul_left_comm, mul_comm] using hmono
+
+  exact le_trans hsum' this
+
+end SSU.Engines.TypeII.LargeSieve
+
+Constant policy: C = Cz depends only on td (once you supply hcard), and the bound is independent of F, ξ, r.
+
+B. Getting hcard without the q ≤ D gate (the q>D fix)
+
+Right now you only have card_zSet_le_three_mul_D_div_q (needs 1 ≤ D/q). What you should add is the intermediate bound:
+
+card(zSet u) ≤ D/q + 2 (no q ≤ D)
+
+and then choose
+
+𝐶
+𝑧
+:
+=
+3
+⋅
+max
+⁡
+ ⁣
+(
+1
+,
+ 
+𝑞
+𝐷
+)
+Cz:=3⋅max(1, 
+D
+q
+	​
+
+)
+
+so that card(zSet u) ≤ Cz*(D/q) holds uniformly (case split on 1 ≤ D/q).
+
+That removes your q > D fallback permanently.
+
+2) Step 4 MV-by-residue (proved deterministically from card(zSetV))
+
+You can do the same restriction trick for Step 4: copy the global proof in Step4MontgomeryVaughan.of_box_geometry, but sum over ResiduePartitionV.vClass td r.
+
+The global file already has the universal bound
+card_zSetV_le_two_mul_U_div_q_add_three, so there is no q ≤ D issue here.
+
+Skeleton (same style as above):
+
+/-- Per-residue Step 4 from the `zSetV` cardinality envelope (Cauchy–Schwarz). -/
+def Step4MontgomeryVaughanByResidue.of_box_geometry
+    (td : TubeData)
+    (hU : 0 ≤ td.U) (hX : 0 ≤ td.X)
+    (hD1 : 1 ≤ td.D) (hXH1 : 1 ≤ td.X * td.H) :
+    Step4MontgomeryVaughanByResidue td := by
+  classical
+  -- Use the same constant as the global Step4 surrogate:
+  refine ⟨(2 * td.U) / (td.q : ℝ) + 3, ?_, ?_⟩
+  · -- nonneg: same as global
+    ...
+  · intro ξ hξ0 hξH F r hr
+    -- repeat the global proof with `vSet` replaced by `vClass td r`
+    ...
+
+Constant policy: C4(td) = (2U)/q + 3 is parameter-only, independent of F, ξ, r.
+
+3) Deterministic gcd-reduction transport (non-coprime tube → reduced coprime tube)
+
+Since TubeData requires Nat.Coprime a.natAbs q.natAbs, you cannot even build td until you reduce. The transport lemma you need should live at the BG tube level (no coprime assumptions).
+
+Let P : BGTube.Params, a : ℤ, q : ℕ, s : ℤ. Define
+
+g : ℕ := Nat.gcd a.natAbs q
+
+q0 : ℕ := q / g
+
+a0 : ℤ := a / (g : ℤ) (valid because g ∣ a.natAbs, hence g ∣ a)
+
+U0 : ℕ := (P.U + g - 1) / g (ceiling of U/g, enough for transport)
+
+s0 : ℤ := s / (g : ℤ) (you can incorporate s % g into the + (g-1) padding as above)
+
+Then prove:
+
+theorem tubeFinset_subset_gcdReduced
+    (P : BGTube.Params) (a : ℤ) (q : ℕ) (s : ℤ) :
+    let g : ℕ := Nat.gcd a.natAbs q
+    let q0 : ℕ := q / g
+    let a0 : ℤ := a / (g : ℤ)
+    let s0 : ℤ := s / (g : ℤ)
+    let U0 : ℕ := (P.U + g - 1) / g
+    BGTube.tubeFinset P a q s ⊆ BGTube.tubeFinset ({P with U := U0}) a0 q0 s0 := by
+  -- use `mem_tubeFinset_iff` and the arithmetic identity
+  --   shear a q s p = (g:ℤ) * shear a0 q0 s0 p - (s % g)
+  -- then `|g*t - r| ≤ U` ⇒ `|t| ≤ ceil((U + g - 1)/g)`.
+  ...
+
+And then your support transfer is immediate:
+
+theorem support_transfer
+    {F : TubePoint → ℂ}
+    (hF : ∀ p, F p ≠ 0 → p ∈ BGTube.tubeFinset P a q s) :
+    ∀ p, F p ≠ 0 → p ∈ BGTube.tubeFinset ({P with U := U0}) a0 q0 s0 :=
+by
+  intro p hp
+  exact (tubeFinset_subset_gcdReduced P a q s) (hF p hp)
+
+Once you have q0,a0 with Nat.Coprime a0.natAbs q0 (standard from gcd division), you can build the reduced TubeData and run the Step3/Step4-by-residue constructors above with no fallback.
+
+Bottom line
+
+After you implement the blueprint “as assumptions,” you can actually remove the assumptions by adding:
+
+Step3MontgomeryVaughanByResidue.of_card_zSet (proved, deterministic)
+
+Step4MontgomeryVaughanByResidue.of_box_geometry (proved, deterministic)
+
+card_zSet_le_D_div_q_add_two + the q>D envelope for hcard
+
+tubeFinset_subset_gcdReduced + support transfer
+
+That completely closes the “only real analytic obligation” in your current SSU formalization style, and it removes both the q>D and ¬Coprime(a,q) fallback triggers in a clean, parameter-only way.

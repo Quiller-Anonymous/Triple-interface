@@ -1082,31 +1082,26 @@ noncomputable def ofBGGeometryReduction_autoTubeForm
         reduction.F f i j =
           SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
             (tdOf P a q hq hcop) (α f i j) (β f i j)) :
-    GeometryInput κ ι where
-  FB := FB
-  P := P
-  a := a
-  q := q
-  hq := hq
-  hcop := hcop
-  ha0 := ha0
-  hlower := hlower
-  hupper := hupper
-  hD1 := hD1
-  hU1 := hU1
-  hqD := hqD
-  hX := hX
-  hH1 := hH1
-  hXH_u := hXH_u
-  hXH_v := hXH_v
-  tubeForm_eq := tubeForm_eq_of_step2ToTubeForm
-    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop) h2 hKhat
-  reduction := reduction
-  α := α
-  β := β
-  hβmod_sig := hβmod_sig
-  hαmod_sig := hαmod_sig
-  hF := hF
+    GeometryInput κ ι := by
+  exact
+    ofBGGeometryCoeffReduction_autoTubeForm
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (h2 := h2) (hKhat := hKhat)
+      (α := α) (β := β)
+      (hβmod_sig := hβmod_sig) (hαmod_sig := hαmod_sig)
+      (Cenergy := reduction.Cenergy)
+      (Cenergy_nonneg := reduction.Cenergy_nonneg)
+      (inner_eq_coeff := by
+        intro f i hi j hj
+        simpa [hF f i j] using reduction.inner_eq f i hi j hj)
+      (energy_le_coeff := by
+        intro f i hi j hj
+        simpa [hF f i j] using reduction.energy_le f i hi j hj)
 
 /-- Rank-one specialization of `ofBGGeometryReduction_autoTubeForm` using a fixed witness
 `I0` and a direct `hF0` equation against the supplied reduction. -/
@@ -3026,6 +3021,352 @@ noncomputable def contract_of_sumFiber_ref_on_zSet_oneAddLog
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
   (g.toUniformInputStep3Step4_of_sumFiber_ref_on_zSet_oneAddLog
     mRefU hmRefU hZeqU hEqOnU mRefV hmRefV hZeqV hEqOnV).contract
+
+/-- Geometry-input endpoint: build decoupled Step-3/Step-4 data from one-add-log
+`hZeq` + `hEqOn` witnesses that are uniform in `F`, routed through the sharpened by-residue
+Montgomery–Vaughan constructors. -/
+noncomputable def toUniformInputStep3Step4_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV
+    (g : GeometryInput κ ι)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r)
+    (hZeqU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := g.toUniformInput.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := g.toUniformInput.td) r (mRefU r hr)))
+    (hEqOnUAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                    (td := g.toUniformInput.td) r (mRefU r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := g.toUniformInput.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := g.toUniformInput.td) r (mRefU r hr)) z, F p))
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r)
+    (hZeqV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := g.toUniformInput.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := g.toUniformInput.td) r (mRefV r hr)))
+    (hEqOnVAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                    (td := g.toUniformInput.td) r (mRefV r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := g.toUniformInput.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := g.toUniformInput.td) r (mRefV r hr)) z, F p)) :
+    UniformInputStep3Step4 κ ι := by
+  let h3MV : SSU.Engines.TypeII.LargeSieve.Step3MontgomeryVaughanByResidue g.toUniformInput.td :=
+    SSU.Engines.TypeII.LargeSieve.step3MV_byResidue_oneAddLog_ref
+      (td := g.toUniformInput.td)
+      (hU0 := g.toUniformInput.R.hU0) (hDq := g.toUniformInput.R.hDq)
+      (hU1 := g.toUniformInput.R.hU1) (hX := g.toUniformInput.R.hX)
+      (hH := g.toUniformInput.R.hH) (hXH := g.toUniformInput.R.hXH_u)
+      (mRef := mRefU) (hmRef := hmRefU) (hZeq := hZeqU) (hEqOn := hEqOnUAll)
+  let h4MV : SSU.Engines.TypeII.LargeSieve.Step4MontgomeryVaughanByResidue g.toUniformInput.td :=
+    SSU.Engines.TypeII.LargeSieve.step4MV_byResidue_oneAddLog_ref
+      (td := g.toUniformInput.td)
+      (hD0 := g.toUniformInput.R.hD0) (hD1 := g.toUniformInput.R.hD1)
+      (hDq := g.toUniformInput.R.hDq) (hU1 := g.toUniformInput.R.hU1)
+      (hX := g.toUniformInput.R.hX) (hH := g.toUniformInput.R.hH)
+      (hXH := g.toUniformInput.R.hXH_v)
+      (mRef := mRefV) (hmRef := hmRefV) (hZeq := hZeqV) (hEqOn := hEqOnVAll)
+  exact g.toUniformInputStep3Step4_ofMontgomeryVaughanByResidue h3MV h4MV
+
+/-- Geometry-input endpoint: `hZeq`/`hEqOn` one-add-log hypotheses (uniform in `F`) to uniform
+Step-5 package through the sharpened by-residue MV route. -/
+noncomputable def toHypothesisStep34ForUniform_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV
+    (g : GeometryInput κ ι)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r)
+    (hZeqU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := g.toUniformInput.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := g.toUniformInput.td) r (mRefU r hr)))
+    (hEqOnUAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                    (td := g.toUniformInput.td) r (mRefU r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := g.toUniformInput.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := g.toUniformInput.td) r (mRefU r hr)) z, F p))
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r)
+    (hZeqV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := g.toUniformInput.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := g.toUniformInput.td) r (mRefV r hr)))
+    (hEqOnVAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                    (td := g.toUniformInput.td) r (mRefV r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := g.toUniformInput.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := g.toUniformInput.td) r (mRefV r hr)) z, F p)) :
+    HypothesisStep34ForUniform κ ι :=
+  (g.toUniformInputStep3Step4_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV
+    mRefU hmRefU hZeqU hEqOnUAll mRefV hmRefV hZeqV hEqOnVAll).toHypothesisStep34ForUniform
+
+/-- Geometry-input endpoint: `hZeq`/`hEqOn` one-add-log hypotheses (uniform in `F`) to Gram
+hypothesis through the sharpened by-residue MV route. -/
+noncomputable def gramHypothesis_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV
+    (g : GeometryInput κ ι)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r)
+    (hZeqU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := g.toUniformInput.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := g.toUniformInput.td) r (mRefU r hr)))
+    (hEqOnUAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                    (td := g.toUniformInput.td) r (mRefU r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := g.toUniformInput.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := g.toUniformInput.td) r (mRefU r hr)) z, F p))
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r)
+    (hZeqV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := g.toUniformInput.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := g.toUniformInput.td) r (mRefV r hr)))
+    (hEqOnVAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                    (td := g.toUniformInput.td) r (mRefV r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := g.toUniformInput.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := g.toUniformInput.td) r (mRefV r hr)) z, F p)) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (g.FB.data).J
+      ((g.FB.data).corePacketFamily.T) :=
+  (g.toUniformInputStep3Step4_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV
+    mRefU hmRefU hZeqU hEqOnUAll mRefV hmRefV hZeqV hEqOnVAll).gramHypothesis
+
+/-- Geometry-input endpoint: `hZeq`/`hEqOn` one-add-log hypotheses (uniform in `F`) to final
+contract through the sharpened by-residue MV route. -/
+noncomputable def contract_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV
+    (g : GeometryInput κ ι)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r)
+    (hZeqU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := g.toUniformInput.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := g.toUniformInput.td) r (mRefU r hr)))
+    (hEqOnUAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU g.toUniformInput.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := g.toUniformInput.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSet g.toUniformInput.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                    (td := g.toUniformInput.td) r (mRefU r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := g.toUniformInput.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := g.toUniformInput.td) r (mRefU r hr)) z, F p))
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r)
+    (hZeqV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := g.toUniformInput.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := g.toUniformInput.td) r (mRefV r hr)))
+    (hEqOnVAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV g.toUniformInput.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := g.toUniformInput.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSetV g.toUniformInput.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                    (td := g.toUniformInput.td) r (mRefV r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := g.toUniformInput.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ g.toUniformInput.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := g.toUniformInput.td) r (mRefV r hr)) z, F p)) :
+    SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
+  (g.toUniformInputStep3Step4_of_sumFiber_ref_on_zSet_oneAddLog_uniformMV
+    mRefU hmRefU hZeqU hEqOnUAll mRefV hmRefV hZeqV hEqOnVAll).contract
 
 /-- Geometry-input endpoint: build decoupled Step-3/Step-4 data from one-add-log
 `u`-fiber hypotheses, while keeping Step 4 on the current BG one-add-log fallback route. -/
@@ -5954,7 +6295,73 @@ noncomputable def contract_ofBGGeometry_const
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
   g.contract
 
-/-- Direct geometry-to-uniform-Step34 constructor for the BG rank-one/modEq bridge route. -/
+/-- Proof-driven geometry-to-uniform-Step34 constructor for the BG rank-one/modEq bridge route. -/
+noncomputable def hypothesisStep34ForUniform_ofBGGeometryReductionData
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+          ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+                (Khat (tdOf P a q hq hcop) ξ) *
+                  (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                      (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ))
+    (α : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (β : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (hβmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → β f i j u₁ = β f i j u₂)
+    (hαmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → α f i j v₁ = α f i j v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) (α f i j) (β f i j)))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) (α f i j) (β f i j))
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    HypothesisStep34ForUniform κ ι := by
+  exact
+    GeometryInput.hypothesisStep34ForUniform_ofBGGeometryCoeffReduction
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (tubeForm_eq := tubeForm_eq)
+      (α := α) (β := β)
+      (hβmod_sig := hβmod_sig) (hαmod_sig := hαmod_sig)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff)
+      (energy_le_coeff := energy_le_coeff)
+
+/-- Compatibility constructor: build the BG rank-one/modEq uniform Step-5 package from a raw
+`ReductionToTubeForm` witness. Internally this delegates to the proof-driven
+`hypothesisStep34ForUniform_ofBGGeometryReductionData`. -/
 noncomputable def hypothesisStep34ForUniform_ofBGGeometry
     {κ ι : Type*} [DecidableEq κ]
     (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
@@ -6000,19 +6407,26 @@ noncomputable def hypothesisStep34ForUniform_ofBGGeometry
         reduction.F f i j =
           SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
             (tdOf P a q hq hcop) (α f i j) (β f i j)) :
-    HypothesisStep34ForUniform κ ι :=
-  (UniformInput.ofBGGeometry
-      (κ := κ) (ι := ι)
+    HypothesisStep34ForUniform κ ι := by
+  exact
+    hypothesisStep34ForUniform_ofBGGeometryReductionData
       (FB := FB)
       (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
       (ha0 := ha0) (hlower := hlower) (hupper := hupper)
       (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
       (hX := hX) (hH1 := hH1)
       (hXH_u := hXH_u) (hXH_v := hXH_v)
-      (tubeForm_eq := tubeForm_eq) (reduction := reduction)
+      (tubeForm_eq := tubeForm_eq)
       (α := α) (β := β)
       (hβmod_sig := hβmod_sig) (hαmod_sig := hαmod_sig)
-      (hF := hF)).toHypothesisStep34ForUniform
+      (Cenergy := reduction.Cenergy)
+      (Cenergy_nonneg := reduction.Cenergy_nonneg)
+      (inner_eq_coeff := by
+        intro f i hi j hj
+        simpa [hF f i j] using reduction.inner_eq f i hi j hj)
+      (energy_le_coeff := by
+        intro f i hi j hj
+        simpa [hF f i j] using reduction.energy_le f i hi j hj)
 
 /-- Direct geometry + provided Step-3/Step-4 use-site bounds → uniform Step-5 hypothesis.
 This is the non-fallback insertion point for future TeX-strength Step-3/Step-4 proofs. -/
@@ -6121,7 +6535,75 @@ noncomputable def hypothesisStep34ForUniform_ofBGGeometry_step3step4
       (C34 := C34) (C34_nonneg := C34_nonneg)
       (step34For := step34For) (C34_le := C34_le)
 
-/-- Direct geometry-to-Gram constructor for the BG rank-one/modEq bridge route. -/
+/-- Proof-driven direct geometry-to-Gram constructor for the BG rank-one/modEq bridge route. -/
+noncomputable def gramHypothesis_ofBGGeometryReductionData
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+          ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+                (Khat (tdOf P a q hq hcop) ξ) *
+                  (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                      (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ))
+    (α : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (β : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (hβmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → β f i j u₁ = β f i j u₂)
+    (hαmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → α f i j v₁ = α f i j v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) (α f i j) (β f i j)))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) (α f i j) (β f i j))
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    SSU.Interzone.GramHypothesis
+      (H := SSU.Global.Signal)
+      (FB.data).J
+      ((FB.data).corePacketFamily.T) := by
+  simpa using
+    (hypothesisStep34ForUniform_ofBGGeometryReductionData
+      (κ := κ) (ι := ι)
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (tubeForm_eq := tubeForm_eq)
+      (α := α) (β := β)
+      (hβmod_sig := hβmod_sig) (hαmod_sig := hαmod_sig)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)).gramHypothesis
+
+/-- Compatibility geometry-to-Gram constructor over a supplied `ReductionToTubeForm` witness.
+Internally this delegates to `gramHypothesis_ofBGGeometryReductionData`. -/
 noncomputable def gramHypothesis_ofBGGeometry
     {κ ι : Type*} [DecidableEq κ]
     (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
@@ -6170,19 +6652,26 @@ noncomputable def gramHypothesis_ofBGGeometry
     SSU.Interzone.GramHypothesis
       (H := SSU.Global.Signal)
       (FB.data).J
-      ((FB.data).corePacketFamily.T) :=
-  (hypothesisStep34ForUniform_ofBGGeometry
-      (κ := κ) (ι := ι)
+      ((FB.data).corePacketFamily.T) := by
+  exact
+    gramHypothesis_ofBGGeometryReductionData
       (FB := FB)
       (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
       (ha0 := ha0) (hlower := hlower) (hupper := hupper)
       (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
       (hX := hX) (hH1 := hH1)
       (hXH_u := hXH_u) (hXH_v := hXH_v)
-      (tubeForm_eq := tubeForm_eq) (reduction := reduction)
+      (tubeForm_eq := tubeForm_eq)
       (α := α) (β := β)
       (hβmod_sig := hβmod_sig) (hαmod_sig := hαmod_sig)
-      (hF := hF)).gramHypothesis
+      (Cenergy := reduction.Cenergy)
+      (Cenergy_nonneg := reduction.Cenergy_nonneg)
+      (inner_eq_coeff := by
+        intro f i hi j hj
+        simpa [hF f i j] using reduction.inner_eq f i hi j hj)
+      (energy_le_coeff := by
+        intro f i hi j hj
+        simpa [hF f i j] using reduction.energy_le f i hi j hj)
 
 /-- Direct geometry + provided Step-3/Step-4 use-site bounds → Gram hypothesis. -/
 noncomputable def gramHypothesis_ofBGGeometry_step3step4
@@ -6247,7 +6736,72 @@ noncomputable def gramHypothesis_ofBGGeometry_step3step4
       (C3_nonneg := C3_nonneg) (C4_nonneg := C4_nonneg)
       (C3_le := C3_le) (C4_le := C4_le)).gramHypothesis
 
-/-- Direct geometry-to-contract constructor for the BG rank-one/modEq bridge route. -/
+/-- Proof-driven direct geometry-to-contract constructor for the BG rank-one/modEq bridge route. -/
+noncomputable def contract_ofBGGeometryReductionData
+    {κ ι : Type*} [DecidableEq κ]
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (tubeForm_eq :
+      ∀ F : TubePoint → ℂ,
+        tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T F =
+          ((∫ ξ in Set.Icc (-(1 / (tdOf P a q hq hcop).H)) (1 / (tdOf P a q hq hcop).H),
+                (Khat (tdOf P a q hq hcop) ξ) *
+                  (‖typeIISum (tdOf P a q hq hcop).a (tdOf P a q hq hcop).q
+                      (tdOf P a q hq hcop).X ξ (tdOf P a q hq hcop).T F‖ ^ 2)) : ℂ))
+    (α : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (β : SSU.Global.Signal → ℤ → ℤ → ℤ → ℂ)
+    (hβmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → β f i j u₁ = β f i j u₂)
+    (hαmod_sig :
+      ∀ (f : SSU.Global.Signal) (i j : ℤ) (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → α f i j v₁ = α f i j v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) (α f i j) (β f i j)))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) (α f i j) (β f i j))
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily := by
+  simpa using
+    (hypothesisStep34ForUniform_ofBGGeometryReductionData
+      (κ := κ) (ι := ι)
+      (FB := FB)
+      (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+      (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+      (hX := hX) (hH1 := hH1)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (tubeForm_eq := tubeForm_eq)
+      (α := α) (β := β)
+      (hβmod_sig := hβmod_sig) (hαmod_sig := hαmod_sig)
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)).contract
+
+/-- Compatibility geometry-to-contract constructor over a supplied `ReductionToTubeForm` witness.
+Internally this delegates to `contract_ofBGGeometryReductionData`. -/
 noncomputable def contract_ofBGGeometry
     {κ ι : Type*} [DecidableEq κ]
     (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
@@ -6293,19 +6847,26 @@ noncomputable def contract_ofBGGeometry
         reduction.F f i j =
           SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
             (tdOf P a q hq hcop) (α f i j) (β f i j)) :
-    SSU.Global.SSUContract (FB.data).corePacketFamily :=
-  (hypothesisStep34ForUniform_ofBGGeometry
-      (κ := κ) (ι := ι)
+    SSU.Global.SSUContract (FB.data).corePacketFamily := by
+  exact
+    contract_ofBGGeometryReductionData
       (FB := FB)
       (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
       (ha0 := ha0) (hlower := hlower) (hupper := hupper)
       (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
       (hX := hX) (hH1 := hH1)
       (hXH_u := hXH_u) (hXH_v := hXH_v)
-      (tubeForm_eq := tubeForm_eq) (reduction := reduction)
+      (tubeForm_eq := tubeForm_eq)
       (α := α) (β := β)
       (hβmod_sig := hβmod_sig) (hαmod_sig := hαmod_sig)
-      (hF := hF)).contract
+      (Cenergy := reduction.Cenergy)
+      (Cenergy_nonneg := reduction.Cenergy_nonneg)
+      (inner_eq_coeff := by
+        intro f i hi j hj
+        simpa [hF f i j] using reduction.inner_eq f i hi j hj)
+      (energy_le_coeff := by
+        intro f i hi j hj
+        simpa [hF f i j] using reduction.energy_le f i hi j hj)
 
 /-- Direct geometry + provided Step-3/Step-4 use-site bounds → final SSU contract. -/
 noncomputable def contract_ofBGGeometry_step3step4
@@ -25468,14 +26029,11 @@ noncomputable def toeplitzInput_flagship_select_ofIndexWitness_extracted
     {κ : Type*} [DecidableEq κ]
     {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
     (route : FlagshipIndexRoute)
-    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInputFor
       (κ := κ) (H0 := H0)) :
-    SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
-      (κ := κ) (H0 := H0) :=
-  match route with
-  | .nonFallback => h
-  | .step3FallbackStep4 => h
-  | .step4FallbackStep3 => h
+    SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInputFor
+      (κ := κ) (H0 := H0) := by
+  cases route <;> exact h
 
 /-- Toeplitz-first selector endpoint for the honest extracted-signal flagship bridge surface.
 
@@ -25486,12 +26044,12 @@ noncomputable def ttStarInput_flagship_select_ofIndexWitness_extracted
     {κ : Type*} [DecidableEq κ]
     {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
     (route : FlagshipIndexRoute)
-    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInputFor
       (κ := κ) (H0 := H0)) :
-    SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.TTStarInput
+    SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.TTStarInputFor
       (κ := κ) (H0 := H0) :=
   (toeplitzInput_flagship_select_ofIndexWitness_extracted
-      (κ := κ) (H0 := H0) route h).toTTStarInput
+      (κ := κ) (H0 := H0) route h).toTTStarInputFor
 
 /-- Selector-first TT*-native higher-layer packet Gram bound on the extracted flagship route.
 
@@ -25502,7 +26060,7 @@ theorem norm_inner_packetOpUnnormalized_le_flagship_select_ofIndexWitness_extrac
     {κ : Type*} [DecidableEq κ]
     {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
     (route : FlagshipIndexRoute)
-    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInputFor
       (κ := κ) (H0 := H0))
     (f : H0) (i : ℤ) (hi : i ∈ h.toeplitz.Dpacket.J) (j : ℤ) (hj : j ∈ h.toeplitz.Dpacket.J) :
     ‖inner ℂ
@@ -25512,7 +26070,7 @@ theorem norm_inner_packetOpUnnormalized_le_flagship_select_ofIndexWitness_extrac
           (h.toeplitz.signal f i j))‖
       ≤
     ((1 / h.toeplitz.Dpacket.X) * ((h.toeplitz.Dpacket.M * h.toeplitz.Dpacket.Φmax) ^ 2) *
-        (h.step34.C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
+        ((h.step34For f i j).C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
           SSU.tubeEnergy h.toeplitz.Dtype.tube (h.toeplitz.Dtype.F f i j))) *
       (2 * (h.toeplitz.Dpacket.H)⁻¹) := by
   cases route <;>
@@ -25531,7 +26089,7 @@ noncomputable def ttStarInput_flagship_default_ofIndexWitness_extracted
 theorem norm_inner_packetOpUnnormalized_le_flagship_default_ofIndexWitness_extracted
     {κ : Type*} [DecidableEq κ]
     {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
-    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInputFor
       (κ := κ) (H0 := H0))
     (f : H0) (i : ℤ) (hi : i ∈ h.toeplitz.Dpacket.J) (j : ℤ) (hj : j ∈ h.toeplitz.Dpacket.J) :
     ‖inner ℂ
@@ -25541,7 +26099,7 @@ theorem norm_inner_packetOpUnnormalized_le_flagship_default_ofIndexWitness_extra
           (h.toeplitz.signal f i j))‖
       ≤
     ((1 / h.toeplitz.Dpacket.X) * ((h.toeplitz.Dpacket.M * h.toeplitz.Dpacket.Φmax) ^ 2) *
-        (h.step34.C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
+        ((h.step34For f i j).C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
           SSU.tubeEnergy h.toeplitz.Dtype.tube (h.toeplitz.Dtype.F f i j))) *
       (2 * (h.toeplitz.Dpacket.H)⁻¹) := by
   simpa using
@@ -25553,7 +26111,7 @@ Gram theorem. Currently equal to the non-fallback extracted route. -/
 theorem norm_inner_packetOpUnnormalized_le_flagship_default_step3_fallback_step4_ofIndexWitness_extracted
     {κ : Type*} [DecidableEq κ]
     {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
-    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInputFor
       (κ := κ) (H0 := H0))
     (f : H0) (i : ℤ) (hi : i ∈ h.toeplitz.Dpacket.J) (j : ℤ) (hj : j ∈ h.toeplitz.Dpacket.J) :
     ‖inner ℂ
@@ -25563,19 +26121,19 @@ theorem norm_inner_packetOpUnnormalized_le_flagship_default_step3_fallback_step4
           (h.toeplitz.signal f i j))‖
       ≤
     ((1 / h.toeplitz.Dpacket.X) * ((h.toeplitz.Dpacket.M * h.toeplitz.Dpacket.Φmax) ^ 2) *
-        (h.step34.C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
+        ((h.step34For f i j).C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
           SSU.tubeEnergy h.toeplitz.Dtype.tube (h.toeplitz.Dtype.F f i j))) *
       (2 * (h.toeplitz.Dpacket.H)⁻¹) := by
   simpa using
-    (norm_inner_packetOpUnnormalized_le_flagship_select_ofIndexWitness_extracted
-      (route := .step3FallbackStep4) (h := h) (f := f) (i := i) hi (j := j) hj)
+    (norm_inner_packetOpUnnormalized_le_flagship_default_ofIndexWitness_extracted
+      (h := h) (f := f) (i := i) hi (j := j) hj)
 
 /-- Fallback selector alias (Step 4 proved, Step 3 fallback) for the TT*-native extracted packet
 Gram theorem. Currently equal to the non-fallback extracted route. -/
 theorem norm_inner_packetOpUnnormalized_le_flagship_default_step4_fallback_step3_ofIndexWitness_extracted
     {κ : Type*} [DecidableEq κ]
     {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0]
-    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInput
+    (h : SSU.Instances.FejerBankedTypeIIToeplitzBridge.Extracted.ToeplitzInputFor
       (κ := κ) (H0 := H0))
     (f : H0) (i : ℤ) (hi : i ∈ h.toeplitz.Dpacket.J) (j : ℤ) (hj : j ∈ h.toeplitz.Dpacket.J) :
     ‖inner ℂ
@@ -25585,26 +26143,26 @@ theorem norm_inner_packetOpUnnormalized_le_flagship_default_step4_fallback_step3
           (h.toeplitz.signal f i j))‖
       ≤
     ((1 / h.toeplitz.Dpacket.X) * ((h.toeplitz.Dpacket.M * h.toeplitz.Dpacket.Φmax) ^ 2) *
-        (h.step34.C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
+        ((h.step34For f i j).C * Real.sqrt (h.toeplitz.Dpacket.H / h.toeplitz.Dpacket.X) *
           SSU.tubeEnergy h.toeplitz.Dtype.tube (h.toeplitz.Dtype.F f i j))) *
       (2 * (h.toeplitz.Dpacket.H)⁻¹) := by
   simpa using
-    (norm_inner_packetOpUnnormalized_le_flagship_select_ofIndexWitness_extracted
-      (route := .step4FallbackStep3) (h := h) (f := f) (i := i) hi (j := j) hj)
+    (norm_inner_packetOpUnnormalized_le_flagship_default_ofIndexWitness_extracted
+      (h := h) (f := f) (i := i) hi (j := j) hj)
 
 /-- Selector fallback alias (Step 3 proved, Step 4 fallback) for the TT*-native extracted route.
 Currently equal to the non-fallback extracted route. -/
 noncomputable def ttStarInput_flagship_default_step3_fallback_step4_ofIndexWitness_extracted
     {κ : Type*} [DecidableEq κ]
     {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0] :=
-  @ttStarInput_flagship_select_ofIndexWitness_extracted κ _ H0 _ _ .step3FallbackStep4
+  @ttStarInput_flagship_default_ofIndexWitness_extracted κ _ H0 _ _
 
 /-- Selector fallback alias (Step 4 proved, Step 3 fallback) for the TT*-native extracted route.
 Currently equal to the non-fallback extracted route. -/
 noncomputable def ttStarInput_flagship_default_step4_fallback_step3_ofIndexWitness_extracted
     {κ : Type*} [DecidableEq κ]
     {H0 : Type*} [NormedAddCommGroup H0] [InnerProductSpace ℂ H0] :=
-  @ttStarInput_flagship_select_ofIndexWitness_extracted κ _ H0 _ _ .step4FallbackStep3
+  @ttStarInput_flagship_default_ofIndexWitness_extracted κ _ H0 _ _
 
 /-- Canonical selector endpoint to uniform Step-5 packaging at the geometry-input + fixed-rank-one
 (`hF0`) layer.
@@ -25613,7 +26171,7 @@ All selector routes now use the proved non-fallback production path internally; 
 is retained only for API compatibility. -/
 noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF
     {κ ι : Type*} [DecidableEq κ]
-    (route : FlagshipIndexRoute)
+    (_route : FlagshipIndexRoute)
     (g : GeometryInput κ ι)
     (I0 : SSU.Engines.BGTypeIIRankOne.Input)
     (hβmod :
@@ -25650,11 +26208,9 @@ noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from
           SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
             (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
     HypothesisStep34ForUniform κ ι :=
-  match route with
-  | .nonFallback | .step3FallbackStep4 | .step4FallbackStep3 =>
-      hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF
-        (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+  hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF
+    (g := g) (I0 := I0) (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
 
 /-- Canonical selector endpoint to uniform Step-5 packaging at the geometry-input +
 extracted-constancy layer.
@@ -25663,7 +26219,7 @@ All selector routes now use the proved non-fallback production path internally; 
 is retained only for API compatibility. -/
 noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness
     {κ ι : Type*} [DecidableEq κ]
-    (route : FlagshipIndexRoute)
+    (_route : FlagshipIndexRoute)
     (g : GeometryInput κ ι)
     (I0 : SSU.Engines.BGTypeIIRankOne.Input)
     (hαconst :
@@ -25693,17 +26249,18 @@ noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness
           SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
             (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
     HypothesisStep34ForUniform κ ι :=
-  match route with
-  | .nonFallback | .step3FallbackStep4 | .step4FallbackStep3 =>
-      hypothesisStep34ForUniform_flagship_default_ofIndexWitness
-        (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+  hypothesisStep34ForUniform_flagship_default_ofIndexWitness
+    (g := g) (I0 := I0) (hαconst := hαconst) (hβconst := hβconst)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
 
 /-- Canonical selector endpoint to Gram hypothesis over the geometry-input + extracted-constancy
-flagship index-witness route family. -/
+flagship index-witness route family.
+
+All selector routes now use the same proved non-fallback production chain internally; `route` is
+retained for API compatibility only. -/
 noncomputable def gramHypothesis_flagship_select_ofIndexWitness
     {κ ι : Type*} [DecidableEq κ]
-    (route : FlagshipIndexRoute)
+    (_route : FlagshipIndexRoute)
     (g : GeometryInput κ ι)
     (I0 : SSU.Engines.BGTypeIIRankOne.Input)
     (hαconst :
@@ -25736,31 +26293,19 @@ noncomputable def gramHypothesis_flagship_select_ofIndexWitness
       (H := SSU.Global.Signal)
       (g.FB.data).J
       ((g.FB.data).corePacketFamily.T) :=
-  match route with
-  | .nonFallback =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
-        (route := .nonFallback)
-        (g := g) (I0 := I0)
-        (hαconst := hαconst) (hβconst := hβconst)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
-  | .step3FallbackStep4 =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
-        (route := .step3FallbackStep4)
-        (g := g) (I0 := I0)
-        (hαconst := hαconst) (hβconst := hβconst)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
-  | .step4FallbackStep3 =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
-        (route := .step4FallbackStep3)
-        (g := g) (I0 := I0)
-        (hαconst := hαconst) (hβconst := hβconst)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness
+    (g := g) (I0 := I0)
+    (hαconst := hαconst) (hβconst := hβconst)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
 
 /-- Canonical selector endpoint to final contract over the geometry-input + extracted-constancy
-flagship index-witness route family. -/
+flagship index-witness route family.
+
+All selector routes now use the same proved non-fallback production chain internally; `route` is
+retained for API compatibility only. -/
 noncomputable def contract_flagship_select_ofIndexWitness
     {κ ι : Type*} [DecidableEq κ]
-    (route : FlagshipIndexRoute)
+    (_route : FlagshipIndexRoute)
     (g : GeometryInput κ ι)
     (I0 : SSU.Engines.BGTypeIIRankOne.Input)
     (hαconst :
@@ -25790,31 +26335,16 @@ noncomputable def contract_flagship_select_ofIndexWitness
           SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
             (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
-  match route with
-  | .nonFallback =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
-        (route := .nonFallback)
-        (g := g) (I0 := I0)
-        (hαconst := hαconst) (hβconst := hβconst)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
-  | .step3FallbackStep4 =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
-        (route := .step3FallbackStep4)
-        (g := g) (I0 := I0)
-        (hαconst := hαconst) (hβconst := hβconst)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
-  | .step4FallbackStep3 =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness
-        (route := .step4FallbackStep3)
-        (g := g) (I0 := I0)
-        (hαconst := hαconst) (hβconst := hβconst)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness
+    (g := g) (I0 := I0)
+    (hαconst := hαconst) (hβconst := hβconst)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)).contract
 
 /-- Canonical selector endpoint to Gram hypothesis over the geometry-input + fixed-rank-one
 (`hF0`) flagship index-witness route family. -/
 noncomputable def gramHypothesis_flagship_select_ofIndexWitness_from_hF
     {κ ι : Type*} [DecidableEq κ]
-    (route : FlagshipIndexRoute)
+    (_route : FlagshipIndexRoute)
     (g : GeometryInput κ ι)
     (I0 : SSU.Engines.BGTypeIIRankOne.Input)
     (hβmod :
@@ -25854,18 +26384,16 @@ noncomputable def gramHypothesis_flagship_select_ofIndexWitness_from_hF
       (H := SSU.Global.Signal)
       (g.FB.data).J
       ((g.FB.data).corePacketFamily.T) :=
-  match route with
-  | .nonFallback | .step3FallbackStep4 | .step4FallbackStep3 =>
-      gramHypothesis_flagship_default_ofIndexWitness_from_hF
-        (g := g) (I0 := I0)
-        (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+  gramHypothesis_flagship_default_ofIndexWitness_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
 
 /-- Canonical selector endpoint to final contract over the geometry-input + fixed-rank-one
 (`hF0`) flagship index-witness route family. -/
 noncomputable def contract_flagship_select_ofIndexWitness_from_hF
     {κ ι : Type*} [DecidableEq κ]
-    (route : FlagshipIndexRoute)
+    (_route : FlagshipIndexRoute)
     (g : GeometryInput κ ι)
     (I0 : SSU.Engines.BGTypeIIRankOne.Input)
     (hβmod :
@@ -25902,12 +26430,10 @@ noncomputable def contract_flagship_select_ofIndexWitness_from_hF
           SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
             (td := tdOf g.P g.a g.q g.hq g.hcop) r) :
     SSU.Global.SSUContract (g.FB.data).corePacketFamily :=
-  match route with
-  | .nonFallback | .step3FallbackStep4 | .step4FallbackStep3 =>
-      contract_flagship_default_ofIndexWitness_from_hF
-        (g := g) (I0 := I0)
-        (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
-        (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
+  contract_flagship_default_ofIndexWitness_from_hF
+    (g := g) (I0 := I0)
+    (hβmod := hβmod) (hαmod := hαmod) (hF0 := hF0)
+    (mRefU := mRefU) (hmRefU := hmRefU) (mRefV := mRefV) (hmRefV := hmRefV)
 
 /-- Canonical selector endpoint to uniform Step-5 packaging, routing across non-fallback and both
 fallback flagship index-witness families while staying on the auto-Step-2 surface. -/
@@ -26027,17 +26553,20 @@ noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_auto
         (energy_le_coeff := energy_le_coeff))
   exact
     hypothesisStep34ForUniform_flagship_select_ofIndexWitness
-      (route := route)
+      (_route := route)
       (g := g) (I0 := I0)
       (hαconst := hαconst) (hβconst := hβconst)
       (mRefU := mRefU) (hmRefU := hmRefU)
       (mRefV := mRefV) (hmRefV := hmRefV)
 
 /-- Canonical selector endpoint to Gram hypothesis, routing over flagship index-witness
-auto-Step-2 routes. -/
+auto-Step-2 routes.
+
+All selector routes now use the same proved non-fallback production chain internally; `route` is
+retained for API compatibility only. -/
 noncomputable def gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm
     {κ ι : Type*} [DecidableEq κ]
-    (route : FlagshipIndexRoute)
+    (_route : FlagshipIndexRoute)
     (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
     (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
     (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
@@ -26106,56 +26635,111 @@ noncomputable def gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm
       (H := SSU.Global.Signal)
       (FB.data).J
       ((FB.data).corePacketFamily.T) :=
-  match route with
-  | .nonFallback =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
-        (route := .nonFallback)
-        (FB := FB)
-        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
-        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
-        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
-        (hX := hX) (hH1 := hH1)
-        (hXH_u := hXH_u) (hXH_v := hXH_v)
-        (h2 := h2) (hKhat := hKhat)
-        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
-        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
-        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
-        (mRefU := mRefU) (hmRefU := hmRefU)
-        (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
-  | .step3FallbackStep4 =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
-        (route := .step3FallbackStep4)
-        (FB := FB)
-        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
-        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
-        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
-        (hX := hX) (hH1 := hH1)
-        (hXH_u := hXH_u) (hXH_v := hXH_v)
-        (h2 := h2) (hKhat := hKhat)
-        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
-        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
-        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
-        (mRefU := mRefU) (hmRefU := hmRefU)
-        (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
-  | .step4FallbackStep3 =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
-        (route := .step4FallbackStep3)
-        (FB := FB)
-        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
-        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
-        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
-        (hX := hX) (hH1 := hH1)
-        (hXH_u := hXH_u) (hXH_v := hXH_v)
-        (h2 := h2) (hKhat := hKhat)
-        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
-        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
-        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
-        (mRefU := mRefU) (hmRefU := hmRefU)
-        (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)).gramHypothesis
 
 /-- Canonical selector endpoint to final SSU contract, routing over flagship index-witness
-auto-Step-2 routes. -/
+auto-Step-2 routes.
+
+All selector routes now use the same proved non-fallback production chain internally; `route` is
+retained for API compatibility only. -/
 noncomputable def contract_flagship_select_ofIndexWitness_autoTubeForm
+    {κ ι : Type*} [DecidableEq κ]
+    (_route : FlagshipIndexRoute)
+    (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ)
+    (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U) (hqD : q ≤ P.D)
+    (hX : 0 < P.X) (hH1 : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (h2 :
+      SSU.Engines.TypeII.Step2ToTubeForm
+        (tdOf P a q hq hcop)
+        (K (tdOf P a q hq hcop)))
+    (hKhat : h2.Khat = Khat (tdOf P a q hq hcop))
+    (I0 : SSU.Engines.BGTypeIIRankOne.Input)
+    (hβmod :
+      ∀ (u₁ u₂ : ℤ),
+        u₁ ≡ u₂ [ZMOD (tdOf P a q hq hcop).q] → I0.β u₁ = I0.β u₂)
+    (hαmod :
+      ∀ (v₁ v₂ : ℤ),
+        v₁ ≡ v₂ [ZMOD (tdOf P a q hq hcop).q] → I0.α v₁ = I0.α v₂)
+    (Cenergy : ℝ) (Cenergy_nonneg : 0 ≤ Cenergy)
+    (inner_eq_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        inner ℂ (((FB.data).corePacketFamily.T i) f) (((FB.data).corePacketFamily.T j) f) =
+          tubeForm (K (tdOf P a q hq hcop)) (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β))
+    (energy_le_coeff :
+      ∀ f : SSU.Global.Signal, ∀ i ∈ (FB.data).J, ∀ j ∈ (FB.data).J,
+        tubeEnergy (tdOf P a q hq hcop).T
+            (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+              (tdOf P a q hq hcop) I0.α I0.β)
+          ≤
+          Cenergy * ‖((FB.data).corePacketFamily.T i) f‖ * ‖((FB.data).corePacketFamily.T j) f‖)
+    (mRefU :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU
+          (tdOf P a q hq hcop)),
+        mRefU r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet
+            (td := tdOf P a q hq hcop) r)
+    (mRefV :
+      ∀ (r : ℤ),
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop) → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV
+          (tdOf P a q hq hcop)),
+        mRefV r hr ∈
+          SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
+            (td := tdOf P a q hq hcop) r) :
+    SSU.Global.SSUContract (FB.data).corePacketFamily :=
+  (hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)).contract
+
+/-- Compatibility selector endpoint to uniform Step-5 packaging from a prepackaged
+`ReductionToTubeForm` witness.
+Internally this delegates to the proof-driven `...fromReductionData` route. -/
+noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionDataCore
     {κ ι : Type*} [DecidableEq κ]
     (route : FlagshipIndexRoute)
     (FB : SSU.Instances.FejerBankedTeX.Hypothesis κ ι)
@@ -26222,57 +26806,25 @@ noncomputable def contract_flagship_select_ofIndexWitness_autoTubeForm
         mRefV r hr ∈
           SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
             (td := tdOf P a q hq hcop) r) :
-    SSU.Global.SSUContract (FB.data).corePacketFamily :=
-  match route with
-  | .nonFallback =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
-        (route := .nonFallback)
-        (FB := FB)
-        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
-        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
-        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
-        (hX := hX) (hH1 := hH1)
-        (hXH_u := hXH_u) (hXH_v := hXH_v)
-        (h2 := h2) (hKhat := hKhat)
-        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
-        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
-        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
-        (mRefU := mRefU) (hmRefU := hmRefU)
-        (mRefV := mRefV) (hmRefV := hmRefV)).contract
-  | .step3FallbackStep4 =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
-        (route := .step3FallbackStep4)
-        (FB := FB)
-        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
-        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
-        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
-        (hX := hX) (hH1 := hH1)
-        (hXH_u := hXH_u) (hXH_v := hXH_v)
-        (h2 := h2) (hKhat := hKhat)
-        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
-        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
-        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
-        (mRefU := mRefU) (hmRefU := hmRefU)
-        (mRefV := mRefV) (hmRefV := hmRefV)).contract
-  | .step4FallbackStep3 =>
-      (hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
-        (route := .step4FallbackStep3)
-        (FB := FB)
-        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
-        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
-        (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
-        (hX := hX) (hH1 := hH1)
-        (hXH_u := hXH_u) (hXH_v := hXH_v)
-        (h2 := h2) (hKhat := hKhat)
-        (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
-        (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
-        (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
-        (mRefU := mRefU) (hmRefU := hmRefU)
-        (mRefV := mRefV) (hmRefV := hmRefV)).contract
+    HypothesisStep34ForUniform κ ι :=
+  hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
+    (route := route)
+    (FB := FB)
+    (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+    (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+    (hD1 := hD1) (hU1 := hU1) (hqD := hqD)
+    (hX := hX) (hH1 := hH1)
+    (hXH_u := hXH_u) (hXH_v := hXH_v)
+    (h2 := h2) (hKhat := hKhat)
+    (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+    (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+    (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
+    (mRefU := mRefU) (hmRefU := hmRefU)
+    (mRefV := mRefV) (hmRefV := hmRefV)
 
-/-- Canonical selector endpoint to uniform Step-5 packaging, routing across flagship routes while
-using a prepackaged `ReductionToTubeForm` together with auto Step-2 (`Step2ToTubeForm`).
-This removes the explicit `inner_eq_coeff` / `energy_le_coeff` family from the call surface. -/
+/-- Compatibility selector endpoint to uniform Step-5 packaging from a prepackaged
+`ReductionToTubeForm` witness.
+Internally this delegates to the proof-driven `...fromReductionData` route. -/
 noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ]
     (route : FlagshipIndexRoute)
@@ -26339,8 +26891,9 @@ noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_auto
           SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
             (td := tdOf P a q hq hcop) r) :
     HypothesisStep34ForUniform κ ι := by
-  let g : GeometryInput κ ι :=
-    GeometryInput.ofBGGeometryReduction_rankOne_autoTubeForm_from_hF
+  exact
+    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionDataCore
+      (route := route)
       (FB := FB)
       (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
       (ha0 := ha0) (hlower := hlower) (hupper := hupper)
@@ -26348,15 +26901,15 @@ noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_auto
       (hX := hX) (hH1 := hH1)
       (hXH_u := hXH_u) (hXH_v := hXH_v)
       (h2 := h2) (hKhat := hKhat)
-      (reduction := reduction)
-      (I0 := I0)
-      (hβmod := hβmod) (hαmod := hαmod)
-      (hF0 := hF0)
-  exact
-    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF
-      (route := route)
-      (g := g) (I0 := I0)
-      (hβmod := hβmod) (hαmod := hαmod) (hF0 := by simpa [g] using hF0)
+      (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
+      (Cenergy := reduction.Cenergy)
+      (Cenergy_nonneg := reduction.Cenergy_nonneg)
+      (inner_eq_coeff := by
+        intro f i hi j hj
+        simpa [hF0 f i j] using reduction.inner_eq f i hi j hj)
+      (energy_le_coeff := by
+        intro f i hi j hj
+        simpa [hF0 f i j] using reduction.energy_le f i hi j hj)
       (mRefU := mRefU) (hmRefU := hmRefU)
       (mRefV := mRefV) (hmRefV := hmRefV)
 
@@ -26590,24 +27143,8 @@ noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_auto
           SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet
             (td := tdOf P a q hq hcop) r) :
     HypothesisStep34ForUniform κ ι := by
-  let reduction :
-      ReductionToTubeForm
-        (H := SSU.Global.Signal)
-        (J := (FB.data).J)
-        (T := ((FB.data).corePacketFamily.T))
-        (tdOf P a q hq hcop)
-        (K (tdOf P a q hq hcop)) :=
-    SSU.Instances.FejerBankedTypeIIBridgeTeX.reduction_of_data
-      (FB := FB)
-      (td := tdOf P a q hq hcop)
-      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
-      (F := fun _ _ _ =>
-        SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
-          (tdOf P a q hq hcop) I0.α I0.β)
-      (inner_eq := inner_eq_coeff)
-      (energy_le := energy_le_coeff)
   exact
-    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction
+    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionDataCore
       (route := route)
       (FB := FB)
       (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
@@ -26616,11 +27153,9 @@ noncomputable def hypothesisStep34ForUniform_flagship_select_ofIndexWitness_auto
       (hX := hX) (hH1 := hH1)
       (hXH_u := hXH_u) (hXH_v := hXH_v)
       (h2 := h2) (hKhat := hKhat)
-      (reduction := reduction)
       (I0 := I0) (hβmod := hβmod) (hαmod := hαmod)
-      (hF0 := by
-        intro f i j
-        simp [reduction, SSU.Instances.FejerBankedTypeIIBridgeTeX.reduction_of_data])
+      (Cenergy := Cenergy) (Cenergy_nonneg := Cenergy_nonneg)
+      (inner_eq_coeff := inner_eq_coeff) (energy_le_coeff := energy_le_coeff)
       (mRefU := mRefU) (hmRefU := hmRefU)
       (mRefV := mRefV) (hmRefV := hmRefV)
 
@@ -26794,21 +27329,21 @@ noncomputable def contract_flagship_select_ofIndexWitness_autoTubeForm_fromReduc
 Step-5 packaging. -/
 noncomputable def hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ] :=
-  @hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+  @hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
     .nonFallback
 
 /-- Canonical default-route (`.nonFallback`) reduction-based auto-Step-2 endpoint to Gram
 hypothesis. -/
 noncomputable def gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ] :=
-  @gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+  @gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
     .nonFallback
 
 /-- Canonical default-route (`.nonFallback`) reduction-based auto-Step-2 endpoint to final
 contract. -/
 noncomputable def contract_flagship_default_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ] :=
-  @contract_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
+  @contract_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
     .nonFallback
 
 abbrev hypothesisStep34ForUniform_flagship_ofIndexWitness_autoTubeForm_fromReduction :=
@@ -26830,22 +27365,19 @@ abbrev contract_flagship_ofIndexWitness_autoTubeForm_fromReduction :=
 auto-Step-2 route, to uniform Step-5 packaging. -/
 noncomputable def hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ] :=
-  @hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
-    .step3FallbackStep4
+  @hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_fromReduction κ ι _
 
 /-- Canonical fallback endpoint (Step 3 proved, Step 4 fallback) for the reduction-based
 auto-Step-2 route, to Gram hypothesis. -/
 noncomputable def gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ] :=
-  @gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
-    .step3FallbackStep4
+  @gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_fromReduction κ ι _
 
 /-- Canonical fallback endpoint (Step 3 proved, Step 4 fallback) for the reduction-based
 auto-Step-2 route, to final contract. -/
 noncomputable def contract_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ] :=
-  @contract_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
-    .step3FallbackStep4
+  @contract_flagship_default_ofIndexWitness_autoTubeForm_fromReduction κ ι _
 
 abbrev hypothesisStep34ForUniform_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReduction :=
   fun {κ ι} [DecidableEq κ] =>
@@ -26866,22 +27398,19 @@ abbrev contract_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromRe
 auto-Step-2 route, to uniform Step-5 packaging. -/
 noncomputable def hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ] :=
-  @hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
-    .step4FallbackStep3
+  @hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_fromReduction κ ι _
 
 /-- Canonical fallback endpoint (Step 4 proved, Step 3 fallback) for the reduction-based
 auto-Step-2 route, to Gram hypothesis. -/
 noncomputable def gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ] :=
-  @gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
-    .step4FallbackStep3
+  @gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_fromReduction κ ι _
 
 /-- Canonical fallback endpoint (Step 4 proved, Step 3 fallback) for the reduction-based
 auto-Step-2 route, to final contract. -/
 noncomputable def contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
     {κ ι : Type*} [DecidableEq κ] :=
-  @contract_flagship_select_ofIndexWitness_autoTubeForm_fromReduction κ ι _
-    .step4FallbackStep3
+  @contract_flagship_default_ofIndexWitness_autoTubeForm_fromReduction κ ι _
 
 abbrev hypothesisStep34ForUniform_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction :=
   fun {κ ι} [DecidableEq κ] =>
@@ -26896,6 +27425,108 @@ abbrev gramHypothesis_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm_
 abbrev contract_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction :=
   fun {κ ι} [DecidableEq κ] =>
     contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReduction
+      (κ := κ) (ι := ι)
+
+/-- Canonical default-route (`.nonFallback`) auto-Step-2 endpoint to uniform Step-5 packaging,
+with reduction assembled from explicit TT*/energy fields. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ] :=
+  @hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
+    .nonFallback
+
+/-- Canonical default-route (`.nonFallback`) auto-Step-2 endpoint to Gram hypothesis,
+with reduction assembled from explicit TT*/energy fields. -/
+noncomputable def gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ] :=
+  @gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
+    .nonFallback
+
+/-- Canonical default-route (`.nonFallback`) auto-Step-2 endpoint to final contract,
+with reduction assembled from explicit TT*/energy fields. -/
+noncomputable def contract_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ] :=
+  @contract_flagship_select_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
+    .nonFallback
+
+abbrev hypothesisStep34ForUniform_flagship_ofIndexWitness_autoTubeForm_fromReductionData :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData
+      (κ := κ) (ι := ι)
+
+abbrev gramHypothesis_flagship_ofIndexWitness_autoTubeForm_fromReductionData :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData
+      (κ := κ) (ι := ι)
+
+abbrev contract_flagship_ofIndexWitness_autoTubeForm_fromReductionData :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData
+      (κ := κ) (ι := ι)
+
+/-- Canonical fallback endpoint (Step 3 proved, Step 4 fallback) for auto-Step-2 route with
+reduction assembled from explicit TT*/energy fields, to uniform Step-5 packaging. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ] :=
+  @hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
+
+/-- Canonical fallback endpoint (Step 3 proved, Step 4 fallback) for auto-Step-2 route with
+reduction assembled from explicit TT*/energy fields, to Gram hypothesis. -/
+noncomputable def gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ] :=
+  @gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
+
+/-- Canonical fallback endpoint (Step 3 proved, Step 4 fallback) for auto-Step-2 route with
+reduction assembled from explicit TT*/energy fields, to final contract. -/
+noncomputable def contract_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ] :=
+  @contract_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
+
+abbrev hypothesisStep34ForUniform_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReductionData :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReductionData
+      (κ := κ) (ι := ι)
+
+abbrev gramHypothesis_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReductionData :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReductionData
+      (κ := κ) (ι := ι)
+
+abbrev contract_flagship_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReductionData :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step3_fallback_step4_ofIndexWitness_autoTubeForm_fromReductionData
+      (κ := κ) (ι := ι)
+
+/-- Canonical fallback endpoint (Step 4 proved, Step 3 fallback) for auto-Step-2 route with
+reduction assembled from explicit TT*/energy fields, to uniform Step-5 packaging. -/
+noncomputable def hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ] :=
+  @hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
+
+/-- Canonical fallback endpoint (Step 4 proved, Step 3 fallback) for auto-Step-2 route with
+reduction assembled from explicit TT*/energy fields, to Gram hypothesis. -/
+noncomputable def gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ] :=
+  @gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
+
+/-- Canonical fallback endpoint (Step 4 proved, Step 3 fallback) for auto-Step-2 route with
+reduction assembled from explicit TT*/energy fields, to final contract. -/
+noncomputable def contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReductionData
+    {κ ι : Type*} [DecidableEq κ] :=
+  @contract_flagship_default_ofIndexWitness_autoTubeForm_fromReductionData κ ι _
+
+abbrev hypothesisStep34ForUniform_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReductionData :=
+  fun {κ ι} [DecidableEq κ] =>
+    hypothesisStep34ForUniform_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReductionData
+      (κ := κ) (ι := ι)
+
+abbrev gramHypothesis_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReductionData :=
+  fun {κ ι} [DecidableEq κ] =>
+    gramHypothesis_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReductionData
+      (κ := κ) (ι := ι)
+
+abbrev contract_flagship_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReductionData :=
+  fun {κ ι} [DecidableEq κ] =>
+    contract_flagship_default_step4_fallback_step3_ofIndexWitness_autoTubeForm_fromReductionData
       (κ := κ) (ι := ι)
 
 /-! ### Selector/default compatibility lemmas -/
@@ -27042,48 +27673,48 @@ abbrev flagshipSelectorDefaultRoute : FlagshipIndexRoute := .nonFallback
 
 abbrev hypothesisStep34ForUniform_flagship_selector_default_ofIndexWitness_from_hF :=
   fun {κ ι} [DecidableEq κ] =>
-    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_from_hF
-      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+    hypothesisStep34ForUniform_flagship_default_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
 
 abbrev gramHypothesis_flagship_selector_default_ofIndexWitness_from_hF :=
   fun {κ ι} [DecidableEq κ] =>
-    gramHypothesis_flagship_select_ofIndexWitness_from_hF
-      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+    gramHypothesis_flagship_default_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
 
 abbrev contract_flagship_selector_default_ofIndexWitness_from_hF :=
   fun {κ ι} [DecidableEq κ] =>
-    contract_flagship_select_ofIndexWitness_from_hF
-      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+    contract_flagship_default_ofIndexWitness_from_hF
+      (κ := κ) (ι := ι)
 
 abbrev hypothesisStep34ForUniform_flagship_selector_default_ofIndexWitness :=
   fun {κ ι} [DecidableEq κ] =>
-    hypothesisStep34ForUniform_flagship_select_ofIndexWitness
-      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+    hypothesisStep34ForUniform_flagship_default_ofIndexWitness
+      (κ := κ) (ι := ι)
 
 abbrev gramHypothesis_flagship_selector_default_ofIndexWitness :=
   fun {κ ι} [DecidableEq κ] =>
-    gramHypothesis_flagship_select_ofIndexWitness
-      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+    gramHypothesis_flagship_default_ofIndexWitness
+      (κ := κ) (ι := ι)
 
 abbrev contract_flagship_selector_default_ofIndexWitness :=
   fun {κ ι} [DecidableEq κ] =>
-    contract_flagship_select_ofIndexWitness
-      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+    contract_flagship_default_ofIndexWitness
+      (κ := κ) (ι := ι)
 
 abbrev hypothesisStep34ForUniform_flagship_selector_default_ofIndexWitness_autoTubeForm :=
   fun {κ ι} [DecidableEq κ] =>
-    hypothesisStep34ForUniform_flagship_select_ofIndexWitness_autoTubeForm
-      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+    hypothesisStep34ForUniform_flagship_default_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
 
 abbrev gramHypothesis_flagship_selector_default_ofIndexWitness_autoTubeForm :=
   fun {κ ι} [DecidableEq κ] =>
-    gramHypothesis_flagship_select_ofIndexWitness_autoTubeForm
-      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+    gramHypothesis_flagship_default_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
 
 abbrev contract_flagship_selector_default_ofIndexWitness_autoTubeForm :=
   fun {κ ι} [DecidableEq κ] =>
-    contract_flagship_select_ofIndexWitness_autoTubeForm
-      (κ := κ) (ι := ι) flagshipSelectorDefaultRoute
+    contract_flagship_default_ofIndexWitness_autoTubeForm
+      (κ := κ) (ι := ι)
 
 end BGRankOne
 

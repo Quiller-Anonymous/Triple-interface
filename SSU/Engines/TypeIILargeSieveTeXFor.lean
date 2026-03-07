@@ -198,6 +198,22 @@ def of_box_geometry
       (hX := hX)
       F
 
+/-- Build a use-site Step 3 bound from broad box geometry with no `q ≤ D` side condition. -/
+def of_general_box_geometry
+    (td : TubeData)
+    (hDpos : 0 < td.D) (hD : 0 ≤ td.D) (hU : 1 ≤ td.U) (hX : 0 ≤ td.X)
+    (F : TubePoint → ℂ) :
+    Step3LargeSieveOuterUFor td F := by
+  exact
+    of_montgomeryVaughan
+      (td := td)
+      (h3MV := SSU.Engines.TypeII.LargeSieve.Step3MontgomeryVaughan.of_general_geometry
+        (td := td) (hDpos := hDpos) (hD := hD) (hU := hU) (hX := hX))
+      (hD := hD)
+      (hU := le_trans (show (0 : ℝ) ≤ 1 by norm_num) hU)
+      (hX := hX)
+      F
+
 /-- Build a use-site TeX Step 3 bound from the constant-coefficient hypothesis
 `∀ u ∈ uSet, coeffUZFin td F u = a`. -/
 def of_constCoeffUZFin
@@ -3486,6 +3502,28 @@ def of_box_geometry
   have h3MV : SSU.Engines.TypeII.LargeSieve.Step3MontgomeryVaughan td :=
     SSU.Engines.TypeII.LargeSieve.Step3MontgomeryVaughan.of_box_geometry
       (td := td) (hDq := hDq) (hD := hD0) (hU := hU1) (hX := hX0)
+  have h4MV : SSU.Engines.TypeII.LargeSieve.Step4MontgomeryVaughan td :=
+    SSU.Engines.TypeII.LargeSieve.Step4MontgomeryVaughan.of_box_geometry
+      (td := td) (hU := hU0) (hX := hX0) (hD1 := hD1) (hXH1 := hXH1)
+  exact
+    of_step3MV_step4MV
+      (td := td) (F := F) (h3MV := h3MV) (h4MV := h4MV)
+      (hD0 := hD0) (hU0 := hU0) (hX0 := hX0)
+      (hD := lt_of_lt_of_le (by norm_num) hD1)
+      (hU := lt_of_lt_of_le (by norm_num) hU1)
+
+/-- Build a use-site TeX Step 5 bound from broad box geometry (no `q ≤ D` side condition). -/
+def of_general_box_geometry
+    (td : TubeData) (F : TubePoint → ℂ)
+    (hD0 : 0 ≤ td.D) (hU0 : 0 ≤ td.U) (hX0 : 0 ≤ td.X)
+    (hD1 : 1 ≤ td.D) (hU1 : 1 ≤ td.U)
+    (hXH1 : 1 ≤ td.X * td.H) :
+    Step34LargeSieveTeXFor td F := by
+  have h3MV : SSU.Engines.TypeII.LargeSieve.Step3MontgomeryVaughan td :=
+    SSU.Engines.TypeII.LargeSieve.Step3MontgomeryVaughan.of_general_geometry
+      (td := td)
+      (hDpos := lt_of_lt_of_le (by norm_num) hD1)
+      (hD := hD0) (hU := hU1) (hX := hX0)
   have h4MV : SSU.Engines.TypeII.LargeSieve.Step4MontgomeryVaughan td :=
     SSU.Engines.TypeII.LargeSieve.Step4MontgomeryVaughan.of_box_geometry
       (td := td) (hU := hU0) (hX := hX0) (hD1 := hD1) (hXH1 := hXH1)

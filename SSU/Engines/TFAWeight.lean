@@ -101,16 +101,16 @@ noncomputable def mask (𝓓 𝓝 : Finset ℤ) (W : ℤ → ℤ → ℂ) (d n :
     + (((𝓓.card : ℂ) * (𝓝.card : ℂ))⁻¹) * (∑ d' ∈ 𝓓, ∑ n' ∈ 𝓝, W d' n')
 
 /-!
-TODO(03_TFA.tex, Lemma `alias-delta2`):
-prove the “alias suppression” identities for `mask`, i.e.
+03_TFA.tex, Lemma `alias-delta2` (“alias suppression”) is proved in
+`SSU/Engines/TFAWeightAliasSuppression.lean`:
 
-* `∑_{n∈𝓝} mask(d,n) = 0` for every `d`, and
-* `∑_{d∈𝓓} mask(d,n) = 0` for every `n`,
+* `BalancedBank.sum_mask_right`
+* `BalancedBank.sum_mask_left`
+* `BalancedBank.sum_sum_mul_mask_eq_zero_left`
+* `BalancedBank.sum_sum_mul_mask_eq_zero_right`
 
-and the induced orthogonality to weights depending only on one variable.
-
-These are deterministic finite-sum identities. We prove them in
-`SSU/Engines/TFAWeightAliasSuppression.lean` to keep this file’s imports lightweight.
+We keep those proofs in the companion file to avoid pulling extra tactic imports into this
+lightweight interface module.
 -/
 
 end BalancedBank

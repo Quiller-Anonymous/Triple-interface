@@ -1,33 +1,34 @@
-import Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundAxiom
+import Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
+import Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineAxiom
+import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 /-!
 ε₁ seam provider for the turnkey `Q0` route.
 
-Polished-gold policy: the turnkey `Q0` route uses a project-neutral *energy bound* interface
+The turnkey `Q0` route consumes the project-neutral energy interface
 `Q0MinorEnergyBound Δ_canon 16`.
 
 This file centralizes *how* we obtain that bound:
 
-- **Today (polished gold):** a single SSU/energy tool axiom in
-  `Goldbach/Cert/MajorArcModules/Q0MinorEnergyBoundAxiom.lean`.
-- **Later (stage (3) prep):** swap this provider to derive the same bound from the in-repo SSU /
-  interzone machinery (still possibly assuming project-neutral SSU axioms), without changing
-  downstream consumers.
+- from a ledger-engine seam (`Q0MinorEnergyLedgerEngineAxiom`) plus the checked
+  `Q0MinorLedgerCertData` cap-16 bridge (`Q0MinorEnergyFromLedgerCert`),
+- with a stable output surface for downstream consumers.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundProvider
 
-open Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundAxiom
+open Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
+open Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineAxiom
+open Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 noncomputable section
 
 /-- The ε₁ input used by `Q0TwoBoundsSpec`: energy bound with cap `16` on the canonical width. -/
 abbrev q0Minor_energyBound16 :
     Goldbach.Cert.MajorArcModules.Q0MinorBound.Q0MinorEnergyBound
-      Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0.Δ_canon 16 :=
-  Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundAxiom.q0Minor_energyBound16
+      Δ_canon 16 :=
+  energyBound16_of_ledger_engine (Δ := Δ_canon) ssu_minor_energy_ledger_engine
 
 end
 
 end Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundProvider
-

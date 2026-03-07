@@ -5,10 +5,12 @@ import SSU.Instances.FejerBankedTypeIIToeplitzTTStarToeplitzHypothesis
 import SSU.Instances.FejerBankedTypeIIToeplitzTorusPacketsRankOneBound
 import SSU.Instances.FejerBankedTypeIIToeplitzTorusPacketsStep34Bound
 import SSU.Engines.BGTypeIIArray
+import SSU.Engines.LargeSieve.MVByResidueHypothesis
 import SSU.Engines.TypeII
 import SSU.Engines.TypeIILargeSieveTeXFor
 import SSU.Engines.TypeIITTStarWrappersTeXFor
 import SSU.Engines.TypeIIToeplitz
+import Mathlib.Data.Int.CardIntervalMod
 
 /-!
 Bridge: Type-II (Toeplitz-in-product) tube inequality → Fejér-banked SSU contract.
@@ -1267,6 +1269,218 @@ namespace TubeFormInputFor
 
 variable (h : TubeFormInputFor (κ := κ) (H0 := H0))
 
+/-- Non-box extracted Step-3 use-site builder (outer-`u`) from common-domain residue witnesses. -/
+private noncomputable def sumFiberRefOnZSetOneAddLogStep3For
+    (base : TubeFormBase (κ := κ) (H0 := H0))
+    (hU0 : 0 ≤ base.td.U) (hDq : 1 ≤ base.td.D / (base.td.q : ℝ)) (hU1 : 1 ≤ base.td.U)
+    (hX : 0 < base.td.X) (hH : 0 < base.td.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil base.td.U + base.td.q) : ℕ) : ℝ)) * (base.td.q : ℝ)
+        ≤ base.td.X * base.td.H)
+    (mRefU :
+      ∀ r : ℤ,
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td),
+        mRefU r hr ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r)
+    (hZeqU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSet base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex (td := base.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSet base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := base.td) r (mRefU r hr)))
+    (hEqOnU :
+      ∀ f : H0, ∀ i j : ℤ,
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSet base.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                    (td := base.td) r (mRefU r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := base.td) r m) z, base.Dtype.F f i j p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := base.td) r (mRefU r hr)) z, base.Dtype.F f i j p))
+    (f : H0) (i j : ℤ) :
+    SSU.Engines.TypeII.Step3LargeSieveOuterUFor base.td (base.Dtype.F f i j) :=
+  SSU.Engines.TypeII.Step3LargeSieveOuterUFor.of_sumFiberUZ_uFromIndex_eq_ref_on_zSet_oneAddLog
+    (td := base.td)
+    (hU0 := hU0) (hDq := hDq) (hU1 := hU1)
+    (hX := hX) (hH := hH) (hXH := hXH_u)
+    (F := base.Dtype.F f i j)
+    (mRef := mRefU) (hmRef := hmRefU) (hZeq := hZeqU)
+    (hEqOn := hEqOnU f i j)
+
+/-- Non-box extracted Step-4 use-site builder (outer-`v`) from common-domain residue witnesses. -/
+private noncomputable def sumFiberRefOnZSetOneAddLogStep4For
+    (base : TubeFormBase (κ := κ) (H0 := H0))
+    (hD0 : 0 ≤ base.td.D) (hD1 : 1 ≤ base.td.D) (hDq : 1 ≤ base.td.D / (base.td.q : ℝ))
+    (hU1 : 1 ≤ base.td.U)
+    (hX : 0 < base.td.X) (hH : 0 < base.td.H)
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * base.td.D) + base.td.q) : ℕ) : ℝ)) * (base.td.q : ℝ)
+        ≤ base.td.X * base.td.H)
+    (mRefV :
+      ∀ r : ℤ,
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td),
+        mRefV r hr ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r)
+    (hZeqV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSetV base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex (td := base.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSetV base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := base.td) r (mRefV r hr)))
+    (hEqOnV :
+      ∀ f : H0, ∀ i j : ℤ,
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSetV base.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                    (td := base.td) r (mRefV r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := base.td) r m) z, base.Dtype.F f i j p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := base.td) r (mRefV r hr)) z, base.Dtype.F f i j p))
+    (f : H0) (i j : ℤ) :
+    SSU.Engines.TypeII.Step4LargeSieveOuterVFor base.td (base.Dtype.F f i j) :=
+  SSU.Engines.TypeII.Step4LargeSieveOuterVFor.of_sumFiberVZ_vFromIndex_eq_ref_on_zSetV_oneAddLog
+    (td := base.td)
+    (hD0 := hD0) (hD1 := hD1) (hDq := hDq) (hU1 := hU1)
+    (hX := hX) (hH := hH) (hXH := hXH_v)
+    (F := base.Dtype.F f i j)
+    (mRef := mRefV) (hmRef := hmRefV) (hZeq := hZeqV)
+    (hEqOn := hEqOnV f i j)
+
+/-- Non-box extracted Step-3/Step-4 combiner on the same common-domain residue witness package. -/
+private noncomputable def sumFiberRefOnZSetOneAddLogStep34TeXFor
+    (base : TubeFormBase (κ := κ) (H0 := H0))
+    (hU0 : 0 ≤ base.td.U) (hD0 : 0 ≤ base.td.D)
+    (hD1 : 1 ≤ base.td.D) (hU1 : 1 ≤ base.td.U)
+    (hDq : 1 ≤ base.td.D / (base.td.q : ℝ))
+    (hX : 0 < base.td.X) (hH : 0 < base.td.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil base.td.U + base.td.q) : ℕ) : ℝ)) * (base.td.q : ℝ)
+        ≤ base.td.X * base.td.H)
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * base.td.D) + base.td.q) : ℕ) : ℝ)) * (base.td.q : ℝ)
+        ≤ base.td.X * base.td.H)
+    (mRefU :
+      ∀ r : ℤ,
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td),
+        mRefU r hr ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r)
+    (hZeqU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSet base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex (td := base.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSet base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := base.td) r (mRefU r hr)))
+    (hEqOnU :
+      ∀ f : H0, ∀ i j : ℤ,
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSet base.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                    (td := base.td) r (mRefU r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := base.td) r m) z, base.Dtype.F f i j p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := base.td) r (mRefU r hr)) z, base.Dtype.F f i j p))
+    (mRefV :
+      ∀ r : ℤ,
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td),
+        mRefV r hr ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r)
+    (hZeqV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSetV base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex (td := base.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSetV base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := base.td) r (mRefV r hr)))
+    (hEqOnV :
+      ∀ f : H0, ∀ i j : ℤ,
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSetV base.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                    (td := base.td) r (mRefV r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := base.td) r m) z, base.Dtype.F f i j p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := base.td) r (mRefV r hr)) z, base.Dtype.F f i j p))
+    (f : H0) (i j : ℤ) :
+    SSU.Engines.TypeII.Step34LargeSieveTeXFor base.td (base.Dtype.F f i j) := by
+  let h3 : SSU.Engines.TypeII.Step3LargeSieveOuterUFor base.td (base.Dtype.F f i j) :=
+    sumFiberRefOnZSetOneAddLogStep3For
+      (base := base) (hU0 := hU0) (hDq := hDq) (hU1 := hU1)
+      (hX := hX) (hH := hH) (hXH_u := hXH_u)
+      (mRefU := mRefU) (hmRefU := hmRefU) (hZeqU := hZeqU) (hEqOnU := hEqOnU)
+      (f := f) (i := i) (j := j)
+  let h4 : SSU.Engines.TypeII.Step4LargeSieveOuterVFor base.td (base.Dtype.F f i j) :=
+    sumFiberRefOnZSetOneAddLogStep4For
+      (base := base) (hD0 := hD0) (hD1 := hD1) (hDq := hDq) (hU1 := hU1)
+      (hX := hX) (hH := hH) (hXH_v := hXH_v)
+      (mRefV := mRefV) (hmRefV := hmRefV) (hZeqV := hZeqV) (hEqOnV := hEqOnV)
+      (f := f) (i := i) (j := j)
+  exact
+    SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_step3_step4
+      (td := base.td) (F := base.Dtype.F f i j)
+      h3 h4
+      (hD := lt_of_lt_of_le (by norm_num) hD1)
+      (hU := lt_of_lt_of_le (by norm_num) hU1)
+      (hX := le_of_lt hX)
+
 /-- Build the non-box extracted TeX Step 3–4 family from common-domain residue witnesses. -/
 noncomputable def of_sumFiber_ref_on_zSet_oneAddLog
     (base : TubeFormBase (κ := κ) (H0 := H0))
@@ -1353,16 +1567,287 @@ noncomputable def of_sumFiber_ref_on_zSet_oneAddLog
     TubeFormInputFor (κ := κ) (H0 := H0) where
   toTubeFormBase := base
   step34TeXFor := fun f i j =>
-    Step34LargeSieveTeXFor.of_sumFiber_ref_on_zSet_oneAddLog
-      (td := base.td)
-      (hU0 := hU0) (hD0 := hD0) (hD1 := hD1) (hU1 := hU1)
+    sumFiberRefOnZSetOneAddLogStep34TeXFor
+      (base := base)
+      (hU0 := hU0) (hD0 := hD0)
+      (hD1 := hD1) (hU1 := hU1)
       (hDq := hDq) (hX := hX) (hH := hH)
       (hXH_u := hXH_u) (hXH_v := hXH_v)
-      (F := base.Dtype.F f i j)
-      (mRefU := mRefU) (hmRefU := hmRefU) (hZeqU := hZeqU)
-      (hEqOnU := hEqOnU f i j)
-      (mRefV := mRefV) (hmRefV := hmRefV) (hZeqV := hZeqV)
-      (hEqOnV := hEqOnV f i j)
+      (mRefU := mRefU) (hmRefU := hmRefU) (hZeqU := hZeqU) (hEqOnU := hEqOnU)
+      (mRefV := mRefV) (hmRefV := hmRefV) (hZeqV := hZeqV) (hEqOnV := hEqOnV)
+      (f := f) (i := i) (j := j)
+
+/-- Non-box extracted Step-3/Step-4 combiner using the sharpened by-residue one-add-log
+Montgomery–Vaughan constructors with common-domain witness packages that are uniform in `F`. -/
+private noncomputable def sumFiberRefOnZSetOneAddLogStep34TeXFor_uniformMV
+    (base : TubeFormBase (κ := κ) (H0 := H0))
+    (hU0 : 0 ≤ base.td.U) (hD0 : 0 ≤ base.td.D)
+    (hD1 : 1 ≤ base.td.D) (hU1 : 1 ≤ base.td.U)
+    (hDq : 1 ≤ base.td.D / (base.td.q : ℝ))
+    (hX : 0 < base.td.X) (hH : 0 < base.td.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil base.td.U + base.td.q) : ℕ) : ℝ)) * (base.td.q : ℝ)
+        ≤ base.td.X * base.td.H)
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * base.td.D) + base.td.q) : ℕ) : ℝ)) * (base.td.q : ℝ)
+        ≤ base.td.X * base.td.H)
+    (mRefU :
+      ∀ r : ℤ,
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td),
+        mRefU r hr ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r)
+    (hZeqU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSet base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex (td := base.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSet base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := base.td) r (mRefU r hr)))
+    (hEqOnUAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSet base.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                    (td := base.td) r (mRefU r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := base.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := base.td) r (mRefU r hr)) z, F p))
+    (mRefV :
+      ∀ r : ℤ,
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td),
+        mRefV r hr ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r)
+    (hZeqV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSetV base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex (td := base.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSetV base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := base.td) r (mRefV r hr)))
+    (hEqOnVAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSetV base.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                    (td := base.td) r (mRefV r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := base.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := base.td) r (mRefV r hr)) z, F p))
+    (f : H0) (i j : ℤ) :
+    SSU.Engines.TypeII.Step34LargeSieveTeXFor base.td (base.Dtype.F f i j) := by
+  let F0 : TubePoint → ℂ := base.Dtype.F f i j
+  let h3MV : SSU.Engines.TypeII.LargeSieve.Step3MontgomeryVaughanByResidue base.td :=
+    SSU.Engines.TypeII.LargeSieve.step3MV_byResidue_oneAddLog_ref
+      (td := base.td)
+      (hU0 := hU0) (hDq := hDq) (hU1 := hU1)
+      (hX := hX) (hH := hH) (hXH := hXH_u)
+      (mRef := mRefU) (hmRef := hmRefU) (hZeq := hZeqU)
+      (hEqOn := hEqOnUAll)
+  let h4MV : SSU.Engines.TypeII.LargeSieve.Step4MontgomeryVaughanByResidue base.td :=
+    SSU.Engines.TypeII.LargeSieve.step4MV_byResidue_oneAddLog_ref
+      (td := base.td)
+      (hD0 := hD0) (hD1 := hD1) (hDq := hDq) (hU1 := hU1)
+      (hX := hX) (hH := hH) (hXH := hXH_v)
+      (mRef := mRefV) (hmRef := hmRefV) (hZeq := hZeqV)
+      (hEqOn := hEqOnVAll)
+  exact
+    SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_step3MVByResidue_step4MVByResidue
+      (td := base.td) (F := F0) h3MV h4MV hD0 hU0 (le_of_lt hX)
+      (lt_of_lt_of_le (by norm_num) hD1) (lt_of_lt_of_le (by norm_num) hU1)
+
+/-- Build the non-box extracted TeX Step 3–4 family from common-domain residue witnesses that are
+uniform in `F`, routed through the sharpened one-add-log by-residue MV constructors. -/
+noncomputable def of_sumFiber_ref_on_zSet_oneAddLog_uniformMV
+    (base : TubeFormBase (κ := κ) (H0 := H0))
+    (hU0 : 0 ≤ base.td.U) (hD0 : 0 ≤ base.td.D)
+    (hD1 : 1 ≤ base.td.D) (hU1 : 1 ≤ base.td.U)
+    (hDq : 1 ≤ base.td.D / (base.td.q : ℝ))
+    (hX : 0 < base.td.X) (hH : 0 < base.td.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil base.td.U + base.td.q) : ℕ) : ℝ)) * (base.td.q : ℝ)
+        ≤ base.td.X * base.td.H)
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * base.td.D) + base.td.q) : ℕ) : ℝ)) * (base.td.q : ℝ)
+        ≤ base.td.X * base.td.H)
+    (mRefU :
+      ∀ r : ℤ,
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td → ℤ)
+    (hmRefU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td),
+        mRefU r hr ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r)
+    (hZeqU :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSet base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex (td := base.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSet base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                (td := base.td) r (mRefU r hr)))
+    (hEqOnUAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.residuesU base.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartition.uIndexSet (td := base.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSet base.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                    (td := base.td) r (mRefU r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := base.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberUZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartition.uFromIndex
+                      (td := base.td) r (mRefU r hr)) z, F p))
+    (mRefV :
+      ∀ r : ℤ,
+        r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td → ℤ)
+    (hmRefV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td),
+        mRefV r hr ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r)
+    (hZeqV :
+      ∀ (r : ℤ)
+        (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td)
+        (m : ℤ),
+        m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r →
+          SSU.Engines.TypeII.LargeSieve.zSetV base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex (td := base.td) r m)
+            =
+          SSU.Engines.TypeII.LargeSieve.zSetV base.td
+              (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                (td := base.td) r (mRefV r hr)))
+    (hEqOnVAll :
+      ∀ (F : TubePoint → ℂ),
+        ∀ (r : ℤ)
+          (hr : r ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.residuesV base.td)
+          (m : ℤ),
+          m ∈ SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vIndexSet (td := base.td) r →
+            ∀ z : ℤ,
+              z ∈ SSU.Engines.TypeII.LargeSieve.zSetV base.td
+                  (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                    (td := base.td) r (mRefV r hr)) →
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := base.td) r m) z, F p)
+                  =
+                (∑ p ∈ SSU.Engines.TypeII.LargeSieve.fiberVZ base.td
+                    (SSU.Engines.TypeII.LargeSieve.ResiduePartitionV.vFromIndex
+                      (td := base.td) r (mRefV r hr)) z, F p)) :
+    TubeFormInputFor (κ := κ) (H0 := H0) where
+  toTubeFormBase := base
+  step34TeXFor := fun f i j =>
+    sumFiberRefOnZSetOneAddLogStep34TeXFor_uniformMV
+      (base := base)
+      (hU0 := hU0) (hD0 := hD0)
+      (hD1 := hD1) (hU1 := hU1)
+      (hDq := hDq) (hX := hX) (hH := hH)
+      (hXH_u := hXH_u) (hXH_v := hXH_v)
+      (mRefU := mRefU) (hmRefU := hmRefU) (hZeqU := hZeqU) (hEqOnUAll := hEqOnUAll)
+      (mRefV := mRefV) (hmRefV := hmRefV) (hZeqV := hZeqV) (hEqOnVAll := hEqOnVAll)
+      (f := f) (i := i) (j := j)
+
+/-- Build the non-box extracted TeX Step 3–4 family from the proved BG rank-one/modEq one-add-log
+route (geometry-first form), for genuinely non-centered tubes (`a/q` arbitrary under BG
+geometry assumptions). This avoids the product-fiber fallback surface entirely. -/
+noncomputable def of_bgTubeRankOne_modEq_oneAddLog_ofBGGeometry
+    (base : TubeFormBase (κ := κ) (H0 := H0))
+    (P : SSU.Engines.BGTube.Params)
+    (a : ℤ) (q : ℕ) (hq : 0 < q) (hcop : Nat.Coprime a.natAbs q)
+    (htd : base.td = SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P a q hq hcop)
+    (ha0 : 0 ≤ a)
+    (hlower :
+      (q : ℤ) * ((P.N : ℤ) + 1) ≤ a * ((P.D : ℤ) + 1) - (P.U : ℤ))
+    (hupper :
+      a * ((2 * P.D : ℕ) : ℤ) + (P.U : ℤ) ≤ (q : ℤ) * ((2 * P.N : ℕ) : ℤ))
+    (hD1_nat : 1 ≤ P.D) (hU1_nat : 1 ≤ P.U) (hqD_nat : q ≤ P.D)
+    (hX_nat : 0 < P.X) (hH1_nat : 1 < P.H)
+    (hXH_u :
+      (2 * ((2 * Int.toNat (Int.ceil (P.U : ℝ) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hXH_v :
+      (2 * ((2 * Int.toNat (Int.ceil (2 * (P.D : ℝ)) + (q : ℤ)) : ℕ) : ℝ)) * (q : ℝ)
+        ≤ (P.X : ℝ) * (P.H : ℝ))
+    (α β : H0 → ℤ → ℤ → ℤ → ℂ)
+    (hF :
+      ∀ f : H0, ∀ i j : ℤ,
+        base.Dtype.F f i j
+          =
+        SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+          (SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P a q hq hcop)
+          (α f i j) (β f i j))
+    (hβmod :
+      ∀ f : H0, ∀ i j : ℤ, ∀ u₁ u₂ : ℤ,
+        u₁ ≡ u₂ [ZMOD
+          (SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P a q hq hcop).q] →
+          β f i j u₁ = β f i j u₂)
+    (hαmod :
+      ∀ f : H0, ∀ i j : ℤ, ∀ v₁ v₂ : ℤ,
+        v₁ ≡ v₂ [ZMOD
+          (SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P a q hq hcop).q] →
+          α f i j v₁ = α f i j v₂) :
+    TubeFormInputFor (κ := κ) (H0 := H0) where
+  toTubeFormBase := base
+  step34TeXFor := by
+    intro f i j
+    have hstep0 :
+        SSU.Engines.TypeII.Step34LargeSieveTeXFor
+          (SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P a q hq hcop)
+          (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff
+            (SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P a q hq hcop)
+            (α f i j) (β f i j)) :=
+      SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_bgTubeRankOne_modEq_oneAddLog_ofBGGeometry
+        (P := P) (a := a) (q := q) (hq := hq) (hcop := hcop)
+        (ha0 := ha0) (hlower := hlower) (hupper := hupper)
+        (hD1_nat := hD1_nat) (hU1_nat := hU1_nat) (hqD_nat := hqD_nat)
+        (hX_nat := hX_nat) (hH1_nat := hH1_nat)
+        (hXH_u := hXH_u) (hXH_v := hXH_v)
+        (α := α f i j) (β := β f i j)
+        (hβmod := hβmod f i j) (hαmod := hαmod f i j)
+    have hstep :
+        SSU.Engines.TypeII.Step34LargeSieveTeXFor
+          base.td
+          (SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff base.td (α f i j) (β f i j)) := by
+      simpa [htd] using hstep0
+    have hF' :
+        base.Dtype.F f i j
+          =
+        SSU.Engines.TypeII.LargeSieve.RankOneShear.coeff base.td (α f i j) (β f i j) := by
+      simpa [htd] using hF f i j
+    simpa [hF'] using hstep
 
 /-- Higher-layer non-box extracted packet bound on the physical-side TeX route. -/
 theorem norm_inner_packetOpUnnormalized_le
@@ -1817,6 +2302,22 @@ namespace InputFor
 
 variable (h : InputFor (κ := κ) (H0 := H0))
 
+private theorem one_le_mul_of_small_band
+    {X H : ℝ}
+    (hX : 0 < X) (hH : 0 < H)
+    (hsmall : (1 / H) / X < (1 / 2 : ℝ)) :
+    1 ≤ X * H := by
+  have hpos : 0 < (1 / H) / X := by positivity
+  have hrecip : (2 : ℝ) < 1 / ((1 / H) / X) := by
+    have hhalf : (0 : ℝ) < (1 / 2 : ℝ) := by norm_num
+    have hrecip' : 1 / (1 / 2 : ℝ) < 1 / ((1 / H) / X) :=
+      (one_div_lt_one_div hhalf hpos).2 hsmall
+    simpa using hrecip'
+  have hden : 1 / ((1 / H) / X) = X * H := by
+    field_simp [ne_of_gt hX, ne_of_gt hH]
+  have htwo : (2 : ℝ) < X * H := by simpa [hden] using hrecip
+  linarith
+
 /-- Any global extracted Step 3–4 package induces the corresponding use-site family. -/
 noncomputable def ofInput
     (h0 : Input (κ := κ) (H0 := H0)) :
@@ -2227,6 +2728,156 @@ private lemma shear_mem_window_of_mem_tubeFinset
     · exact hlower
     · exact le_trans hx' hU0
 
+private lemma card_Icc_negU_to_posU (U : ℕ) :
+    (Finset.Icc (-(U : ℤ)) (U : ℤ)).card = 2 * U + 1 := by
+  have hcard :
+      (Finset.Icc (-(U : ℤ)) (U : ℤ)).card = ((U : ℤ) + 1 - (-(U : ℤ))).toNat := by
+    simpa using (Int.card_Icc (a := (-(U : ℤ))) (b := (U : ℤ)))
+  have hsimp : ((U : ℤ) + 1 - (-(U : ℤ))) = (2 * (U : ℤ) + 1) := by
+    ring
+  have hnn : 0 ≤ (2 * (U : ℤ) + 1) := by
+    have hU0 : (0 : ℤ) ≤ (U : ℤ) := by exact_mod_cast (Nat.zero_le U)
+    linarith
+  have htoNat : (2 * (U : ℤ) + 1).toNat = 2 * U + 1 := by
+    apply Int.ofNat.inj
+    calc
+      ((2 * (U : ℤ) + 1).toNat : ℤ) = 2 * (U : ℤ) + 1 := by
+        simpa using (Int.toNat_of_nonneg hnn)
+      _ = ((2 * U + 1 : ℕ) : ℤ) := by norm_cast
+  calc
+    (Finset.Icc (-(U : ℤ)) (U : ℤ)).card
+        = ((U : ℤ) + 1 - (-(U : ℤ))).toNat := hcard
+    _ = (2 * (U : ℤ) + 1).toNat := by simpa [hsimp]
+    _ = 2 * U + 1 := htoNat
+
+/-- Explicit modulus-sensitive cardinality envelope for the residue window
+`{u ∈ Icc (-U) U | u ≡ r [ZMOD m]}`.
+
+* if `m = 0`, the congruence is equality and the set has cardinality at most `1`;
+* if `m ≠ 0`, this is exactly the interval-mod-count formula from
+  `Int.Ioc_filter_modEq_card` on `Ioc (-(U+1)) U`.
+-/
+private noncomputable def residueWindowCardBound (U : ℕ) (m r : ℤ) : ℕ :=
+  if m = 0 then
+    1
+  else
+    Int.toNat <|
+      max
+        (⌊(((U : ℤ) : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋ -
+          ⌊(((-((U : ℤ) + 1) : ℤ) : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋)
+        0
+
+private theorem card_filter_Icc_modEq_le_residueWindowCardBound
+    (U : ℕ) (m r : ℤ) :
+    ((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun u => u ≡ r [ZMOD m])).card
+      ≤ residueWindowCardBound U m r := by
+  classical
+  by_cases hm : m = 0
+  · have hsubset :
+      ((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun u => u ≡ r [ZMOD m]))
+        ⊆ ({r} : Finset ℤ) := by
+      intro u hu
+      have huEq : u = r := by
+        have hmod : u ≡ r [ZMOD m] := (Finset.mem_filter.mp hu).2
+        simpa [hm, Int.modEq_zero_iff] using hmod
+      simpa [huEq]
+    have hcard : ((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun u => u ≡ r [ZMOD m])).card
+        ≤ ({r} : Finset ℤ).card := Finset.card_le_card hsubset
+    simpa [residueWindowCardBound, hm] using hcard
+  · have hmabs_pos : 0 < (Int.natAbs m : ℤ) := by
+      exact_mod_cast Int.natAbs_pos.mpr hm
+    let a : ℤ := -((U : ℤ) + 1)
+    let b : ℤ := (U : ℤ)
+    have hIcc_eq_Ioc : Finset.Icc (-(U : ℤ)) (U : ℤ) = Finset.Ioc a b := by
+      ext u
+      simp [a, b]
+      omega
+    have hcardZ :
+        (((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun u => u ≡ r [ZMOD m])).card : ℤ)
+          =
+        max
+          (⌊(((U : ℤ) : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋ -
+            ⌊(((-((U : ℤ) + 1) : ℤ) : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋)
+          0 := by
+      calc
+        (((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun u => u ≡ r [ZMOD m])).card : ℤ)
+            =
+          (((Finset.Ioc a b).filter (fun u => u ≡ r [ZMOD (Int.natAbs m : ℕ)])).card : ℤ) := by
+              simp [hIcc_eq_Ioc]
+        _ =
+          max
+            (⌊((b : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋ -
+              ⌊((a : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋)
+            0 := by
+              simpa using
+                (Int.Ioc_filter_modEq_card
+                  (a := a) (b := b) (r := (Int.natAbs m : ℕ))
+                  (hr := by exact_mod_cast hmabs_pos) (v := r))
+        _ =
+          max
+            (⌊(((U : ℤ) : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋ -
+              ⌊(((-((U : ℤ) + 1) : ℤ) : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋)
+            0 := by simp [a, b]
+    let z : ℤ :=
+      max
+        (⌊(((U : ℤ) : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋ -
+          ⌊(((-((U : ℤ) + 1) : ℤ) : ℚ) - (r : ℚ)) / ((Int.natAbs m : ℕ) : ℚ)⌋)
+        0
+    have hz_nonneg : 0 ≤ z := by
+      dsimp [z]
+      exact le_max_right _ _
+    have hcardNat :
+        ((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun u => u ≡ r [ZMOD m])).card = Int.toNat z := by
+      apply Int.ofNat.inj
+      calc
+        (((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun u => u ≡ r [ZMOD m])).card : ℤ)
+            = z := by
+                simpa [z] using hcardZ
+        _ = (Int.toNat z : ℤ) := by
+              symm
+              exact Int.toNat_of_nonneg hz_nonneg
+    have hbound :
+        ((Finset.Icc (-(U : ℤ)) (U : ℤ)).filter (fun u => u ≡ r [ZMOD m])).card
+          ≤ Int.toNat z := by
+      exact le_of_eq hcardNat
+    simpa [residueWindowCardBound, hm, z] using hbound
+
+private theorem card_filter_prod_le_tubeWindow_bound
+    (P : SSU.Engines.BGTube.Params)
+    (T : Finset TubePoint)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hsubTube : T ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (k : ℤ) :
+    (T.filter fun p => PT.prod p = k).card ≤ 2 * (2 * P.U + 1) := by
+  have hraw :
+      (T.filter fun p => PT.prod p = k).card ≤
+        2 * (Finset.Icc (-(P.U : ℤ)) (P.U : ℤ)).card := by
+    exact card_filter_prod_le_two_mul_card_levels_of_shear_mem_set_on_box
+      (P := P) (T := T) (a := a) (s := s) (q := q) hq
+      (levels := Finset.Icc (-(P.U : ℤ)) (P.U : ℤ))
+      (by
+        intro p hp
+        exact (SSU.Engines.BGTube.mem_tubeFinset_iff P a q s p).mp (hsubTube hp) |>.1)
+      (by
+        intro p hp
+        exact shear_mem_window_of_mem_tubeFinset
+          (P := P) (a := a) (s := s) (q := q) (p := p) (hmem := hsubTube hp))
+      k
+  have hwindow :
+      ((P.U : ℤ) + 1 + (P.U : ℤ)).toNat = 2 * P.U + 1 := by
+    apply Int.ofNat.inj
+    have hnonneg : 0 ≤ (P.U : ℤ) + 1 + (P.U : ℤ) := by
+      have hU0 : (0 : ℤ) ≤ (P.U : ℤ) := by exact_mod_cast (Nat.zero_le P.U)
+      linarith
+    calc
+      (((P.U : ℤ) + 1 + (P.U : ℤ)).toNat : ℤ) = (P.U : ℤ) + 1 + (P.U : ℤ) := by
+        simpa using Int.toNat_of_nonneg hnonneg
+      _ = ((2 * P.U + 1 : ℕ) : ℤ) := by
+        norm_cast
+        ring
+  simpa [hwindow] using hraw
+
 /-- Global extracted Step 3–4 package for the canonical BG tube shear window. If the extracted
 support lies inside the actual BG tube `tubeFinset P a q s`, then the shear values automatically
 lie in the interval `[-U,U]`, so the product-fiber multiplicity is bounded by
@@ -2249,93 +2900,642 @@ noncomputable def ofTubeWindowProdFiberCardBound
   step34 :=
     Step34ProdSum.of_prodFiberCardBound
       Dpacket.X Dpacket.H Dtype.tube hX hH
-      (2 * (Finset.Icc (-(P.U : ℤ)) (P.U : ℤ)).card)
+      (2 * (2 * P.U + 1))
       (by
         intro k hk
-        exact card_filter_prod_le_two_mul_card_levels_of_shear_mem_set_on_box
-          (P := P) (T := Dtype.tube) (a := a) (s := s) (q := q) hq
-          (levels := Finset.Icc (-(P.U : ℤ)) (P.U : ℤ))
-          (by
-            intro p hp
-            exact (SSU.Engines.BGTube.mem_tubeFinset_iff P a q s p).mp (hsubTube hp) |>.1)
-          (by
-            intro p hp
-            exact shear_mem_window_of_mem_tubeFinset
-              (P := P) (a := a) (s := s) (q := q) (p := p) (hmem := hsubTube hp))
-          k)
+        exact card_filter_prod_le_tubeWindow_bound
+          (P := P) (T := Dtype.tube) (a := a) (s := s) (q := q)
+          hq hsubTube k)
 
-/-- The first honest non-rank-one extracted use-site family: the deterministic trivial Step 3–4
-bound, applied directly to the extracted coefficient array `Dtype.F f i j`. This is mathematically
-weak but genuinely lives on the full extracted-signal family, not the frozen rank-one box model. -/
-noncomputable def trivial
+/-- Global extracted Step 3–4 package for a residue-structured subclass of the canonical BG tube
+window: support lies in `tubeFinset P a q s`, and shear values satisfy a fixed congruence class
+modulo `m`. The finite level set is derived geometrically as
+`Icc (-U) U` filtered by that congruence, and the resulting cardinality bound is plugged in via an
+explicit modulus-sensitive envelope (`residueWindowCardBound`), so no explicit `levels` input is
+required. -/
+noncomputable def ofTubeWindowResidueProdFiberCardBound
     (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
     (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m r : ℤ)
     (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
-    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ)) :
-    InputFor (κ := κ) (H0 := H0) where
-  Dpacket := Dpacket
-  Dtype := Dtype
-  hX := hX
-  hH := hH
-  hsmall := hsmall
-  step34For := fun f i j =>
-    Step34ProdSumFor.of_global Dpacket.X Dpacket.H Dtype.tube
-      (Step34ProdSum.trivial Dpacket.X Dpacket.H Dtype.tube hX hH)
-      (Dtype.F f i j)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidue :
+      ∀ p ∈ Dtype.tube, SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m]) :
+    Input (κ := κ) (H0 := H0) := by
+  let levels : Finset ℤ :=
+    (Finset.Icc (-(P.U : ℤ)) (P.U : ℤ)).filter (fun u => u ≡ r [ZMOD m])
+  have hsubBox : Dtype.tube ⊆ P.box := by
+    intro p hp
+    exact (SSU.Engines.BGTube.mem_tubeFinset_iff P a q s p).mp (hsubTube hp) |>.1
+  have hlevels : ∀ p ∈ Dtype.tube, SSU.Engines.BGTube.shear a q s p ∈ levels := by
+    intro p hp
+    exact Finset.mem_filter.mpr
+      ⟨shear_mem_window_of_mem_tubeFinset
+          (P := P) (a := a) (s := s) (q := q) (p := p) (hmem := hsubTube hp),
+        hresidue p hp⟩
+  have hlevelsCard :
+      levels.card ≤ residueWindowCardBound P.U m r := by
+    simpa [levels] using card_filter_Icc_modEq_le_residueWindowCardBound (U := P.U) (m := m) (r := r)
+  refine
+    InputFor.ofProdFiberCardBound
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype hX hH hsmall
+      (2 * residueWindowCardBound P.U m r) ?_
+  intro k hk
+  have hraw :
+      (Dtype.tube.filter fun p => PT.prod p = k).card ≤ 2 * levels.card := by
+    exact card_filter_prod_le_two_mul_card_levels_of_shear_mem_set_on_box
+      (P := P) (T := Dtype.tube) (a := a) (s := s) (q := q) hq
+      (levels := levels) hsubBox hlevels k
+  calc
+    (Dtype.tube.filter fun p => PT.prod p = k).card ≤ 2 * levels.card := hraw
+    _ ≤ 2 * residueWindowCardBound P.U m r := Nat.mul_le_mul_left 2 hlevelsCard
+
+/-- Global extracted Step 3–4 package for a residue-window union subclass of the canonical BG tube
+window: support lies in `tubeFinset P a q s`, and each shear value is congruent (mod `m`) to one of
+the residue representatives in `residueReps`. The finite level set is derived geometrically as a
+`biUnion` of congruence slices of `Icc (-U) U`, with an explicit modulus-sensitive cardinality
+bound `∑ r∈residueReps, residueWindowCardBound U m r`. -/
+noncomputable def ofTubeWindowResidueSetProdFiberCardBound
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m : ℤ)
+    (residueReps : Finset ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidueSet :
+      ∀ p ∈ Dtype.tube, ∃ r ∈ residueReps,
+        SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m]) :
+    Input (κ := κ) (H0 := H0) := by
+  let levels : Finset ℤ :=
+    residueReps.biUnion fun r =>
+      (Finset.Icc (-(P.U : ℤ)) (P.U : ℤ)).filter (fun u => u ≡ r [ZMOD m])
+  have hsubBox : Dtype.tube ⊆ P.box := by
+    intro p hp
+    exact (SSU.Engines.BGTube.mem_tubeFinset_iff P a q s p).mp (hsubTube hp) |>.1
+  have hlevels : ∀ p ∈ Dtype.tube, SSU.Engines.BGTube.shear a q s p ∈ levels := by
+    intro p hp
+    rcases hresidueSet p hp with ⟨r, hr, hmod⟩
+    exact Finset.mem_biUnion.mpr ⟨r, hr, Finset.mem_filter.mpr
+      ⟨shear_mem_window_of_mem_tubeFinset
+          (P := P) (a := a) (s := s) (q := q) (p := p) (hmem := hsubTube hp),
+        hmod⟩⟩
+  have hlevelsCard :
+      levels.card ≤ ∑ r ∈ residueReps, residueWindowCardBound P.U m r := by
+    calc
+      levels.card
+          ≤ ∑ r ∈ residueReps,
+              ((Finset.Icc (-(P.U : ℤ)) (P.U : ℤ)).filter
+                (fun u => u ≡ r [ZMOD m])).card := by
+              simpa [levels] using
+                (Finset.card_biUnion_le
+                  (s := residueReps)
+                  (t := fun r =>
+                    (Finset.Icc (-(P.U : ℤ)) (P.U : ℤ)).filter
+                      (fun u => u ≡ r [ZMOD m])))
+      _ ≤ ∑ r ∈ residueReps, residueWindowCardBound P.U m r := by
+            refine Finset.sum_le_sum ?_
+            intro r hr
+            exact card_filter_Icc_modEq_le_residueWindowCardBound (U := P.U) (m := m) (r := r)
+  refine
+    InputFor.ofProdFiberCardBound
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype hX hH hsmall
+      (2 * (∑ r ∈ residueReps, residueWindowCardBound P.U m r)) ?_
+  intro k hk
+  have hraw :
+      (Dtype.tube.filter fun p => PT.prod p = k).card ≤ 2 * levels.card := by
+    exact card_filter_prod_le_two_mul_card_levels_of_shear_mem_set_on_box
+      (P := P) (T := Dtype.tube) (a := a) (s := s) (q := q) hq
+      (levels := levels) hsubBox hlevels k
+  calc
+    (Dtype.tube.filter fun p => PT.prod p = k).card ≤ 2 * levels.card := hraw
+    _ ≤ 2 * (∑ r ∈ residueReps, residueWindowCardBound P.U m r) :=
+      Nat.mul_le_mul_left 2 hlevelsCard
+
+/-- Phase twist converting product-phase sums into Type-II shear-phase sums. -/
+private def prodPhaseTwist
+    (a q : ℤ) (X ξ : ℝ) (F : TubePoint → ℂ) : TubePoint → ℂ :=
+  fun p =>
+    F p *
+      SSU.Engines.TypeII.e
+        (ξ *
+          (((SSU.Engines.TypeII.ProductToeplitz.prod p : ℝ) / X) -
+            (((SSU.Engines.TypeII.shearU a q p : ℝ) * (SSU.Engines.TypeII.shearV p : ℝ)) /
+              ((q : ℝ) * X))))
+
+private theorem prodSum_eq_typeIISum_prodPhaseTwist
+    (a q : ℤ) (X ξ : ℝ) (T : Finset TubePoint) (F : TubePoint → ℂ) :
+    SSU.Engines.TypeII.ProductToeplitz.prodSum X ξ T F
+      =
+    SSU.Engines.TypeII.typeIISum a q X ξ T (prodPhaseTwist a q X ξ F) := by
+  classical
+  unfold SSU.Engines.TypeII.ProductToeplitz.prodSum
+    SSU.Engines.TypeII.typeIISum
+    prodPhaseTwist
+  refine Finset.sum_congr rfl ?_
+  intro p hp
+  set A : ℝ :=
+    ξ *
+      (((SSU.Engines.TypeII.ProductToeplitz.prod p : ℝ) / X) -
+        (((SSU.Engines.TypeII.shearU a q p : ℝ) * (SSU.Engines.TypeII.shearV p : ℝ)) /
+          ((q : ℝ) * X)))
+  set B : ℝ :=
+    ξ * ((SSU.Engines.TypeII.shearU a q p : ℝ) * (SSU.Engines.TypeII.shearV p : ℝ)) /
+      ((q : ℝ) * X)
+  have hphase :
+      ξ * (SSU.Engines.TypeII.ProductToeplitz.prod p : ℝ) / X = A + B := by
+    dsimp [A, B]
+    ring
+  have heAB :
+      SSU.Engines.TypeII.e (A + B)
+        = SSU.Engines.TypeII.e A * SSU.Engines.TypeII.e B := by
+    unfold SSU.Engines.TypeII.e
+    simp [mul_add, add_mul, Complex.exp_add, mul_assoc, mul_left_comm, mul_comm]
+  calc
+    F p * SSU.Engines.TypeII.e (ξ * (SSU.Engines.TypeII.ProductToeplitz.prod p : ℝ) / X)
+        =
+      F p * SSU.Engines.TypeII.e (A + B) := by simp [hphase]
+    _ =
+      F p * (SSU.Engines.TypeII.e A * SSU.Engines.TypeII.e B) := by
+      simpa [heAB]
+    _ =
+      (F p * SSU.Engines.TypeII.e A) * SSU.Engines.TypeII.e B := by
+      ring
+
+private theorem tubeEnergy_prodPhaseTwist_eq
+    (a q : ℤ) (X ξ : ℝ) (T : Finset TubePoint) (F : TubePoint → ℂ) :
+    SSU.tubeEnergy T (prodPhaseTwist a q X ξ F) = SSU.tubeEnergy T F := by
+  classical
+  unfold SSU.tubeEnergy prodPhaseTwist
+  refine Finset.sum_congr rfl ?_
+  intro p hp
+  have he :
+      ‖SSU.Engines.TypeII.e
+          (ξ *
+            (((SSU.Engines.TypeII.ProductToeplitz.prod p : ℝ) / X) -
+              (((SSU.Engines.TypeII.shearU a q p : ℝ) * (SSU.Engines.TypeII.shearV p : ℝ)) /
+                ((q : ℝ) * X))))‖
+        = 1 := by
+    simpa using
+      (SSU.Engines.TypeII.norm_e
+        (ξ *
+          (((SSU.Engines.TypeII.ProductToeplitz.prod p : ℝ) / X) -
+            (((SSU.Engines.TypeII.shearU a q p : ℝ) * (SSU.Engines.TypeII.shearV p : ℝ)) /
+              ((q : ℝ) * X)))))
+  simp [norm_mul, he]
+
+private theorem step34TeXFor_of_box_geometry_C_eq
+    (td : TubeData) (F G : TubePoint → ℂ)
+    (hDq : 1 ≤ td.D / (td.q : ℝ))
+    (hD0 : 0 ≤ td.D) (hU0 : 0 ≤ td.U) (hX0 : 0 ≤ td.X)
+    (hD1 : 1 ≤ td.D) (hU1 : 1 ≤ td.U)
+    (hXH1 : 1 ≤ td.X * td.H) :
+    (SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_box_geometry
+      td F hDq hD0 hU0 hX0 hD1 hU1 hXH1).C
+      =
+    (SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_box_geometry
+      td G hDq hD0 hU0 hX0 hD1 hU1 hXH1).C := by
+  rfl
+
+private theorem step34TeXFor_of_general_box_geometry_C_eq
+    (td : TubeData) (F G : TubePoint → ℂ)
+    (hD0 : 0 ≤ td.D) (hU0 : 0 ≤ td.U) (hX0 : 0 ≤ td.X)
+    (hD1 : 1 ≤ td.D) (hU1 : 1 ≤ td.U)
+    (hXH1 : 1 ≤ td.X * td.H) :
+    (SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_general_box_geometry
+      td F hD0 hU0 hX0 hD1 hU1 hXH1).C
+      =
+    (SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_general_box_geometry
+      td G hD0 hU0 hX0 hD1 hU1 hXH1).C := by
+  rfl
+
+/-- Tube-data specialization for a general-slope centered BG tube (`s = 0`). -/
+private noncomputable def generalSlopeTubeData
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a : ℤ) (q : ℕ)
+    (hq : 0 < q)
+    (hcop : Nat.Coprime a.natAbs q)
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q 0) :
+    TubeData := by
+  let td0 := SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P a q hq hcop
+  exact
+    { td0 with
+      X := Dpacket.X
+      H := Dpacket.H
+      T := Dtype.tube
+      mem_T := by
+        intro p hp
+        exact td0.mem_T p (hsubTube hp) }
+
+private theorem prodSum_eq_typeIISum_unit
+    (X ξ : ℝ) (T : Finset TubePoint) (F : TubePoint → ℂ) :
+    SSU.Engines.TypeII.ProductToeplitz.prodSum X ξ T F
+      =
+    SSU.Engines.TypeII.typeIISum (a := (0 : ℤ)) (q := (1 : ℤ)) X ξ T F := by
+  simp [SSU.Engines.TypeII.ProductToeplitz.prodSum, SSU.Engines.TypeII.typeIISum,
+    SSU.Engines.TypeII.ProductToeplitz.prod, SSU.Engines.TypeII.shearU,
+    SSU.Engines.TypeII.shearV, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
+
+/-- Tube-data specialization for the centered-unit BG tube (`a = 0`, `q = 1`, `s = 0`) with an
+arbitrary extracted support `Dtype.tube` known to lie in that tube window. -/
+private noncomputable def centeredUnitTubeData
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0) :
+    TubeData := by
+  let td0 :=
+    SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P 0 1 (by norm_num) (by decide)
+  exact
+    { td0 with
+      T := Dtype.tube
+      mem_T := by
+        intro p hp
+        exact td0.mem_T p (hsubTube hp) }
+
+/-- Shifted BG parameters: same `(X,H,D,N)` as `P`, with `U` enlarged by `|s|`.
+Used to convert a shifted shear tube (`s`) into a centered shear tube (`s=0`) by
+`|x| ≤ |x - s| + |s|`. -/
+private def shiftedShearParams (P : SSU.Engines.BGTube.Params) (s : ℤ) :
+    SSU.Engines.BGTube.Params :=
+  { P with U := P.U + Int.natAbs s }
+
+/-- Deterministic geometry bridge: every point in `tubeFinset P a q s` lies in
+`tubeFinset (shiftedShearParams P s) a q 0`. -/
+private theorem tubeFinset_subset_shiftedShearCentered
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ) (s : ℤ) :
+    SSU.Engines.BGTube.tubeFinset P a q s
+      ⊆
+    SSU.Engines.BGTube.tubeFinset (shiftedShearParams P s) a q 0 := by
+  intro p hp
+  rcases (SSU.Engines.BGTube.mem_tubeFinset_iff P a q s p).1 hp with ⟨hpbox, hshear⟩
+  have hpbox' : p ∈ (shiftedShearParams P s).box := by
+    simpa [shiftedShearParams, SSU.Engines.BGTube.Params.box,
+      SSU.Engines.BGTube.Params.dRange, SSU.Engines.BGTube.Params.nRange] using hpbox
+  have hshear' : Int.natAbs (SSU.Engines.BGTube.shear a q 0 p) ≤ (shiftedShearParams P s).U := by
+    have hshear_s : SSU.Engines.BGTube.shear a q s p = SSU.Engines.BGTube.shear a q 0 p - s := by
+      simp [SSU.Engines.BGTube.shear, sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+    have hbase : Int.natAbs (SSU.Engines.BGTube.shear a q 0 p - s) ≤ P.U := by
+      simpa [hshear_s] using hshear
+    have htri :
+        Int.natAbs (SSU.Engines.BGTube.shear a q 0 p)
+          ≤ Int.natAbs (SSU.Engines.BGTube.shear a q 0 p - s) + Int.natAbs s := by
+      simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using
+        (Int.natAbs_add_le (SSU.Engines.BGTube.shear a q 0 p - s) s)
+    have hbound : Int.natAbs (SSU.Engines.BGTube.shear a q 0 p) ≤ P.U + Int.natAbs s := by
+      exact le_trans htri (Nat.add_le_add_right hbase _)
+    simpa [shiftedShearParams, Nat.add_comm, Nat.add_left_comm, Nat.add_assoc] using hbound
+  exact (SSU.Engines.BGTube.mem_tubeFinset_iff (shiftedShearParams P s) a q 0 p).2
+    ⟨hpbox', hshear'⟩
+
+/-- Shifted-unit BG parameters: specialization of `shiftedShearParams` to unit slope. -/
+private def shiftedUnitParams (P : SSU.Engines.BGTube.Params) (s : ℤ) :
+    SSU.Engines.BGTube.Params :=
+  shiftedShearParams P s
+
+/-- Deterministic geometry bridge: every point in `tubeFinset P 0 1 s` lies in
+`tubeFinset (shiftedUnitParams P s) 0 1 0`. -/
+private theorem tubeFinset_subset_shiftedUnitCentered
+    (P : SSU.Engines.BGTube.Params) (s : ℤ) :
+    SSU.Engines.BGTube.tubeFinset P 0 1 s
+      ⊆
+    SSU.Engines.BGTube.tubeFinset (shiftedUnitParams P s) 0 1 0 := by
+  simpa [shiftedUnitParams, shiftedShearParams] using
+    (tubeFinset_subset_shiftedShearCentered (P := P) (a := 0) (q := 1) (s := s))
+
+/-- Deterministic `U`-inflation helper: keep all parameters except force `U ≥ 1`. -/
+private def withUnitU (P : SSU.Engines.BGTube.Params) : SSU.Engines.BGTube.Params :=
+  { P with U := max P.U 1 }
+
+private theorem tubeFinset_subset_withUnitU
+    (P : SSU.Engines.BGTube.Params) (a s : ℤ) (q : ℕ) :
+    SSU.Engines.BGTube.tubeFinset P a q s
+      ⊆
+    SSU.Engines.BGTube.tubeFinset (withUnitU P) a q s := by
+  intro p hp
+  rcases (SSU.Engines.BGTube.mem_tubeFinset_iff P a q s p).1 hp with ⟨hpbox, hshear⟩
+  have hpbox' : p ∈ (withUnitU P).box := by
+    simpa [withUnitU, SSU.Engines.BGTube.Params.box,
+      SSU.Engines.BGTube.Params.dRange, SSU.Engines.BGTube.Params.nRange] using hpbox
+  have hshear' : Int.natAbs (SSU.Engines.BGTube.shear a q s p) ≤ (withUnitU P).U := by
+    exact le_trans hshear (Nat.le_max_left P.U 1)
+  exact (SSU.Engines.BGTube.mem_tubeFinset_iff (withUnitU P) a q s p).2 ⟨hpbox', hshear'⟩
+
+/-- Deterministic `(D,U)`-inflation helper: force both `D ≥ 1` and `U ≥ 1`. -/
+private def withUnitDU (P : SSU.Engines.BGTube.Params) : SSU.Engines.BGTube.Params :=
+  { P with D := max P.D 1, U := max P.U 1 }
+
+private theorem tubeFinset_subset_withUnitDU
+    (P : SSU.Engines.BGTube.Params) (a s : ℤ) (q : ℕ) :
+    SSU.Engines.BGTube.tubeFinset P a q s
+      ⊆
+    SSU.Engines.BGTube.tubeFinset (withUnitDU P) a q s := by
+  by_cases hD1 : 1 ≤ P.D
+  · have hEq : withUnitDU P = withUnitU P := by
+      cases P with
+      | mk X H D N U =>
+          simp [withUnitDU, withUnitU, max_eq_left hD1]
+    simpa [hEq] using tubeFinset_subset_withUnitU (P := P) (a := a) (s := s) (q := q)
+  · intro p hp
+    exfalso
+    have hD0 : P.D = 0 := by
+      refine Nat.eq_zero_of_not_pos ?_
+      intro hpos
+      exact hD1 (Nat.succ_le_of_lt hpos)
+    rcases (SSU.Engines.BGTube.mem_tubeFinset_iff P a q s p).1 hp with ⟨hpbox, _⟩
+    have hd : p.1 ∈ P.dRange := by
+      exact (Finset.mem_product.mp (by simpa [SSU.Engines.BGTube.Params.box] using hpbox)).1
+    have hdIcc :
+        (P.D : ℤ) + 1 ≤ p.1 ∧ p.1 ≤ ((2 * P.D : ℕ) : ℤ) := by
+      simpa [SSU.Engines.BGTube.Params.dRange] using (Finset.mem_Icc.mp hd)
+    have : ¬ ((P.D : ℤ) + 1 ≤ ((2 * P.D : ℕ) : ℤ)) := by
+      simp [hD0]
+    exact this (le_trans hdIcc.1 hdIcc.2)
+
+private def reducedSlopeG (a : ℤ) (q : ℕ) : ℕ :=
+  Nat.gcd a.natAbs q
+
+private def reducedSlopeA (a : ℤ) (q : ℕ) : ℤ :=
+  a / (reducedSlopeG a q : ℤ)
+
+private def reducedSlopeQ (a : ℤ) (q : ℕ) : ℕ :=
+  q / reducedSlopeG a q
+
+private theorem reducedSlopeG_pos (a : ℤ) (q : ℕ) (hq : 1 ≤ q) :
+    0 < reducedSlopeG a q := by
+  exact Nat.gcd_pos_of_pos_right _ (lt_of_lt_of_le (by decide : 0 < 1) hq)
+
+private theorem reducedSlopeQ_one_le (a : ℤ) (q : ℕ) (hq : 1 ≤ q) :
+    1 ≤ reducedSlopeQ a q := by
+  let g := reducedSlopeG a q
+  have hgpos : 0 < g := reducedSlopeG_pos a q hq
+  have hg_le_q : g ≤ q := Nat.le_of_dvd (lt_of_lt_of_le (by decide : 0 < 1) hq)
+    (by
+      dsimp [g, reducedSlopeG]
+      exact Nat.gcd_dvd_right a.natAbs q)
+  have hq0pos : 0 < reducedSlopeQ a q := by
+    simpa [reducedSlopeQ, g] using Nat.div_pos hg_le_q hgpos
+  exact Nat.succ_le_of_lt hq0pos
+
+private theorem reducedSlopeA_natAbs (a : ℤ) (q : ℕ) (hq : 1 ≤ q) :
+    (reducedSlopeA a q).natAbs = a.natAbs / reducedSlopeG a q := by
+  let g := reducedSlopeG a q
+  have hgpos : 0 < g := reducedSlopeG_pos a q hq
+  have hg_ne : (g : ℤ) ≠ 0 := by exact_mod_cast (Nat.ne_of_gt hgpos)
+  have hgdvdaNat : g ∣ a.natAbs := by
+    dsimp [g, reducedSlopeG]
+    exact Nat.gcd_dvd_left a.natAbs q
+  have hgdvdaZabs : (g : ℤ) ∣ (a.natAbs : ℤ) := by
+    exact_mod_cast hgdvdaNat
+  have hgdvdaZ : (g : ℤ) ∣ a := (Int.dvd_natAbs).1 hgdvdaZabs
+  calc
+    (reducedSlopeA a q).natAbs
+        = (a / (g : ℤ)).natAbs := by rfl
+    _ = a.natAbs / (g : ℤ).natAbs +
+          (if 0 ≤ a ∨ (g : ℤ) = 0 ∨ (g : ℤ) ∣ a then 0 else 1) := by
+          simpa using Int.natAbs_ediv a (g : ℤ)
+    _ = a.natAbs / g + 0 := by simp [hgdvdaZ, hg_ne, g]
+    _ = a.natAbs / g := by simp
+
+private theorem reducedSlope_coprime (a : ℤ) (q : ℕ) (hq : 1 ≤ q) :
+    Nat.Coprime (reducedSlopeA a q).natAbs (reducedSlopeQ a q) := by
+  let g := reducedSlopeG a q
+  have hgpos : 0 < g := reducedSlopeG_pos a q hq
+  have hcopNat :
+      Nat.Coprime (a.natAbs / g) (q / g) := by
+    simpa [g, reducedSlopeG] using
+      (Nat.coprime_div_gcd_div_gcd (m := a.natAbs) (n := q) hgpos)
+  simpa [reducedSlopeQ, g, reducedSlopeA_natAbs (a := a) (q := q) (hq := hq)] using hcopNat
+
+private theorem tubeFinset_subset_reducedCentered
+    (P : SSU.Engines.BGTube.Params) (a : ℤ) (q : ℕ) (hq : 1 ≤ q) :
+    SSU.Engines.BGTube.tubeFinset P a q 0
+      ⊆
+    SSU.Engines.BGTube.tubeFinset P (reducedSlopeA a q) (reducedSlopeQ a q) 0 := by
+  intro p hp
+  rcases (SSU.Engines.BGTube.mem_tubeFinset_iff P a q 0 p).1 hp with ⟨hpbox, hshear⟩
+  let g := reducedSlopeG a q
+  let q0 := reducedSlopeQ a q
+  let a0 := reducedSlopeA a q
+  have hgpos : 0 < g := reducedSlopeG_pos a q hq
+  have hg_ne : (g : ℤ) ≠ 0 := by exact_mod_cast (Nat.ne_of_gt hgpos)
+  have hgdvdqNat : g ∣ q := by
+    dsimp [g, reducedSlopeG]
+    exact Nat.gcd_dvd_right a.natAbs q
+  have hgdvdaNat : g ∣ a.natAbs := by
+    dsimp [g, reducedSlopeG]
+    exact Nat.gcd_dvd_left a.natAbs q
+  have hgdvdaZabs : (g : ℤ) ∣ (a.natAbs : ℤ) := by exact_mod_cast hgdvdaNat
+  have hgdvdaZ : (g : ℤ) ∣ a := (Int.dvd_natAbs).1 hgdvdaZabs
+  have hqterm :
+      (((q0 : ℤ) * p.2) * (g : ℤ)) = (q : ℤ) * p.2 := by
+    have hmulNat : q0 * g = q := by
+      dsimp [q0, reducedSlopeQ, g, reducedSlopeG]
+      exact Nat.div_mul_cancel hgdvdqNat
+    have hmulInt : (q0 : ℤ) * (g : ℤ) = (q : ℤ) := by exact_mod_cast hmulNat
+    calc
+      (((q0 : ℤ) * p.2) * (g : ℤ))
+          = (((q0 : ℤ) * (g : ℤ)) * p.2) := by ring
+      _ = (q : ℤ) * p.2 := by simpa [hmulInt]
+  have haterm :
+      ((a0 * p.1) * (g : ℤ)) = a * p.1 := by
+    have haMul : a0 * (g : ℤ) = a := by
+      dsimp [a0, reducedSlopeA, g]
+      simpa [mul_comm] using (Int.ediv_mul_cancel hgdvdaZ)
+    calc
+      ((a0 * p.1) * (g : ℤ))
+          = ((a0 * (g : ℤ)) * p.1) := by ring
+      _ = a * p.1 := by simpa [haMul]
+  have hmul_shear :
+      (((q0 : ℤ) * p.2 - a0 * p.1) * (g : ℤ))
+        = ((q : ℤ) * p.2 - a * p.1) := by
+    calc
+      (((q0 : ℤ) * p.2 - a0 * p.1) * (g : ℤ))
+          = (((q0 : ℤ) * p.2) * (g : ℤ)) - ((a0 * p.1) * (g : ℤ)) := by ring
+      _ = ((q : ℤ) * p.2) - (a * p.1) := by simpa [hqterm, haterm]
+  have hshear0 :
+      Int.natAbs (((q : ℤ) * p.2 - a * p.1)) ≤ P.U := by
+    simpa [SSU.Engines.BGTube.shear] using hshear
+  have hshearMul :
+      Int.natAbs ((((q0 : ℤ) * p.2 - a0 * p.1) * (g : ℤ))) ≤ P.U := by
+    simpa [hmul_shear] using hshear0
+  have hnatAbs_g : Int.natAbs (g : ℤ) = g := by simp [g]
+  have hshearMul' :
+      Int.natAbs (((q0 : ℤ) * p.2 - a0 * p.1)) * g ≤ P.U := by
+    simpa [Int.natAbs_mul, hnatAbs_g, mul_assoc, mul_left_comm, mul_comm] using hshearMul
+  have hleMul :
+      Int.natAbs (((q0 : ℤ) * p.2 - a0 * p.1))
+        ≤ Int.natAbs (((q0 : ℤ) * p.2 - a0 * p.1)) * g := by
+    exact Nat.le_mul_of_pos_right _ hgpos
+  have hshearRed :
+      Int.natAbs (((q0 : ℤ) * p.2 - a0 * p.1)) ≤ P.U := by
+    exact le_trans hleMul hshearMul'
+  exact
+    (SSU.Engines.BGTube.mem_tubeFinset_iff P (reducedSlopeA a q) (reducedSlopeQ a q) 0 p).2
+      ⟨hpbox, by simpa [SSU.Engines.BGTube.shear, q0, a0] using hshearRed⟩
 
 set_option maxHeartbeats 4000000 in
-private noncomputable def boxGeometryOneAddLogStep34For
+/-- Product-side non-box extracted Step-3 constructor on the centered-unit tube-window family. -/
+private noncomputable def tubeWindowCenteredUnitOneAddLogStep3For
     (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
     (P : SSU.Engines.BGTube.Params)
-    (hUbox : 2 * P.N ≤ P.U)
-    (W : SSU.Engines.TFA.Weight)
-    (α : H0 → ℤ → ℤ → ℤ → ℂ)
-    (β : H0 → ℤ → ℤ → ℤ → ℂ)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0)
+    (f : H0) (i j : ℤ) :
+    let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+    SSU.Engines.TypeII.Step3LargeSieveOuterUFor td (Dtype.F f i j) := by
+  let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+  have hDq : 1 ≤ td.D / (td.q : ℝ) := by
+    have htdD : td.D = (P.D : ℝ) := rfl
+    have htdqZ : td.q = (1 : ℤ) := rfl
+    have htdq : (td.q : ℝ) = 1 := by simpa [htdqZ]
+    have hD1R : (1 : ℝ) ≤ (P.D : ℝ) := by exact_mod_cast hD1
+    simpa [htdD, htdq] using hD1R
+  have hD0 : 0 ≤ td.D := by
+    change (0 : ℝ) ≤ (P.D : ℝ)
+    positivity
+  have hX0 : 0 ≤ td.X := by
+    change (0 : ℝ) ≤ (P.X : ℝ)
+    positivity
+  have hU1R : 1 ≤ td.U := by
+    change (1 : ℝ) ≤ (P.U : ℝ)
+    exact_mod_cast hU1
+  have hXeq' : td.X = Dpacket.X := by simpa [td, centeredUnitTubeData] using hXeq.symm
+  have hHeq' : td.H = Dpacket.H := by simpa [td, centeredUnitTubeData] using hHeq.symm
+  exact
+    SSU.Engines.TypeII.Step3LargeSieveOuterUFor.of_box_geometry
+      (td := td) (hDq := hDq) (hD := hD0) (hU := hU1R)
+      (hX := by simpa [hXeq'] using hX0)
+      (F := Dtype.F f i j)
+
+set_option maxHeartbeats 4000000 in
+/-- Product-side non-box extracted Step-4 constructor on the centered-unit tube-window family. -/
+private noncomputable def tubeWindowCenteredUnitOneAddLogStep4For
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0)
+    (f : H0) (i j : ℤ) :
+    let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+    SSU.Engines.TypeII.Step4LargeSieveOuterVFor td (Dtype.F f i j) := by
+  let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+  have hU0 : 0 ≤ td.U := by
+    change (0 : ℝ) ≤ (P.U : ℝ)
+    positivity
+  have hX0 : 0 ≤ td.X := by
+    change (0 : ℝ) ≤ (P.X : ℝ)
+    positivity
+  have hD1R : 1 ≤ td.D := by
+    change (1 : ℝ) ≤ (P.D : ℝ)
+    exact_mod_cast hD1
+  have hXH1R : 1 ≤ td.X * td.H := by
+    simpa [td, centeredUnitTubeData] using hXH1
+  have hXeq' : td.X = Dpacket.X := by simpa [td, centeredUnitTubeData] using hXeq.symm
+  have hHeq' : td.H = Dpacket.H := by simpa [td, centeredUnitTubeData] using hHeq.symm
+  exact
+    SSU.Engines.TypeII.Step4LargeSieveOuterVFor.of_box_geometry
+      (td := td) (hU := hU0)
+      (hX := by simpa [hXeq'] using hX0)
+      (hD1 := hD1R)
+      (hXH1 := by simpa [hXeq', hHeq'] using hXH1R)
+      (F := Dtype.F f i j)
+
+set_option maxHeartbeats 4000000 in
+/-- Product-side non-box extracted TeX Step-3/Step-4 combiner on the centered-unit
+tube-window family. -/
+private noncomputable def tubeWindowCenteredUnitOneAddLogStep34TeXFor
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
     (hXeq : Dpacket.X = (P.X : ℝ))
     (hHeq : Dpacket.H = (P.H : ℝ))
     (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
     (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
     (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0)
     (f : H0) (i j : ℤ) :
-    let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
-      SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
-    Step34ProdSumFor Dpacket.X Dpacket.H Dtype.tube (Dtype.F f i j) := by
-  let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
-    SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
-  let hTriv :
-      Step34ProdSum Dpacket.X Dpacket.H Dtype.tube :=
-    Step34ProdSum.trivial Dpacket.X Dpacket.H Dtype.tube hX hH
-  let hTrivFor :
-      Step34ProdSumFor Dpacket.X Dpacket.H Dtype.tube (Dtype.F f i j) :=
-    Step34ProdSumFor.of_global Dpacket.X Dpacket.H Dtype.tube hTriv (Dtype.F f i j)
-  let td :=
-    SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P 0 1 (by norm_num) (by decide)
-  have hDq : 1 ≤ td.D / (td.q : ℝ) := by
-    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
-      using (show 1 ≤ (P.D : ℝ) by exact_mod_cast hD1)
-  have hD0 : 0 ≤ td.D := by
-    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
-      (show (0 : ℝ) ≤ (P.D : ℝ) by exact_mod_cast (Nat.zero_le P.D))
-  have hU0 : 0 ≤ td.U := by
-    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
-      (show (0 : ℝ) ≤ (P.U : ℝ) by exact_mod_cast (Nat.zero_le P.U))
-  have hX0 : 0 ≤ td.X := by
-    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
-      (show (0 : ℝ) ≤ (P.X : ℝ) by exact_mod_cast (Nat.zero_le P.X))
+    let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+    SSU.Engines.TypeII.Step34LargeSieveTeXFor td (Dtype.F f i j) := by
+  let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+  let h3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor td (Dtype.F f i j) :=
+    tubeWindowCenteredUnitOneAddLogStep3For
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hD1 := hD1) (hU1 := hU1)
+      (hsubTube := hsubTube)
+      (f := f) (i := i) (j := j)
+  let h4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor td (Dtype.F f i j) :=
+    tubeWindowCenteredUnitOneAddLogStep4For
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hD1 := hD1) (hU1 := hU1) (hXH1 := hXH1)
+      (hsubTube := hsubTube)
+      (f := f) (i := i) (j := j)
   have hD1R : 1 ≤ td.D := by
-    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
-      using (show 1 ≤ (P.D : ℝ) by exact_mod_cast hD1)
+    change (1 : ℝ) ≤ (P.D : ℝ)
+    exact_mod_cast hD1
   have hU1R : 1 ≤ td.U := by
-    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
-      using (show 1 ≤ (P.U : ℝ) by exact_mod_cast hU1)
-  have hXH1R : 1 ≤ td.X * td.H := by
-    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using hXH1
+    change (1 : ℝ) ≤ (P.U : ℝ)
+    exact_mod_cast hU1
+  have hX0 : 0 ≤ td.X := by
+    change (0 : ℝ) ≤ (P.X : ℝ)
+    positivity
+  exact
+    SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_step3_step4
+      (td := td) (F := Dtype.F f i j) h3 h4
+      (hD := lt_of_lt_of_le (by norm_num) hD1R)
+      (hU := lt_of_lt_of_le (by norm_num) hU1R)
+      (hX := hX0)
+
+set_option maxHeartbeats 4000000 in
+/-- Uniform/product-side Step-3/Step-4 package on the centered-unit extracted family, obtained
+from a use-site TeX Step-3/Step-4 bound by a proved small-`ξ`/large-`ξ` split.
+
+This is the production M3 constructor that removes the `X / |ξ|` singular factor on the centered
+branch (`a = 0`, `q = 1`, `s = 0`) and yields an honest `Step34ProdSumFor` bound. -/
+private noncomputable def centeredUnitStep34For_of_step34TeXFor
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0)
+    (f : H0) (i j : ℤ)
+    (h34 :
+      let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+      SSU.Engines.TypeII.Step34LargeSieveTeXFor td (Dtype.F f i j))
+    :
+    Step34ProdSumFor Dpacket.X Dpacket.H Dtype.tube (Dtype.F f i j) := by
+  let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+  let hTriv : Step34ProdSum Dpacket.X Dpacket.H Dtype.tube :=
+    Step34ProdSum.trivial Dpacket.X Dpacket.H Dtype.tube hX hH
+  let hTrivFor : Step34ProdSumFor Dpacket.X Dpacket.H Dtype.tube (Dtype.F f i j) :=
+    Step34ProdSumFor.of_global Dpacket.X Dpacket.H Dtype.tube hTriv (Dtype.F f i j)
   let h34 :
-      SSU.Engines.TypeII.Step34LargeSieveTeXFor td (Dtype.F f i j) :=
-    SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_box_geometry
-      (td := td) (F := Dtype.F f i j)
-      (hDq := hDq) (hD0 := hD0) (hU0 := hU0) (hX0 := hX0)
-      (hD1 := hD1R) (hU1 := hU1R) (hXH1 := hXH1R)
+      SSU.Engines.TypeII.Step34LargeSieveTeXFor td (Dtype.F f i j) := by
+    simpa [td] using h34
   let E : ℝ := SSU.tubeEnergy Dtype.tube (Dtype.F f i j)
   let B : ℝ :=
     h34.C *
@@ -2346,11 +3546,9 @@ private noncomputable def boxGeometryOneAddLogStep34For
   let C : ℝ := max hTriv.C Cbig
   refine
     { C := C
-      C_nonneg := by
-        exact le_trans hTriv.C_nonneg (le_max_left _ _)
+      C_nonneg := by exact le_trans hTriv.C_nonneg (le_max_left _ _)
       bound := ?_ }
   intro ξ hξBand
-  have hHR : 0 < (P.H : ℝ) := by simpa [hHeq] using hH
   have hE0 : 0 ≤ E := by
     unfold E SSU.tubeEnergy
     refine Finset.sum_nonneg ?_
@@ -2386,10 +3584,8 @@ private noncomputable def boxGeometryOneAddLogStep34For
     have hlarge : 1 / (2 * Dpacket.H) < |ξ| := lt_of_not_ge hsmallξ
     have hξabs_pos : 0 < |ξ| := lt_trans hhalf_pos hlarge
     have hξ0 : ξ ≠ 0 := by exact abs_pos.mp hξabs_pos
-    have hrecip :
-        1 / |ξ| ≤ 2 * Dpacket.H := by
-      have hrecip' :
-          1 / |ξ| ≤ 1 / (1 / (2 * Dpacket.H)) := by
+    have hrecip : 1 / |ξ| ≤ 2 * Dpacket.H := by
+      have hrecip' : 1 / |ξ| ≤ 1 / (1 / (2 * Dpacket.H)) := by
         exact one_div_le_one_div_of_le hhalf_pos (le_of_lt hlarge)
       have hrewrite : 1 / (1 / (2 * Dpacket.H)) = 2 * Dpacket.H := by
         field_simp [ne_of_gt hH]
@@ -2398,27 +3594,34 @@ private noncomputable def boxGeometryOneAddLogStep34For
         (P.X : ℝ) / |ξ| ≤ 2 * (P.X : ℝ) * (P.H : ℝ) := by
       have hmul := mul_le_mul_of_nonneg_left hrecip (show 0 ≤ (P.X : ℝ) by positivity)
       simpa [hXeq, hHeq, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using hmul
-    have hbox :
-        Dtype.tube = P.box := by
-      simpa [Dtype] using
-        (SSU.Engines.BGTypeIIArray.Data.mkBox_tube_eq_box
-          (H := H0) (P := P) (hU := hUbox) (W := W) (α := α) (β := β))
-    have hTbox : td.T = P.box := by
-      simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
-        using (SSU.Engines.BGTube.tubeFinset_eq_box_of_U_ge_twoN (P := P) hUbox)
-    have hTtube : td.T = Dtype.tube := by simpa [hbox] using hTbox
+    have hband : |ξ| ≤ 1 / td.H := by
+      simpa [td, centeredUnitTubeData, hHeq] using hξBand
     have h34raw :
-        ‖SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ Dtype.tube (Dtype.F f i j)‖ ^ 2
+        ‖SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ td.T (Dtype.F f i j)‖ ^ 2
           ≤
         h34.C *
           Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
             Real.sqrt (td.U + td.X / |ξ|) *
               Real.sqrt (td.D + td.X / |ξ|) *
                 E := by
-      have hband : |ξ| ≤ 1 / td.H := by
-        simpa [hHeq, td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using hξBand
       have hraw := h34.bound ξ hξ0 hband
-      simpa [hTtube, E] using hraw
+      simpa [E] using hraw
+    have htda : td.a = (0 : ℤ) := rfl
+    have htdq : td.q = (1 : ℤ) := rfl
+    have htdX : td.X = (P.X : ℝ) := rfl
+    have htdD : td.D = (P.D : ℝ) := rfl
+    have htdU : td.U = (P.U : ℝ) := rfl
+    have htdT : td.T = Dtype.tube := rfl
+    have h34raw' :
+        ‖SSU.Engines.TypeII.typeIISum (a := (0 : ℤ)) (q := (1 : ℤ)) (P.X : ℝ) ξ Dtype.tube
+            (Dtype.F f i j)‖ ^ 2
+          ≤
+        h34.C *
+          Real.sqrt ((P.D : ℝ) * (P.U : ℝ)) *
+            Real.sqrt ((P.U : ℝ) + (P.X : ℝ) / |ξ|) *
+              Real.sqrt ((P.D : ℝ) + (P.X : ℝ) / |ξ|) *
+                E := by
+      simpa [E, htda, htdq, htdX, htdD, htdU, htdT] using h34raw
     have hsqrtU :
         Real.sqrt ((P.U : ℝ) + (P.X : ℝ) / |ξ|) ≤
           Real.sqrt ((P.U : ℝ) + 2 * (P.X : ℝ) * (P.H : ℝ)) := by
@@ -2429,8 +3632,7 @@ private noncomputable def boxGeometryOneAddLogStep34For
           Real.sqrt ((P.D : ℝ) + 2 * (P.X : ℝ) * (P.H : ℝ)) := by
       apply Real.sqrt_le_sqrt
       linarith
-    have hA0 :
-        0 ≤ h34.C * Real.sqrt ((P.D : ℝ) * (P.U : ℝ)) := by
+    have hA0 : 0 ≤ h34.C * Real.sqrt ((P.D : ℝ) * (P.U : ℝ)) := by
       exact mul_nonneg h34.C_nonneg (by positivity)
     have hgeom :
         h34.C *
@@ -2484,36 +3686,19 @@ private noncomputable def boxGeometryOneAddLogStep34For
     have hEqProd :
         SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ Dtype.tube (Dtype.F f i j)
           =
-        SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ Dtype.tube
+        SSU.Engines.TypeII.typeIISum (a := (0 : ℤ)) (q := (1 : ℤ)) (P.X : ℝ) ξ Dtype.tube
           (Dtype.F f i j) := by
       calc
         SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ Dtype.tube (Dtype.F f i j)
             =
-        SSU.Engines.TypeII.ProductToeplitz.prodSum td.X ξ P.box (Dtype.F f i j) := by
-              simp [hXeq, hbox, td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
+        SSU.Engines.TypeII.ProductToeplitz.prodSum (P.X : ℝ) ξ Dtype.tube (Dtype.F f i j) := by
+              simp [hXeq]
         _ =
-        SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ P.box (Dtype.F f i j) := by
-              simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
-                (prodSum_eq_typeIISum_box (P := P) (ξ := ξ) (F := Dtype.F f i j))
-        _ =
-        SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ Dtype.tube (Dtype.F f i j) := by
-          simpa [hbox]
-    have hTypeEq :
-        SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ Dtype.tube (Dtype.F f i j)
-          =
         SSU.Engines.TypeII.typeIISum (a := (0 : ℤ)) (q := (1 : ℤ)) (P.X : ℝ) ξ Dtype.tube
           (Dtype.F f i j) := by
-      simp [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
-    have h34raw' :
-        ‖SSU.Engines.TypeII.typeIISum (a := (0 : ℤ)) (q := (1 : ℤ)) (P.X : ℝ) ξ Dtype.tube
-            (Dtype.F f i j)‖ ^ 2
-          ≤
-        h34.C *
-          Real.sqrt ((P.D : ℝ) * (P.U : ℝ)) *
-            Real.sqrt ((P.U : ℝ) + (P.X : ℝ) / |ξ|) *
-              Real.sqrt ((P.D : ℝ) + (P.X : ℝ) / |ξ|) *
-                E := by
-      simpa [hTypeEq, td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using h34raw
+              simpa using
+                (prodSum_eq_typeIISum_unit
+                  (X := (P.X : ℝ)) (ξ := ξ) (T := Dtype.tube) (F := Dtype.F f i j))
     have hbig0 :
         ‖SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ Dtype.tube (Dtype.F f i j)‖ ^ 2
           ≤ B * E := by
@@ -2521,7 +3706,7 @@ private noncomputable def boxGeometryOneAddLogStep34For
         ‖SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ Dtype.tube (Dtype.F f i j)‖ ^ 2
             =
         ‖SSU.Engines.TypeII.typeIISum (a := (0 : ℤ)) (q := (1 : ℤ)) (P.X : ℝ) ξ Dtype.tube
-            (Dtype.F f i j)‖ ^ 2 := by rw [hEqProd, hTypeEq]
+            (Dtype.F f i j)‖ ^ 2 := by rw [hEqProd]
         _ ≤
           h34.C *
             Real.sqrt ((P.D : ℝ) * (P.U : ℝ)) *
@@ -2531,16 +3716,14 @@ private noncomputable def boxGeometryOneAddLogStep34For
         _ ≤ B * E := by
               have hgeomE := mul_le_mul_of_nonneg_right hgeom hE0
               simpa [mul_assoc, mul_left_comm, mul_comm] using hgeomE
-    have hCBigFactor :
-        B = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) := by
+    have hCBigFactor : B = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) := by
       calc
         B = B * (Real.sqrt (Dpacket.X / Dpacket.H) * Real.sqrt (Dpacket.H / Dpacket.X)) := by
               rw [hsqrt_cancel]
               ring
         _ = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) := by
               simp [Cbig, mul_assoc, mul_left_comm, mul_comm]
-    have hCBig :
-        B * E = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) * E := by
+    have hCBig : B * E = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) * E := by
       calc
         B * E = (Cbig * Real.sqrt (Dpacket.H / Dpacket.X)) * E := by rw [hCBigFactor]
         _ = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) * E := by ring
@@ -2561,13 +3744,1154 @@ private noncomputable def boxGeometryOneAddLogStep34For
       _ = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) * E := hCBig
       _ ≤ C * Real.sqrt (Dpacket.H / Dpacket.X) * E := hinflate
 
+set_option maxHeartbeats 4000000 in
+/-- Product-side non-box extracted `Step34ProdSumFor` package on the centered-unit tube-window
+family. This combines the use-site Step-3/Step-4 TeX route with the product-phase identity
+`prodSum = typeIISum` at `(a,q) = (0,1)`. -/
+private noncomputable def tubeWindowCenteredUnitOneAddLogStep34For
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0)
+    (f : H0) (i j : ℤ) :
+    Step34ProdSumFor Dpacket.X Dpacket.H Dtype.tube (Dtype.F f i j) := by
+  let h34 :
+      let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+      SSU.Engines.TypeII.Step34LargeSieveTeXFor td (Dtype.F f i j) :=
+    tubeWindowCenteredUnitOneAddLogStep34TeXFor
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hX := hX) (hH := hH)
+      (hD1 := hD1) (hU1 := hU1) (hXH1 := hXH1)
+      (hsubTube := hsubTube)
+      (f := f) (i := i) (j := j)
+  exact
+    centeredUnitStep34For_of_step34TeXFor
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hX := hX) (hH := hH)
+      (hsubTube := hsubTube)
+      (h34 := h34)
+      (f := f) (i := i) (j := j)
+
+/-- Centered-unit extracted `InputFor` constructor from a supplied use-site TeX Step-3/Step-4
+family, promoted to the uniform/product-side `Step34ProdSumFor` route via the proved M3
+small-`ξ`/large-`ξ` split. -/
+noncomputable def tubeWindowCenteredUnitOneAddLog_ofStep34TeXFor
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0)
+    (step34TeXFor :
+      ∀ f : H0, ∀ i j : ℤ,
+        let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+        SSU.Engines.TypeII.Step34LargeSieveTeXFor td (Dtype.F f i j)) :
+    InputFor (κ := κ) (H0 := H0) where
+  Dpacket := Dpacket
+  Dtype := Dtype
+  hX := hX
+  hH := hH
+  hsmall := hsmall
+  step34For := fun f i j =>
+    centeredUnitStep34For_of_step34TeXFor
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hX := hX) (hH := hH)
+      (hsubTube := hsubTube)
+      (h34 := step34TeXFor f i j)
+      (f := f) (i := i) (j := j)
+
+/-- Product-side non-box extracted use-site family backed by explicit Step-3/Step-4-for
+constructors on the centered-unit tube-window route (`a = 0`, `q = 1`, `s = 0`). -/
+noncomputable def tubeWindowCenteredUnitOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let h34For :
+      ∀ f : H0, ∀ i j : ℤ,
+        let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+        SSU.Engines.TypeII.Step34LargeSieveTeXFor td (Dtype.F f i j) :=
+    fun f i j =>
+      tubeWindowCenteredUnitOneAddLogStep34TeXFor
+        (κ := κ) (H0 := H0)
+        (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+        (hXeq := hXeq) (hHeq := hHeq)
+        (hX := hX) (hH := hH)
+        (hD1 := hD1) (hU1 := hU1) (hXH1 := hXH1)
+        (hsubTube := hsubTube)
+        (f := f) (i := i) (j := j)
+  exact
+    tubeWindowCenteredUnitOneAddLog_ofStep34TeXFor
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hX := hX) (hH := hH)
+      (hsmall := hsmall)
+      (hsubTube := hsubTube)
+      (step34TeXFor := h34For)
+
+/-- Product-side non-box extracted use-site family on the shifted unit-slope tube-window route
+(`a = 0`, `q = 1`, arbitrary offset `s`), proved non-fallback by enlarging `U` to `U + |s|` and
+reducing to the centered unit-slope chain. -/
+noncomputable def tubeWindowShiftedUnitOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (s : ℤ)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 s) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let P' : SSU.Engines.BGTube.Params := shiftedUnitParams P s
+  have hXeq' : Dpacket.X = (P'.X : ℝ) := by
+    simpa [P', shiftedUnitParams] using hXeq
+  have hHeq' : Dpacket.H = (P'.H : ℝ) := by
+    simpa [P', shiftedUnitParams] using hHeq
+  have hD1' : 1 ≤ P'.D := by
+    simpa [P', shiftedUnitParams] using hD1
+  have hU1' : 1 ≤ P'.U := by
+    dsimp [P', shiftedUnitParams, shiftedShearParams]
+    exact le_trans hU1 (Nat.le_add_right P.U (Int.natAbs s))
+  have hXH1' : 1 ≤ (P'.X : ℝ) * (P'.H : ℝ) := by
+    simpa [P', shiftedUnitParams] using hXH1
+  have hsubCentered : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P' 0 1 0 := by
+    intro p hp
+    exact tubeFinset_subset_shiftedUnitCentered (P := P) (s := s) (hsubTube hp)
+  exact
+    tubeWindowCenteredUnitOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P' hXeq' hHeq' hX hH hsmall hD1' hU1' hXH1' hsubCentered
+
+set_option maxHeartbeats 4000000 in
+/-- Product-side non-fallback `Step34ProdSumFor` on the non-unit-slope centered tube-window
+(`a/q` general, `s = 0`), obtained from the assumed per-residue MV Step-3/Step-4 chain together
+with the deterministic product↔shear phase twist identity. -/
+private noncomputable def tubeWindowGeneralSlopeOneAddLogStep34For
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hcop : Nat.Coprime a.natAbs q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ Dpacket.X * Dpacket.H)
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q 0)
+    (f : H0) (i j : ℤ) :
+    Step34ProdSumFor Dpacket.X Dpacket.H Dtype.tube (Dtype.F f i j) := by
+  let qpos : 0 < q := lt_of_lt_of_le (by decide : 0 < 1) hq
+  let td := generalSlopeTubeData (H0 := H0) Dpacket Dtype P a q qpos hcop hsubTube
+  let F0 : TubePoint → ℂ := Dtype.F f i j
+  have hD0 : 0 ≤ td.D := by
+    simpa [td, generalSlopeTubeData, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+      (show (0 : ℝ) ≤ (P.D : ℝ) by exact_mod_cast (Nat.zero_le P.D))
+  have hU0 : 0 ≤ td.U := by
+    simpa [td, generalSlopeTubeData, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+      (show (0 : ℝ) ≤ (P.U : ℝ) by exact_mod_cast (Nat.zero_le P.U))
+  have hX0 : 0 ≤ td.X := by
+    simpa [td, generalSlopeTubeData] using (le_of_lt hX)
+  have hD1R : 1 ≤ td.D := by
+    simpa [td, generalSlopeTubeData, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+      (show 1 ≤ (P.D : ℝ) by exact_mod_cast hD1)
+  have hU1R : 1 ≤ td.U := by
+    simpa [td, generalSlopeTubeData, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+      (show 1 ≤ (P.U : ℝ) by exact_mod_cast hU1)
+  have hXH1R : 1 ≤ td.X * td.H := by
+    simpa [td, generalSlopeTubeData] using hXH1
+  have hDpos : 0 < td.D := lt_of_lt_of_le (by norm_num) hD1R
+  let h3MV : SSU.Engines.TypeII.LargeSieve.Step3MontgomeryVaughanByResidue td :=
+    SSU.Engines.TypeII.LargeSieve.step3MV_byResidue td hDpos hD0 hU1R hX0
+  let h4MV : SSU.Engines.TypeII.LargeSieve.Step4MontgomeryVaughanByResidue td :=
+    SSU.Engines.TypeII.LargeSieve.step4MV_byResidue td hU0 hX0 hD1R hXH1R
+  let CteX : ℝ :=
+    (SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_step3MVByResidue_step4MVByResidue
+      td F0 h3MV h4MV hD0 hU0 hX0 (lt_of_lt_of_le (by norm_num) hD1R)
+      (lt_of_lt_of_le (by norm_num) hU1R)).C
+  let E : ℝ := SSU.tubeEnergy Dtype.tube F0
+  let hTriv : Step34ProdSum Dpacket.X Dpacket.H Dtype.tube :=
+    Step34ProdSum.trivial Dpacket.X Dpacket.H Dtype.tube hX hH
+  let hTrivFor : Step34ProdSumFor Dpacket.X Dpacket.H Dtype.tube F0 :=
+    Step34ProdSumFor.of_global Dpacket.X Dpacket.H Dtype.tube hTriv F0
+  let B : ℝ :=
+    CteX *
+      Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+        Real.sqrt (td.U + 2 * td.X * td.H) *
+          Real.sqrt (td.D + 2 * td.X * td.H)
+  let Cbig : ℝ := B * Real.sqrt (Dpacket.X / Dpacket.H)
+  let C : ℝ := max hTriv.C Cbig
+  refine
+    { C := C
+      C_nonneg := by exact le_trans hTriv.C_nonneg (le_max_left _ _)
+      bound := ?_ }
+  intro ξ hξBand
+  have hE0 : 0 ≤ E := by
+    unfold E SSU.tubeEnergy
+    refine Finset.sum_nonneg ?_
+    intro p hp
+    positivity
+  have hsqrtHX0 : 0 ≤ Real.sqrt (Dpacket.H / Dpacket.X) := by positivity
+  have hsqrt_cancel :
+      Real.sqrt (Dpacket.X / Dpacket.H) * Real.sqrt (Dpacket.H / Dpacket.X) = 1 := by
+    have hpos : 0 ≤ Dpacket.X / Dpacket.H := by positivity
+    calc
+      Real.sqrt (Dpacket.X / Dpacket.H) * Real.sqrt (Dpacket.H / Dpacket.X)
+          = Real.sqrt ((Dpacket.X / Dpacket.H) * (Dpacket.H / Dpacket.X)) := by
+              simpa using (Real.sqrt_mul hpos (Dpacket.H / Dpacket.X)).symm
+      _ = Real.sqrt (1 : ℝ) := by
+            congr 1
+            field_simp [ne_of_gt hX, ne_of_gt hH]
+      _ = 1 := by simp
+  by_cases hsmallξ : |ξ| ≤ 1 / (2 * Dpacket.H)
+  · have hbase := hTrivFor.bound ξ hξBand
+    have hC_le : hTriv.C ≤ C := le_max_left _ _
+    have hmul :
+        hTriv.C * Real.sqrt (Dpacket.H / Dpacket.X) * E
+          ≤ C * Real.sqrt (Dpacket.H / Dpacket.X) * E := by
+      have hfac : 0 ≤ Real.sqrt (Dpacket.H / Dpacket.X) * E := mul_nonneg hsqrtHX0 hE0
+      have htmp := mul_le_mul_of_nonneg_right hC_le hfac
+      calc
+        hTriv.C * Real.sqrt (Dpacket.H / Dpacket.X) * E
+            = hTriv.C * (Real.sqrt (Dpacket.H / Dpacket.X) * E) := by ring
+        _ ≤ C * (Real.sqrt (Dpacket.H / Dpacket.X) * E) := htmp
+        _ = C * Real.sqrt (Dpacket.H / Dpacket.X) * E := by ring
+    exact le_trans hbase hmul
+  · have hhalf_pos : 0 < 1 / (2 * Dpacket.H) := by positivity
+    have hlarge : 1 / (2 * Dpacket.H) < |ξ| := lt_of_not_ge hsmallξ
+    have hξabs_pos : 0 < |ξ| := lt_trans hhalf_pos hlarge
+    have hξ0 : ξ ≠ 0 := by exact abs_pos.mp hξabs_pos
+    have hrecip : 1 / |ξ| ≤ 2 * Dpacket.H := by
+      have hrecip' : 1 / |ξ| ≤ 1 / (1 / (2 * Dpacket.H)) := by
+        exact one_div_le_one_div_of_le hhalf_pos (le_of_lt hlarge)
+      have hrewrite : 1 / (1 / (2 * Dpacket.H)) = 2 * Dpacket.H := by
+        field_simp [ne_of_gt hH]
+      simpa [hrewrite] using hrecip'
+    have hXdiv :
+        td.X / |ξ| ≤ 2 * td.X * td.H := by
+      have hmul := mul_le_mul_of_nonneg_left hrecip (show 0 ≤ td.X by positivity)
+      have htdH : td.H = Dpacket.H := by
+        simp [td, generalSlopeTubeData]
+      simpa [div_eq_mul_inv, htdH, mul_assoc, mul_left_comm, mul_comm] using hmul
+    have hband : |ξ| ≤ 1 / td.H := by
+      simpa [td, generalSlopeTubeData] using hξBand
+    let Fξ : TubePoint → ℂ := prodPhaseTwist td.a td.q td.X ξ F0
+    let h34ξ : SSU.Engines.TypeII.Step34LargeSieveTeXFor td Fξ :=
+      SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_step3MVByResidue_step4MVByResidue
+        td Fξ h3MV h4MV hD0 hU0 hX0
+        (lt_of_lt_of_le (by norm_num) hD1R)
+        (lt_of_lt_of_le (by norm_num) hU1R)
+    have hCeq : h34ξ.C = CteX := by
+      simp [h34ξ, CteX,
+        SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_step3MVByResidue_step4MVByResidue,
+        SSU.Engines.TypeII.Step3LargeSieveOuterUFor.of_fiberLargeSieveFor,
+        SSU.Engines.TypeII.Step3LargeSieveOuterUFor.of_fiberLargeSieveByResidueFor,
+        SSU.Engines.TypeII.Step3FiberLargeSieveFor.of_byResidue,
+        SSU.Engines.TypeII.Step4LargeSieveOuterVFor.of_fiberLargeSieveFor,
+        SSU.Engines.TypeII.Step4LargeSieveOuterVFor.of_fiberLargeSieveByResidueFor,
+        SSU.Engines.TypeII.Step3FiberLargeSieveByResidueFor.of_montgomeryVaughanByResidue,
+        SSU.Engines.TypeII.Step4FiberLargeSieveFor.of_byResidue,
+        SSU.Engines.TypeII.Step4FiberLargeSieveByResidueFor.of_montgomeryVaughanByResidue,
+        SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_step3_step4]
+    have hEeq : SSU.tubeEnergy td.T Fξ = E := by
+      simpa [E, Fξ, td, generalSlopeTubeData] using
+        (tubeEnergy_prodPhaseTwist_eq td.a td.q td.X ξ Dtype.tube F0)
+    have h34raw :
+        ‖SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ td.T Fξ‖ ^ 2
+          ≤
+        CteX *
+          Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+            Real.sqrt (td.U + td.X / |ξ|) *
+              Real.sqrt (td.D + td.X / |ξ|) *
+                E := by
+      have hraw := h34ξ.bound ξ hξ0 hband
+      calc
+        ‖SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ td.T Fξ‖ ^ 2
+            ≤
+          h34ξ.C *
+            Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+              Real.sqrt (td.U + td.X / |ξ|) *
+                Real.sqrt (td.D + td.X / |ξ|) *
+                  SSU.tubeEnergy td.T Fξ := hraw
+        _ =
+          CteX *
+            Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+              Real.sqrt (td.U + td.X / |ξ|) *
+                Real.sqrt (td.D + td.X / |ξ|) *
+                  E := by simp [hCeq, hEeq]
+    have hsqrtU :
+        Real.sqrt (td.U + td.X / |ξ|) ≤ Real.sqrt (td.U + 2 * td.X * td.H) := by
+      apply Real.sqrt_le_sqrt
+      linarith
+    have hsqrtD :
+        Real.sqrt (td.D + td.X / |ξ|) ≤ Real.sqrt (td.D + 2 * td.X * td.H) := by
+      apply Real.sqrt_le_sqrt
+      linarith
+    have hA0 : 0 ≤ CteX * Real.sqrt ((td.D * td.U) / (td.q : ℝ)) := by
+      have hCteX0 : 0 ≤ CteX := by
+        simpa [CteX] using
+          (SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_step3MVByResidue_step4MVByResidue
+            td F0 h3MV h4MV hD0 hU0 hX0
+            (lt_of_lt_of_le (by norm_num) hD1R)
+            (lt_of_lt_of_le (by norm_num) hU1R)).C_nonneg
+      exact mul_nonneg hCteX0 (by positivity)
+    have hgeom :
+        CteX *
+            Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+              Real.sqrt (td.U + td.X / |ξ|) *
+                Real.sqrt (td.D + td.X / |ξ|)
+          ≤ B := by
+      have h1 :
+          CteX *
+              Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+                Real.sqrt (td.U + td.X / |ξ|)
+            ≤
+          CteX *
+              Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+                Real.sqrt (td.U + 2 * td.X * td.H) := by
+        exact mul_le_mul_of_nonneg_left hsqrtU hA0
+      have h2 :
+          (CteX *
+              Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+                Real.sqrt (td.U + 2 * td.X * td.H)) *
+              Real.sqrt (td.D + td.X / |ξ|)
+            ≤
+          (CteX *
+              Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+                Real.sqrt (td.U + 2 * td.X * td.H)) *
+              Real.sqrt (td.D + 2 * td.X * td.H) := by
+        have hleft0 :
+            0 ≤ CteX *
+              Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+                Real.sqrt (td.U + 2 * td.X * td.H) := by
+          positivity
+        exact mul_le_mul_of_nonneg_left hsqrtD hleft0
+      calc
+        CteX *
+            Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+              Real.sqrt (td.U + td.X / |ξ|) *
+                Real.sqrt (td.D + td.X / |ξ|)
+            ≤
+        (CteX *
+            Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+              Real.sqrt (td.U + 2 * td.X * td.H)) *
+                Real.sqrt (td.D + td.X / |ξ|) := by
+                  simpa [mul_assoc] using
+                    mul_le_mul_of_nonneg_right h1 (by positivity)
+        _ ≤
+        (CteX *
+            Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+              Real.sqrt (td.U + 2 * td.X * td.H)) *
+                Real.sqrt (td.D + 2 * td.X * td.H) := h2
+        _ = B := by simp [B, mul_assoc]
+    have hEqProd :
+        SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ Dtype.tube F0
+          =
+        SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ td.T Fξ := by
+      calc
+        SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ Dtype.tube F0
+            =
+        SSU.Engines.TypeII.ProductToeplitz.prodSum td.X ξ td.T F0 := by
+              simp [td, generalSlopeTubeData]
+        _ = SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ td.T Fξ := by
+              simpa [Fξ] using
+                (prodSum_eq_typeIISum_prodPhaseTwist
+                  (a := td.a) (q := td.q) (X := td.X) (ξ := ξ) (T := td.T) (F := F0))
+    have hbig0 :
+        ‖SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ Dtype.tube F0‖ ^ 2
+          ≤ B * E := by
+      calc
+        ‖SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ Dtype.tube F0‖ ^ 2
+            =
+        ‖SSU.Engines.TypeII.typeIISum td.a td.q td.X ξ td.T Fξ‖ ^ 2 := by rw [hEqProd]
+        _ ≤
+          CteX *
+            Real.sqrt ((td.D * td.U) / (td.q : ℝ)) *
+              Real.sqrt (td.U + td.X / |ξ|) *
+                Real.sqrt (td.D + td.X / |ξ|) *
+                  E := h34raw
+        _ ≤ B * E := by
+              have hgeomE := mul_le_mul_of_nonneg_right hgeom hE0
+              simpa [mul_assoc, mul_left_comm, mul_comm] using hgeomE
+    have hCBigFactor : B = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) := by
+      calc
+        B = B * (Real.sqrt (Dpacket.X / Dpacket.H) * Real.sqrt (Dpacket.H / Dpacket.X)) := by
+              rw [hsqrt_cancel]
+              ring
+        _ = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) := by
+              simp [Cbig, mul_assoc, mul_left_comm, mul_comm]
+    have hCBig : B * E = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) * E := by
+      calc
+        B * E = (Cbig * Real.sqrt (Dpacket.H / Dpacket.X)) * E := by rw [hCBigFactor]
+        _ = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) * E := by ring
+    have hCbig_le : Cbig ≤ C := le_max_right _ _
+    have hinflate :
+        Cbig * Real.sqrt (Dpacket.H / Dpacket.X) * E
+          ≤ C * Real.sqrt (Dpacket.H / Dpacket.X) * E := by
+      have hfac : 0 ≤ Real.sqrt (Dpacket.H / Dpacket.X) * E := mul_nonneg hsqrtHX0 hE0
+      have htmp := mul_le_mul_of_nonneg_right hCbig_le hfac
+      calc
+        Cbig * Real.sqrt (Dpacket.H / Dpacket.X) * E
+            = Cbig * (Real.sqrt (Dpacket.H / Dpacket.X) * E) := by ring
+        _ ≤ C * (Real.sqrt (Dpacket.H / Dpacket.X) * E) := htmp
+        _ = C * Real.sqrt (Dpacket.H / Dpacket.X) * E := by ring
+    calc
+      ‖SSU.Engines.TypeII.ProductToeplitz.prodSum Dpacket.X ξ Dtype.tube F0‖ ^ 2
+          ≤ B * E := hbig0
+      _ = Cbig * Real.sqrt (Dpacket.H / Dpacket.X) * E := hCBig
+      _ ≤ C * Real.sqrt (Dpacket.H / Dpacket.X) * E := hinflate
+
+/-- Product-side non-fallback extracted one-add-log constructor on the centered BG tube-window
+with general slope `a/q` (`q ≥ 1`, `s = 0`). -/
+noncomputable def tubeWindowGeneralSlopeOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hcop : Nat.Coprime a.natAbs q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ Dpacket.X * Dpacket.H)
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q 0) :
+    InputFor (κ := κ) (H0 := H0) where
+  Dpacket := Dpacket
+  Dtype := Dtype
+  hX := hX
+  hH := hH
+  hsmall := hsmall
+  step34For := fun f i j =>
+    tubeWindowGeneralSlopeOneAddLogStep34For
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+      (a := a) (q := q) (hq := hq) (hcop := hcop)
+      (hX := hX) (hH := hH)
+      (hD1 := hD1) (hU1 := hU1) (hXH1 := hXH1)
+      (hsubTube := hsubTube)
+      (f := f) (i := i) (j := j)
+
+/-- Product-side non-box extracted use-site family on the shifted general-slope tube-window route
+(`a/q` arbitrary, `s` arbitrary), reduced to the centered-window general-slope route by enlarging
+`U` by `|s|`. -/
+noncomputable def tubeWindowShiftedGeneralSlopeOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hcop : Nat.Coprime a.natAbs q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ Dpacket.X * Dpacket.H)
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let P' : SSU.Engines.BGTube.Params := shiftedShearParams P s
+  have hD1' : 1 ≤ P'.D := by
+    simpa [P', shiftedShearParams] using hD1
+  have hU1' : 1 ≤ P'.U := by
+    dsimp [P', shiftedShearParams]
+    exact le_trans hU1 (Nat.le_add_right P.U (Int.natAbs s))
+  have hsubCentered : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P' a q 0 := by
+    intro p hp
+    exact tubeFinset_subset_shiftedShearCentered (P := P) (a := a) (q := q) (s := s) (hsubTube hp)
+  exact
+    tubeWindowGeneralSlopeOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P' a q hq hcop hX hH hsmall hD1' hU1' hXH1
+      hsubCentered
+
+/-- Product-side non-box extracted use-site family on the centered general-slope tube-window
+without a coprimality side condition, obtained by reducing `(a,q)` by `gcd(a,q)` on the
+deterministic geometry side and routing through the coprime constructor. -/
+noncomputable def tubeWindowGeneralSlopeOneAddLogNoCoprime
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ Dpacket.X * Dpacket.H)
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q 0) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let a0 : ℤ := reducedSlopeA a q
+  let q0 : ℕ := reducedSlopeQ a q
+  have hq0 : 1 ≤ q0 := reducedSlopeQ_one_le a q hq
+  have hcop0 : Nat.Coprime a0.natAbs q0 := by
+    simpa [a0, q0] using reducedSlope_coprime a q hq
+  have hsub0 : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a0 q0 0 := by
+    intro p hp
+    exact tubeFinset_subset_reducedCentered (P := P) (a := a) (q := q) (hq := hq) (hsubTube hp)
+  exact
+    tubeWindowGeneralSlopeOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P a0 q0 hq0 hcop0 hX hH hsmall hD1 hU1 hXH1 hsub0
+
+/-- Product-side non-box extracted use-site family on the shifted general-slope tube-window
+without a coprimality side condition. This first centers the shift deterministically and then
+applies `tubeWindowGeneralSlopeOneAddLogNoCoprime`. -/
+noncomputable def tubeWindowShiftedGeneralSlopeOneAddLogNoCoprime
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ Dpacket.X * Dpacket.H)
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let P' : SSU.Engines.BGTube.Params := shiftedShearParams P s
+  have hD1' : 1 ≤ P'.D := by
+    simpa [P', shiftedShearParams] using hD1
+  have hU1' : 1 ≤ P'.U := by
+    dsimp [P', shiftedShearParams]
+    exact le_trans hU1 (Nat.le_add_right P.U (Int.natAbs s))
+  have hsubCentered : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P' a q 0 := by
+    intro p hp
+    exact tubeFinset_subset_shiftedShearCentered (P := P) (a := a) (q := q) (s := s) (hsubTube hp)
+  exact
+    tubeWindowGeneralSlopeOneAddLogNoCoprime
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P' a q hq hX hH hsmall hD1' hU1' hXH1 hsubCentered
+
+/-- Non-fallback broad non-box extracted one-add-log constructor on BG tube windows, proved via
+the centered-unit Step-3/Step-4 chain on a box-envelope parameter set.
+
+This removes dependence on slope-side BG compatibility (`q ≤ D`, coprimality) by routing through
+the deterministic inclusion `tubeFinset P a q s ⊆ P.box = tubeFinset P' 0 1 0`, with
+`P'.U := max P.U (2 * P.N)`. -/
+noncomputable def tubeWindowBoxEnvelopeOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let P' : SSU.Engines.BGTube.Params := { P with U := max P.U (2 * P.N) }
+  have hXeq' : Dpacket.X = (P'.X : ℝ) := by
+    simpa [P'] using hXeq
+  have hHeq' : Dpacket.H = (P'.H : ℝ) := by
+    simpa [P'] using hHeq
+  have hD1' : 1 ≤ P'.D := by
+    simpa [P'] using hD1
+  have hU1' : 1 ≤ P'.U := by
+    dsimp [P']
+    exact le_trans hU1 (Nat.le_max_left P.U (2 * P.N))
+  have hXH1' : 1 ≤ (P'.X : ℝ) * (P'.H : ℝ) := by
+    simpa [P'] using hXH1
+  have hUge : 2 * P'.N ≤ P'.U := by
+    dsimp [P']
+    exact Nat.le_max_right P.U (2 * P.N)
+  have hTubeBox' :
+      SSU.Engines.BGTube.tubeFinset P' 0 1 0 = P'.box := by
+    simpa using (SSU.Engines.BGTube.tubeFinset_eq_box_of_U_ge_twoN (P := P') hUge)
+  have hsubCentered : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P' 0 1 0 := by
+    intro p hp
+    have hpBox : p ∈ P.box := (SSU.Engines.BGTube.mem_tubeFinset_iff P a q s p).mp (hsubTube hp) |>.1
+    have hpBox' : p ∈ P'.box := by
+      simpa [P'] using hpBox
+    simpa [hTubeBox'] using hpBox'
+  exact
+    tubeWindowCenteredUnitOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P' hXeq' hHeq' hX hH hsmall hD1' hU1' hXH1' hsubCentered
+
+/-- Packet-scale-agnostic non-fallback Step-3/Step-4 constructor on BG tube windows.
+
+Routes through the shifted general-slope non-fallback chain after deterministic
+`(D,U)`-inflation (`withUnitDU`).
+-/
+  noncomputable def tubeWindowOneAddLogScaleAgnostic
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let P' : SSU.Engines.BGTube.Params := withUnitDU P
+  have hD1' : 1 ≤ P'.D := by
+    dsimp [P', withUnitDU]
+    exact Nat.le_max_right P.D 1
+  have hU1' : 1 ≤ P'.U := by
+    dsimp [P', withUnitDU]
+    exact Nat.le_max_right P.U 1
+  have hXH1pkt : 1 ≤ Dpacket.X * Dpacket.H := one_le_mul_of_small_band hX hH hsmall
+  have hsubTube' : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P' a q s := by
+    intro p hp
+    exact tubeFinset_subset_withUnitDU (P := P) (a := a) (q := q) (s := s) (hsubTube hp)
+  exact
+    tubeWindowShiftedGeneralSlopeOneAddLogNoCoprime
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P' a s q hq hX hH hsmall hD1' hU1' hXH1pkt hsubTube'
+
+/-- Canonical non-box extracted one-add-log constructor (scale-agnostic default route). -/
+noncomputable def tubeWindowOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s) :
+    InputFor (κ := κ) (H0 := H0) :=
+  tubeWindowOneAddLogScaleAgnostic
+    (κ := κ) (H0 := H0)
+    Dpacket Dtype P a s q hq hX hH hsmall hsubTube
+
+/-- Canonical default non-box extracted one-add-log constructor.
+
+Compatibility alias for `tubeWindowOneAddLog`. -/
+noncomputable def tubeWindowOneAddLogDefault
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s) :
+    InputFor (κ := κ) (H0 := H0) :=
+  tubeWindowOneAddLog
+    (κ := κ) (H0 := H0)
+    Dpacket Dtype P a s q hq hX hH hsmall hsubTube
+
+/-- Canonical default extracted one-add-log constructor on the centered general-slope subclass
+(`s = 0`), routed through the packet-scale-agnostic default endpoint. -/
+noncomputable def tubeWindowGeneralSlopeOneAddLogDefault
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q 0) :
+    InputFor (κ := κ) (H0 := H0) :=
+  tubeWindowOneAddLog
+    (κ := κ) (H0 := H0)
+    Dpacket Dtype P a 0 q hq hX hH hsmall hsubTube
+
+/-- Canonical default extracted one-add-log constructor on the shifted general-slope subclass,
+routed through the packet-scale-agnostic default endpoint. -/
+noncomputable def tubeWindowShiftedGeneralSlopeOneAddLogDefault
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s) :
+    InputFor (κ := κ) (H0 := H0) :=
+  tubeWindowOneAddLog
+    (κ := κ) (H0 := H0)
+    Dpacket Dtype P a s q hq hX hH hsmall hsubTube
+
+/-- Use-site extracted Step 3–4 family for the residue-structured BG tube-window subclass.
+
+This always routes through the non-fallback general-slope chain after deterministic
+`(D,U)`-inflation. -/
+noncomputable def tubeWindowResidueOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m r : ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidue :
+      ∀ p ∈ Dtype.tube, SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m]) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let P' : SSU.Engines.BGTube.Params := withUnitDU P
+  have hD1' : 1 ≤ P'.D := by
+    dsimp [P', withUnitDU]
+    exact Nat.le_max_right P.D 1
+  have hU1' : 1 ≤ P'.U := by
+    dsimp [P', withUnitDU]
+    exact Nat.le_max_right P.U 1
+  have hXH1pkt : 1 ≤ Dpacket.X * Dpacket.H := one_le_mul_of_small_band hX hH hsmall
+  have hsubTube' : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P' a q s := by
+    intro p hp
+    exact tubeFinset_subset_withUnitDU (P := P) (a := a) (q := q) (s := s) (hsubTube hp)
+  exact
+    tubeWindowShiftedGeneralSlopeOneAddLogNoCoprime
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P' a s q hq hX hH hsmall hD1' hU1' hXH1pkt hsubTube'
+
+/-- Deterministic `U`-inflation from a finite shear-level set. -/
+private def withShearLevelsU (P : SSU.Engines.BGTube.Params) (levels : Finset ℤ) :
+    SSU.Engines.BGTube.Params :=
+  { P with U := max P.U (levels.sup Int.natAbs) }
+
+/-- Geometry bridge from box support + finite shear levels to a BG tube window. -/
+private theorem tube_subset_withShearLevelsU_of_box_levels
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ) (levels : Finset ℤ)
+    (hsubBox : Dtype.tube ⊆ P.box)
+    (hlevels : ∀ p ∈ Dtype.tube, SSU.Engines.BGTube.shear a q s p ∈ levels) :
+    Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset (withShearLevelsU P levels) a q s := by
+  intro p hp
+  have hpBox : p ∈ P.box := hsubBox hp
+  have hpLevels : SSU.Engines.BGTube.shear a q s p ∈ levels := hlevels p hp
+  have hpShear :
+      Int.natAbs (SSU.Engines.BGTube.shear a q s p) ≤ levels.sup Int.natAbs := by
+    exact Finset.le_sup hpLevels
+  have hpShear' :
+      Int.natAbs (SSU.Engines.BGTube.shear a q s p) ≤ (withShearLevelsU P levels).U := by
+    exact le_trans hpShear (Nat.le_max_right P.U (levels.sup Int.natAbs))
+  have hpBox' : p ∈ (withShearLevelsU P levels).box := by
+    simpa [withShearLevelsU, SSU.Engines.BGTube.Params.box,
+      SSU.Engines.BGTube.Params.dRange, SSU.Engines.BGTube.Params.nRange] using hpBox
+  exact (SSU.Engines.BGTube.mem_tubeFinset_iff (withShearLevelsU P levels) a q s p).2
+    ⟨hpBox', hpShear'⟩
+
+/-- Non-fallback Step-3/Step-4 constructor on a broader non-BG-compatible extracted class:
+support in `P.box` and finite shear-level control. -/
+noncomputable def shearLevelSetOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (levels : Finset ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubBox : Dtype.tube ⊆ P.box)
+    (hlevels : ∀ p ∈ Dtype.tube, SSU.Engines.BGTube.shear a q s p ∈ levels) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let P' : SSU.Engines.BGTube.Params := withShearLevelsU P levels
+  have hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P' a q s := by
+    intro p hp
+    exact tube_subset_withShearLevelsU_of_box_levels
+      (Dtype := Dtype) (P := P) (a := a) (s := s) (q := q) (levels := levels)
+      hsubBox hlevels hp
+  exact
+    tubeWindowOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P' a s q hq hX hH hsmall hsubTube
+
+/-- Non-fallback Step-3/Step-4 constructor on the broad box-support class:
+no pre-supplied tube window or level set is required; levels are extracted as the finite image of
+the shear map on `Dtype.tube`. -/
+noncomputable def boxSupportOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubBox : Dtype.tube ⊆ P.box) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let levels : Finset ℤ := Dtype.tube.image (fun p => SSU.Engines.BGTube.shear a q s p)
+  have hlevels : ∀ p ∈ Dtype.tube, SSU.Engines.BGTube.shear a q s p ∈ levels := by
+    intro p hp
+    exact Finset.mem_image.mpr ⟨p, hp, rfl⟩
+  exact
+    shearLevelSetOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P a s q hq levels hX hH hsmall hsubBox hlevels
+
+/-- Packet-scale-agnostic non-fallback residue-union Step-3/Step-4 constructor on BG tube windows.
+
+Routes through the shifted general-slope non-fallback chain after deterministic
+`(D,U)`-inflation (`withUnitDU`). -/
+noncomputable def tubeWindowResidueSetOneAddLogScaleAgnostic
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m : ℤ)
+    (residueReps : Finset ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidueSet :
+      ∀ p ∈ Dtype.tube, ∃ r ∈ residueReps,
+        SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m]) :
+    InputFor (κ := κ) (H0 := H0) := by
+  let P' : SSU.Engines.BGTube.Params := withUnitDU P
+  have hD1' : 1 ≤ P'.D := by
+    dsimp [P', withUnitDU]
+    exact Nat.le_max_right P.D 1
+  have hU1' : 1 ≤ P'.U := by
+    dsimp [P', withUnitDU]
+    exact Nat.le_max_right P.U 1
+  have hXH1pkt : 1 ≤ Dpacket.X * Dpacket.H := one_le_mul_of_small_band hX hH hsmall
+  have hsubTube' : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P' a q s := by
+    intro p hp
+    exact tubeFinset_subset_withUnitDU (P := P) (a := a) (q := q) (s := s) (hsubTube hp)
+  exact
+    tubeWindowShiftedGeneralSlopeOneAddLogNoCoprime
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P' a s q hq hX hH hsmall hD1' hU1' hXH1pkt hsubTube'
+
+/-- Canonical residue-union non-box extracted one-add-log constructor
+(scale-agnostic default route). -/
+noncomputable def tubeWindowResidueSetOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m : ℤ)
+    (residueReps : Finset ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidueSet :
+      ∀ p ∈ Dtype.tube, ∃ r ∈ residueReps,
+        SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m]) :
+    InputFor (κ := κ) (H0 := H0) :=
+  tubeWindowResidueSetOneAddLogScaleAgnostic
+    (κ := κ) (H0 := H0)
+    Dpacket Dtype P a s q hq m residueReps hX hH hsmall hsubTube hresidueSet
+
+/-- Canonical default residue-union non-box extracted one-add-log constructor.
+
+Compatibility alias for `tubeWindowResidueSetOneAddLog`. -/
+noncomputable def tubeWindowResidueSetOneAddLogDefault
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m : ℤ)
+    (residueReps : Finset ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidueSet :
+      ∀ p ∈ Dtype.tube, ∃ r ∈ residueReps,
+        SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m]) :
+    InputFor (κ := κ) (H0 := H0) :=
+  tubeWindowResidueSetOneAddLog
+    (κ := κ) (H0 := H0)
+    Dpacket Dtype P a s q hq m residueReps hX hH hsmall hsubTube hresidueSet
+
+/-- Canonical default residue-structured non-box extracted one-add-log constructor.
+Compatibility wrapper over `tubeWindowResidueSetOneAddLogDefault` with singleton residues. -/
+noncomputable def tubeWindowResidueOneAddLogDefault
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m r : ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidue :
+      ∀ p ∈ Dtype.tube, SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m]) :
+    InputFor (κ := κ) (H0 := H0) :=
+  tubeWindowResidueSetOneAddLog
+    (κ := κ) (H0 := H0)
+    Dpacket Dtype P a s q hq m ({r} : Finset ℤ) hX hH hsmall hsubTube
+    (by
+      intro p hp
+      exact ⟨r, by simp, hresidue p hp⟩)
+
+/-- Compatibility-signature constructor on the canonical BG tube window.
+
+This legacy `...ProdFiber` name is retained for API continuity, but now routes through the
+proved non-fallback packet-scale-agnostic Step-3/Step-4 chain. -/
+noncomputable def tubeWindowOneAddLogProdFiber
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s) :
+    InputFor (κ := κ) (H0 := H0) :=
+  tubeWindowOneAddLog
+    (κ := κ) (H0 := H0)
+    Dpacket Dtype P a s q hq hX hH hsmall hsubTube
+
+/-- Compatibility-signature constructor on a BG tube-window residue-union subclass.
+
+This legacy `...ProdFiber` name is retained for API continuity, but now routes through the
+proved non-fallback packet-scale-agnostic residue-union Step-3/Step-4 chain. -/
+noncomputable def tubeWindowResidueSetOneAddLogProdFiber
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m : ℤ)
+    (residueReps : Finset ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidueSet :
+      ∀ p ∈ Dtype.tube, ∃ r ∈ residueReps,
+        SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m]) :
+    InputFor (κ := κ) (H0 := H0) :=
+  tubeWindowResidueSetOneAddLog
+    (κ := κ) (H0 := H0)
+    Dpacket Dtype P a s q hq m residueReps hX hH hsmall hsubTube hresidueSet
+
+attribute [deprecated tubeWindowOneAddLogScaleAgnostic
+  (since := "2026-03-07")] tubeWindowOneAddLogProdFiber
+
+attribute [deprecated tubeWindowResidueSetOneAddLogScaleAgnostic
+  (since := "2026-03-07")] tubeWindowResidueSetOneAddLogProdFiber
+
+/-- The first honest non-rank-one extracted use-site family: the deterministic trivial Step 3–4
+bound, applied directly to the extracted coefficient array `Dtype.F f i j`. This is mathematically
+weak but genuinely lives on the full extracted-signal family, not the frozen rank-one box model. -/
+noncomputable def trivial
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ)) :
+    InputFor (κ := κ) (H0 := H0) where
+  Dpacket := Dpacket
+  Dtype := Dtype
+  hX := hX
+  hH := hH
+  hsmall := hsmall
+  step34For := fun f i j =>
+    Step34ProdSumFor.of_global Dpacket.X Dpacket.H Dtype.tube
+      (Step34ProdSum.trivial Dpacket.X Dpacket.H Dtype.tube hX hH)
+      (Dtype.F f i j)
+
+set_option maxHeartbeats 4000000 in
+private noncomputable def boxGeometryOneAddLogStep3For
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (P : SSU.Engines.BGTube.Params)
+    (hUbox : 2 * P.N ≤ P.U)
+    (W : SSU.Engines.TFA.Weight)
+    (α : H0 → ℤ → ℤ → ℤ → ℂ)
+    (β : H0 → ℤ → ℤ → ℤ → ℂ)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (f : H0) (i j : ℤ) :
+    let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
+      SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
+    let td :=
+      SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P 0 1 (by norm_num) (by decide)
+    SSU.Engines.TypeII.Step3LargeSieveOuterUFor td (Dtype.F f i j) := by
+  let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
+    SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
+  let td :=
+    SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P 0 1 (by norm_num) (by decide)
+  have hDq : 1 ≤ td.D / (td.q : ℝ) := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
+      using (show 1 ≤ (P.D : ℝ) by exact_mod_cast hD1)
+  have hD0 : 0 ≤ td.D := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+      (show (0 : ℝ) ≤ (P.D : ℝ) by exact_mod_cast (Nat.zero_le P.D))
+  have hX0 : 0 ≤ td.X := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+      (show (0 : ℝ) ≤ (P.X : ℝ) by exact_mod_cast (Nat.zero_le P.X))
+  have hU1R : 1 ≤ td.U := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
+      using (show 1 ≤ (P.U : ℝ) by exact_mod_cast hU1)
+  exact
+    SSU.Engines.TypeII.Step3LargeSieveOuterUFor.of_box_geometry
+      (td := td) (hDq := hDq) (hD := hD0) (hU := hU1R) (hX := hX0) (F := Dtype.F f i j)
+
+set_option maxHeartbeats 4000000 in
+private noncomputable def boxGeometryOneAddLogStep4For
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (P : SSU.Engines.BGTube.Params)
+    (hUbox : 2 * P.N ≤ P.U)
+    (W : SSU.Engines.TFA.Weight)
+    (α : H0 → ℤ → ℤ → ℤ → ℂ)
+    (β : H0 → ℤ → ℤ → ℤ → ℂ)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (f : H0) (i j : ℤ) :
+    let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
+      SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
+    let td :=
+      SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P 0 1 (by norm_num) (by decide)
+    SSU.Engines.TypeII.Step4LargeSieveOuterVFor td (Dtype.F f i j) := by
+  let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
+    SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
+  let td :=
+    SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P 0 1 (by norm_num) (by decide)
+  have hU0 : 0 ≤ td.U := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+      (show (0 : ℝ) ≤ (P.U : ℝ) by exact_mod_cast (Nat.zero_le P.U))
+  have hX0 : 0 ≤ td.X := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+      (show (0 : ℝ) ≤ (P.X : ℝ) by exact_mod_cast (Nat.zero_le P.X))
+  have hD1R : 1 ≤ td.D := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
+      using (show 1 ≤ (P.D : ℝ) by exact_mod_cast hD1)
+  have hXH1R : 1 ≤ td.X * td.H := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using hXH1
+  exact
+    SSU.Engines.TypeII.Step4LargeSieveOuterVFor.of_box_geometry
+      (td := td) (hU := hU0) (hX := hX0) (hD1 := hD1R) (hXH1 := hXH1R) (F := Dtype.F f i j)
+
+set_option maxHeartbeats 4000000 in
+private noncomputable def boxGeometryOneAddLogStep34TeXFor
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (P : SSU.Engines.BGTube.Params)
+    (hUbox : 2 * P.N ≤ P.U)
+    (W : SSU.Engines.TFA.Weight)
+    (α : H0 → ℤ → ℤ → ℤ → ℂ)
+    (β : H0 → ℤ → ℤ → ℤ → ℂ)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (f : H0) (i j : ℤ) :
+    let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
+      SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
+    let td :=
+      SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P 0 1 (by norm_num) (by decide)
+    SSU.Engines.TypeII.Step34LargeSieveTeXFor td (Dtype.F f i j) := by
+  let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
+    SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
+  let td :=
+    SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube P 0 1 (by norm_num) (by decide)
+  let h3 :
+      SSU.Engines.TypeII.Step3LargeSieveOuterUFor td (Dtype.F f i j) :=
+    boxGeometryOneAddLogStep3For
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (P := P)
+      (hUbox := hUbox) (W := W) (α := α) (β := β)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hX := hX) (hH := hH)
+      (hD1 := hD1) (hU1 := hU1)
+      (f := f) (i := i) (j := j)
+  let h4 :
+      SSU.Engines.TypeII.Step4LargeSieveOuterVFor td (Dtype.F f i j) :=
+    boxGeometryOneAddLogStep4For
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (P := P)
+      (hUbox := hUbox) (W := W) (α := α) (β := β)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hX := hX) (hH := hH)
+      (hD1 := hD1) (hU1 := hU1) (hXH1 := hXH1)
+      (f := f) (i := i) (j := j)
+  have hD1R : 1 ≤ td.D := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
+      using (show 1 ≤ (P.D : ℝ) by exact_mod_cast hD1)
+  have hU1R : 1 ≤ td.U := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube]
+      using (show 1 ≤ (P.U : ℝ) by exact_mod_cast hU1)
+  have hX0 : 0 ≤ td.X := by
+    simpa [td, SSU.Engines.TypeII.LargeSieve.BGTubeBridge.tubeDataOfBGTube] using
+      (show (0 : ℝ) ≤ (P.X : ℝ) by exact_mod_cast (Nat.zero_le P.X))
+  exact
+    SSU.Engines.TypeII.Step34LargeSieveTeXFor.of_step3_step4
+      (td := td) (F := Dtype.F f i j) h3 h4
+      (hD := lt_of_lt_of_le (by norm_num) hD1R)
+      (hU := lt_of_lt_of_le (by norm_num) hU1R)
+      (hX := hX0)
+
+set_option maxHeartbeats 4000000 in
+private noncomputable def boxGeometryOneAddLogStep34For
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (P : SSU.Engines.BGTube.Params)
+    (hUbox : 2 * P.N ≤ P.U)
+    (W : SSU.Engines.TFA.Weight)
+    (α : H0 → ℤ → ℤ → ℤ → ℂ)
+    (β : H0 → ℤ → ℤ → ℤ → ℂ)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (f : H0) (i j : ℤ) :
+    let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
+      SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
+    Step34ProdSumFor Dpacket.X Dpacket.H Dtype.tube (Dtype.F f i j) := by
+  let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
+    SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
+  have hBox :
+      Dtype.tube = P.box := by
+    simpa [Dtype] using
+      (SSU.Engines.BGTypeIIArray.Data.mkBox_tube_eq_box
+        (H := H0) (P := P) (hU := hUbox) (W := W) (α := α) (β := β))
+  have hTubeBox :
+      SSU.Engines.BGTube.tubeFinset P 0 1 0 = P.box := by
+    simpa using (SSU.Engines.BGTube.tubeFinset_eq_box_of_U_ge_twoN (P := P) hUbox)
+  have hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0 := by
+    intro p hp
+    have hpBox : p ∈ P.box := by simpa [hBox] using hp
+    simpa [hTubeBox] using hpBox
+  let h34 :
+      let td := centeredUnitTubeData (H0 := H0) Dtype P hsubTube
+      SSU.Engines.TypeII.Step34LargeSieveTeXFor td (Dtype.F f i j) :=
+    tubeWindowCenteredUnitOneAddLogStep34TeXFor
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hX := hX) (hH := hH)
+      (hD1 := hD1) (hU1 := hU1) (hXH1 := hXH1)
+      (hsubTube := hsubTube)
+      (f := f) (i := i) (j := j)
+  exact
+    centeredUnitStep34For_of_step34TeXFor
+      (κ := κ) (H0 := H0)
+      (Dpacket := Dpacket) (Dtype := Dtype) (P := P)
+      (hXeq := hXeq) (hHeq := hHeq)
+      (hX := hX) (hH := hH)
+      (hsubTube := hsubTube)
+      (h34 := h34)
+      (f := f) (i := i) (j := j)
+
 /-- First nontrivial extracted use-site family on the flagship path, kept under the historical
 `boxGeometryOneAddLog` name for compatibility.
 
-It now routes through the product-side constructor
-`InputFor.ofTubeWindowProdFiberCardBound` on the box-as-tube geometry
-`tubeFinset P (a:=0) (q:=1) (s:=0) = P.box`, so this canonical entrypoint is carried by the
-global product-side theorem surface rather than the skew-side TeX one-add-log wrapper. -/
+It is now backed by a proved non-fallback use-site `Step34ProdSumFor` family
+(`boxGeometryOneAddLogStep34For`) for the extracted box signal, rather than the deterministic
+global product-fiber fallback route. -/
 noncomputable def boxGeometryOneAddLog
     (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
     (P : SSU.Engines.BGTube.Params)
@@ -2581,27 +4905,19 @@ noncomputable def boxGeometryOneAddLog
     (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
     (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
     (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ)) :
-    InputFor (κ := κ) (H0 := H0) := by
-  let Dtype : SSU.Engines.BGTypeIIArray.Data H0 :=
-    SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
-  have hbox : Dtype.tube = P.box := by
-    simpa [Dtype] using
-      (SSU.Engines.BGTypeIIArray.Data.mkBox_tube_eq_box
-        (H := H0) (P := P) (hU := hUbox) (W := W) (α := α) (β := β))
-  have hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P (a := 0) (q := 1) (s := 0) := by
-    intro p hp
-    have hpbox : p ∈ P.box := by simpa [hbox] using hp
-    have hTubeBox :
-        SSU.Engines.BGTube.tubeFinset P (a := 0) (q := 1) (s := 0) = P.box := by
-      exact SSU.Engines.BGTube.tubeFinset_eq_box_of_U_ge_twoN (P := P) hUbox
-    simpa [hTubeBox] using hpbox
-  let h0 : Input (κ := κ) (H0 := H0) :=
-    InputFor.ofTubeWindowProdFiberCardBound
-      (κ := κ) (H0 := H0)
-      Dpacket Dtype P (a := 0) (s := 0) (q := 1)
-      (hq := by decide)
-      hX hH hsmall hsubTube
-  exact InputFor.ofInput (κ := κ) (H0 := H0) h0
+    InputFor (κ := κ) (H0 := H0) where
+  Dpacket := Dpacket
+  Dtype := SSU.Engines.BGTypeIIArray.Data.mkBox (H := H0) P hUbox W α β
+  hX := hX
+  hH := hH
+  hsmall := hsmall
+  step34For := boxGeometryOneAddLogStep34For
+    (κ := κ) (H0 := H0)
+    (Dpacket := Dpacket) (P := P)
+    (hUbox := hUbox) (W := W) (α := α) (β := β)
+    (hXeq := hXeq) (hHeq := hHeq)
+    (hX := hX) (hH := hH)
+    (hD1 := hD1) (hU1 := hU1) (hXH1 := hXH1)
 
 /-- Canonical Step-2 Toeplitz-form extraction package for the frozen Fejér-banked packets. -/
 noncomputable def toToeplitzPairHypothesis :
@@ -2718,6 +5034,213 @@ theorem norm_inner_packetOpUnnormalized_le_ofInput
   let h1 : InputFor (κ := κ) (H0 := H0) := InputFor.ofInput (κ := κ) (H0 := H0) h0
   simpa [h1, InputFor.ofInput] using
     (h1.norm_inner_packetOpUnnormalized_le (f := f) (i := i) (j := j))
+
+/-- Compatibility theorem for the non-box tube-window product-side family.
+
+Prefer `norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLogDefault` as the canonical endpoint.
+-/
+theorem norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (f : H0) (i j : ℤ) :
+    let h0 : InputFor (κ := κ) (H0 := H0) :=
+      InputFor.tubeWindowOneAddLog
+        (κ := κ) (H0 := H0)
+        Dpacket Dtype P a s q hq hX hH hsmall hsubTube
+    ‖inner ℂ
+        (((h0.Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := h0.Dpacket) (D := h0.Dtype) f i j h0.hH))
+        (((h0.Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := h0.Dpacket) (D := h0.Dtype) f i j h0.hH))‖
+      ≤
+    ((1 / h0.Dpacket.X) * ((h0.Dpacket.M * h0.Dpacket.Φmax) ^ 2) *
+        (((h0.step34For f i j).C *
+          Real.sqrt (h0.Dpacket.H / h0.Dpacket.X) *
+          SSU.tubeEnergy h0.Dtype.tube (h0.Dtype.F f i j))) *
+      (2 * (h0.Dpacket.H)⁻¹)) := by
+  let h0 : InputFor (κ := κ) (H0 := H0) :=
+    InputFor.tubeWindowOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P a s q hq hX hH hsmall hsubTube
+  simpa [h0] using
+    (h0.norm_inner_packetOpUnnormalized_le (f := f) (i := i) (j := j))
+
+/-- Direct non-rank-one extracted theorem from the canonical default non-box tube-window route.
+
+This endpoint routes through the canonical non-fallback Step-3/Step-4 chain.
+On centered-unit-compatible inputs this recovers the centered-unit proved Step-3/Step-4-for
+`Step34ProdSumFor` path as a special case.
+
+In particular, on the centered-unit branch this is the production route where the `X / |ξ|`
+dependence is removed by the proved small-`ξ` / large-`ξ` split.
+-/
+theorem norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLogDefault
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (f : H0) (i j : ℤ) :
+    let h0 : InputFor (κ := κ) (H0 := H0) :=
+      InputFor.tubeWindowOneAddLog
+        (κ := κ) (H0 := H0)
+        Dpacket Dtype P a s q hq hX hH hsmall hsubTube
+    ‖inner ℂ
+        (((h0.Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := h0.Dpacket) (D := h0.Dtype) f i j h0.hH))
+        (((h0.Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := h0.Dpacket) (D := h0.Dtype) f i j h0.hH))‖
+      ≤
+    ((1 / h0.Dpacket.X) * ((h0.Dpacket.M * h0.Dpacket.Φmax) ^ 2) *
+        (((h0.step34For f i j).C *
+          Real.sqrt (h0.Dpacket.H / h0.Dpacket.X) *
+          SSU.tubeEnergy h0.Dtype.tube (h0.Dtype.F f i j)))) *
+      (2 * (h0.Dpacket.H)⁻¹) := by
+  classical
+  let h0 : InputFor (κ := κ) (H0 := H0) :=
+    InputFor.tubeWindowOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P a s q hq hX hH hsmall hsubTube
+  simpa [h0] using
+    (h0.norm_inner_packetOpUnnormalized_le (f := f) (i := i) (j := j))
+
+/-- Compatibility theorem for the centered-unit non-box tube-window route.
+
+Prefer `norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLogDefault` as the canonical endpoint.
+This theorem is kept for compatibility while the default endpoint is canonical.
+-/
+theorem norm_inner_packetOpUnnormalized_le_tubeWindowCenteredUnitOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (hXeq : Dpacket.X = (P.X : ℝ))
+    (hHeq : Dpacket.H = (P.H : ℝ))
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hD1 : 1 ≤ P.D) (hU1 : 1 ≤ P.U)
+    (hXH1 : 1 ≤ (P.X : ℝ) * (P.H : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P 0 1 0)
+    (f : H0) (i j : ℤ) :
+    ‖inner ℂ
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := Dpacket) (D := Dtype) f i j hH))
+        (((Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := Dpacket) (D := Dtype) f i j hH))‖
+      ≤
+    ((1 / Dpacket.X) * ((Dpacket.M * Dpacket.Φmax) ^ 2) *
+        (((InputFor.tubeWindowCenteredUnitOneAddLog
+            (κ := κ) (H0 := H0)
+            Dpacket Dtype P hXeq hHeq hX hH hsmall hD1 hU1 hXH1 hsubTube).step34For f i j).C *
+          Real.sqrt (Dpacket.H / Dpacket.X) *
+          SSU.tubeEnergy Dtype.tube (Dtype.F f i j))) *
+      (2 * (Dpacket.H)⁻¹) := by
+  let h0 : InputFor (κ := κ) (H0 := H0) :=
+    InputFor.tubeWindowCenteredUnitOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P hXeq hHeq hX hH hsmall hD1 hU1 hXH1 hsubTube
+  simpa [h0, InputFor.tubeWindowCenteredUnitOneAddLog] using
+    (h0.norm_inner_packetOpUnnormalized_le (f := f) (i := i) (j := j))
+
+attribute [deprecated norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLogDefault
+  (since := "2026-03-06")] norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLog
+
+attribute [deprecated norm_inner_packetOpUnnormalized_le_tubeWindowOneAddLogDefault
+  (since := "2026-03-06")] norm_inner_packetOpUnnormalized_le_tubeWindowCenteredUnitOneAddLog
+
+/-- Direct non-rank-one extracted theorem from the residue-structured non-box
+tube-window product-side family. -/
+theorem norm_inner_packetOpUnnormalized_le_tubeWindowResidueOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m r : ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidue :
+      ∀ p ∈ Dtype.tube, SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m])
+    (f : H0) (i j : ℤ) :
+    let h0 : InputFor (κ := κ) (H0 := H0) :=
+      InputFor.tubeWindowResidueOneAddLog
+        (κ := κ) (H0 := H0)
+        Dpacket Dtype P a s q hq m r hX hH hsmall hsubTube hresidue
+    ‖inner ℂ
+        (((h0.Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := h0.Dpacket) (D := h0.Dtype) f i j h0.hH))
+        (((h0.Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := h0.Dpacket) (D := h0.Dtype) f i j h0.hH))‖
+      ≤
+    ((1 / h0.Dpacket.X) * ((h0.Dpacket.M * h0.Dpacket.Φmax) ^ 2) *
+        (((h0.step34For f i j).C *
+          Real.sqrt (h0.Dpacket.H / h0.Dpacket.X) *
+          SSU.tubeEnergy h0.Dtype.tube (h0.Dtype.F f i j))) *
+      (2 * (h0.Dpacket.H)⁻¹)) := by
+  let h0 : InputFor (κ := κ) (H0 := H0) :=
+    InputFor.tubeWindowResidueOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P a s q hq m r hX hH hsmall hsubTube hresidue
+  simpa [h0] using
+    (h0.norm_inner_packetOpUnnormalized_le (f := f) (i := i) (j := j))
+
+/-- Direct non-rank-one extracted theorem from the residue-union non-box
+tube-window product-side family. -/
+theorem norm_inner_packetOpUnnormalized_le_tubeWindowResidueSetOneAddLog
+    (Dpacket : SSU.Instances.FejerBankedPartition.Data κ)
+    (Dtype : SSU.Engines.BGTypeIIArray.Data H0)
+    (P : SSU.Engines.BGTube.Params)
+    (a s : ℤ) (q : ℕ)
+    (hq : 1 ≤ q)
+    (m : ℤ)
+    (residueReps : Finset ℤ)
+    (hX : 0 < Dpacket.X) (hH : 0 < Dpacket.H)
+    (hsmall : (1 / Dpacket.H) / Dpacket.X < (1 / 2 : ℝ))
+    (hsubTube : Dtype.tube ⊆ SSU.Engines.BGTube.tubeFinset P a q s)
+    (hresidueSet :
+      ∀ p ∈ Dtype.tube, ∃ r ∈ residueReps,
+        SSU.Engines.BGTube.shear a q s p ≡ r [ZMOD m])
+    (f : H0) (i j : ℤ) :
+    let h0 : InputFor (κ := κ) (H0 := H0) :=
+      InputFor.tubeWindowResidueSetOneAddLog
+        (κ := κ) (H0 := H0)
+        Dpacket Dtype P a s q hq m residueReps hX hH hsmall hsubTube hresidueSet
+    ‖inner ℂ
+        (((h0.Dpacket.toMultiplierModel).packetOpUnnormalized i)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := h0.Dpacket) (D := h0.Dtype) f i j h0.hH))
+        (((h0.Dpacket.toMultiplierModel).packetOpUnnormalized j)
+          (SSU.Instances.FejerBankedTypeIIToeplitzTorusPackets.General.fTT
+            (Dpacket := h0.Dpacket) (D := h0.Dtype) f i j h0.hH))‖
+      ≤
+    ((1 / h0.Dpacket.X) * ((h0.Dpacket.M * h0.Dpacket.Φmax) ^ 2) *
+        (((h0.step34For f i j).C *
+          Real.sqrt (h0.Dpacket.H / h0.Dpacket.X) *
+          SSU.tubeEnergy h0.Dtype.tube (h0.Dtype.F f i j))) *
+      (2 * (h0.Dpacket.H)⁻¹)) := by
+  let h0 : InputFor (κ := κ) (H0 := H0) :=
+    InputFor.tubeWindowResidueSetOneAddLog
+      (κ := κ) (H0 := H0)
+      Dpacket Dtype P a s q hq m residueReps hX hH hsmall hsubTube hresidueSet
+  simpa [h0, InputFor.tubeWindowResidueSetOneAddLog] using
+    (h0.norm_inner_packetOpUnnormalized_le (f := f) (i := i) (j := j))
 
 /-- Direct non-rank-one extracted theorem from the first nontrivial box-geometry one-add-log
 Step 3–4 family. -/

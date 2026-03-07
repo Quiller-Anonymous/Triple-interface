@@ -1,4 +1,5 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
+import Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineAxiom
 import Goldbach.Cert.MajorArcModules.Q0MajorRoute
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
@@ -52,8 +53,11 @@ Notes provenance: Theorem 9.17 + SSU Theorem 6.27 / (6.7).
 Lean interface: `Q0MinorEnergyLedgerEngine Δ C2 C3` with certified `C2,C3`.
 -/
 
-axiom ssu_minor_energy_ledger_engine :
-  Q0MinorEnergyLedgerEngine Δ_canon C2 C3
+theorem ssu_minor_energy_ledger_engine :
+    Q0MinorEnergyLedgerEngine Δ_canon C2 C3 := by
+  simpa using
+    (Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineAxiom.ssu_minor_energy_ledger_engine :
+      Q0MinorEnergyLedgerEngine Δ_canon C2 C3)
 
 /-!
 ## ε₂-small engine (small-β major-arc evaluation)

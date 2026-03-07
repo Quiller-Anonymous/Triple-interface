@@ -128,6 +128,72 @@ Since the interval length is at most `D/q + 2`, we can absorb the additive const
 `1 ≤ D/q`.
 -/
 
+/-- Universal deterministic cardinality bound for `zSet td u`:
+`card ≤ D/q + 2` (no `q ≤ D` assumption). -/
+theorem card_zSet_le_D_div_q_add_two (td : TubeData) (u : ℤ) (hD : 0 ≤ td.D) :
+    ((zSet td u).card : ℝ) ≤ (td.D / (td.q : ℝ)) + 2 := by
+  classical
+  have hq : (0 : ℝ) < (td.q : ℝ) := by exact_mod_cast td.q_pos
+
+  let A : ℤ := (⌊(td.D - (vResidue td u : ℤ)) / (td.q : ℝ)⌋ : ℤ)
+  let B : ℤ := (⌈(2 * td.D - (vResidue td u : ℤ)) / (td.q : ℝ)⌉ : ℤ)
+  let I : Finset ℤ := Finset.Ioc A B
+
+  have hcard_le : ((zSet td u).card : ℝ) ≤ (I.card : ℝ) := by
+    have hnat : (zSet td u).card ≤ I.card := by
+      simpa [I, A, B] using card_zSet_le_Ioc_floor_ceil (td := td) (u := u)
+    exact_mod_cast hnat
+
+  have hAB : A ≤ B := by
+    set r : ℝ := (td.D - (vResidue td u : ℤ)) / (td.q : ℝ)
+    set s : ℝ := (2 * td.D - (vResidue td u : ℤ)) / (td.q : ℝ)
+    have hrs : r ≤ s := by
+      have : td.D - (vResidue td u : ℤ) ≤ 2 * td.D - (vResidue td u : ℤ) := by linarith
+      exact div_le_div_of_nonneg_right this (le_of_lt hq)
+    have : (A : ℝ) ≤ (B : ℝ) := by
+      have hA : (A : ℝ) ≤ r := by simpa [A, r] using (Int.floor_le r)
+      have hB : s ≤ (B : ℝ) := by simpa [B, s] using (Int.le_ceil s)
+      exact le_trans (le_trans hA hrs) hB
+    exact_mod_cast this
+
+  have hcardZ : ((I.card : ℤ)) = B - A := by
+    simpa [I] using (Int.card_Ioc_of_le (a := A) (b := B) hAB)
+
+  have hcardR : (I.card : ℝ) = (B - A : ℝ) := by
+    exact_mod_cast hcardZ
+
+  have hBA : (B - A : ℝ) ≤ (td.D / (td.q : ℝ)) + 2 := by
+    set r : ℝ := (td.D - (vResidue td u : ℤ)) / (td.q : ℝ)
+    set s : ℝ := (2 * td.D - (vResidue td u : ℤ)) / (td.q : ℝ)
+    have hB : (B : ℝ) ≤ s + 1 := by
+      have : (⌈s⌉ : ℝ) < s + 1 := Int.ceil_lt_add_one s
+      simpa [B, s] using this.le
+    have hA : r - 1 ≤ (A : ℝ) := by
+      have : r - 1 < (⌊r⌋ : ℝ) := Int.sub_one_lt_floor r
+      simpa [A, r] using this.le
+    have : (B - A : ℝ) ≤ (s + 1) - (r - 1) := by
+      have hA' : -(A : ℝ) ≤ -(r - 1) := by exact neg_le_neg hA
+      have hB' : (B : ℝ) + (-(A : ℝ)) ≤ (s + 1) + (-(r - 1)) := add_le_add hB hA'
+      simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hB'
+    have hs_r : s - r = td.D / (td.q : ℝ) := by
+      have hnum :
+          (2 * td.D - (vResidue td u : ℤ)) - (td.D - (vResidue td u : ℤ)) = td.D := by ring
+      calc
+        s - r
+            = ((2 * td.D - (vResidue td u : ℤ)) / (td.q : ℝ)) -
+                ((td.D - (vResidue td u : ℤ)) / (td.q : ℝ)) := by rfl
+        _ = (((2 * td.D - (vResidue td u : ℤ)) - (td.D - (vResidue td u : ℤ))) / (td.q : ℝ)) := by
+              simpa using
+                (div_sub_div_same (2 * td.D - (vResidue td u : ℤ))
+                  (td.D - (vResidue td u : ℤ)) (td.q : ℝ))
+        _ = td.D / (td.q : ℝ) := by simpa [hnum]
+    nlinarith [this, hs_r]
+
+  calc
+    ((zSet td u).card : ℝ) ≤ (I.card : ℝ) := hcard_le
+    _ = (B - A : ℝ) := hcardR
+    _ ≤ (td.D / (td.q : ℝ)) + 2 := hBA
+
 theorem card_zSet_le_three_mul_D_div_q (td : TubeData) (u : ℤ)
     (hDq : 1 ≤ td.D / (td.q : ℝ)) (hD : 0 ≤ td.D) :
     ((zSet td u).card : ℝ) ≤ 3 * (td.D / (td.q : ℝ)) := by
