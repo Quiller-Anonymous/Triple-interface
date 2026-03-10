@@ -77,6 +77,22 @@ theorem tail_bound_on_window
     hX hN
 
 /-- Off-diagonal AO error term bound on the canonical window, in the bundled hypothesis form. -/
+theorem E_off_bound_relative
+    (H : OffDiagHyp)
+    {X N : ℕ}
+    (hX : BankParams.X0 ≤ X)
+    (hN : N ∈ Windows.EvenIn X BankParams.H) :
+  |Goldbach.AO_OffDiagFunX.E_off (model H) X N|
+    ≤ H.eps * |Goldbach.AO_WeightMass.weight_mass X| := by
+  exact Goldbach.AO_OffDiagFunX.E_off_bound_relative
+    (M := model H) (eps := H.eps)
+    (hbudget := by
+      intro X N hX hN
+      simpa [model, EntryPointTenorFunX.offDiagModel] using
+        H.budget_ok (X := X) (N := N) hX hN)
+    hX hN
+
+/-- Off-diagonal AO error term bound on the canonical window, in the bundled hypothesis form. -/
 theorem E_off_bound
     (H : OffDiagHyp)
     {X N : ℕ}

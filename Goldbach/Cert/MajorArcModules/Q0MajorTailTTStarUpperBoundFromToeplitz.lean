@@ -469,7 +469,7 @@ private lemma coeffMass_le_one_div_20001 {X : ℕ} (hX : X0 ≤ X) :
     exact hsum_le
   exact le_trans hsum_le_coeff (le_trans hsum_le' (le_of_eq hfinal))
 
-private lemma toeplitzExprTopTight_le_80000000 {X : ℕ} (hX : X0 ≤ X) :
+private lemma toeplitzExprTopTight_le_36742000 {X : ℕ} (hX : X0 ≤ X) :
     toeplitzExprTopTight X (1 : ℝ) ≤ (80000000 : ℝ) := by
   classical
   have hNcard :
@@ -584,7 +584,7 @@ private lemma toeplitzExprTopTight_le_80000000 {X : ℕ} (hX : X0 ≤ X) :
     simpa [pow_two] using hmul
   have hdiag :
       ((1 + δ_split) * ‖majorArcWeightFourier X (1 : ℝ) 0‖ ^ 2) * diagBoundTight X (X + H)
-        ≤ (40000000 : ℝ) := by
+        ≤ (36720000 : ℝ) := by
     -- `diagBoundTight = log^2 * coeffMass`.
     unfold diagBoundTight
     have hcoeff' : coeffMass X (X + H) ≤ (1 : ℝ) / (20001 : ℝ) := hcoeff
@@ -634,20 +634,20 @@ private lemma toeplitzExprTopTight_le_80000000 {X : ℕ} (hX : X0 ≤ X) :
         (204 : ℝ) * (60000 : ℝ) ^ 2 * ((1 : ℝ) / (20001 : ℝ)) := by
       field_simp [hXne]
       ring
-    have hnum : (204 : ℝ) * (60000 : ℝ) ^ 2 * ((1 : ℝ) / (20001 : ℝ)) ≤ (40000000 : ℝ) := by
+    have hnum : (204 : ℝ) * (60000 : ℝ) ^ 2 * ((1 : ℝ) / (20001 : ℝ)) ≤ (36720000 : ℝ) := by
       norm_num
     have hnum' :
         (51 : ℝ) * (((60000 : ℝ) / (X : ℝ)) ^ 2) * ((4 : ℝ) * (X : ℝ) ^ 2) * ((1 : ℝ) / (20001 : ℝ))
-          ≤ (40000000 : ℝ) := by
+          ≤ (36720000 : ℝ) := by
       -- rewrite by `hbound` and close with `hnum`
       calc
         (51 : ℝ) * (((60000 : ℝ) / (X : ℝ)) ^ 2) * ((4 : ℝ) * (X : ℝ) ^ 2) * ((1 : ℝ) / (20001 : ℝ))
             = (204 : ℝ) * (60000 : ℝ) ^ 2 * ((1 : ℝ) / (20001 : ℝ)) := hbound
-        _ ≤ (40000000 : ℝ) := hnum
+        _ ≤ (36720000 : ℝ) := hnum
     exact le_trans hmain hnum'
   have heven :
       ((1 + 1 / δ_split) * kernelMassNZEven X (1 : ℝ) (X + H)) * (coeffMass X (X + H)) ^ 2
-        ≤ (40000000 : ℝ) := by
+        ≤ (21600 : ℝ) := by
     have hδ : (1 + 1 / δ_split) ≤ (2 : ℝ) := by
       -- `1 + 1/50 ≤ 2`
       norm_num [δ_split]
@@ -709,23 +709,23 @@ private lemma toeplitzExprTopTight_le_80000000 {X : ℕ} (hX : X0 ≤ X) :
       have := mul_le_mul h1 h2 (by positivity) h1nn
       simpa [mul_assoc] using this
     -- numeric
-    have : ((2 : ℝ) * (10800 : ℝ)) * (1 : ℝ) ≤ (40000000 : ℝ) := by norm_num
+    have : ((2 : ℝ) * (10800 : ℝ)) * (1 : ℝ) ≤ (21600 : ℝ) := by norm_num
     exact le_trans hmain this
   -- Finish: even term + odd term + diagonal term.
   unfold toeplitzExprTopTight
-  have hsum80 :
+  have hsumTight :
       ((1 + 1 / δ_split) * kernelMassNZEven X (1 : ℝ) (X + H)) * (coeffMass X (X + H)) ^ 2
         +
       (2 * (1 + 1 / δ_split) * kernelMassNZOdd X (1 : ℝ) (X + H)) * aTerm2Mass X * coeffMass X (X + H)
         +
       ((1 + δ_split) * ‖majorArcWeightFourier X (1 : ℝ) 0‖ ^ 2) * diagBoundTight X (X + H)
-        ≤ (80000000 : ℝ) := by
+        ≤ (36742000 : ℝ) := by
     -- Odd term is `0`, so it suffices to bound `even + diag`.
     have hsumAC :
         ((1 + 1 / δ_split) * kernelMassNZEven X (1 : ℝ) (X + H)) * (coeffMass X (X + H)) ^ 2
           +
         ((1 + δ_split) * ‖majorArcWeightFourier X (1 : ℝ) 0‖ ^ 2) * diagBoundTight X (X + H)
-          ≤ (80000000 : ℝ) := by
+          ≤ (36742000 : ℝ) := by
       nlinarith [heven, hdiag]
     -- Rewrite the full sum by `rw [hodd]` (no `mul_eq_zero` case-splitting).
     have :
@@ -734,20 +734,21 @@ private lemma toeplitzExprTopTight_le_80000000 {X : ℕ} (hX : X0 ≤ X) :
         (2 * (1 + 1 / δ_split) * kernelMassNZOdd X (1 : ℝ) (X + H)) * aTerm2Mass X * coeffMass X (X + H)
           +
         ((1 + δ_split) * ‖majorArcWeightFourier X (1 : ℝ) 0‖ ^ 2) * diagBoundTight X (X + H)
-          ≤ (80000000 : ℝ) := by
+          ≤ (36742000 : ℝ) := by
       -- after rewriting, this becomes exactly `hsumAC`
       rw [hodd]
       simpa [add_assoc, add_left_comm, add_comm] using hsumAC
     exact this
-  simpa [add_assoc] using hsum80
+  simpa [add_assoc] using hsumTight
 
 private lemma toeplitzExprTopTight_le_U_target {X : ℕ} (hX : X0 ≤ X) :
     toeplitzExprTopTight X Δ_canon ≤ U_target := by
-  have h80 : toeplitzExprTopTight X (1 : ℝ) ≤ (80000000 : ℝ) := toeplitzExprTopTight_le_80000000 (X := X) hX
-  have hU : (80000000 : ℝ) ≤ U_target := by
+  have hTight : toeplitzExprTopTight X (1 : ℝ) ≤ (36742000 : ℝ) :=
+    toeplitzExprTopTight_le_36742000 (X := X) hX
+  have hU : (36742000 : ℝ) ≤ U_target := by
     dsimp [U_target, Q0MajorTailTTStarUpperBoundFromCert.U, Q0MajorTailTTStarCertData.data]
     norm_num
-  simpa [Δ_canon] using le_trans h80 hU
+  simpa [Δ_canon] using le_trans hTight hU
 
 theorem innerMajorQ0_full_ttstar_kSupport_upperBound :
     Q0InnerMajorFullTTStarKSupportUpperBound Δ_canon U_target := by

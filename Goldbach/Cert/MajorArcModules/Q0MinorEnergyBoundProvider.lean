@@ -1,5 +1,5 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
-import Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineAxiom
+import Goldbach.Cert.MajorArcModules.Q0MinorSplitEngine
 import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 /-!
@@ -18,7 +18,7 @@ This file centralizes *how* we obtain that bound:
 namespace Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundProvider
 
 open Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
-open Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineAxiom
+open Goldbach.Cert.MajorArcModules.Q0MinorSplitEngine
 open Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 noncomputable section
@@ -27,7 +27,7 @@ noncomputable section
 abbrev q0Minor_energyBound16 :
     Goldbach.Cert.MajorArcModules.Q0MinorBound.Q0MinorEnergyBound
       Δ_canon 16 :=
-  energyBound16_of_ledger_engine (Δ := Δ_canon) ssu_minor_energy_ledger_engine
+  energyBound16_of_ssuCertBound Q0MinorSSUFromCert.nonzeroModeEnergyBound
 
 end
 

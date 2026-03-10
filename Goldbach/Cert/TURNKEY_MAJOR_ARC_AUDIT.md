@@ -1,14 +1,15 @@
 # Turnkey major arc audit (Steps 1–2)
 
 This note records the **current remaining obligations** to eliminate the remaining major-arc
-assumptions and end with a certificate-checked proof.
+assumption surface and end with a certificate-checked proof.
 
 ## What “done” means
 
 `Goldbach/Cert/TurnkeyMajorArcCanonSpec.lean` now constructs `turnkeyMajorArcCanon`
-from the `Q0` certificate route. The remaining analytic assumptions are isolated as axioms in:
-
-- `Goldbach/Cert/MajorArcModules/Q0TwoBoundsSpec.lean` (`q0Minor_energy`, `q0Major_bound`).
+from the `Q0` certificate route. The `Q0`-level assembly in
+`Goldbach/Cert/MajorArcModules/Q0TwoBoundsSpec.lean` is now theorem-driven: in particular,
+`q0Major_bound` is no longer an explicit axiom, and the ε₂-small branch is discharged
+deterministically.
 
 You can confirm this directly with:
 
@@ -21,10 +22,8 @@ import Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec
 #print axioms Goldbach.Cert.MajorArcEvalOnWindowCanonSpec.major_arc_eval_on_window_canon
 ```
 
-which currently reports (in addition to standard classical/propext/trust axioms) the two
-project-specific axioms:
-`Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec.q0Major_bound` and
-`Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec.q0Minor_energy`.
+which currently reports only standard classical/compiler axioms for
+`Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec.turnkeyMajorArcCanon`.
 
 ## Fixed reduction route (Step 2)
 
@@ -42,17 +41,21 @@ to two uniform analytic bounds `ε₁, ε₂` plus the purely numeric inequality
 
 ## Remaining analytic obligations (Step 1)
 
-At `Δ = 1`, the only missing analytic content to get `TurnkeyMajorArcCanon` is:
+At `Δ = 1`, the only materially unfinished analytic content is:
 
 1. **`ε₁` (Q0-complement / minor piece):**
    A uniform bound on `‖corr_integral X N - corr_integral_major_Q0 X N Δ‖`
    on the canonical window.
 
 2. **`ε₂` (Q0 major deviation):**
-   A uniform bound on `‖corr_integral_major_Q0 X N Δ - corrModel N‖`
-   on the canonical window.
+   This branch is now theorem-driven end-to-end:
+   - the small-β branch is proved in
+     `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundDeterministic.lean`;
+   - the large-β TT*/Toeplitz branch is proved in
+     `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarUpperBoundFromToeplitz.lean`.
+   So `ε₂` is no longer an active project-specific axiom seam at the `Q0` route level.
 
-These are packaged as a single interface in:
+These are packaged at the `Q0` route level in:
 
 - `Goldbach/Cert/MajorArcModules/TurnkeyRouteQ0.lean:58` (`TwoBounds`).
 

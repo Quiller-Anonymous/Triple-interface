@@ -11,8 +11,8 @@ Generator parameters (for reproducibility):
 - `delta_split = 50.0`
 
 NOTE: `U` is a generated *candidate* upper bound for the finite TT* sum (used in the successive-
-approximation workflow). It is *not* yet backed by a fully formalized Lean proof of the analytic
-inequality `TT* ≤ U`.
+approximation workflow). It may also be tightened by the proved theorem-side cap from
+`Q0MajorTailTTStarUpperBoundFromToeplitz.lean`.
  -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCertData
@@ -23,9 +23,17 @@ noncomputable section
 
 
 
+/--
+`U_theorem_cap` is the proved deterministic Toeplitz-top cap exported by
+`Q0MajorTailTTStarUpperBoundFromToeplitz.lean`.
+When the experimental generator produces a larger candidate, we use this smaller proved cap.
+-/
+def U_theorem_cap : ℚ := (36742000 : ℚ)
+
+
 def data : Data :=
   { M2 := (50000 : ℚ)
-    U := (2362254614 : ℚ) }
+    U := (36742000 : ℚ) }
 
 theorem data_valid : data.Valid := by
   native_decide

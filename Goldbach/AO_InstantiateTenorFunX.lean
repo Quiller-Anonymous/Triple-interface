@@ -172,6 +172,153 @@ lemma errAO_bound (Hoff : OffDiagHyp)
           gcongr
     _ = δAO Hoff := by simpa [hδ]
 
+/--
+Mixed AO envelope that preserves the relative structure of the kernel and off-diagonal channels.
+
+This isolates the current absolute floor coming from the Mellin truncation channel.
+-/
+lemma errAO_bound_semimixed (Hoff : OffDiagHyp)
+    (δm : ℕ → ℝ)
+    (hm :
+      ∀ {X N : ℕ}, Goldbach.BankParams.X0 ≤ X →
+        N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H →
+          |(channels Hoff).E_mellin X N| ≤ δm X)
+    {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X)
+    (hN : N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H) :
+    |errAO Hoff X N|
+      ≤ δm X
+          + Goldbach.AO_WeightMass.weight_mass N
+              * (((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed)
+          + Goldbach.AO_WeightMass.weight_mass X * Hoff.eps := by
+  have hX' : Goldbach.BG_Bank.X0 ≤ X := by
+    simpa [Goldbach.BG_Bank.X0] using hX
+  have hN' : N ∈ Goldbach.Windows.EvenIn X Goldbach.BG_Bank.H := by
+    simpa [Goldbach.BG_Bank.H] using hN
+  have hk :
+      |(channels Hoff).E_kernel X N|
+        ≤ Goldbach.AO_WeightMass.weight_mass N
+            * (((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed) := by
+    have hkernel :
+        |Goldbach.AO_KernelTail.E_kernel X N|
+          ≤ Goldbach.AO_WeightMass.weight_mass N
+              * (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed) := by
+      simpa using (Goldbach.AO_KernelTail.E_kernel_bound_relative (X := X) (N := N) hX' hN')
+    have hcap :
+        Goldbach.BG_Bank.payload_cap X N ≤ (1252 : ℝ) / 10^6 := by
+      simpa [Goldbach.BG_Bank.X0, Goldbach.BG_Bank.H] using
+        (Goldbach.BG_Bank.payload_cap_window_num (X := X) (N := N) hX' hN')
+    have hwmN_nonneg : 0 ≤ Goldbach.AO_WeightMass.weight_mass N := by
+      simpa [Goldbach.AO_WeightMass.weight_mass] using (sq_nonneg (Goldbach.BG_Bank.wScale N))
+    have htail_nonneg : 0 ≤ Goldbach.BG_Identity.C_tail_closed := by
+      have htail_val : Goldbach.BG_Identity.C_tail_closed = (99 : ℝ) / 1020100 := by
+        norm_num [Goldbach.BG_Identity.C_tail_closed, Goldbach.BG_Identity.Ucut, Goldbach.BankParams.H]
+      nlinarith [htail_val]
+    have hprod :
+        Goldbach.AO_WeightMass.weight_mass N
+            * (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
+          ≤ Goldbach.AO_WeightMass.weight_mass N
+              * (((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed) := by
+      exact mul_le_mul_of_nonneg_left
+        (mul_le_mul_of_nonneg_right hcap htail_nonneg) hwmN_nonneg
+    have :
+        |(channels Hoff).E_kernel X N|
+          ≤ Goldbach.AO_WeightMass.weight_mass N
+              * (((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed) := by
+      simpa [channels] using le_trans hkernel hprod
+    simpa using this
+  have hmellin : |(channels Hoff).E_mellin X N| ≤ δm X := hm hX hN
+  have hs :
+      |(channels Hoff).E_smooth X N| ≤ (0 : ℝ) := by
+    simpa [channels] using (Goldbach.AO_SmoothLoss.E_smooth_bound (X := X) (N := N) hX' hN')
+  have ho :
+      |(channels Hoff).E_off X N|
+        ≤ Goldbach.AO_WeightMass.weight_mass X * Hoff.eps := by
+    have hrel :
+        |Goldbach.AO_OffDiagFunX.E_off (TenorHypFunX.model Hoff) X N|
+          ≤ Hoff.eps * |Goldbach.AO_WeightMass.weight_mass X| :=
+      TenorHypFunX.E_off_bound_relative (H := Hoff) (X := X) (N := N) hX hN
+    have hwmX_nonneg : 0 ≤ Goldbach.AO_WeightMass.weight_mass X := by
+      simpa [Goldbach.AO_WeightMass.weight_mass] using (sq_nonneg (Goldbach.BG_Bank.wScale X))
+    simpa [channels, abs_of_nonneg hwmX_nonneg, mul_comm, mul_left_comm, mul_assoc] using hrel
+  have tri :
+      |(channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+          + (channels Hoff).E_kernel X N + (channels Hoff).E_off X N|
+        ≤ |(channels Hoff).E_smooth X N| + |(channels Hoff).E_mellin X N|
+            + |(channels Hoff).E_kernel X N| + |(channels Hoff).E_off X N| := by
+    have t3 :=
+      abs_add_le ((channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+        + (channels Hoff).E_kernel X N) ((channels Hoff).E_off X N)
+    have t2 :=
+      abs_add_le ((channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N)
+        ((channels Hoff).E_kernel X N)
+    have t1 := abs_add_le ((channels Hoff).E_smooth X N) ((channels Hoff).E_mellin X N)
+    calc
+      |(channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+          + (channels Hoff).E_kernel X N + (channels Hoff).E_off X N|
+          = |((channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+              + (channels Hoff).E_kernel X N) + (channels Hoff).E_off X N| := by ring
+      _ ≤ |(channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N
+              + (channels Hoff).E_kernel X N| + |(channels Hoff).E_off X N| := t3
+      _ ≤ (|(channels Hoff).E_smooth X N + (channels Hoff).E_mellin X N|
+              + |(channels Hoff).E_kernel X N|) + |(channels Hoff).E_off X N| := by gcongr
+      _ ≤ ((|(channels Hoff).E_smooth X N| + |(channels Hoff).E_mellin X N|)
+              + |(channels Hoff).E_kernel X N|) + |(channels Hoff).E_off X N| := by gcongr
+      _ = |(channels Hoff).E_smooth X N| + |(channels Hoff).E_mellin X N|
+              + |(channels Hoff).E_kernel X N| + |(channels Hoff).E_off X N| := by ring
+  have hdecomp := errAO_decomp (Hoff := Hoff) X N
+  rw [hdecomp]
+  refine le_trans tri ?_
+  calc
+    |(channels Hoff).E_smooth X N| + |(channels Hoff).E_mellin X N|
+          + |(channels Hoff).E_kernel X N| + |(channels Hoff).E_off X N|
+      ≤ 0 + δm X
+          + (Goldbach.AO_WeightMass.weight_mass N
+              * (((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed))
+          + (Goldbach.AO_WeightMass.weight_mass X * Hoff.eps) := by
+            gcongr
+    _ = δm X
+          + Goldbach.AO_WeightMass.weight_mass N
+              * (((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed)
+          + Goldbach.AO_WeightMass.weight_mass X * Hoff.eps := by ring
+
+lemma errAO_bound_mixed (Hoff : OffDiagHyp)
+    {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X)
+    (hN : N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H) :
+    |errAO Hoff X N|
+      ≤ Goldbach.AO_MellinTrunc.δ_mellin_canon
+          + Goldbach.AO_WeightMass.weight_mass N
+              * (((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed)
+          + Goldbach.AO_WeightMass.weight_mass X * Hoff.eps := by
+  exact errAO_bound_semimixed
+    (Hoff := Hoff)
+    (δm := fun _ => Goldbach.AO_MellinTrunc.δ_mellin_canon)
+    (hm := by
+      intro X N hX hN
+      simpa [channels] using (Goldbach.AO_MellinTrunc.E_mellin_bound (X := X) (N := N) hX hN))
+    hX hN
+
+/--
+Semimixed AO bound specialized to the new Mellin window envelope.
+
+This is the first downstream theorem that consumes `AO_MellinTrunc.E_mellin_bound_window` rather
+than the hard-coded canonical constant directly.
+-/
+lemma errAO_bound_window_mellin (Hoff : OffDiagHyp)
+    {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X)
+    (hN : N ∈ Goldbach.Windows.EvenIn X Goldbach.BankParams.H) :
+    |errAO Hoff X N|
+      ≤ Goldbach.AO_MellinTrunc.δ_mellin_window X
+          + Goldbach.AO_WeightMass.weight_mass N
+              * (((1252 : ℝ) / 10^6) * Goldbach.BG_Identity.C_tail_closed)
+          + Goldbach.AO_WeightMass.weight_mass X * Hoff.eps := by
+  exact errAO_bound_semimixed
+    (Hoff := Hoff)
+    (δm := Goldbach.AO_MellinTrunc.δ_mellin_window)
+    (hm := by
+      intro X N hX hN
+      simpa [channels] using (Goldbach.AO_MellinTrunc.E_mellin_bound_window (X := X) (N := N) hX hN))
+    hX hN
+
 /-- Lower bound for the staged parallel-track main term on the canonical window. -/
 lemma McanoN_lb_cAO (Hoff : OffDiagHyp) [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     {X N : ℕ} (hX : Goldbach.BankParams.X0 ≤ X)

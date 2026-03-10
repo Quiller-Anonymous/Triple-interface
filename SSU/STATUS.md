@@ -1,6 +1,6 @@
 # SSU status (rolling)
 
-Last updated: 2026-03-07
+Last updated: 2026-03-08
 
 Estimated “status bar” (**M1–M6 flagship roadmap tranche**): 100%
 
@@ -16,6 +16,18 @@ Secondary bar (**plumbing + weak fallbacks**, end-to-end objects exist but with 
 - ✅ Canonical extracted/default routes are non-fallback and proof-driven on the promoted paths.
 - ✅ Remaining work, if any, is optional sharpening (better constants or stronger families), not required
   to use SSU as a completed library contract surface.
+
+## Goldbach ep-1 integration note
+
+- ✅ Downstream `Q0` pinned-route seam is now narrowed: Step-1/Step-2 are derived from the
+  project-neutral dyadic polynomial-decay boundary
+  `q0MinorDyadicGramDecayPoly_exists` in
+  `Goldbach/Cert/MajorArcModules/Q0MinorInterzoneDyadicConventionalAxioms.lean`.
+- ✅ Remaining project-pinned `ep-1` seam is calibration-only (Crow cap inequalities), exposed as
+  `ssu_minor_energy_calibration` in
+  `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedgerEngineAxiom.lean`.
+- ✅ Mathematician-facing handoff theorem/module added:
+  `Goldbach/Cert/MajorArcModules/Q0MinorCalibrationHandoff.lean`.
 
 ## Major status (flagship)
 

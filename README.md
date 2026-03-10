@@ -28,6 +28,12 @@ Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple
 -- The σ‑tail channel is **axiom‑free** (explicit divisor‑sum majorant + real bound `|sigmaTail Q N| ≤ (180/Q)·N²`).
 -- A separate “turnkey” pinned-cap route still exists for convenience:
 `Goldbach/GoldFunX_OptionB_Cert.lean` (this is *fool’s gold* under the above standard).
+-- ε₁ seam narrowing update (2026-03-08): in the pinned `Q0` workbench, Step‑1/Step‑2 are now
+  derived from the project-neutral dyadic existence boundary
+  `q0MinorDyadicGramDecayPoly_exists`; the remaining project-pinned ε₁ seam is calibration-only
+  (the two Crow cap inequalities), surfaced in
+  `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedgerEngineAxiom.lean` and handoff helper
+  `Goldbach/Cert/MajorArcModules/Q0MinorCalibrationHandoff.lean`.
 -- Polished‑gold target (in progress): keep a small auditable list of “analytic tool” axioms (e.g. an SSU/interzone bundle)
   and prove/certify our project-specific instantiations (major-arc sub-bounds, TT*/Toeplitz kernel masses, and minor-energy
   lever-bundle/Gram-decay inputs) so the remaining axioms are theorem-shaped and reusable across Goldbach/Twin.
@@ -189,12 +195,20 @@ This section lists only potential question-beggers that can enter the Goldbach p
 - None (as of `Goldbach/AxiomAuditGold.lean`).
 
 **Axioms currently used by the “turnkey” pinned-cap Option-B route (explicit `axiom`s)**
-- ε₂-small major arcs (project-pinned): `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundTextbookAxiom.lean:35`
-  `major_arc_small_beta_upperBound` (upper bound on the small-β major-arc deviation).
-- ε₂-large TT*/Toeplitz upper bound (project-pinned): `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarUpperBoundFromToeplitzAxiom.lean:52`
-  `toeplitzExprTopTight_le_U_target` (pinned Step‑5 Toeplitz expression ≤ generated `U_target`).
-- ε₁ minor-energy ledger engine (project-pinned): `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean:55`
-  `ssu_minor_energy_ledger_engine`.
+- ε₁ minor-energy ledger engine export (project-pinned route): `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean:55`
+  `ssu_minor_energy_ledger_engine` (now derived via `Q0MinorEnergyLedgerEngineAxiom`, not postulated directly).
+- ε₁ remaining pinned seam (calibration only): `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedgerEngineAxiom.lean:76`
+  `ssu_minor_energy_calibration` (Crow calibration to certified caps).
+- ε₁ conventional dyadic existence boundary (project-neutral): `Goldbach/Cert/MajorArcModules/Q0MinorInterzoneDyadicConventionalAxioms.lean:158`
+  `q0MinorDyadicGramDecayPoly_exists`.
+
+The ε₂-small branch is now discharged deterministically in
+`Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundDeterministic.lean` and is no longer an
+active pinned axiom in the turnkey `Q0` route.
+
+The ε₂-large branch is now discharged deterministically in
+`Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarUpperBoundFromToeplitz.lean` and is likewise no
+longer an active pinned axiom in the turnkey `Q0` route.
 
 **Path from fool’s gold → gold**
 - Major arcs: discharge the pinned Q0 workbench assumptions above (ε₂-small, ε₂-large, ε₁) by proved

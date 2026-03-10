@@ -1,13 +1,19 @@
-# Step 5 missing inputs (what we need to remove the last axioms)
+# Step 5 missing inputs (current live seams)
 
-Step 5 means removing the two remaining project-specific axioms in:
+Historically Step 5 meant removing the two remaining project-specific axioms in:
 
 - `Goldbach/Cert/MajorArcModules/Q0TwoBoundsSpec.lean`
   - `q0Minor_energy` (ε₁: Q₀-complement / “minor energy”)
   - `q0Major_bound`  (ε₂: Q₀-major deviation)
 
-This file records the *precise mathematical inputs* we still need in order to replace those axioms
-by (a) proved Lean theorems, or (b) a data-driven certificate that Lean can check.
+The repo has moved since then:
+
+- `q0Major_bound` is now proved in `Q0TwoBoundsSpec.lean`;
+- the ε₂-small branch is discharged deterministically in
+  `Q0MajorSmallUpperBoundDeterministic.lean`;
+- the live remaining Step-5 seam is ε₁.
+
+This file records the *precise mathematical inputs* still needed for those remaining seams.
 
 ## ε₁: Q₀-complement / minor energy (`q0Minor_energy`)
 
@@ -54,7 +60,7 @@ down in Lean:
 So, for ε₁, what is still missing is the *analytic* theorem (SSU/Type-I variance ledger) that
 produces an instance of `Q0MinorEnergyEngine Δ_canon E` with `E = (C.ε₁ : ℝ)^2` (or better).
 
-## ε₂: Q₀-major deviation (`q0Major_bound`)
+## ε₂: Q₀-major deviation status
 
 Lean target (exact shape):
 
@@ -62,7 +68,7 @@ Lean target (exact shape):
   `Q0MajorDeviationBound Δ ε₂`:
   `∀ X ≥ X0, ∀ N ∈ EvenIn X H, ‖corr_integral_major_Q0 X N Δ - corrModel N‖ ≤ ε₂`.
 
-What is missing in the repo today:
+What was missing historically in the repo:
 
 1) **The final “assembly lemma”** that consumes the existing BMOR-effective on-arc bounds
    (Steps 20/21) and the Step-24 main term identification, and produces the uniform deviation
@@ -70,10 +76,19 @@ What is missing in the repo today:
 
 2) **A β-localization/tail mechanism** that covers the full β-integral over `[-1/2,1/2]`.
    The module `Goldbach/Cert/MajorArcModules/Q0MajorBoundSplit.lean` provides a clean split at
-   `betaSmallSet` (`|β| ≤ 1/(4π)`), but the repo currently lacks a proved bound for the
+   `betaSmallSet` (`|β| ≤ 1/(4π)`), but the repo lacked a proved bound for the
    complementary “large β” term.
 
-What we need (either path is acceptable):
+Current status:
+
+- The assembly layer is in place: `Q0TwoBoundsSpec.q0Major_bound` is now a theorem.
+- The small-β branch is proved deterministically.
+- The large-β TT*/Toeplitz branch is proved deterministically in
+  `Q0MajorTailTTStarUpperBoundFromToeplitz.lean`.
+
+So ε₂ is no longer a live missing-input seam for the turnkey `Q0` route.
+
+Historical options that were pursued:
 
 - **Option ε₂-A (analytic tail bound)**: a proved kernel/Fejér-type bound (or other mechanism) that
   makes the large-β contribution small enough on the pinned parameters.

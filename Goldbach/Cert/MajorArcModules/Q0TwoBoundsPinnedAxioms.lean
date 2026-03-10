@@ -1,26 +1,20 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
-import Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineAxiom
 import Goldbach.Cert.MajorArcModules.Q0MajorRoute
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
-import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
+import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundDeterministic
+import Goldbach.Cert.MajorArcModules.Q0MinorSplitEngine
+import Goldbach.Cert.MajorArcModules.Q0MinorSSUFromCert
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitz
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
 import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 /-!
-Project-pinned axioms for the turnkey `Q0` certificate route (fool’s gold boundary).
+Pinned-budget aggregator for the turnkey `Q0` certificate route.
 
-This file is the **temporary** assumption surface used by `Q0TwoBoundsSpec.lean` while we pursue a
-checkable major-arc certificate (“platinum” work) via successive approximation.
-
-These assumptions are *not* conventional math under the repo’s “gold” standard, because they pin
-project constants/budgets (e.g. `Δ_canon`, `εs = 2`, and the current TT* budget `M2 = 50_000`).
-
-They are kept here (separate from `Q0TwoBoundsConventionalAxioms.lean`) so that:
-- the live Goldbach pipeline can remain gold-grade (conventional major-arc boundary), and
-- the offline Q0 route can iterate rapidly on certificates without refactoring downstream wiring.
+This file specializes the current certified/deterministic `Q0` workbench bounds to the pinned
+budgets used by the turnkey route, without introducing new analytic assumptions of its own.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0TwoBoundsPinnedAxioms
@@ -31,10 +25,13 @@ open Goldbach.Windows
 
 open Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedger
 open Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
+open Goldbach.Cert.MajorArcModules.Q0MinorSplitEngine
+open Goldbach.Cert.MajorArcModules.Q0MinorSSUFromCert
 open Goldbach.Cert.MajorArcModules.Q0MajorRoute
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundSpec
-open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundTextbookAxiom
+open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
+open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundDeterministic
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
 open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitz
 open Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
@@ -55,9 +52,21 @@ Lean interface: `Q0MinorEnergyLedgerEngine Δ C2 C3` with certified `C2,C3`.
 
 theorem ssu_minor_energy_ledger_engine :
     Q0MinorEnergyLedgerEngine Δ_canon C2 C3 := by
-  simpa using
-    (Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineAxiom.ssu_minor_energy_ledger_engine :
-      Q0MinorEnergyLedgerEngine Δ_canon C2 C3)
+  have hC2 :
+      (2 * Q0MinorSSUFromCert.A2 : ℝ) = C2 := by
+    norm_num [C2, Q0MinorSSUFromCert.A2,
+      Goldbach.Cert.MajorArcModules.Q0MinorLedgerCertData.data,
+      Goldbach.Cert.MajorArcModules.Q0MinorSSUCertData.data]
+  have hC3 :
+      (2 * Goldbach.Cert.MajorArcModules.Q0MinorTypeIFromCert.A3 : ℝ) = C3 := by
+    norm_num [C3, Goldbach.Cert.MajorArcModules.Q0MinorTypeIFromCert.A3,
+      Goldbach.Cert.MajorArcModules.Q0MinorLedgerCertData.data,
+      Goldbach.Cert.MajorArcModules.Q0MinorTypeICertData.data]
+  simpa [hC2, hC3] using
+    (ledgerEngine_of_ssuCertBound Q0MinorSSUFromCert.nonzeroModeEnergyBound :
+      Q0MinorEnergyLedgerEngine Δ_canon
+        (2 * Q0MinorSSUFromCert.A2)
+        (2 * Goldbach.Cert.MajorArcModules.Q0MinorTypeIFromCert.A3))
 
 /-!
 ## ε₂-small engine (small-β major-arc evaluation)
@@ -68,9 +77,9 @@ Lean interface: `Q0MajorSmallBound Δ εs` (here we pin `εs = 2` as in the curr
 -/
 theorem major_arc_small_beta_upperBound :
     Q0MajorSmallUpperBound Δ_canon Us := by
-  -- The contentful assumption lives in a “textbook axiom” file; this pinned route only re-exports it.
-  simpa [Us, Q0MajorSmallUpperBoundTextbookAxiom.Us] using
-    (Q0MajorSmallUpperBoundTextbookAxiom.major_arc_small_beta_upperBound : Q0MajorSmallUpperBound Δ_canon (Q0MajorSmallUpperBoundTextbookAxiom.Us))
+  simpa [Us, Q0MajorSmallUpperBoundFromCert.U] using
+    (Q0MajorSmallUpperBoundDeterministic.major_arc_small_beta_upperBound :
+      Q0MajorSmallUpperBound Δ_canon Q0MajorSmallUpperBoundFromCert.U)
 
 /-!
 ## ε₂-large engine (TT*/Parseval control of the β-tail)
@@ -79,8 +88,6 @@ This is the option-3 TT*/Parseval analytic payload, packaged as a finite `kSuppo
 The numeric budget `U` comes from the generated TT* certificate data (currently a placeholder).
 -/
 
--- The remaining pinned assumption is now the Toeplitz expression upper bound (see
--- `Q0MajorTailTTStarUpperBoundFromToeplitz.lean`); the TT* `kSupport` upper bound is derived.
 theorem innerMajorQ0_full_ttstar_kSupport_upperBound :
     Q0InnerMajorFullTTStarKSupportUpperBound Δ_canon Ut := by
   simpa [Ut, Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitz.U_target] using

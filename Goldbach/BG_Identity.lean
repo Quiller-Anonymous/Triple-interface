@@ -1806,6 +1806,32 @@ lemma errTI_bound_from_tail
   -- keep the rewrite minimal to avoid typeclass inference issues
   simpa [errTI] using hfinal
 
+/-- Weighted Type-I tail bound preserving the natural `wScale(X)^2` suppression. -/
+lemma errTI_bound_from_tail_wScale_sq
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X H)
+    {tail_mass : ℝ} (hTail : Finset.sum outerBand (fun k => K_full k)≤ tail_mass) :
+    |errTI X N| ≤ (Goldbach.BG_Bank.wScale X)^2 * (payload_cap X N * tail_mass) := by
+  classical
+  have step1 :
+      |Finset.sum outerBand (fun k => P_BG X N k * K_full k)|
+        ≤ ((Goldbach.BG_Bank.wScale X)^2 * payload_cap X N)
+            * Finset.sum outerBand (fun k => |K_full k|) := by
+    refine abs_sum_mul_le_cap_sum_abs (s := outerBand)
+      (a := fun k => P_BG X N k) (b := fun k => K_full k)
+      (C := (Goldbach.BG_Bank.wScale X)^2 * payload_cap X N) ?_
+    intro k hk
+    simpa [mul_assoc, mul_left_comm, mul_comm] using
+      (Goldbach.BG_Bank.payload_bound_window_wScale_sq (X := X) (N := N) hX hN (k := k))
+  have step2 : Finset.sum outerBand (fun k => |K_full k|) ≤ tail_mass := by
+    have := hTail
+    simpa [sum_abs_K_full_outer] using this
+  have hcap_nonneg :
+      0 ≤ (Goldbach.BG_Bank.wScale X)^2 * payload_cap X N := by
+    exact mul_nonneg (sq_nonneg _) (Goldbach.BG_Bank.payload_nonneg (X := X) (N := N))
+  have hmul := mul_le_mul_of_nonneg_left step2 hcap_nonneg
+  have hfinal := le_trans step1 hmul
+  simpa [errTI, mul_assoc, mul_left_comm, mul_comm] using hfinal
+
 /-- Exact tail mass constant for the current tent: definitionally the outer-band sum. -/
 noncomputable def C_tail : ℝ := Finset.sum outerBand (fun k => K_full k)
 
@@ -2234,6 +2260,13 @@ lemma errTI_bound_closed :
   intro X N hX hN
   exact errTI_bound_from_tail (X := X) (N := N) hX hN (tail_mass := C_tail_closed)
     tail_mass_le_C_tail_closed
+
+lemma errTI_bound_closed_wScale_sq :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ Goldbach.Windows.EvenIn X H →
+      |errTI X N| ≤ (Goldbach.BG_Bank.wScale X)^2 * (payload_cap X N * C_tail_closed) := by
+  intro X N hX hN
+  exact errTI_bound_from_tail_wScale_sq (X := X) (N := N) hX hN
+    (tail_mass := C_tail_closed) tail_mass_le_C_tail_closed
 
 /-- Numeric corollary for the tail mass. -/
 lemma C_tail_closed_le : C_tail_closed ≤ (98 : ℝ) / 10^6 := by

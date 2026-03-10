@@ -45,6 +45,9 @@ class Params:
     q_small: int = 12
     # Toeplitz split parameter δ (must match the Lean-side choice when comparing bounds).
     delta_split: float = 50.0
+    # Proved deterministic theorem-side cap from
+    # `Q0MajorTailTTStarUpperBoundFromToeplitz.lean`.
+    theorem_cap: int = 36_742_000
     # Use the “passes-budget” experimental model (Step5 mix kernel masses).
     # This is the default in the successive-approximation workflow; `--baseline` reverts.
     dispersion_on: bool = True
@@ -446,8 +449,9 @@ def render(p: Params) -> str:
         u_raw = compute_u_dispersion_on(p) if p.dispersion_on else compute_u_default(p)
     else:
         u_raw = p.U
-    u = min(u_raw, budget_u)
+    u = min(u_raw, budget_u, p.theorem_cap)
     capped = u_raw > budget_u
+    theorem_capped = u_raw > p.theorem_cap
     cap_note = ""
     if capped:
         cap_note = (
@@ -457,6 +461,16 @@ def render(p: Params) -> str:
             f"Update the deterministic proof/generator to bring `U_raw ≤ M2^2` before removing this cap.\n"
             f"-/\n"
             f"def U_raw : ℚ := ({u_raw} : ℚ)\n"
+        )
+    theorem_note = ""
+    if theorem_capped:
+        theorem_note = (
+            f"\n/--\n"
+            f"`U_theorem_cap` is the proved deterministic Toeplitz-top cap exported by\n"
+            f"`Q0MajorTailTTStarUpperBoundFromToeplitz.lean`.\n"
+            f"When the experimental generator produces a larger candidate, we use this smaller proved cap.\n"
+            f"-/\n"
+            f"def U_theorem_cap : ℚ := ({p.theorem_cap} : ℚ)\n"
         )
     mode_note = "dispersion-on" if p.dispersion_on else "baseline"
     return f"""import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCert
@@ -472,8 +486,8 @@ Generator parameters (for reproducibility):
 - `delta_split = {p.delta_split}`
 
 NOTE: `U` is a generated *candidate* upper bound for the finite TT* sum (used in the successive-
-approximation workflow). It is *not* yet backed by a fully formalized Lean proof of the analytic
-inequality `TT* ≤ U`.
+approximation workflow). It may also be tightened by the proved theorem-side cap from
+`Q0MajorTailTTStarUpperBoundFromToeplitz.lean`.
  -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCertData
@@ -483,6 +497,7 @@ open Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarCert
 noncomputable section
 
 {cap_note}
+{theorem_note}
 
 def data : Data :=
   {{ M2 := ({p.M2} : ℚ)

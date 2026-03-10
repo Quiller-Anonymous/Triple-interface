@@ -23,9 +23,11 @@ open Goldbach.Windows
 /-- Canonical FunX Goldbach theorem, using the textbook major-arc boundary and assuming the remaining
 global budget inequality. -/
 theorem goldbach_funX_canon_optionB_textbookMajorArc
-    (hεlt : Goldbach.CanonParams.ε <
-      Goldbach.AO_Major.cAO
-        (Goldbach.AO_InstantiateTenorFunX.caps Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff))
+    (hεlt :
+      ∀ {X : ℕ}, Goldbach.ParallelTenorFunX.X0 ≤ X →
+        Goldbach.CanonParams.ε <
+          Goldbach.ParallelTenorFunXScale.c0
+            Goldbach.AO_OffDiag.TenorHypFunX.Canon.Hoff X)
     [Goldbach.BG_Calib.WeightsBridgeHyp]
     (hBudget :
       ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ EvenIn X (10_000 : ℕ) →
@@ -36,7 +38,7 @@ theorem goldbach_funX_canon_optionB_textbookMajorArc
     ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
   have hBase : FiniteBaseUpTo 1_000_000 := Goldbach.FiniteBase.finiteBaseUpTo_1e6
   exact
-    Goldbach.goldbach_from_tenorFunX_fun_autoHoff
+    Goldbach.goldbach_from_tenorFunX_scale_autoHoff
       (hεlt := hεlt)
       (hBudget := by
         intro X N hX hN
@@ -44,4 +46,3 @@ theorem goldbach_funX_canon_optionB_textbookMajorArc
       (hBase := hBase)
 
 end Goldbach
-

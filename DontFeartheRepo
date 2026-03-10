@@ -1,0 +1,3016 @@
+EP-1 CERTIFICATION PLAN
+
+You need a rigorous certificate generator, not a numerical experiment.
+
+The goal is not to estimate the theorem heuristically. It is to produce a finite package of explicit rational inequalities that Lean can check and that imply
+
+∑
+𝑁
+∈
+E
+v
+e
+n
+I
+n
+(
+𝑋
+,
+𝐻
+)
+∥
+m
+i
+n
+o
+r
+R
+e
+s
+i
+d
+u
+a
+l
+(
+𝑋
+,
+𝑁
+,
+1
+)
+∥
+2
+≤
+(
+1
+800
+log
+⁡
+2
+(
+𝑋
++
+𝐻
+)
+)
+2
+(
+𝐶
+2
+𝐻
+𝑋
++
+𝐶
+3
+1
+𝐻
+𝑄
+0
+2
+)
+N∈EvenIn(X,H)
+∑
+	​
+
+∥minorResidual(X,N,1)∥
+2
+≤(
+800log
+2
+(X+H)
+1
+	​
+
+)
+2
+(C
+2
+	​
+
+X
+H
+	​
+
++C
+3
+	​
+
+HQ
+0
+2
+	​
+
+1
+	​
+
+)
+
+for all 
+𝑋
+≥
+𝑋
+0
+X≥X
+0
+	​
+
+.
+
+The most important strategic fact is this:
+
+𝐶
+2
+C
+2
+	​
+
+ is the bottleneck.
+
+𝐶
+3
+C
+3
+	​
+
+ has enormous slack.
+
+Because
+
+C
+r
+o
+w
+(
+𝑎
+4
+,
+2
+)
+=
+4
+(
+𝜋
+2
+3
+−
+1
+)
+≈
+9.15947
+,
+Crow(a
+4,2
+	​
+
+)=4(
+3
+π
+2
+	​
+
+−1)≈9.15947,
+
+the final cap allows roughly
+
+𝐶
+2
+≤
+17.47
+if 
+𝐾
+=
+1
+,
+𝐶
+2
+≤
+5.82
+if 
+𝐾
+=
+3.
+C
+2
+	​
+
+≤17.47if K=1,C
+2
+	​
+
+≤5.82if K=3.
+
+For 
+𝐶
+3
+C
+3
+	​
+
+, even with 
+𝐾
+=
+3
+K=3, you can tolerate about
+
+𝐶
+3
+≤
+5.24
+×
+10
+6
+.
+C
+3
+	​
+
+≤5.24×10
+6
+.
+
+So your computation should be designed to get a small explicit 
+𝐶
+2
+C
+2
+	​
+
+. You do not need to optimize 
+𝐶
+3
+C
+3
+	​
+
+ much.
+
+What program to build
+
+Build a two-part certificate pipeline.
+
+Part A: normalized SSU certificate
+
+This should certify an explicit constant 
+𝐴
+2
+A
+2
+	​
+
+ such that
+
+∑
+𝑁
+∈
+E
+v
+e
+n
+I
+n
+(
+𝑋
+,
+𝐻
+)
+∣
+𝑚
+𝑋
+S
+S
+U
+(
+𝑁
+)
+∣
+2
+≤
+(
+1
+800
+log
+⁡
+2
+(
+𝑋
++
+𝐻
+)
+)
+2
+𝐴
+2
+𝐻
+𝑋
+N∈EvenIn(X,H)
+∑
+	​
+
+∣m
+X
+SSU
+	​
+
+(N)∣
+2
+≤(
+800log
+2
+(X+H)
+1
+	​
+
+)
+2
+A
+2
+	​
+
+X
+H
+	​
+
+
+uniformly for all 
+𝑋
+≥
+𝑋
+0
+X≥X
+0
+	​
+
+.
+
+This is the hard part.
+
+Part B: normalized Type-I certificate
+
+This should certify an explicit constant 
+𝐴
+3
+A
+3
+	​
+
+ such that
+
+∑
+𝑁
+∈
+E
+v
+e
+n
+I
+n
+(
+𝑋
+,
+𝐻
+)
+∣
+𝑚
+𝑋
+T
+I
+(
+𝑁
+)
+∣
+2
+≤
+(
+1
+800
+log
+⁡
+2
+(
+𝑋
++
+𝐻
+)
+)
+2
+𝐴
+3
+1
+𝐻
+𝑄
+0
+2
+.
+N∈EvenIn(X,H)
+∑
+	​
+
+∣m
+X
+TI
+	​
+
+(N)∣
+2
+≤(
+800log
+2
+(X+H)
+1
+	​
+
+)
+2
+A
+3
+	​
+
+HQ
+0
+2
+	​
+
+1
+	​
+
+.
+
+This part is much easier numerically because your slack is huge.
+
+Then combine them with the deterministic lemma
+
+∣
+𝑢
++
+𝑣
+∣
+2
+≤
+2
+∣
+𝑢
+∣
+2
++
+2
+∣
+𝑣
+∣
+2
+∣u+v∣
+2
+≤2∣u∣
+2
++2∣v∣
+2
+
+to get
+
+𝐶
+2
+=
+2
+𝐴
+2
+,
+𝐶
+3
+=
+2
+𝐴
+3
+,
+C
+2
+	​
+
+=2A
+2
+	​
+
+,C
+3
+	​
+
+=2A
+3
+	​
+
+,
+
+or better if you manage orthogonality.
+
+What the program should actually compute
+
+You should not compute the residual directly over all 
+𝑁
+N by quadrature. That will be slow, unstable, and hard to certify.
+
+You should instead compute a TT
+∗
+∗
+/Toeplitz upper bound.
+
+The program should do this:
+
+Rewrite the normalized minor energy as a finite Toeplitz sum in Fourier mode difference 
+𝑡
+t.
+
+Split 
+𝑡
+=
+0
+t=0 and 
+𝑡
+≠
+0
+t
+
+=0.
+
+For 
+𝑡
+≠
+0
+t
+
+=0, use the hard-weight Fourier coefficient formula
+
+𝑊
+^
+𝑋
+(
+𝑡
+)
+=
+1
+𝜋
+𝑡
+∑
+𝑞
+≤
+𝑄
+0
+𝑐
+𝑞
+(
+𝑡
+)
+sin
+⁡
+ ⁣
+(
+2
+𝜋
+𝑡
+𝑞
+𝑋
+)
+W
+X
+	​
+
+(t)=
+πt
+1
+	​
+
+q≤Q
+0
+	​
+
+∑
+	​
+
+c
+q
+	​
+
+(t)sin(
+qX
+2πt
+	​
+
+)
+
+for the major weight, then use
+
+1
+𝐴
+𝑐
+^
+(
+𝑡
+)
+=
+−
+1
+𝐴
+^
+(
+𝑡
+)
+(
+𝑡
+≠
+0
+)
+1
+A
+c
+	​
+
+	​
+
+(t)=−
+1
+A
+	​
+
+	​
+
+(t)(t
+
+=0)
+
+for the minor weight.
+
+Bound the resulting Toeplitz form with a finite explicit expression.
+
+Export that expression as a rational certificate.
+
+Let Lean verify the finite bound and deduce 
+𝐴
+2
+A
+2
+	​
+
+ or 
+𝐴
+3
+A
+3
+	​
+
+.
+
+This is the same architecture the repo already uses for the major-tail TT
+∗
+∗
+ certificate. You are essentially building the minor analogue of that generator.
+
+The exact modules to clone in spirit
+
+The easiest route is to imitate the major-tail certificate stack.
+
+Use these as templates:
+
+Q0MajorTailTTStarAlgebra.lean
+
+Q0MajorTailTTStarConstMode.lean
+
+Q0MajorTailTTStarStep5WeightSplit.lean
+
+the certificate generator behind gen_q0_major_tail_ttstar_cert.py
+
+What you want is a new pair of generators, conceptually:
+
+gen_q0_minor_ssu_cert.py
+
+gen_q0_minor_typeI_cert.py
+
+and matching Lean checker files.
+
+Arithmetic requirements
+
+Do not use ordinary floating point as your proof backend.
+
+Use one of:
+
+exact rationals throughout, when feasible;
+
+interval arithmetic with outward rounding, then export rational upper bounds;
+
+Arb/ball arithmetic is ideal.
+
+A good design is:
+
+core evaluation in Python calling mpmath or Arb-backed wrappers for exploration;
+
+final certification done with exact rationals or rigorous interval bounds;
+
+export a .lean or .json artifact with rational numerators/denominators.
+
+The final object Lean checks should contain only rational inequalities.
+
+Minimal viable program design
+
+You want five components.
+
+1. Symbolic reducer
+
+Input:
+
+𝑋
+0
+=
+10
+6
+X
+0
+	​
+
+=10
+6
+, 
+𝐻
+=
+10
+4
+H=10
+4
+, 
+𝑄
+0
+=
+30000
+Q
+0
+	​
+
+=30000, 
+Δ
+=
+1
+Δ=1
+
+Output:
+
+a finite Toeplitz-form expression for the normalized energy,
+
+split into zero mode and nonzero modes.
+
+This piece can be derived once and mirrored in Lean.
+
+2. Fourier coefficient evaluator
+
+For each relevant nonzero integer 
+𝑡
+t, compute a rigorous upper bound on
+
+∣
+1
+𝜋
+𝑡
+∑
+𝑞
+≤
+𝑄
+0
+𝑐
+𝑞
+(
+𝑡
+)
+sin
+⁡
+ ⁣
+(
+2
+𝜋
+𝑡
+𝑞
+𝑋
+)
+∣
+.
+	​
+
+πt
+1
+	​
+
+q≤Q
+0
+	​
+
+∑
+	​
+
+c
+q
+	​
+
+(t)sin(
+qX
+2πt
+	​
+
+)
+	​
+
+.
+
+This should exploit:
+
+exact Ramanujan sums 
+𝑐
+𝑞
+(
+𝑡
+)
+c
+q
+	​
+
+(t),
+
+small-angle bounds when 
+2
+𝜋
+∣
+𝑡
+∣
+/
+(
+𝑞
+𝑋
+)
+2π∣t∣/(qX) is small,
+
+cancellation in the 
+𝑞
+q-sum before absolute values.
+
+This is where most of the 
+𝐶
+2
+C
+2
+	​
+
+ savings will come from.
+
+3. Toeplitz-top evaluator
+
+Compute a certified upper bound on the finite Toeplitz form generated by those coefficients.
+
+This should follow the “do not lose 
+𝑄
+0
+2
+Q
+0
+2
+	​
+
+” policy already spelled out in your Step-5 docs:
+
+do not replace 
+𝑐
+𝑞
+(
+𝑡
+)
+c
+q
+	​
+
+(t) by 
+∣
+𝑐
+𝑞
+(
+𝑡
+)
+∣
+∣c
+q
+	​
+
+(t)∣ too early;
+
+do not use an 
+ℓ
+∞
+ℓ
+∞
+ bound on the whole progression if a progression average is available.
+
+This is the main SSU certificate engine.
+
+4. Constant-mode evaluator
+
+Treat 
+𝑡
+=
+0
+t=0 separately.
+
+This is where the Type-I / alias / leakage term lives. Because your budget on 
+𝐶
+3
+C
+3
+	​
+
+ is huge, this can be comparatively crude as long as it is rigorous.
+
+5. Monotonicity checker
+
+Because the theorem is for all 
+𝑋
+≥
+𝑋
+0
+X≥X
+0
+	​
+
+, your generator must not merely test one 
+𝑋
+X.
+
+It should prove that the certified upper-bound expressions are monotone decreasing in 
+𝑋
+X beyond 
+𝑋
+0
+X
+0
+	​
+
+, or else bound the supremum on intervals of 
+𝑋
+X rigorously.
+
+The simplest successful pattern is usually:
+
+derive an explicit envelope 
+𝑈
+(
+𝑋
+)
+U(X),
+
+prove 
+𝑈
+′
+(
+𝑋
+)
+≤
+0
+U
+′
+(X)≤0 for 
+𝑋
+≥
+𝑋
+0
+X≥X
+0
+	​
+
+,
+
+then certify only 
+𝑈
+(
+𝑋
+0
+)
+U(X
+0
+	​
+
+).
+
+Without this, finite computation at one 
+𝑋
+X is not enough.
+
+What theorem shape to target first
+
+Do not aim first for 
+𝐶
+2
+=
+𝐶
+3
+=
+1
+C
+2
+	​
+
+=C
+3
+	​
+
+=1.
+
+Aim for any explicit 
+𝐴
+2
+,
+𝐴
+3
+A
+2
+	​
+
+,A
+3
+	​
+
+ that lead to certification.
+
+A realistic first target is:
+
+with 
+𝐾
+=
+1
+K=1: get 
+𝐴
+2
+<
+17
+A
+2
+	​
+
+<17,
+
+with 
+𝐾
+=
+3
+K=3: get 
+𝐴
+2
+<
+5.5
+A
+2
+	​
+
+<5.5.
+
+And for 
+𝐴
+3
+A
+3
+	​
+
+, almost anything reasonable will pass.
+
+So your program should optimize the SSU side first and treat the Type-I side as secondary.
+
+The cleanest proof-certificate interface
+
+You should formalize one deterministic theorem of this form:
+
+SSUCert
+(
+𝐴
+2
+)
+ 
+∧
+ TypeICert
+(
+𝐴
+3
+)
+⟹
+NormalizedMinorEnergy
+(
+2
+𝐴
+2
+,
+2
+𝐴
+3
+)
+.
+SSUCert(A
+2
+	​
+
+) ∧ TypeICert(A
+3
+	​
+
+)⟹NormalizedMinorEnergy(2A
+2
+	​
+
+,2A
+3
+	​
+
+).
+
+Then your number-crunching program only needs to emit:
+
+one certificate for the oscillatory modes,
+
+one certificate for the constant mode.
+
+That keeps the computation modular.
+
+What success looks like
+
+At the end, your program should output something like:
+
+A2_num / A2_den and proof data showing
+
+𝐸
+≠
+0
+(
+𝑋
+)
+≤
+(
+1
+800
+log
+⁡
+2
+(
+𝑋
++
+𝐻
+)
+)
+2
+𝐴
+2
+𝐻
+𝑋
+E
+
+=0
+	​
+
+(X)≤(
+800log
+2
+(X+H)
+1
+	​
+
+)
+2
+A
+2
+	​
+
+X
+H
+	​
+
+
+A3_num / A3_den and proof data showing
+
+𝐸
+0
+(
+𝑋
+)
+≤
+(
+1
+800
+log
+⁡
+2
+(
+𝑋
++
+𝐻
+)
+)
+2
+𝐴
+3
+1
+𝐻
+𝑄
+0
+2
+E
+0
+	​
+
+(X)≤(
+800log
+2
+(X+H)
+1
+	​
+
+)
+2
+A
+3
+	​
+
+HQ
+0
+2
+	​
+
+1
+	​
+
+
+Then Lean combines them and gives the theorem you want.
+
+The shortest build plan
+
+I would build this in this order:
+
+a minor-weight Fourier coefficient module, parallel to the major-tail one;
+
+a zero-mode certificate generator;
+
+a nonzero-mode Toeplitz certificate generator;
+
+a Lean checker for each;
+
+the deterministic combination theorem.
+
+That is the smallest serious program that can close the seam with constants.
+
+Here is the analytic choice I would make for the next module.
+
+1. The intended coefficient family
+
+Take the hard minor 
+𝛼
+α-weight
+
+𝑊
+𝑋
+min
+⁡
+(
+𝛼
+)
+:
+=
+1
+𝐴
+𝑋
+𝑐
+(
+𝛼
+)
+,
+𝐴
+𝑋
+:
+=
+m
+a
+j
+o
+r
+A
+r
+c
+S
+e
+t
+Q
+0
+(
+𝑋
+,
+1
+)
+,
+W
+X
+min
+	​
+
+(α):=1
+A
+X
+c
+	​
+
+	​
+
+(α),A
+X
+	​
+
+:=majorArcSetQ0(X,1),
+
+and define its Fourier coefficients by
+
+𝑊
+^
+𝑋
+min
+⁡
+(
+𝑡
+)
+:
+=
+∫
+0
+1
+𝑊
+𝑋
+min
+⁡
+(
+𝛼
+)
+ 
+𝑒
+(
+𝑡
+𝛼
+)
+ 
+𝑑
+𝛼
+(
+𝑡
+∈
+𝑍
+)
+.
+W
+X
+min
+	​
+
+(t):=∫
+0
+1
+	​
+
+W
+X
+min
+	​
+
+(α)e(tα)dα(t∈Z).
+
+Then the coefficient family should be
+
+c
+o
+e
+f
+f
+(
+𝑋
+,
+𝑁
+,
+𝑡
+)
+:
+=
+𝑞
+0
+𝑁
+𝑜
+𝑟
+𝑚
+𝐹
+𝑎
+𝑐
+𝑡
+𝑜
+𝑟
+(
+𝑁
+)
+ 
+𝑊
+^
+𝑋
+min
+⁡
+(
+𝑡
+)
+.
+coeff(X,N,t):=q0NormFactor(N)
+W
+X
+min
+	​
+
+(t).
+	​
+
+
+That is the clean one-variable 
+𝑡
+t-family.
+
+The 
+𝛽
+β-kernel belongs outside coeff, as the Toeplitz / 
+𝑘
+k-progression factor.
+
+If you expand corr_integral_minor_Q0 directly from the Lean definitions, you get
+
+m
+i
+n
+o
+r
+R
+e
+s
+i
+d
+u
+a
+l
+(
+𝑋
+,
+𝑁
+,
+1
+)
+=
+∑
+𝑛
+,
+𝑚
+∈
+𝑠
+(
+𝑁
+)
+𝑎
+𝑇
+𝑒
+𝑟
+𝑚
+(
+𝑋
+,
+𝑛
+)
+ 
+𝑎
+𝑇
+𝑒
+𝑟
+𝑚
+(
+𝑋
+,
+𝑚
+)
+ 
+𝐾
+^
+𝐻
+(
+𝑚
+−
+𝑛
+)
+ 
+c
+o
+e
+f
+f
+(
+𝑋
+,
+𝑁
+,
+𝑛
++
+𝑚
+−
+𝑁
+)
+,
+minorResidual(X,N,1)=
+n,m∈s(N)
+∑
+	​
+
+aTerm(X,n)aTerm(X,m)
+K
+H
+	​
+
+(m−n)coeff(X,N,n+m−N),
+
+where
+
+𝐾
+^
+𝐻
+(
+𝑘
+)
+:
+=
+∫
+0
+1
+k
+e
+r
+n
+e
+l
+P
+o
+l
+y
+C
+(
+𝛽
+)
+ 
+𝑒
+(
+𝑘
+𝛽
+)
+ 
+𝑑
+𝛽
+.
+K
+H
+	​
+
+(k):=∫
+0
+1
+	​
+
+kernelPolyC(β)e(kβ)dβ.
+
+Equivalently, after setting 
+𝑘
+=
+𝑚
+−
+𝑛
+k=m−n, this becomes
+
+m
+i
+n
+o
+r
+R
+e
+s
+i
+d
+u
+a
+l
+(
+𝑋
+,
+𝑁
+,
+1
+)
+=
+∑
+𝑘
+∈
+𝑘
+𝑆
+𝑢
+𝑝
+𝑝
+𝑜
+𝑟
+𝑡
+(
+𝑁
+)
+𝐾
+^
+𝐻
+(
+𝑘
+)
+∑
+𝑛
+𝑎
+𝑇
+𝑒
+𝑟
+𝑚
+(
+𝑋
+,
+𝑛
+)
+ 
+𝑎
+𝑇
+𝑒
+𝑟
+𝑚
+(
+𝑋
+,
+𝑛
++
+𝑘
+)
+ 
+c
+o
+e
+f
+f
+(
+𝑋
+,
+𝑁
+,
+2
+𝑛
++
+𝑘
+−
+𝑁
+)
+.
+minorResidual(X,N,1)=
+k∈kSupport(N)
+∑
+	​
+
+K
+H
+	​
+
+(k)
+n
+∑
+	​
+
+aTerm(X,n)aTerm(X,n+k)coeff(X,N,2n+k−N).
+	​
+
+
+This is the exact minor analogue of the major-tail 
+𝑘
+k-slice formula already encoded in the Step-5 scaffold: the 
+𝑘
+k-th 
+𝛽
+β-Fourier slice is a sum over 
+𝑛
+n, and the relevant 
+𝛼
+α-frequency is
+
+𝑡
+=
+2
+𝑛
++
+𝑘
+−
+𝑁
+.
+t=2n+k−N.
+
+That 
+𝑡
+=
+2
+𝑛
++
+𝑘
+−
+𝑁
+t=2n+k−N identification is already written into the Step-5 handoff: the 
+𝛽
+β-Fourier coefficient at frequency 
+𝑘
+k is a sum over 
+𝑛
+n weighted by the 
+𝛼
+α-weight Fourier coefficient at 
+𝑡
+=
+2
+𝑛
++
+𝑘
+−
+𝑁
+t=2n+k−N. See STEP5_U_SPEC.md, and the Lean theorem
+Q0MajorTailTTStarAlgebra.innerMajorQ0_eq_sum_nm.
+
+2. The exact coefficient formula you should target
+
+This is the clean target theorem:
+
+𝑊
+^
+𝑋
+min
+⁡
+(
+0
+)
+=
+1
+−
+𝑊
+^
+𝑋
+\maj
+(
+0
+)
+,
+𝑊
+^
+𝑋
+min
+⁡
+(
+𝑡
+)
+=
+−
+𝑊
+^
+𝑋
+\maj
+(
+𝑡
+)
+(
+𝑡
+≠
+0
+)
+.
+W
+X
+min
+	​
+
+(0)=1−
+W
+X
+\maj
+	​
+
+(0),
+W
+X
+min
+	​
+
+(t)=−
+W
+X
+\maj
+	​
+
+(t)(t
+
+=0).
+
+This is just
+
+1
+𝐴
+𝑋
+𝑐
+=
+1
+−
+1
+𝐴
+𝑋
+.
+1
+A
+X
+c
+	​
+
+	​
+
+=1−1
+A
+X
+	​
+
+	​
+
+.
+
+So for 
+𝑡
+≠
+0
+t
+
+=0, the minor coefficient is exactly the negative of the already-developed major coefficient.
+
+That means you should reuse the major-tail weight-split file, not invent a new coefficient formula from scratch.
+
+From the existing major-tail module, the trusted target is:
+
+Q0MajorTailTTStarStep5WeightSplit.majorArcWeightFourier_eq_q1Part_add_sum_ramanujan_sinc
+
+Q0MajorTailTTStarStep5WeightSplit.majorArcWeightFourier_eq_AX_add_LX_add_RX
+
+So your minor coefficient theorem should be the complement version:
+
+𝑊
+^
+𝑋
+min
+⁡
+(
+𝑡
+)
+=
+−
+𝑞
+1
+𝑃
+𝑎
+𝑟
+𝑡
+(
+𝑋
+,
+1
+,
+𝑡
+)
+−
+∑
+2
+≤
+𝑞
+≤
+𝑄
+0
+𝑐
+𝑞
+(
+𝑡
+)
+ 
+s
+i
+n
+c
+F
+a
+c
+t
+o
+r
+(
+𝑋
+,
+𝑞
+,
+1
+,
+𝑡
+)
+(
+𝑡
+≠
+0
+)
+,
+W
+X
+min
+	​
+
+(t)=−q1Part(X,1,t)−
+2≤q≤Q
+0
+	​
+
+∑
+	​
+
+c
+q
+	​
+
+(t)sincFactor(X,q,1,t)(t
+
+=0),
+	​
+
+
+and equivalently
+
+𝑊
+^
+𝑋
+min
+⁡
+(
+𝑡
+)
+=
+−
+(
+𝐴
+𝑋
+(
+𝑋
+,
+1
+,
+𝑡
+)
++
+𝐿
+𝑋
+(
+𝑋
+,
+𝑡
+)
++
+𝑅
+𝑋
+(
+𝑋
+,
+1
+,
+𝑡
+)
+)
+(
+𝑡
+≠
+0
+)
+.
+W
+X
+min
+	​
+
+(t)=−(AX(X,1,t)+LX(X,t)+RX(X,1,t))(t
+
+=0).
+	​
+
+
+Informally, this is exactly the manuscript/U-spec formula
+
+𝑊
+^
+𝑋
+\maj
+(
+𝑡
+)
+=
+1
+𝜋
+𝑡
+∑
+𝑞
+≤
+𝑄
+0
+𝑐
+𝑞
+(
+𝑡
+)
+sin
+⁡
+ ⁣
+(
+2
+𝜋
+𝑡
+𝑞
+𝑋
+)
+(
+𝑡
+≠
+0
+)
+,
+W
+X
+\maj
+	​
+
+(t)=
+πt
+1
+	​
+
+q≤Q
+0
+	​
+
+∑
+	​
+
+c
+q
+	​
+
+(t)sin(
+qX
+2πt
+	​
+
+)(t
+
+=0),
+
+so
+
+𝑊
+^
+𝑋
+min
+⁡
+(
+𝑡
+)
+=
+−
+1
+𝜋
+𝑡
+∑
+𝑞
+≤
+𝑄
+0
+𝑐
+𝑞
+(
+𝑡
+)
+sin
+⁡
+ ⁣
+(
+2
+𝜋
+𝑡
+𝑞
+𝑋
+)
+(
+𝑡
+≠
+0
+)
+.
+W
+X
+min
+	​
+
+(t)=−
+πt
+1
+	​
+
+q≤Q
+0
+	​
+
+∑
+	​
+
+c
+q
+	​
+
+(t)sin(
+qX
+2πt
+	​
+
+)(t
+
+=0).
+	​
+
+
+That is the key analytic datum.
+
+3. The intended split interpretation
+
+My recommendation is:
+
+Keep the Step-5 
+𝑘
+k-slice decomposition
+
+The primary decomposition should still be by
+
+𝑘
+=
+𝑚
+−
+𝑛
+,
+k=m−n,
+
+because that is what the TT
+∗
+∗
+/Toeplitz scaffold is already built around.
+
+Inside each 
+𝑘
+k-slice, the 
+𝛼
+α-frequency is
+
+𝑡
+=
+2
+𝑛
++
+𝑘
+−
+𝑁
+.
+t=2n+k−N.
+
+That is the right variable for the weight Fourier coefficient.
+
+Treat 
+𝑡
+=
+0
+t=0 as a separate diagonal/constant-mode contribution
+
+Yes, isolate 
+𝑡
+=
+0
+t=0, but I would not describe it as “the entire Type-I / alias term” at this stage.
+
+Why not: for the hard minor weight 
+1
+𝐴
+𝑋
+𝑐
+1
+A
+X
+c
+	​
+
+	​
+
+, the 
+𝑡
+=
+0
+t=0 coefficient is
+
+𝑊
+^
+𝑋
+min
+⁡
+(
+0
+)
+=
+1
+−
+m
+e
+a
+s
+(
+𝐴
+𝑋
+)
+,
+W
+X
+min
+	​
+
+(0)=1−meas(A
+X
+	​
+
+),
+
+which is order 
+1
+1, not a small alias-suppressed quantity.
+
+The paper’s “Type-I / alias” language refers to the balanced bank weight where the constant mode is removed:
+
+∫
+𝑇
+𝑣
+b
+a
+n
+k
+=
+0
+,
+∫
+T
+	​
+
+v
+bank
+	​
+
+=0,
+
+so the 
+𝑚
+=
+0
+m=0 Fourier mode drops out entirely. And the Type-I limb in TT
+∗
+∗
+ is then controlled after bank averaging and AO mixing.
+
+That is not the same thing as the hard minor complement.
+
+So the right interpretation is:
+
+𝑡
+=
+0
+t=0: isolate it as the constant/diagonal mode of the hard minor weight;
+
+𝑡
+≠
+0
+t
+
+=0: these are the oscillatory modes and should be the main SSU/dispersion target.
+
+If later you prove that the 
+𝑡
+=
+0
+t=0 hard-minor piece matches the paper’s Type-I/AO normalization after further algebra, great. But I would not bake that into the next module.
+
+Preserve an extra split inside 
+𝑡
+≠
+0
+t
+
+=0
+
+Yes. Keep the same decomposition already used on the major side:
+
+𝑞
+=
+1
+q=1 boundary term,
+
+2
+≤
+𝑞
+≤
+12
+2≤q≤12 small-denominator exact part,
+
+𝑞
+≥
+13
+q≥13 linearized Ramanujan part plus remainder.
+
+That is already formalized in the major-tail weight-split module, and it is exactly the structure you want to port.
+
+4. The preferred route
+
+I would derive it directly from
+
+m
+i
+n
+o
+r
+R
+e
+s
+i
+d
+u
+a
+l
+=
+𝑞
+0
+𝑁
+𝑜
+𝑟
+𝑚
+𝐹
+𝑎
+𝑐
+𝑡
+𝑜
+𝑟
+⋅
+c
+o
+r
+r
+_
+i
+n
+t
+e
+g
+r
+a
+l
+_
+m
+i
+n
+o
+r
+_
+Q
+0
+,
+minorResidual=q0NormFactor⋅corr_integral_minor_Q0,
+
+using the same Step-16 / Step-24 Fourier expansion machinery as the major-tail route.
+
+That is the preferred route.
+
+Reason: the repo already contains the exact algebra you need on the major side:
+
+CorrIntegralQ0Reduction.lean gives the hard 
+𝑄
+0
+Q
+0
+	​
+
+-major / 
+𝑄
+0
+Q
+0
+	​
+
+-minor split;
+
+Q0MajorTailTTStarAlgebra.innerMajorQ0_eq_sum_nm gives the 
+𝑛
+,
+𝑚
+n,m expansion;
+
+STEP5_U_SPEC.md identifies the 
+𝑘
+k-slice / 
+𝑡
+=
+2
+𝑛
++
+𝑘
+−
+𝑁
+t=2n+k−N structure;
+
+Q0MajorTailTTStarStep5WeightSplit gives the explicit nonzero 
+𝑡
+t Fourier coefficient formula.
+
+So the new minor module should be a complement version of the major-tail algebra, not a fresh derivation from the manuscript only.
+
+5. The exact target theorem I would write next
+
+I would make the next module prove these four lemmas.
+
+(a) Hard minor weight
+m
+i
+n
+o
+r
+A
+r
+c
+W
+e
+i
+g
+h
+t
+C
+(
+𝑋
+,
+𝛼
+)
+:
+=
+(
+𝐴
+𝑋
+𝑐
+)
+.
+𝑖
+𝑛
+𝑑
+𝑖
+𝑐
+𝑎
+𝑡
+𝑜
+𝑟
+(
+1
+)
+.
+minorArcWeightC(X,α):=(A
+X
+c
+	​
+
+).indicator(1).
+(b) Fourier coefficient
+m
+i
+n
+o
+r
+A
+r
+c
+W
+e
+i
+g
+h
+t
+F
+o
+u
+r
+i
+e
+r
+(
+𝑋
+,
+𝑡
+)
+:
+=
+∫
+0
+1
+m
+i
+n
+o
+r
+A
+r
+c
+W
+e
+i
+g
+h
+t
+C
+(
+𝑋
+,
+𝛼
+)
+ 
+𝑒
+(
+𝑡
+𝛼
+)
+ 
+𝑑
+𝛼
+.
+minorArcWeightFourier(X,t):=∫
+0
+1
+	​
+
+minorArcWeightC(X,α)e(tα)dα.
+(c) Complement identity
+m
+i
+n
+o
+r
+A
+r
+c
+W
+e
+i
+g
+h
+t
+F
+o
+u
+r
+i
+e
+r
+(
+𝑋
+,
+0
+)
+=
+1
+−
+m
+a
+j
+o
+r
+A
+r
+c
+W
+e
+i
+g
+h
+t
+F
+o
+u
+r
+i
+e
+r
+(
+𝑋
+,
+1
+,
+0
+)
+,
+minorArcWeightFourier(X,0)=1−majorArcWeightFourier(X,1,0),
+m
+i
+n
+o
+r
+A
+r
+c
+W
+e
+i
+g
+h
+t
+F
+o
+u
+r
+i
+e
+r
+(
+𝑋
+,
+𝑡
+)
+=
+−
+m
+a
+j
+o
+r
+A
+r
+c
+W
+e
+i
+g
+h
+t
+F
+o
+u
+r
+i
+e
+r
+(
+𝑋
+,
+1
+,
+𝑡
+)
+(
+𝑡
+≠
+0
+)
+.
+minorArcWeightFourier(X,t)=−majorArcWeightFourier(X,1,t)(t
+
+=0).
+(d) Minor residual 
+𝑘
+k-slice expansion
+m
+i
+n
+o
+r
+R
+e
+s
+i
+d
+u
+a
+l
+(
+𝑋
+,
+𝑁
+,
+1
+)
+=
+𝑞
+0
+𝑁
+𝑜
+𝑟
+𝑚
+𝐹
+𝑎
+𝑐
+𝑡
+𝑜
+𝑟
+(
+𝑁
+)
+∑
+𝑘
+∈
+𝑘
+𝑆
+𝑢
+𝑝
+𝑝
+𝑜
+𝑟
+𝑡
+(
+𝑁
+)
+𝐾
+^
+𝐻
+(
+𝑘
+)
+∑
+𝑛
+𝑎
+𝑇
+𝑒
+𝑟
+𝑚
+(
+𝑋
+,
+𝑛
+)
+𝑎
+𝑇
+𝑒
+𝑟
+𝑚
+(
+𝑋
+,
+𝑛
++
+𝑘
+)
+ 
+m
+i
+n
+o
+r
+A
+r
+c
+W
+e
+i
+g
+h
+t
+F
+o
+u
+r
+i
+e
+r
+(
+𝑋
+,
+2
+𝑛
++
+𝑘
+−
+𝑁
+)
+.
+minorResidual(X,N,1)=q0NormFactor(N)
+k∈kSupport(N)
+∑
+	​
+
+K
+H
+	​
+
+(k)
+n
+∑
+	​
+
+aTerm(X,n)aTerm(X,n+k)minorArcWeightFourier(X,2n+k−N).
+
+Once that is in place, the “analytic choice” is frozen.
+
+6. Bottom line
+
+So my answer to your three concrete questions is:
+
+The coefficient family should be
+
+c
+o
+e
+f
+f
+(
+𝑋
+,
+𝑁
+,
+𝑡
+)
+=
+𝑞
+0
+𝑁
+𝑜
+𝑟
+𝑚
+𝐹
+𝑎
+𝑐
+𝑡
+𝑜
+𝑟
+(
+𝑁
+)
+ 
+𝑊
+^
+𝑋
+min
+⁡
+(
+𝑡
+)
+.
+coeff(X,N,t)=q0NormFactor(N)
+W
+X
+min
+	​
+
+(t).
+	​
+
+
+The intended split should be:
+
+first by 
+𝑘
+=
+𝑚
+−
+𝑛
+k=m−n,
+
+then isolate 
+𝑡
+=
+0
+t=0 as the constant/diagonal hard-minor mode,
+
+treat 
+𝑡
+≠
+0
+t
+
+=0 as the oscillatory SSU/dispersion target,
+
+and preserve the 
+𝑞
+=
+1
+q=1, 
+2
+≤
+𝑞
+≤
+12
+2≤q≤12, 
+𝑞
+≥
+13
+q≥13 split inside 
+𝑡
+≠
+0
+t
+
+=0.
+
+The preferred route is:
+
+derive it directly from 
+𝑚
+𝑖
+𝑛
+𝑜
+𝑟
+𝑅
+𝑒
+𝑠
+𝑖
+𝑑
+𝑢
+𝑎
+𝑙
+=
+𝑞
+0
+𝑁
+𝑜
+𝑟
+𝑚
+𝐹
+𝑎
+𝑐
+𝑡
+𝑜
+𝑟
+⋅
+𝑐
+𝑜
+𝑟
+𝑟
+_
+𝑖
+𝑛
+𝑡
+𝑒
+𝑔
+𝑟
+𝑎
+𝑙
+_
+𝑚
+𝑖
+𝑛
+𝑜
+𝑟
+_
+𝑄
+0
+,
+derive it directly from minorResidual=q0NormFactor⋅corr_integral_minor_Q0,
+	​
+
+
+but reuse the already-trusted major-tail weight-split theorem by the complement identity
+
+𝑊
+^
+𝑋
+min
+⁡
+(
+𝑡
+)
+=
+−
+𝑊
+^
+𝑋
+\maj
+(
+𝑡
+)
+(
+𝑡
+≠
+0
+)
+.
+W
+X
+min
+	​
+
+(t)=−
+W
+X
+\maj
+	​
+
+(t)(t
+
+=0).
+
+That is the analytic datum I would build the next module around.

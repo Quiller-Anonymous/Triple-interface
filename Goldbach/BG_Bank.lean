@@ -92,6 +92,15 @@ lemma abs_wX_le_one (X n : ℕ) : |wX X n| ≤ 1 := by
   have h1 : wX X n ≤ 1 := wX_le_one X n
   simpa [abs_of_nonneg h0] using h1
 
+lemma wX_le_wScale (X n : ℕ) : wX X n ≤ wScale X := by
+  by_cases hn : n ∈ Finset.Icc (X / 2 - H) (X / 2 + H)
+  · simp [wX, hn]
+  · simp [wX, hn, wScale_nonneg]
+
+lemma abs_wX_le_wScale (X n : ℕ) : |wX X n| ≤ wScale X := by
+  have h0 : 0 ≤ wX X n := wX_nonneg X n
+  simpa [abs_of_nonneg h0] using wX_le_wScale X n
+
 /-- Working-band offsets S_BG = { k ∈ ℤ | |k| ≤ H }. -/
 def S_BG : Finset ℤ := (Finset.Icc (-(H:ℤ)) (H:ℤ))
 
@@ -410,6 +419,197 @@ lemma payload_bound_window
             have := mul_le_mul_of_nonneg_left hsum hlogNN
             nlinarith [hpos]
     _ = (1 / 800 : ℝ) * (Real.log ((N:ℝ) + 1) / Real.log (N:ℝ))^2 := by
+          field_simp [one_div, mul_comm, mul_left_comm, mul_assoc, pow_two]
+
+/-- Weighted payload bound that preserves the natural `wScale(X)^2` suppression. -/
+lemma payload_bound_window_wScale_sq
+  {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ Goldbach.Windows.EvenIn X H) {k : ℤ} :
+  |P_BG X N k| ≤ (wScale X)^2 * payload_cap X N := by
+  have hXN : X ≤ N := by
+    have hI : N ∈ Goldbach.Windows.IccShift X H := (Finset.mem_filter.mp hN).1
+    rcases Finset.mem_image.mp hI with ⟨k, hk, rfl⟩
+    exact Nat.le_add_right X k
+  have hN_ge_X0 : X0 ≤ N := le_trans hX hXN
+  have hlogNpos  : 0 < Real.log (N:ℝ) := log_pos_of_large (X := N) hN_ge_X0
+  have hlogNsqNN : 0 ≤ (Real.log (N:ℝ))^2 := by exact sq_nonneg _
+  have hlogNN   : 0 ≤ 1 / (Real.log (N:ℝ))^2 := one_div_nonneg.mpr hlogNsqNN
+  have hlogNabs  : |1 / (Real.log (N:ℝ))^2| = 1 / (Real.log (N:ℝ))^2 :=
+    abs_of_nonneg hlogNN
+  have hwScale_sq_nonneg : 0 ≤ (wScale X)^2 := sq_nonneg _
+
+  have hterm :
+    ∀ n ∈ Finset.Icc 2 (N - 2),
+      |if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+        then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+        else 0|
+      ≤ (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 := by
+        intro n hn
+        by_cases hcond : ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+        · have hn_min : 2 ≤ n := (Finset.mem_Icc.mp hn).1
+          have hn_max : n ≤ N - 2 := (Finset.mem_Icc.mp hn).2
+          have hΛn  : |Λ n| ≤ Real.log ((N:ℝ) + 1) := abs_Lambda_le_logNs N n hn_min hn_max
+          have hm_min : 2 ≤ N - n := by
+            omega
+          have hΛm : |Λ (N - n)| ≤ Real.log ((N:ℝ) + 1) := by
+            unfold Λ
+            by_cases hp : Nat.Prime (N - n)
+            · have hNm_pos : 0 < (N - n : ℝ) := by
+                have : n ≤ N := by omega
+                rw [← Nat.cast_sub this]
+                exact Nat.cast_pos.mpr (Nat.sub_pos_of_lt (by omega : n < N))
+              have hNm_ge_one : 1 ≤ (N - n : ℝ) := by
+                have : 1 ≤ N - n := Nat.one_le_of_lt (Nat.lt_of_succ_le hm_min)
+                have hn_le : n ≤ N := by omega
+                have : (1 : ℝ) ≤ ↑(N - n) := Nat.one_le_cast.mpr this
+                simp only [Nat.cast_sub hn_le] at this
+                exact this
+              have hlog_Nm_nn : 0 ≤ Real.log (N - n : ℝ) := Real.log_nonneg hNm_ge_one
+              have : (N - n : ℝ) ≤ (N.succ : ℝ) := by
+                have hn_le : n ≤ N := by omega
+                simp only [Nat.cast_succ, Nat.cast_sub hn_le]
+                have : (0 : ℝ) ≤ (n : ℝ) := Nat.cast_nonneg n
+                linarith
+              have hlog_ineq : Real.log (N - n : ℝ) ≤ Real.log (N.succ : ℝ) :=
+                Real.log_le_log hNm_pos this
+              rw [show (N.succ : ℝ) = (N : ℝ) + 1 by simp] at hlog_ineq
+              simp [hp, abs_of_nonneg hlog_Nm_nn]
+              have hn_le : n ≤ N := by omega
+              rw [Nat.cast_sub hn_le, abs_of_nonneg hlog_Nm_nn]
+              exact hlog_ineq
+            · have hlog_Np1_nn : 0 ≤ Real.log ((N : ℝ) + 1) := by
+                apply Real.log_nonneg
+                have : (0 : ℝ) ≤ (N : ℝ) := Nat.cast_nonneg N
+                linarith
+              simp [hp, abs_of_nonneg hlog_Np1_nn]
+              exact hlog_Np1_nn
+          have hw1 : |wX X n| ≤ wScale X := abs_wX_le_wScale X n
+          have hw2 : |wX X (N - n)| ≤ wScale X := abs_wX_le_wScale X (N - n)
+          have hwScale_nonneg : 0 ≤ wScale X := wScale_nonneg X
+          have hlogNp1_nn : 0 ≤ Real.log ((N:ℝ) + 1) := by
+            apply Real.log_nonneg
+            have : (0 : ℝ) ≤ (N : ℝ) := Nat.cast_nonneg N
+            linarith
+          have hfac1 : |wX X n| * |Λ n| ≤ wScale X * |Λ n| := by
+            exact mul_le_mul_of_nonneg_right hw1 (abs_nonneg _)
+          have hfac2 : |wX X (N - n)| * |Λ (N - n)| ≤ wScale X * |Λ (N - n)| := by
+            exact mul_le_mul_of_nonneg_right hw2 (abs_nonneg _)
+          have hΛprod :
+              |Λ n| * |Λ (N - n)| ≤ (Real.log ((N:ℝ) + 1))^2 := by
+            have :=
+              mul_le_mul hΛn hΛm (abs_nonneg _) hlogNp1_nn
+            simpa [pow_two] using this
+          have :
+              |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|
+                ≤ (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 := by
+            calc
+              |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|
+                  = (|wX X n| * |Λ n|) * (|wX X (N - n)| * |Λ (N - n)|) := by
+                      simp [abs_mul, mul_assoc, mul_comm, mul_left_comm]
+              _ ≤ (wScale X * |Λ n|) * (wScale X * |Λ (N - n)|) := by
+                    exact mul_le_mul hfac1 hfac2
+                      (mul_nonneg (abs_nonneg _) (abs_nonneg _))
+                      (mul_nonneg hwScale_nonneg (abs_nonneg _))
+              _ = (wScale X)^2 * (|Λ n| * |Λ (N - n)|) := by ring
+              _ ≤ (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 := by
+                    exact mul_le_mul_of_nonneg_left hΛprod hwScale_sq_nonneg
+          simpa [hcond]
+        · have hrhs_nonneg : 0 ≤ (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 :=
+            mul_nonneg hwScale_sq_nonneg (sq_nonneg _)
+          simpa [hcond, abs_of_nonneg (by norm_num : (0 : ℝ) ≤ 0)] using hrhs_nonneg
+
+  have hsum :
+    |Finset.sum (Finset.Icc 2 (N - 2))
+       (fun n => if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+        then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+        else 0)|
+    ≤ (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 := by
+    let S := Finset.filter (fun n : ℕ => (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k) (Finset.Icc 2 (N - 2))
+    have h_sum_S :
+        Finset.sum (Finset.Icc 2 (N - 2))
+          (fun n =>
+            if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+            then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+            else 0)
+        = Finset.sum S
+            (fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))) := by
+      classical
+      have := (Finset.sum_filter
+        (s := Finset.Icc 2 (N - 2))
+        (p := fun n : ℕ => (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k)
+        (f := fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))))
+      simpa [S] using this.symm
+    have :
+      |Finset.sum S (fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n)))|
+        ≤ (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 := by
+      classical
+      calc
+        |Finset.sum S (fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n)))|
+            ≤ Finset.sum S
+                (fun n => |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|) := by
+              simpa using
+                (Finset.abs_sum_le_sum_abs
+                  (s := S)
+                  (f := fun n => (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))))
+        _ ≤ Finset.sum S (fun _ => (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2) := by
+              apply Finset.sum_le_sum
+              intro n hn
+              have hn' : n ∈ Finset.Icc 2 (N - 2) := (Finset.mem_filter.mp hn).1
+              have hcond : ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k ) := (Finset.mem_filter.mp hn).2
+              have hterm' :
+                  |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|
+                    ≤ (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 := by
+                simpa [hcond] using (hterm n hn')
+              simpa using hterm'
+        _ ≤ S.card • ((wScale X)^2 * (Real.log ((N:ℝ) + 1))^2) := by
+              apply Finset.sum_le_card_nsmul
+              intro n hn
+              have hn' : n ∈ Finset.Icc 2 (N - 2) := (Finset.mem_filter.mp hn).1
+              have hcond : ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k ) := (Finset.mem_filter.mp hn).2
+              have hterm' :
+                  |(wX X n * Λ n) * (wX X (N - n) * Λ (N - n))|
+                    ≤ (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 := by
+                simpa [hcond] using (hterm n hn')
+              simpa using hterm'
+        _ ≤ 1 • ((wScale X)^2 * (Real.log ((N:ℝ) + 1))^2) := by
+              have hcard_nat : S.card ≤ 1 := by
+                simpa [S] using card_filter_offset_le_one N k
+              have hcard : (S.card : ℝ) ≤ 1 := by exact_mod_cast hcard_nat
+              have hconst_nonneg : 0 ≤ (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 :=
+                mul_nonneg hwScale_sq_nonneg (sq_nonneg _)
+              have := mul_le_mul_of_nonneg_right hcard hconst_nonneg
+              simpa [nsmul_eq_mul, one_mul] using this
+        _ = (wScale X)^2 * (Real.log ((N:ℝ) + 1))^2 := one_nsmul _
+    simpa [h_sum_S] using this
+
+  unfold P_BG payload_cap
+  calc
+    |((1 / 800 : ℝ) * (1 / (Real.log (N:ℝ))^2)) *
+      Finset.sum (Finset.Icc 2 (N - 2))
+        (fun n =>
+          if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+          then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+          else 0)|
+        = (1 / 800 : ℝ) * |1 / (Real.log (N:ℝ))^2| *
+          |Finset.sum (Finset.Icc 2 (N - 2))
+             (fun n =>
+               if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+               then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+               else 0)| := by
+              have hconst : |(1 / 800 : ℝ)| = (1 / 800 : ℝ) := by norm_num
+              rw [abs_mul, abs_mul, hconst, hlogNabs]
+    _ = (1 / 800 : ℝ) * (1 / (Real.log (N:ℝ))^2) *
+          |Finset.sum (Finset.Icc 2 (N - 2))
+             (fun n =>
+               if ( (n:ℤ) - ((N:ℤ) - (n:ℤ)) = k )
+               then (wX X n * Λ n) * (wX X (N - n) * Λ (N - n))
+               else 0)| := by
+              simp [hlogNabs, mul_comm, mul_left_comm, mul_assoc]
+    _ ≤ (1 / 800 : ℝ) * (1 / (Real.log (N:ℝ))^2) *
+          ((wScale X)^2 * (Real.log ((N:ℝ) + 1))^2) := by
+          have hpos : 0 ≤ (1 / 800 : ℝ) := by norm_num
+          have := mul_le_mul_of_nonneg_left hsum hlogNN
+          nlinarith [hpos]
+    _ = (wScale X)^2 * ((1 / 800 : ℝ) * (Real.log ((N:ℝ) + 1) / Real.log (N:ℝ))^2) := by
           field_simp [one_div, mul_comm, mul_left_comm, mul_assoc, pow_two]
 
 /-- Uniform numeric cap on the canonical window. -/

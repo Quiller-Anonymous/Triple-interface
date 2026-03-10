@@ -6,7 +6,7 @@
 -- isolated as explicit hypotheses (typeclasses), with optional pinned/certificate instances
 -- living in the relevant `Cert/*` modules.
 
-import Goldbach.CompleteTenorFunX_CanonBudget
+import Goldbach.CompleteTenorFunX_CanonBudget_Scale
 import Goldbach.Cert.InnerSwapTextbookRoute
 import Goldbach.FiniteBase.CombineAll
 import Goldbach.BG_CalibBridgeStub
@@ -19,10 +19,10 @@ theorem goldbach_funX_canon
     [Goldbach.AO_SigmaPos.SigmaUpperOnWindow]
     [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     [Goldbach.BG_Calib.WeightsBridgeHyp]
-    [Goldbach.ParallelFunXCanon.BudgetHyp] :
+    [Goldbach.ParallelFunXCanonScale.BudgetHyp] :
     ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
   have hBase : FiniteBaseUpTo 1_000_000 := Goldbach.FiniteBase.finiteBaseUpTo_1e6
-  exact Goldbach.ParallelFunXCanon.goldbach_from_tenorFunX_fun_auto (hBase := hBase)
+  exact Goldbach.ParallelFunXCanonScale.goldbach_from_tenorFunX_scale_auto (hBase := hBase)
 
 /--
 Canonical end-to-end Goldbach theorem, assuming a major-arc calibration datum.
@@ -35,18 +35,21 @@ theorem goldbach_funX_canon_of_canonCalibration
     [Goldbach.AO_SigmaPos.SigmaLowerOnWindow]
     [Goldbach.BG_Calib.WeightsBridgeHyp]
     (h : Goldbach.Cert.MajorArcCalibrationFunX.CanonicalCalibration)
-    (hεlt : Goldbach.CanonParams.ε < Goldbach.ParallelFunXCanon.c0)
+    (hεlt :
+      ∀ {X : ℕ}, Goldbach.ParallelTenorFunX.X0 ≤ X →
+        Goldbach.CanonParams.ε <
+          Goldbach.ParallelFunXCanonScale.c0 X)
     (hBudget :
       ∀ {X N : ℕ}, (1_000_000 : ℕ) ≤ X → N ∈ Goldbach.Windows.EvenIn X (10_000 : ℕ) →
         Goldbach.BG_Calib.δbridge_canon
           + (Goldbach.BG_Bank.payload_cap X N * Goldbach.BG_Identity.C_tail_closed)
           + @Goldbach.ParallelTenorFunX.δAO_gap_bound
               (Goldbach.Cert.InnerSwapTextbookRoute.innerSwapOnWindow_of_canonCalibration h)
-              Goldbach.ParallelFunXCanon.Hoff X ≤ Goldbach.CanonParams.ε) :
+              Goldbach.ParallelFunXCanonScale.Hoff X ≤ Goldbach.CanonParams.ε) :
     ∀ n, Even n → 4 ≤ n → GoldbachRep n := by
-  haveI : Goldbach.ParallelFunXCanon.BudgetHyp :=
+  haveI : Goldbach.ParallelFunXCanonScale.BudgetHyp :=
     { innerSwap := Goldbach.Cert.InnerSwapTextbookRoute.innerSwapOnWindow_of_canonCalibration h
-    , eps_lt_c0 := hεlt
+    , eps_lt_c0_on_window := hεlt
     , budget := by
         intro X N hX hN
         simpa [Goldbach.CanonParams.ε] using hBudget hX hN }

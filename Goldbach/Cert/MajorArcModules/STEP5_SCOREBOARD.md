@@ -50,10 +50,10 @@ The remaining analytic assumptions are centralized in:
 - Project-neutral spec sheet: `Goldbach/Cert/MajorArcModules/Q0TwoBoundsConventionalAxioms.lean`
 - Current pinned assumptions (fool’s gold): `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean`
 
-Note (Stage 2 target): the remaining ε₂-large Step-5 goal is generator-facing:
-`Q0MajorTailTTStarUpperBoundFromToeplitz.toeplitzExprTopTight_upper_le_U_target`,
-where `toeplitzExprTopTight_upper` is the explicit expression from
-`Q0MajorTailTTStarStep5ToeplitzUpperBound.lean`.
+Historical note: the original Stage-2 ε₂-large goal was the generator-facing comparison between
+the explicit Toeplitz-top expression and a certified `U_target`. The live theorem route in
+`Q0MajorTailTTStarUpperBoundFromToeplitz.lean` is now axiom-free; further generator work is
+therefore about tightening/sharpening, not removing an active pinned seam.
 
 Build notes:
 - Gold-grade staging bundle (no pinned axioms): `lake build Goldbach.Cert.MajorArcModules.All`

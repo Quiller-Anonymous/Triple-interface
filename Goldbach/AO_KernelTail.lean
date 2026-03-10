@@ -41,4 +41,22 @@ theorem E_kernel_bound
   simpa [E_kernel, BG_Bank.payload_cap] using
     (BG_Identity.errTI_bound_closed (X := N) (N := N) hXN hNmem)
 
+theorem E_kernel_bound_relative
+  {X N : ℕ} (hX : BG_Bank.X0 ≤ X) (hN : N ∈ EvenIn X BG_Bank.H) :
+  |E_kernel X N|
+    ≤ Goldbach.AO_WeightMass.weight_mass N
+        * (BG_Bank.payload_cap X N * BG_Identity.C_tail_closed) := by
+  have hXN : BG_Bank.X0 ≤ N := by
+    have hNX : X ≤ N := by
+      have hIn : N ∈ Goldbach.Windows.IccShift X BG_Bank.H := (Finset.mem_filter.mp hN).1
+      rcases Finset.mem_image.mp hIn with ⟨k, hk, rfl⟩
+      exact Nat.le_add_right X k
+    exact le_trans hX hNX
+  have hEven : Goldbach.Windows.IsEven N := (Finset.mem_filter.mp hN).2
+  have hNmem : N ∈ EvenIn N BG_Bank.H :=
+    Goldbach.Windows.mem_EvenIn_self (N := N) (H := BG_Bank.H) hEven
+  simpa [E_kernel, BG_Bank.payload_cap, Goldbach.AO_WeightMass.weight_mass,
+    mul_assoc, mul_left_comm, mul_comm] using
+    (BG_Identity.errTI_bound_closed_wScale_sq (X := N) (N := N) hXN hNmem)
+
 end Goldbach.AO_KernelTail

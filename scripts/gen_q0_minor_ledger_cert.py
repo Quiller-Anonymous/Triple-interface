@@ -6,6 +6,10 @@ This produces a small Lean artifact in `ℚ`:
   - nonnegativity of `C2,C3`,
   - the numeric cap check `C2/100 + C3/(9*10^12) ≤ 16`.
 
+The preferred route is to provide split constants `A2, A3` and let the script derive
+`C2 = 2 * A2`, `C3 = 2 * A3`, matching the deterministic combination theorem
+`SSUCert(A2) ∧ TypeICert(A3) ⇒ NormalizedMinorEnergy(2*A2, 2*A3)`.
+
 The analytic content (proving the actual ledger inequality for `corr_integral_minor_Q0`) is not
 generated here; this script only emits the stable numeric payload.
 """
@@ -13,18 +17,33 @@ generated here; this script only emits the stable numeric payload.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fractions import Fraction
 from pathlib import Path
+import argparse
 
 
 @dataclass(frozen=True)
 class LedgerConsts:
-    c2_q: str
-    c3_q: str
+    c2: Fraction
+    c3: Fraction
 
 
-# Placeholder values satisfying the cap by a wide margin.
+def parse_rat(text: str) -> Fraction:
+    try:
+        return Fraction(text)
+    except Exception as exc:  # pragma: no cover - defensive CLI parsing
+        raise argparse.ArgumentTypeError(f"bad rational: {text}") from exc
+
+
+def lean_q(fr: Fraction) -> str:
+    if fr.denominator == 1:
+        return f"({fr.numerator} : ℚ)"
+    return f"(({fr.numerator} : ℚ) / ({fr.denominator} : ℚ))"
+
+
+# Default placeholder values satisfying the cap by a wide margin.
 # Replace these once the constant-tracked SSU/Type-I engine is certified.
-DEFAULT = LedgerConsts(c2_q="(160 : ℚ)", c3_q="(144000000 : ℚ)")
+DEFAULT = LedgerConsts(c2=Fraction(160), c3=Fraction(144000000))
 
 
 def render(d: LedgerConsts) -> str:
@@ -45,8 +64,8 @@ def render(d: LedgerConsts) -> str:
             "noncomputable section",
             "",
             "def data : Q0MinorLedgerCert.Data :=",
-            f"  {{ C2 := {d.c2_q}",
-            f"    C3 := {d.c3_q} }}",
+            f"  {{ C2 := {lean_q(d.c2)}",
+            f"    C3 := {lean_q(d.c3)} }}",
             "",
             "theorem data_valid : data.Valid := by",
             "  native_decide",
@@ -60,12 +79,32 @@ def render(d: LedgerConsts) -> str:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--c2", type=parse_rat, default=None, help="explicit rational C2")
+    parser.add_argument("--c3", type=parse_rat, default=None, help="explicit rational C3")
+    parser.add_argument("--a2", type=parse_rat, default=None, help="split SSU constant A2")
+    parser.add_argument("--a3", type=parse_rat, default=None, help="split Type-I constant A3")
+    args = parser.parse_args()
+
+    if (args.c2 is None) ^ (args.c3 is None):
+        raise SystemExit("either supply both --c2/--c3 or neither")
+    if (args.a2 is None) ^ (args.a3 is None):
+        raise SystemExit("either supply both --a2/--a3 or neither")
+    if args.c2 is not None and args.a2 is not None:
+        raise SystemExit("use either explicit --c2/--c3 or split --a2/--a3, not both")
+
+    if args.a2 is not None:
+        payload = LedgerConsts(c2=2 * args.a2, c3=2 * args.a3)
+    elif args.c2 is not None:
+        payload = LedgerConsts(c2=args.c2, c3=args.c3)
+    else:
+        payload = DEFAULT
+
     repo_root = Path(__file__).resolve().parents[1]
     out = repo_root / "Goldbach" / "Cert" / "MajorArcModules" / "Q0MinorLedgerCertData.lean"
-    out.write_text(render(DEFAULT), encoding="utf-8")
+    out.write_text(render(payload), encoding="utf-8")
     print(f"Wrote {out}")
 
 
 if __name__ == "__main__":
     main()
-
