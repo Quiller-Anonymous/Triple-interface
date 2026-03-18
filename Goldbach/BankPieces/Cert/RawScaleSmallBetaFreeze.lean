@@ -693,6 +693,76 @@ noncomputable def frozenBetaScalarC (N : ℕ) : ℂ :=
     Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator
       (fun β : ℝ => smallBetaCenteredArchShell N 0 β) β
 
+/--
+The half-interval frozen archimedean integral matching the actual `q = 1` local textbook arc.
+
+Unlike `smallBetaFrozenArchExtractedArcRescaled`, this integrates only over `u ∈ [0,1]`, which
+is the correct rescaled surface exposed by the exact `q = 1` local rewrite.
+-/
+noncomputable def smallBetaFrozenArchExtractedArcRescaledHalfQ1 (N : ℕ) : ℂ :=
+  ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+      Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+    Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+      ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaFrozenRescaledArchShell N u β) β
+
+/--
+The corrected frozen `q = 1` archimedean scalar family.
+
+This keeps the same explicit `1/X` normalization as `AqLocalC X N 1`, but uses the half-interval
+frozen integral that actually matches the principal textbook arc.
+-/
+noncomputable def AqFrozenHalfQ1C (X N : ℕ) : ℂ :=
+  ((((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))⁻¹)
+    * ((((X : ℝ) : ℂ))⁻¹)
+    * smallBetaFrozenArchExtractedArcRescaledHalfQ1 N
+
+/--
+The phase-corrected half-interval frozen shell for the principal arc.
+
+This incorporates the exact deterministic phase `e(2u/X)` suggested by the midpoint correction
+`N ↦ N + 2` on the range `n,m ∈ {4,…,N-2}`.
+-/
+noncomputable def smallBetaPhaseCorrectedFrozenRescaledArchShellQ1
+    (X N : ℕ) (u β : ℝ) : ℂ :=
+  Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+    * smallBetaFrozenRescaledArchShell N u β
+
+/--
+The corresponding phase-corrected half-interval frozen archimedean integral for `q = 1`.
+-/
+noncomputable def smallBetaPhaseCorrectedFrozenArchExtractedArcRescaledHalfQ1
+    (X N : ℕ) : ℂ :=
+  ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+      Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+    Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+      ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β) β
+
+/--
+The phase-corrected principal-arc frozen scalar family.
+-/
+noncomputable def AqFrozenHalfQ1CorrectedC (X N : ℕ) : ℂ :=
+  ((((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))⁻¹)
+    * ((((X : ℝ) : ℂ))⁻¹)
+    * smallBetaPhaseCorrectedFrozenArchExtractedArcRescaledHalfQ1 X N
+
+/-- The corresponding half-interval rescaled shell gap for the exceptional arc `q = 1`. -/
+noncomputable def smallBetaRescaledGapExtractedArcHalfQ1 (X N : ℕ) : ℂ :=
+  ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+      Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+    Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+      ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledShellGap X N 1 u β) β
+
+/--
+The corresponding half-interval gap against the phase-corrected frozen principal-arc model.
+-/
+noncomputable def smallBetaRescaledGapExtractedArcHalfQ1Corrected (X N : ℕ) : ℂ :=
+  ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+      Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+    Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+      ∫ u in (0 : ℝ)..(1 : ℝ),
+        (smallBetaRescaledArchShell X N 1 u β
+          - smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β)) β
+
 private lemma integral_centeredUnitSet_one_indicator_const (z : ℂ) :
     ∫ u : ℝ, (centeredUnitSet (1 : ℝ)).indicator (fun _ : ℝ => z) u = (2 : ℂ) * z := by
   have hs : MeasurableSet (centeredUnitSet (1 : ℝ)) := measurableSet_centeredUnitSet (1 : ℝ)
@@ -709,6 +779,41 @@ private lemma integral_centeredUnitSet_one_indicator_const (z : ℂ) :
     (f := fun _ : ℝ => z) hs]
   rw [integral_const]
   simp [hvol, s]
+
+private lemma intervalIntegral_zero_one_const (z : ℂ) :
+    ∫ u in (0 : ℝ)..(1 : ℝ), z = z := by
+  simpa using (intervalIntegral.integral_const (a := (0 : ℝ)) (b := (1 : ℝ)) (c := z))
+
+theorem smallBetaFrozenArchExtractedArcRescaledHalfQ1_eq_frozenBetaScalarC
+    (N : ℕ) :
+    smallBetaFrozenArchExtractedArcRescaledHalfQ1 N = frozenBetaScalarC N := by
+  unfold smallBetaFrozenArchExtractedArcRescaledHalfQ1 frozenBetaScalarC
+  have hrewrite :
+      (fun β : ℝ =>
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+          ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaFrozenRescaledArchShell N u β) β)
+        =
+      (fun β : ℝ =>
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator
+          (fun β : ℝ => smallBetaCenteredArchShell N 0 β) β) := by
+    funext β
+    by_cases hβ : β ∈ Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet
+    · simp [hβ, smallBetaFrozenRescaledArchShell, intervalIntegral_zero_one_const]
+    · simp [hβ]
+  refine intervalIntegral.integral_congr_ae ?_
+  exact Filter.Eventually.of_forall <| fun β _ => by
+    have hpt := congrArg (fun f : ℝ → ℂ => f β) hrewrite
+    simpa using hpt
+
+theorem AqFrozenHalfQ1C_eq_inv_weight_mass_mul_inv_X_mul_frozenBetaScalarC
+    (X N : ℕ) :
+    AqFrozenHalfQ1C X N
+      =
+    ((((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))⁻¹)
+      * ((((X : ℝ) : ℂ))⁻¹)
+      * frozenBetaScalarC N := by
+  unfold AqFrozenHalfQ1C
+  rw [smallBetaFrozenArchExtractedArcRescaledHalfQ1_eq_frozenBetaScalarC]
 
 theorem smallBetaFrozenArchExtractedArcRescaled_eq_two_mul_frozenBetaScalarC
     (X N q : ℕ) :
@@ -972,6 +1077,21 @@ private lemma continuous_smallBetaFrozenRescaledArchShell_uncurry (N : ℕ) :
   simpa [phi, smallBetaFrozenRescaledArchShell] using
     (continuous_smallBetaCenteredArchShell_uncurry N).comp hphi
 
+private lemma continuous_smallBetaPhaseCorrectedFrozenRescaledArchShellQ1_uncurry
+    (X N : ℕ) :
+    Continuous fun p : ℝ × ℝ => smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N p.2 p.1 := by
+  have hphase : Continuous fun p : ℝ × ℝ =>
+      Goldbach.Cert.MajorArcExponential.e (2 * p.2 / (X : ℝ)) := by
+    unfold Goldbach.Cert.MajorArcExponential.e
+    have harg : Continuous fun p : ℝ × ℝ =>
+        (Complex.I : ℂ) * (2 * Real.pi * (2 * p.2 / (X : ℝ))) := by
+      exact continuous_const.mul <|
+        (continuous_ofReal.comp <|
+          (continuous_const.mul continuous_snd).div_const (X : ℝ))
+    simpa using Complex.continuous_exp.comp harg
+  simpa [smallBetaPhaseCorrectedFrozenRescaledArchShellQ1]
+    using hphase.mul (continuous_smallBetaFrozenRescaledArchShell_uncurry N)
+
 private lemma integral_indicator_centeredUnitSet_one_smallBetaRescaledArchShell_eq_intervalIntegral
     (X N q : ℕ) (β : ℝ) :
     (∫ u : ℝ, (centeredUnitSet (1 : ℝ)).indicator
@@ -1203,6 +1323,106 @@ private lemma intervalIntegrable_betaSmall_indicator_inner_smallBetaFrozenRescal
       Goldbach.Cert.MajorArcModules.BetaLocalization.measurableSet_betaSmallSet
       hInt
 
+private lemma continuous_beta_intervalIntegral_smallBetaRescaledArchShell_halfQ1
+    (X N : ℕ) :
+    Continuous fun β : ℝ =>
+      ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β := by
+  simpa using
+    (intervalIntegral.continuous_parametric_intervalIntegral_of_continuous'
+      (f := fun β u => smallBetaRescaledArchShell X N 1 u β)
+      (hf := by
+        simpa [Function.uncurry] using continuous_smallBetaRescaledArchShell_uncurry X N 1)
+      (0 : ℝ) (1 : ℝ))
+
+private lemma continuous_beta_intervalIntegral_smallBetaFrozenRescaledArchShell_halfQ1
+    (N : ℕ) :
+    Continuous fun β : ℝ =>
+      ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaFrozenRescaledArchShell N u β := by
+  simpa using
+    (intervalIntegral.continuous_parametric_intervalIntegral_of_continuous'
+      (f := fun β u => smallBetaFrozenRescaledArchShell N u β)
+      (hf := by
+        simpa [Function.uncurry] using continuous_smallBetaFrozenRescaledArchShell_uncurry N)
+      (0 : ℝ) (1 : ℝ))
+
+private lemma intervalIntegrable_betaSmall_indicator_inner_smallBetaRescaledArchShell_halfQ1
+    (X N : ℕ) :
+    IntervalIntegrable
+      (fun β : ℝ =>
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator
+          (fun β : ℝ => ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β)
+      volume Goldbach.Cert.MajorArcModules.BetaInterval.aβ
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ := by
+  have hInt :
+      IntervalIntegrable
+        (fun β : ℝ => ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β)
+        volume Goldbach.Cert.MajorArcModules.BetaInterval.aβ
+          Goldbach.Cert.MajorArcModules.BetaInterval.bβ :=
+    (continuous_beta_intervalIntegral_smallBetaRescaledArchShell_halfQ1 X N).intervalIntegrable _ _
+  exact
+    Goldbach.Cert.MajorArcModules.BetaLocalization.intervalIntegrable_indicator_of_intervalIntegrable
+      (a := Goldbach.Cert.MajorArcModules.BetaInterval.aβ)
+      (b := Goldbach.Cert.MajorArcModules.BetaInterval.bβ)
+      (s := Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet)
+      Goldbach.Cert.MajorArcModules.BetaLocalization.measurableSet_betaSmallSet
+      hInt
+
+private lemma intervalIntegrable_betaSmall_indicator_inner_smallBetaFrozenRescaledArchShell_halfQ1
+    (N : ℕ) :
+    IntervalIntegrable
+      (fun β : ℝ =>
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator
+          (fun β : ℝ => ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaFrozenRescaledArchShell N u β) β)
+      volume Goldbach.Cert.MajorArcModules.BetaInterval.aβ
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ := by
+  have hInt :
+      IntervalIntegrable
+        (fun β : ℝ => ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaFrozenRescaledArchShell N u β)
+        volume Goldbach.Cert.MajorArcModules.BetaInterval.aβ
+          Goldbach.Cert.MajorArcModules.BetaInterval.bβ :=
+    (continuous_beta_intervalIntegral_smallBetaFrozenRescaledArchShell_halfQ1 N).intervalIntegrable _ _
+  exact
+    Goldbach.Cert.MajorArcModules.BetaLocalization.intervalIntegrable_indicator_of_intervalIntegrable
+      (a := Goldbach.Cert.MajorArcModules.BetaInterval.aβ)
+      (b := Goldbach.Cert.MajorArcModules.BetaInterval.bβ)
+      (s := Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet)
+      Goldbach.Cert.MajorArcModules.BetaLocalization.measurableSet_betaSmallSet
+      hInt
+
+private lemma continuous_beta_intervalIntegral_smallBetaPhaseCorrectedFrozenRescaledArchShell_halfQ1
+    (X N : ℕ) :
+    Continuous fun β : ℝ =>
+      ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β := by
+  simpa using
+    (intervalIntegral.continuous_parametric_intervalIntegral_of_continuous'
+      (f := fun β u => smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β)
+      (hf := by
+        simpa [Function.uncurry] using
+          continuous_smallBetaPhaseCorrectedFrozenRescaledArchShellQ1_uncurry X N)
+      (0 : ℝ) (1 : ℝ))
+
+private lemma intervalIntegrable_betaSmall_indicator_inner_smallBetaPhaseCorrectedFrozenRescaledArchShell_halfQ1
+    (X N : ℕ) :
+    IntervalIntegrable
+      (fun β : ℝ =>
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator
+          (fun β : ℝ => ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β) β)
+      volume Goldbach.Cert.MajorArcModules.BetaInterval.aβ
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ := by
+  have hInt :
+      IntervalIntegrable
+        (fun β : ℝ => ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β)
+        volume Goldbach.Cert.MajorArcModules.BetaInterval.aβ
+          Goldbach.Cert.MajorArcModules.BetaInterval.bβ :=
+    (continuous_beta_intervalIntegral_smallBetaPhaseCorrectedFrozenRescaledArchShell_halfQ1 X N).intervalIntegrable _ _
+  exact
+    Goldbach.Cert.MajorArcModules.BetaLocalization.intervalIntegrable_indicator_of_intervalIntegrable
+      (a := Goldbach.Cert.MajorArcModules.BetaInterval.aβ)
+      (b := Goldbach.Cert.MajorArcModules.BetaInterval.bβ)
+      (s := Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet)
+      Goldbach.Cert.MajorArcModules.BetaLocalization.measurableSet_betaSmallSet
+      hInt
+
 theorem smallBetaRescaledGapExtractedArc_eq_sub
     (X N q : ℕ) :
     smallBetaRescaledGapExtractedArc X N q (1 : ℝ)
@@ -1214,6 +1434,174 @@ theorem smallBetaRescaledGapExtractedArc_eq_sub
   · exact intervalIntegrable_betaSmall_indicator_inner_smallBetaFrozenRescaledArchShell_one N
   · intro β
     exact integral_indicator_centeredUnitSet_one_smallBetaRescaledShellGap_eq_sub X N q β
+
+theorem smallBetaRescaledGapExtractedArcHalfQ1_eq_sub
+    (X N : ℕ) :
+    smallBetaRescaledGapExtractedArcHalfQ1 X N
+      =
+    (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+          ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β)
+      -
+    smallBetaFrozenArchExtractedArcRescaledHalfQ1 N := by
+  unfold smallBetaRescaledGapExtractedArcHalfQ1 smallBetaFrozenArchExtractedArcRescaledHalfQ1
+  have hcentu :
+      ∀ β : ℝ,
+        IntervalIntegrable (fun u : ℝ => smallBetaRescaledArchShell X N 1 u β)
+          volume (0 : ℝ) (1 : ℝ) := by
+    intro β
+    have hcont : Continuous fun u : ℝ => smallBetaRescaledArchShell X N 1 u β := by
+      let psi : ℝ → ℝ × ℝ := fun u => (β, u)
+      have hpsi : Continuous psi := continuous_const.prodMk continuous_id
+      simpa [psi] using (continuous_smallBetaRescaledArchShell_uncurry X N 1).comp hpsi
+    exact hcont.intervalIntegrable _ _
+  have hfrozu :
+      ∀ β : ℝ,
+        IntervalIntegrable (fun u : ℝ => smallBetaFrozenRescaledArchShell N u β)
+          volume (0 : ℝ) (1 : ℝ) := by
+    intro β
+    have hcont : Continuous fun u : ℝ => smallBetaFrozenRescaledArchShell N u β := by
+      let psi : ℝ → ℝ × ℝ := fun u => (β, u)
+      have hpsi : Continuous psi := continuous_const.prodMk continuous_id
+      simpa [psi] using (continuous_smallBetaFrozenRescaledArchShell_uncurry N).comp hpsi
+    exact hcont.intervalIntegrable _ _
+  calc
+    ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+      Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+        ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledShellGap X N 1 u β) β
+      =
+    ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+      (Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+        ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β
+        -
+      Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+        ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaFrozenRescaledArchShell N u β) β) := by
+          refine intervalIntegral.integral_congr_ae ?_
+          exact Filter.Eventually.of_forall <| fun β _ => by
+            by_cases hβ : β ∈ Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet
+            · simp [hβ]
+              calc
+                ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledShellGap X N 1 u β
+                  =
+                ∫ u in (0 : ℝ)..(1 : ℝ),
+                  (smallBetaRescaledArchShell X N 1 u β
+                    - smallBetaFrozenRescaledArchShell N u β) := by
+                      refine intervalIntegral.integral_congr_ae ?_
+                      exact Filter.Eventually.of_forall <| fun u _ =>
+                        smallBetaRescaledShellGap_eq_sub X N 1 u β
+                _ =
+                (∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β)
+                  - ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaFrozenRescaledArchShell N u β := by
+                      rw [intervalIntegral.integral_sub (hcentu β) (hfrozu β)]
+            · simp [hβ]
+    _ =
+    (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+          ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β)
+      -
+    (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+          ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaFrozenRescaledArchShell N u β) β) := by
+          rw [intervalIntegral.integral_sub
+            (intervalIntegrable_betaSmall_indicator_inner_smallBetaRescaledArchShell_halfQ1 X N)
+            (intervalIntegrable_betaSmall_indicator_inner_smallBetaFrozenRescaledArchShell_halfQ1 N)]
+
+theorem AqLocalC_q1_sub_AqFrozenHalfQ1C_eq_inv_weight_mass_mul_inv_X_mul_halfGap
+    (X N : ℕ) (hX : 2 ≤ X) :
+    AqLocalC X N 1 - AqFrozenHalfQ1C X N
+      =
+    ((((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))⁻¹)
+      * ((((X : ℝ) : ℂ))⁻¹)
+      * smallBetaRescaledGapExtractedArcHalfQ1 X N := by
+  rw [AqLocalC_q1_eq_inv_weight_mass_mul_inv_X_mul_rescaled_half X N hX,
+    AqFrozenHalfQ1C_eq_inv_weight_mass_mul_inv_X_mul_frozenBetaScalarC]
+  rw [← smallBetaFrozenArchExtractedArcRescaledHalfQ1_eq_frozenBetaScalarC]
+  rw [smallBetaRescaledGapExtractedArcHalfQ1_eq_sub]
+  ring
+
+theorem smallBetaRescaledGapExtractedArcHalfQ1Corrected_eq_sub
+    (X N : ℕ) :
+    smallBetaRescaledGapExtractedArcHalfQ1Corrected X N
+      =
+    (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+          ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β)
+      -
+    smallBetaPhaseCorrectedFrozenArchExtractedArcRescaledHalfQ1 X N := by
+  unfold smallBetaRescaledGapExtractedArcHalfQ1Corrected
+    smallBetaPhaseCorrectedFrozenArchExtractedArcRescaledHalfQ1
+  have hcorru :
+      ∀ β : ℝ,
+        IntervalIntegrable
+          (fun u : ℝ => smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β)
+          volume (0 : ℝ) (1 : ℝ) := by
+    intro β
+    have hcont : Continuous fun u : ℝ => smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β := by
+      let psi : ℝ → ℝ × ℝ := fun u => (β, u)
+      have hpsi : Continuous psi := continuous_const.prodMk continuous_id
+      simpa [psi] using
+        (continuous_smallBetaPhaseCorrectedFrozenRescaledArchShellQ1_uncurry X N).comp hpsi
+    exact hcont.intervalIntegrable _ _
+  calc
+    ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+      Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+        ∫ u in (0 : ℝ)..(1 : ℝ),
+          (smallBetaRescaledArchShell X N 1 u β
+            - smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β)) β
+      =
+    ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+      (Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+        ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β
+        -
+      Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+        ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β) β) := by
+          refine intervalIntegral.integral_congr_ae ?_
+          exact Filter.Eventually.of_forall <| fun β _ => by
+            by_cases hβ : β ∈ Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet
+            · simp [hβ]
+              rw [intervalIntegral.integral_sub
+                (by
+                  have hcont : Continuous fun u : ℝ => smallBetaRescaledArchShell X N 1 u β := by
+                    let psi : ℝ → ℝ × ℝ := fun u => (β, u)
+                    have hpsi : Continuous psi := continuous_const.prodMk continuous_id
+                    simpa [psi] using
+                      (continuous_smallBetaRescaledArchShell_uncurry X N 1).comp hpsi
+                  exact hcont.intervalIntegrable _ _)
+                (hcorru β)]
+            · simp [hβ]
+    _ =
+    (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+          ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β)
+      -
+    (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+          ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β) β) := by
+          rw [intervalIntegral.integral_sub
+            (intervalIntegrable_betaSmall_indicator_inner_smallBetaRescaledArchShell_halfQ1 X N)
+            (intervalIntegrable_betaSmall_indicator_inner_smallBetaPhaseCorrectedFrozenRescaledArchShell_halfQ1 X N)]
+
+theorem AqLocalC_q1_sub_AqFrozenHalfQ1CorrectedC_eq_inv_weight_mass_mul_inv_X_mul_halfGapCorrected
+    (X N : ℕ) (hX : 2 ≤ X) :
+    AqLocalC X N 1 - AqFrozenHalfQ1CorrectedC X N
+      =
+    ((((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))⁻¹)
+      * ((((X : ℝ) : ℂ))⁻¹)
+      * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N := by
+  rw [AqLocalC_q1_eq_inv_weight_mass_mul_inv_X_mul_rescaled_half X N hX]
+  unfold AqFrozenHalfQ1CorrectedC
+  rw [smallBetaRescaledGapExtractedArcHalfQ1Corrected_eq_sub]
+  ring
 
 theorem AqFrozenC_eq_inv_weight_mass_mul_inv_qX_mul_frozenRawScalarC
     (X N q : ℕ) (Δ : ℝ) :

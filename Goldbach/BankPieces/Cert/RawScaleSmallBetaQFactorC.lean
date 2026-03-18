@@ -47,6 +47,21 @@ noncomputable def AqLocalC (X N q : ℕ) : ℂ :=
   else
     AqC X N q (1 : ℝ)
 
+theorem AqLocalC_q1_eq_inv_weight_mass_mul_inv_X_mul_rescaled_half
+    (X N : ℕ) (hX : 2 ≤ X) :
+    AqLocalC X N 1
+      =
+    ((((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))⁻¹)
+      * ((((X : ℝ) : ℂ))⁻¹)
+      * (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+          Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+          Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+            ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β) := by
+  unfold AqLocalC
+  simp
+  rw [smallBetaLocalArchExtractedArc_q1_eq_inv_X_mul_rescaled_half X N hX]
+  simp [mul_assoc]
+
 private lemma rcop_one_mem_zero :
     0 ∈ Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop 1 := by
   simp [Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop]

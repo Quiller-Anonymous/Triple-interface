@@ -193,6 +193,69 @@ private lemma centered_indicator_comp_div_eq_unit_indicator
         simpa [centeredUnitSet] using this)
     simp [hu, hnot, smallBetaRescaledArchShell]
 
+private lemma intervalIntegral_indicator_arcSetTextbook_q1_eq_short
+    {X : ℕ} (hX : 2 ≤ X) {f : ℝ → ℂ} :
+    (∫ α in (0 : ℝ)..(1 : ℝ),
+        (Goldbach.Cert.MajorArcStep24IntegralExtraction.arcSetTextbook X 1 0 (1 : ℝ)).indicator
+          f α)
+      =
+    ∫ α in (0 : ℝ)..((1 : ℝ) / (X : ℝ)), f α := by
+  set r : ℝ := (1 : ℝ) / (X : ℝ)
+  have hr0 : 0 ≤ r := by
+    have hXpos : (0 : ℝ) < (X : ℝ) := by
+      have : (0 : ℕ) < X := lt_of_lt_of_le (by decide : (0 : ℕ) < 2) hX
+      exact_mod_cast this
+    exact one_div_nonneg.mpr (le_of_lt hXpos)
+  have hr1 : r ≤ 1 := by
+    have hX1 : (1 : ℝ) ≤ (X : ℝ) := by
+      have : (1 : ℕ) ≤ X := le_trans (by decide : (1 : ℕ) ≤ 2) hX
+      exact_mod_cast this
+    simpa [r, one_div] using
+      (one_div_le_one_div_of_le (by positivity : (0 : ℝ) < (1 : ℝ)) hX1)
+  have hrIcc : r ∈ Set.Icc (0 : ℝ) (1 : ℝ) := ⟨hr0, hr1⟩
+  have hEqOn :
+      Set.EqOn
+        ((Goldbach.Cert.MajorArcStep24IntegralExtraction.arcSetTextbook X 1 0 (1 : ℝ)).indicator f)
+        (({x : ℝ | x ≤ r}).indicator f)
+        (Set.uIcc (0 : ℝ) (1 : ℝ)) := by
+    intro x hx
+    have hx0 : 0 ≤ x := by simpa using hx.1
+    have hxArc_iff :
+        x ∈ Goldbach.Cert.MajorArcStep24IntegralExtraction.arcSetTextbook X 1 0 (1 : ℝ)
+          ↔ x ≤ r := by
+      have :
+          x ∈ Goldbach.Cert.MajorArcStep24IntegralExtraction.arcSetTextbook X 1 0 (1 : ℝ)
+            ↔ |x - (0 : ℝ)| ≤ r := by
+        simp [Goldbach.Cert.MajorArcStep24IntegralExtraction.arcSetTextbook, r, one_mul]
+      simpa [abs_of_nonneg hx0] using this
+    by_cases hxle : x ≤ r
+    · have hxArc :
+          x ∈ Goldbach.Cert.MajorArcStep24IntegralExtraction.arcSetTextbook X 1 0 (1 : ℝ) :=
+        hxArc_iff.mpr hxle
+      simp [hxArc, hxle]
+    · have hxArc :
+          x ∉ Goldbach.Cert.MajorArcStep24IntegralExtraction.arcSetTextbook X 1 0 (1 : ℝ) := by
+            intro hxArc
+            exact hxle (hxArc_iff.mp hxArc)
+      simp [hxArc, hxle]
+  have hRewrite :
+      (∫ α in (0 : ℝ)..(1 : ℝ),
+          (Goldbach.Cert.MajorArcStep24IntegralExtraction.arcSetTextbook X 1 0 (1 : ℝ)).indicator
+            f α)
+        =
+      ∫ α in (0 : ℝ)..(1 : ℝ), ({x : ℝ | x ≤ r}).indicator f α := by
+    simpa using
+      (intervalIntegral.integral_congr (μ := MeasureTheory.volume) (a := (0 : ℝ)) (b := (1 : ℝ))
+        hEqOn)
+  have hShort :
+      (∫ α in (0 : ℝ)..(1 : ℝ), ({x : ℝ | x ≤ r}).indicator f α)
+        =
+      ∫ α in (0 : ℝ)..r, f α := by
+    simpa using
+      (intervalIntegral.integral_indicator (μ := MeasureTheory.volume) (a₁ := (0 : ℝ))
+        (a₂ := r) (a₃ := (1 : ℝ)) (f := f) hrIcc)
+  exact hRewrite.trans hShort
+
 theorem smallBetaCenteredArchExtractedArcGlobal_eq_inv_qX_mul_rescaled
     (X N q : ℕ) (Δ : ℝ) (hX : 1 ≤ X) (hq : 1 ≤ q) :
     smallBetaCenteredArchExtractedArcGlobal X N q Δ
@@ -698,6 +761,102 @@ theorem smallBetaLocalExtractedArc_eq_localPhaseFactor_mul_weight_mass_mul_AqC
     localPhaseFactor q a N
       * ((((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ)) * AqC X N q (1 : ℝ)) := by
           rw [smallBetaLocalArchExtractedArc_eq_weight_mass_mul_AqC X N q a hX hq ha]
+
+theorem smallBetaLocalArchExtractedArc_q1_eq_inv_X_mul_rescaled_half
+    (X N : ℕ) (hX : 2 ≤ X) :
+    smallBetaLocalArchExtractedArc X N 1 0 (1 : ℝ)
+      =
+    ((((X : ℝ) : ℂ))⁻¹)
+      * (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+          Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+          Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+            ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β) := by
+  have hXneR : (X : ℝ) ≠ 0 := by
+    exact_mod_cast (Nat.ne_of_gt (lt_of_lt_of_le (by decide : (0 : ℕ) < 2) hX))
+  unfold smallBetaLocalArchExtractedArc
+  have houter :
+      (fun β : ℝ =>
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+          ∫ α in (0 : ℝ)..(1 : ℝ),
+            (Goldbach.Cert.MajorArcStep24IntegralExtraction.arcSetTextbook X 1 0 (1 : ℝ)).indicator
+              (fun α => smallBetaLocalArchShell X N 1 0 α β) α) β)
+        =
+      (fun β : ℝ =>
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+          ((((X : ℝ) : ℂ))⁻¹)
+            * (∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β)) β) := by
+    funext β
+    by_cases hβ : β ∈ Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet
+    · rw [Set.indicator_of_mem hβ, Set.indicator_of_mem hβ]
+      have hcenter :
+          (fun α : ℝ => smallBetaLocalArchShell X N 1 0 α β)
+            =
+          (fun α : ℝ => smallBetaCenteredArchShell N α β) := by
+            funext α
+            simpa [smallBetaLocalArchShell_eq_centered, localShift]
+      rw [hcenter]
+      rw [intervalIntegral_indicator_arcSetTextbook_q1_eq_short (X := X) hX]
+      have htmp :
+          (((X : ℝ)⁻¹ : ℝ) •
+              (∫ u in (0 : ℝ)..(1 : ℝ), smallBetaCenteredArchShell N (u / (X : ℝ)) β))
+            =
+          ∫ α in (0 : ℝ) / (X : ℝ)..(1 : ℝ) / (X : ℝ), smallBetaCenteredArchShell N α β := by
+            simpa using
+              (intervalIntegral.inv_smul_integral_comp_div (f := fun t : ℝ =>
+                smallBetaCenteredArchShell N t β) (a := (0 : ℝ)) (b := (1 : ℝ))
+                (c := (X : ℝ)))
+      have hrewrite :
+          (fun u : ℝ => smallBetaCenteredArchShell N (u / (X : ℝ)) β)
+            =
+          (fun u : ℝ => smallBetaRescaledArchShell X N 1 u β) := by
+            funext u
+            simp [smallBetaRescaledArchShell]
+      calc
+        (∫ α in (0 : ℝ)..((1 : ℝ) / (X : ℝ)), smallBetaCenteredArchShell N α β)
+            =
+        ∫ α in (0 : ℝ) / (X : ℝ)..(1 : ℝ) / (X : ℝ), smallBetaCenteredArchShell N α β := by
+              simp
+        _ =
+        (((X : ℝ)⁻¹ : ℝ) •
+          (∫ u in (0 : ℝ)..(1 : ℝ), smallBetaCenteredArchShell N (u / (X : ℝ)) β)) := by
+            simpa using htmp.symm
+        _ =
+        (((X : ℝ)⁻¹ : ℝ) •
+          (∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β)) := by
+            simp [hrewrite]
+        _ =
+        ((((X : ℝ) : ℂ))⁻¹)
+          * (∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) := by
+            simp [smul_eq_mul, div_eq_inv_mul, hXneR]
+    · simp [hβ]
+  rw [houter]
+  calc
+    ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+        Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator
+          (fun β : ℝ => ((((X : ℝ) : ℂ))⁻¹)
+            * (∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β)) β
+      =
+      ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+        ((((X : ℝ) : ℂ))⁻¹)
+          * Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator
+              (fun β : ℝ => ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β := by
+        refine intervalIntegral.integral_congr_ae ?_
+        exact Filter.Eventually.of_forall (fun β => by
+          by_cases hβ : β ∈ Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet <;>
+            simp [hβ, mul_assoc])
+    _ =
+      ((((X : ℝ) : ℂ))⁻¹)
+        * (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+            Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator
+              (fun β : ℝ => ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β) := by
+        exact
+          (intervalIntegral.integral_const_mul
+            (a := Goldbach.Cert.MajorArcModules.BetaInterval.aβ)
+            (b := Goldbach.Cert.MajorArcModules.BetaInterval.bβ)
+            ((((X : ℝ) : ℂ))⁻¹)
+            (fun β : ℝ =>
+              Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator
+                (fun β : ℝ => ∫ u in (0 : ℝ)..(1 : ℝ), smallBetaRescaledArchShell X N 1 u β) β))
 
 end
 

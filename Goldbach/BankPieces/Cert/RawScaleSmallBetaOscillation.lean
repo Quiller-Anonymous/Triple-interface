@@ -84,6 +84,55 @@ theorem rescaled_shell_summand_sub_frozen_eq_phase_diff
   simp
 
 /--
+For `q = 1`, the exact local oscillation carries a deterministic midpoint phase
+`e (2u / X)`, after which the surviving defect is centered at `N + 2`.
+-/
+theorem rescaled_shell_summand_q1_eq_phase_corrected_centered
+    (X N n m : ℕ) (u β : ℝ) :
+    e (((-(N : ℤ) : ℝ) * (u / (X : ℝ))))
+        * (gExp ((u / (X : ℝ)) + β) n
+            * gExp ((u / (X : ℝ)) - β) m)
+      =
+    e (2 * u / (X : ℝ))
+      * e
+          (β * ((n : ℝ) - (m : ℝ))
+            + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ)))) := by
+  have h :=
+    rescaled_shell_summand_eq_single_phase
+      (X := X) (N := N) (q := 1) (n := n) (m := m) (u := u) (β := β)
+  simp only [one_mul] at h
+  rw [h]
+  congr 1
+  norm_num
+  ring
+
+/--
+Exact difference identity for the midpoint-corrected `q = 1` defect.
+
+After factoring out the deterministic phase `e (2u / X)`, the remaining local discrepancy is
+centered at `N + 2`.
+-/
+theorem rescaled_shell_summand_sub_phase_corrected_frozen_q1_eq_phase_diff
+    (X N n m : ℕ) (u β : ℝ) :
+    e (((-(N : ℤ) : ℝ) * (u / (X : ℝ))))
+        * (gExp ((u / (X : ℝ)) + β) n
+            * gExp ((u / (X : ℝ)) - β) m)
+      -
+      e (2 * u / (X : ℝ))
+        * (e (((-(N : ℤ) : ℝ) * (0 : ℝ))) * (gExp (0 + β) n * gExp (0 - β) m))
+      =
+    e (2 * u / (X : ℝ))
+      * (e
+          (β * ((n : ℝ) - (m : ℝ))
+            + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+          -
+        e (β * ((n : ℝ) - (m : ℝ)))) := by
+  rw [rescaled_shell_summand_q1_eq_phase_corrected_centered]
+  rw [centered_shell_summand_eq_single_phase (N := N) (n := n) (m := m) (θ := 0) (β := β)]
+  simp
+  ring
+
+/--
 Norm bound for the local oscillatory difference, conditional on the standard smallness hypothesis
 needed by `norm_e_sub_e_le_of_abs_two_pi_mul_sub_le_one`.
 -/
@@ -115,6 +164,38 @@ theorem norm_rescaled_shell_summand_sub_frozen_le
       hxy
   simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm, mul_assoc, mul_left_comm, mul_comm]
     using hbound
+
+/--
+Norm bound for the midpoint-corrected `q = 1` defect.
+
+The remaining oscillatory scale is now governed by `n + m - (N + 2)`.
+-/
+theorem norm_rescaled_shell_summand_sub_phase_corrected_frozen_q1_le
+    (X N n m : ℕ) (u β : ℝ)
+    (hsmall :
+      |2 * Real.pi * ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))| ≤ 1) :
+    ‖e (((-(N : ℤ) : ℝ) * (u / (X : ℝ))))
+        * (gExp ((u / (X : ℝ)) + β) n
+            * gExp ((u / (X : ℝ)) - β) m)
+      -
+      e (2 * u / (X : ℝ))
+        * (e (((-(N : ℤ) : ℝ) * (0 : ℝ))) * (gExp (0 + β) n * gExp (0 - β) m))‖
+      ≤
+    4 * Real.pi * |(u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ)) )| := by
+  rw [rescaled_shell_summand_sub_phase_corrected_frozen_q1_eq_phase_diff]
+  rw [norm_mul, norm_e]
+  simp only [one_mul]
+  have hbound :=
+    Goldbach.Cert.MajorArcExponential.norm_e_sub_e_le_of_abs_two_pi_mul_sub_le_one
+      (x :=
+        β * ((n : ℝ) - (m : ℝ))
+          + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+      (y := β * ((n : ℝ) - (m : ℝ)))
+      (by
+        simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm,
+          mul_assoc, mul_left_comm, mul_comm] using hsmall)
+  simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm,
+    mul_assoc, mul_left_comm, mul_comm] using hbound
 
 /--
 Linear growth bound for the additive character along an arithmetic progression:
