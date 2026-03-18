@@ -477,5 +477,152 @@ theorem tail_reindex_bound (Q N : ℕ) (hN0 : N ≠ 0) :
 
   exact (ENNReal.ofReal_le_iff_le_toReal hb).1 hmain
 
+/-- The ENNReal tail majorant is bounded by the reindexed divisor majorant. -/
+theorem sigmaTailENN_le_reindexMajorantENN (Q N : ℕ) (hN0 : N ≠ 0) :
+    sigmaTailENN Q N ≤ reindexMajorantENN Q N := by
+  have h1 : sigmaTailENN Q N ≤ ∑' q : ℕ, qMajorant Q q N :=
+    sigmaTailENN_le_tsum_qMajorant (Q := Q) (N := N)
+  have h2 : (∑' q : ℕ, qMajorant Q q N) ≤ ∑' q : ℕ, gcdMajorant Q q N :=
+    tsum_qMajorant_le_tsum_gcdMajorant (Q := Q) (N := N)
+  have h3 : (∑' q : ℕ, gcdMajorant Q q N) ≤ reindexMajorantENN Q N :=
+    tsum_gcdMajorant_le_reindexMajorantENN (Q := Q) (N := N) hN0
+  exact le_trans (le_trans h1 h2) h3
+
+/-- The reindexed ENNReal majorant is finite whenever `N ≠ 0`. -/
+theorem reindexMajorantENN_ne_top (Q N : ℕ) (hN0 : N ≠ 0) :
+    reindexMajorantENN Q N ≠ (⊤ : ENNReal) := by
+  classical
+  unfold reindexMajorantENN
+  refine
+    Goldbach.ProofTools.ENNReal.sum_ne_top_of_forall_ne_top
+      (s := (Nat.divisors N).filter Squarefree)
+      (f := fun d =>
+        (ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹) *
+          (∑' r : ℕ,
+            if (Q / d) < r ∧ Squarefree r ∧ Nat.Coprime r N then
+              ENNReal.ofReal (((Nat.totient r : ℝ) ^ 2)⁻¹)
+            else 0))
+      ?_
+  intro d hd
+  have hd_div : d ∈ Nat.divisors N := (Finset.mem_filter.mp hd).1
+  have hd0 : d ≠ 0 := ne_of_gt (Nat.pos_of_mem_divisors hd_div)
+  set R : ℕ := Q / d
+  have hinner_ne :
+      (∑' r : ℕ,
+          if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
+            ENNReal.ofReal (((Nat.totient r : ℝ) ^ 2)⁻¹)
+          else 0) ≠ (⊤ : ENNReal) := by
+    by_cases hR0 : R = 0
+    · let a : ℕ → ENNReal := fun r =>
+        ENNReal.ofReal (((Nat.totient r : ℝ) ^ 2)⁻¹)
+      have hrewrite :
+          (∑' r : ℕ,
+              if R < r ∧ Squarefree r ∧ Nat.Coprime r N then a r else 0)
+            =
+          (∑' r : ℕ,
+              if 0 < r ∧ Squarefree r ∧ Nat.Coprime r N then a r else 0) := by
+        simp [hR0]
+      let f₁ : ℕ → ENNReal := fun r =>
+        if r = 1 then
+          if Squarefree r ∧ Nat.Coprime r N then a r else 0
+        else 0
+      let f₂ : ℕ → ENNReal := fun r =>
+        if 1 < r ∧ Squarefree r ∧ Nat.Coprime r N then a r else 0
+      have hsplit :
+          (fun r : ℕ =>
+              if 0 < r ∧ Squarefree r ∧ Nat.Coprime r N then a r else 0)
+            =
+          fun r : ℕ => f₁ r + f₂ r := by
+        funext r
+        cases r with
+        | zero =>
+            simp [f₁, f₂, a]
+        | succ r =>
+            cases r with
+            | zero =>
+                simp [f₁, f₂, a]
+            | succ r =>
+                have h1 : (1 : ℕ) < r.succ.succ := Nat.succ_lt_succ (Nat.succ_pos _)
+                simp [f₁, f₂, a, h1]
+      have htsum :
+          (∑' r : ℕ, if 0 < r ∧ Squarefree r ∧ Nat.Coprime r N then a r else 0)
+            =
+          (∑' r : ℕ, f₁ r) + (∑' r : ℕ, f₂ r) := by
+        simpa [hsplit, ENNReal.tsum_add]
+      have hf₁ :
+          (∑' r : ℕ, f₁ r) ≤ ENNReal.ofReal (1 : ℝ) := by
+        have : (∑' r : ℕ, f₁ r) = ENNReal.ofReal (1 : ℝ) := by
+          have hsq1 : Squarefree (1 : ℕ) := by
+            simpa using (squarefree_one : Squarefree (1 : ℕ))
+          have hcop1 : Nat.Coprime (1 : ℕ) N := by
+            simpa using (Nat.coprime_one_left N)
+          have ha1 : a 1 = ENNReal.ofReal (1 : ℝ) := by
+            simp [a, Nat.totient_one]
+          simpa [f₁, hsq1, hcop1, ha1] using (tsum_ite_eq (1 : ℕ) (f₁ 1))
+        simpa [this]
+      have hf₂ :
+          (∑' r : ℕ, f₂ r) ≤ ENNReal.ofReal ((90 : ℝ) / 1) := by
+        have h :=
+          Goldbach.AO_OffDiag.euler_tail_bound_tsum_ENNReal (R := 1) (N := N)
+            (by decide : 1 ≤ (1 : ℕ))
+        simpa [f₂, a, one_div] using h
+      have hle :
+          (∑' r : ℕ,
+              if 0 < r ∧ Squarefree r ∧ Nat.Coprime r N then a r else 0)
+            ≤ ENNReal.ofReal (1 : ℝ) + ENNReal.ofReal ((90 : ℝ) / 1) := by
+        rw [htsum]
+        exact add_le_add hf₁ hf₂
+      have hne :
+          (∑' r : ℕ, if 0 < r ∧ Squarefree r ∧ Nat.Coprime r N then a r else 0) ≠ (⊤ : ENNReal) :=
+        Goldbach.ProofTools.ENNReal.ne_top_of_le_of_lt_top hle (by simp)
+      simpa [hrewrite, a] using hne
+    · have hR1 : 1 ≤ R := (Nat.one_le_iff_ne_zero).2 hR0
+      have h :=
+        Goldbach.AO_OffDiag.euler_tail_bound_tsum_ENNReal (R := R) (N := N) hR1
+      have h' :
+          (∑' r : ℕ,
+              if R < r ∧ Squarefree r ∧ Nat.Coprime r N then
+                ENNReal.ofReal (((Nat.totient r : ℝ) ^ 2)⁻¹)
+              else 0)
+            ≤ ENNReal.ofReal ((90 : ℝ) / R) := by
+        simpa [one_div] using h
+      exact Goldbach.ProofTools.ENNReal.ne_top_of_le_of_lt_top h' (by simp)
+  have hfac_ne : ENNReal.ofReal ((Nat.totient d : ℝ))⁻¹ ≠ (⊤ : ENNReal) := by simp
+  have hinner_ne' :
+      (∑' r : ℕ,
+          if (Q / d) < r ∧ Squarefree r ∧ Nat.Coprime r N then
+            ENNReal.ofReal (((Nat.totient r : ℝ) ^ 2)⁻¹)
+          else 0) ≠ (⊤ : ENNReal) := by
+    simpa [R] using hinner_ne
+  exact ENNReal.mul_ne_top hfac_ne hinner_ne'
+
+/-- The ENNReal full tail is finite whenever `N ≠ 0`. -/
+theorem sigmaTailENN_ne_top (Q N : ℕ) (hN0 : N ≠ 0) :
+    sigmaTailENN Q N ≠ (⊤ : ENNReal) := by
+  exact Goldbach.ProofTools.ENNReal.ne_top_of_le_of_lt_top
+    (sigmaTailENN_le_reindexMajorantENN (Q := Q) (N := N) hN0)
+    (by
+      simpa [lt_top_iff_ne_top] using reindexMajorantENN_ne_top (Q := Q) (N := N) hN0)
+
+/-- The real tail series is summable whenever `N ≠ 0`. -/
+theorem summable_sigmaTailSeries (Q N : ℕ) (hN0 : N ≠ 0) :
+    Summable (fun q : ℕ => if Q < q then sigmaTerm q N else 0) := by
+  have hsum_norm :
+      Summable (fun q : ℕ => ‖if Q < q then sigmaTerm q N else 0‖) := by
+    have hsum_toReal :
+        Summable
+          (fun q : ℕ => ((if Q < q then sigmaTermENN q N else 0 : ENNReal)).toReal) :=
+      ENNReal.summable_toReal (sigmaTailENN_ne_top (Q := Q) (N := N) hN0)
+    have hpoint :
+        (fun q : ℕ => ((if Q < q then sigmaTermENN q N else 0 : ENNReal)).toReal) =
+          fun q : ℕ => ‖if Q < q then sigmaTerm q N else 0‖ := by
+      funext q
+      by_cases hq : Q < q
+      · simp [sigmaTermENN, hq, ENNReal.toReal_ofReal, Real.norm_eq_abs, abs_nonneg]
+      · simp [sigmaTermENN, hq, ENNReal.toReal_ofReal, Real.norm_eq_abs, abs_nonneg]
+    rw [hpoint] at hsum_toReal
+    exact hsum_toReal
+  exact Summable.of_norm hsum_norm
+
 end SigmaTailReindexFun
 end Goldbach.AO_OffDiag

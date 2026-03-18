@@ -222,3 +222,28 @@ This collapse is now formalized in
 So the third route is useful diagnostically and architecturally, but it still does not discharge the
 canonical budget target. The remaining issue is deeper than the slack parameterization: the closure
 surface is still forcing the main lower term and the bank error into incompatible normalized shapes.
+
+### Projected-route status
+
+The projected/direct replacement route now also exists and builds:
+
+- `Goldbach/ProjectedMajorTermDirectProto.lean`
+- `Goldbach/CompleteTenorFunX_DirectProjectedCanon.lean`
+- `Goldbach/BankPieces/Cert/ProjectedInput.lean`
+
+The important current conclusion is:
+
+- the projected route is not blocked on wrapper architecture anymore,
+- it is blocked on a missing model-comparison theorem.
+
+More precisely, the present projected reference gap still goes through
+`Goldbach.BG_Calib.ref_to_Mfun_bound_of_const_gap`, which compares
+`conv_ref` to `conv_ref_const` and then `conv_ref_const` to the target object.
+
+That is now known to be the wrong final seam, because:
+
+- `conv_ref_const` is built from `Goldbach.AO_SigmaModel.sigma`,
+- `bankOp_ref` / `MainTerm.M` are built from the projected Hardy–Littlewood singular-series term.
+
+So a future “direct projected gap” theorem has to compare those two σ-models honestly, rather than
+trying to squeeze more from the older `conv_ref_const` intermediary.

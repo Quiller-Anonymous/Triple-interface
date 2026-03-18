@@ -5,6 +5,11 @@ hi bumbler
 The code in this file has the Apache 2.0 license, Anonymous Quiller 2025-
 Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple Interface Method" (ed. Quiller), 2025, and unpublished manuscripts on twin primes and alt-zeta.
 
+This repository is primarily a Lean formalization of interfaces, reduction steps, certificates, and
+end-to-end glue. Some entry points are fully in-repo proofs, some are conditional on explicit
+hypotheses, and some convenience routes still rely on explicit axioms. The README below tries to
+separate those cases clearly.
+
 ## Status legend:
 - Platinum standard: builds; unconditional proof; no `axiom`/`sorry`/`admit` dependencies (beyond core classical axioms).
 - Gold standard: builds; end-to-end proof depending only on explicitly listed **conventional math axioms**.
@@ -21,36 +26,46 @@ Based on public domain pre-publication paper at Zenodo, "Goldbach and the Triple
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: fool's gold (Option‑B textbook major‑arc boundary); polished‑gold workbench in progress
--- The Option‑B entry point `Goldbach/GoldFunX_OptionB_Gold.lean` routes the major‑arc step through the
-  conventional theorem‑shaped boundary `Goldbach/Cert/MajorArcPowerSavingSpec.lean` (`majorArc_powerSaving`),
-  rather than a project‑pinned window/cap axiom.
--- The σ‑tail channel is **axiom‑free** (explicit divisor‑sum majorant + real bound `|sigmaTail Q N| ≤ (180/Q)·N²`).
--- A separate “turnkey” pinned-cap route still exists for convenience:
-`Goldbach/GoldFunX_OptionB_Cert.lean` (this is *fool’s gold* under the above standard).
--- ε₁ seam narrowing update (2026-03-08): in the pinned `Q0` workbench, Step‑1/Step‑2 are now
-  derived from the project-neutral dyadic existence boundary
-  `q0MinorDyadicGramDecayPoly_exists`; the remaining project-pinned ε₁ seam is calibration-only
-  (the two Crow cap inequalities), surfaced in
-  `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedgerEngineAxiom.lean` and handoff helper
-  `Goldbach/Cert/MajorArcModules/Q0MinorCalibrationHandoff.lean`.
--- Polished‑gold target (in progress): keep a small auditable list of “analytic tool” axioms (e.g. an SSU/interzone bundle)
-  and prove/certify our project-specific instantiations (major-arc sub-bounds, TT*/Toeplitz kernel masses, and minor-energy
-  lever-bundle/Gram-decay inputs) so the remaining axioms are theorem-shaped and reusable across Goldbach/Twin.
-2. Twin primes conjecture -- Current status: fool’s gold (default build); conditional (hypothesis-only entrypoint)
--- Hypothesis-only checklist entrypoint: `Twin/ChecklistEntrypoint.lean` (`Twin.ChecklistEntrypoint.twins_in_all_large_windows`) is axiom-free in-repo and takes the remaining analytic inputs as explicit hypotheses/typeclasses (see `Twin/ChecklistAxioms.lean`).
--- Verified 2026-01-27: `lake build Twin.ChecklistEntrypoint` succeeds locally.
--- Verified 2026-01-27: `lake build All` succeeds locally (default `All.lean` target).
--- Default build is **fool’s gold**: `Twin/ChecklistEntrypointDefault.lean` imports `Twin/ChecklistSmeDefaultAxioms.lean` (via `Twin/ChecklistRouteDefault.lean`), which postulates the conventional analytic hypotheses as explicit `axiom`s for the frozen model `sme := Twin.ChecklistSme.sme`.
--- Goldbach-side hook (default) is also **fool’s gold** for the same reason: `Goldbach/TwinGold.lean` runs the Twin pipeline via a `Twin.HasTwinTI` instance exported from `Goldbach/TI/TwinInstance.lean`, which is currently derived from the same checklist hypotheses.
-3. SSU -- The analytical backend of the triple interface -- current status: platinum (canonical flagship complete)
--- `SSU/STATUS.md` (updated 2026-03-07) tracks M1–M6 as complete with canonical selector-first flagship routes build-clean and proof-driven.
--- Legacy fallback/reduction routes are retained as compatibility aliases; canonical defaults are non-fallback on the promoted extracted paths.
--- Remaining work is optional post-platinum sharpening (constants and broader-family strengthening), not required for the completed SSU contract surface.
-4. The alt-zeta construct (nuanced primes detector) -- Current status: gold (B2 interface)
-5. The Riemann hypothesis -- Current status: mud
+1. Goldbach conjecture -- Current status: gold
+-- The final wrapper `Goldbach.goldbach_final` is a theorem of the shape “finite base + global
+  pointwise witness => Goldbach for every even integer.” The formal endpoint is pointwise in `N`,
+  not merely a density statement on windows.
+-- The canonical entry point `Goldbach/GoldFunX.lean` is **axiom-free in the `#print axioms`
+  sense**, but it is still conditional: it requires explicit hypotheses/typeclass inputs
+  (`SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and
+  `ParallelFunXCanonScale.BudgetHyp`).
+-- The “gold-grade” Option-B route `Goldbach/GoldFunX_OptionB_Gold.lean` replaces the major-arc
+  inner-swap input by one conventional theorem-shaped axiom,
+  `Goldbach/Cert/MajorArcPowerSavingSpec.lean` (`majorArc_powerSaving`), but it still leaves the
+  remaining global budget inequality explicit in the theorem type.
+-- The pinned-cap convenience route `Goldbach/GoldFunX_OptionB_Cert.lean` is still **fool's gold**.
+  In that workbench, the remaining polished-gold blockers are concentrated in the pinned `Q0`
+  major-arc/minor-energy seam, especially `ssu_minor_energy_calibration`; the project-neutral
+  dyadic existence boundary `q0MinorDyadicGramDecayPoly_exists` also remains explicit there.
+-- Type-I note: the legacy file `Goldbach/TypeI_Leak.lean` still contains a zero placeholder and
+  should not be read as the active AO/FunX story. The live AO kernel-tail path uses the nontrivial
+  `BG_Identity.errTI` bound through `Goldbach/AO_KernelTail.lean`.
 
-NOTE (Jan 9 2026): Note that when I say "it builds", I mean it builds locally (VS Code Studio on Macbrook Pro, 28GB Ram, bought in 2025), NOT on Github. Reason: the finite base chunks outpace the resources available on the repo, and I'm not going to spend a small fortune to convince it to do the job to completion.
+2. Twin primes conjecture -- Current status: conditional entrypoint + fool's-gold default build
+-- The hypothesis-only checklist entry point `Twin/ChecklistEntrypoint.lean`
+  (`Twin.ChecklistEntrypoint.twins_in_all_large_windows`) is axiom-free in-repo and takes the
+  remaining analytic inputs as explicit hypotheses/typeclasses (see `Twin/ChecklistAxioms.lean`).
+-- The default build remains **fool's gold** because `Twin/ChecklistEntrypointDefault.lean`
+  imports `Twin/ChecklistSmeDefaultAxioms.lean`, which postulates the frozen-model analytic inputs
+  as explicit axioms.
+-- The default Goldbach-side Twin hook `Goldbach/TwinGold.lean` is likewise fool's gold for the
+  same reason.
+
+3. SSU -- Current status: platinum
+-- `SSU/STATUS.md` tracks the canonical flagship as complete. Remaining work there is optional
+  sharpening, not required for the current SSU contract surface.
+
+4. Alt-Zeta -- Current status: gold (B2 interface)
+
+5. Riemann hypothesis -- Current status: mud
+
+Build note: “it builds” means it builds locally. The finite-base chunks are too large for the
+current GitHub setup, so local builds are the authoritative check here.
 
 ## Local hiccups
 See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are present or missing.
@@ -60,29 +75,23 @@ See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are presen
 
 ## Narrative overview (machine check)
 
-This repository is a Lean 4 development that formalizes the *interfaces and end-to-end glue* needed
-to turn a pointwise closure statement on even windows into actual Goldbach representations. The
-finite base is fully proved up to `1_000_000` (see `Goldbach/FiniteBase/CombineAll.lean`), and the
-final wrapper `Goldbach.goldbach_final` (in `Goldbach/Final.lean`) reduces all remaining large-`N`
-cases to a packaged analytic witness.
+This repository is a Lean 4 development of the reduction pipeline around Goldbach. The finite base
+is fully proved up to `1_000_000` (see `Goldbach/FiniteBase/CombineAll.lean`), and the final wrapper
+`Goldbach.goldbach_final` (in `Goldbach/Final.lean`) turns a global pointwise closure witness into
+Goldbach representations for all even integers above the cutoff.
 
-The analytic core is not presented as a single monolithic Lean proof of every estimate in the
-manuscript. Instead, the code isolates a small number of explicit hypotheses at the pipeline entry
-points (most notably a single on-window “budget inequality” that aggregates the quantitative
-inputs), so the dependency boundary is auditable. In particular:
+The analytic layer is not yet a single unconditional monolithic formal proof of every estimate in
+the manuscript. Instead, the code isolates the remaining analytic inputs at a small number of
+entry points so the dependency boundary is auditable. The most important distinctions are:
 
-- The **canonical Goldbach entry point** `Goldbach.goldbach_funX_canon` (in `Goldbach/GoldFunX.lean`)
-  is *axiom-free* under the repo’s “gold standard” transparency check (see
-  `Goldbach/AxiomAuditGold.lean`).
-- The **Option‑B entry point with a conventional major‑arc boundary** (the “textbook major‑arc
-  boundary” route) has exactly one non‑core explicit axiom:
-  `Goldbach.Cert.MajorArcPowerSavingSpec.majorArc_powerSaving` (see
-  `Goldbach/AxiomAuditGoldOptionBTextbookMajorArc.lean`).
-- A separate **turnkey pinned‑cap route** exists for convenience (`Goldbach/GoldFunX_OptionB_Cert.lean`).
-  This route is intentionally *not* “gold” under the above standard: it pins project constants and
-  currently still imports project‑pinned major‑arc / TT* / minor‑energy assumptions (audited by
-  `Goldbach/AxiomAuditGoldOptionB_PinnedCap.lean`). This is the workbench where major‑arc certificate
-  work is developed without refactoring the live pipeline.
+- `Goldbach.goldbach_funX_canon` is axiom-free in the import graph, but still conditional on
+  explicit hypotheses in its theorem type.
+- `Goldbach/GoldFunX_OptionB_Gold.lean` uses one conventional major-arc axiom boundary
+  (`majorArc_powerSaving`) plus explicit budget hypotheses.
+- `Goldbach/GoldFunX_OptionB_Cert.lean` is the project-pinned workbench route for certificates and
+  calibration; it is not gold-grade.
+- The analytic engine works window-by-window, but the final wrapper obtains a theorem for each
+  individual even integer by evaluating the global witness at `X := N`.
 
 ## Formal verification map (Lean modules)
 
@@ -99,8 +108,11 @@ intended theorem-shape.
     `Decomposition`, `Bounds`, lemma `errAO_bound`)
   - Canonical instantiation of AO constants for the Tenor FunX track: `Goldbach/AO_InstantiateTenorFunX.lean`
   - AO stages plumbing into the parallel track: `Goldbach/AO_Stages.lean`, `Goldbach/ParallelTenorFunX.lean`
-- Type–I leakage (current build choice)
-  - Type–I leakage is currently trivialized (`errTI = 0`) and proved as such: `Goldbach/TypeI_Leak.lean`
+- Type–I leakage / kernel tail
+  - Active AO/FunX route: `Goldbach/AO_KernelTail.lean` identifies the kernel tail with the genuine
+    bank Type-I term `BG_Identity.errTI` and uses the closed-form bound `errTI_bound_closed`.
+  - Legacy placeholder: `Goldbach/TypeI_Leak.lean` still contains an older zero-envelope route used
+    by legacy bank-bridge code.
 - Major arcs (two distinct boundaries)
   - Conventional theorem‑shaped boundary (textbook power saving)
     - Interface objects (`RΛ_smooth`, `RΛ_model`, `MajorArcPowerSaving`):
@@ -112,7 +124,7 @@ intended theorem-shape.
     - Pinned Q0 workbench surface: `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean`
       (ε₁/ε₂‑small/ε₂‑large pinned assumptions)
 - End‑to‑end canonical pipeline entry
-  - Main “gold” entry point (axiom‑free): `Goldbach/GoldFunX.lean` (`Goldbach.goldbach_funX_canon`)
+  - Main “gold” entry point (axiom‑free, hypothesis-based): `Goldbach/GoldFunX.lean` (`Goldbach.goldbach_funX_canon`)
   - Option‑B entry point using the conventional major‑arc boundary: `Goldbach/GoldFunX_OptionB_Gold.lean`
     (audited by `Goldbach/AxiomAuditGoldOptionBTextbookMajorArc.lean`)
   - Turnkey pinned‑cap convenience entry point (audited separately): `Goldbach/GoldFunX_OptionB_Cert.lean`
@@ -166,7 +178,7 @@ Goldbach/CompleteTenorFunX.lean: conditional final theorem for the Tenor FunX tr
 
 Goldbach/CompleteTenorFunX_CanonBudget.lean: canonical wrapper for the Tenor FunX track (fixes `OffDiagHyp` and discharges the numeric budgets from `log_X0_le`).
 
-Goldbach/GoldFunX.lean: end-to-end Goldbach theorem for the canonical (Tenor-aligned) parallel FunX track at `X0 = 1_000_000`.
+Goldbach/GoldFunX.lean: hypothesis-based end-to-end Goldbach theorem for the canonical (Tenor-aligned) parallel FunX track at `X0 = 1_000_000`.
 
 ### Closure and final theorem
 
@@ -180,7 +192,11 @@ i.e. analytic witness on the window + checked finite base implies Goldbach for a
 
 ## Goldbach pipeline: axioms / hypotheses (transparency list)
 
-This section lists only potential question-beggers that can enter the Goldbach pipeline: explicit `axiom`s (and any remaining `sorry`/`admit` in imported modules). It intentionally does not enumerate proved constants, computational certificates, or hypotheses. The main Option-B pipeline entry point is now “gold” by the above standard; a separate pinned-cap turnkey route remains available and is audited separately.
+This section lists explicit `axiom`s (and any remaining `sorry`/`admit` in imported modules). It
+does **not** list ordinary theorem hypotheses or typeclass assumptions. In particular, a theorem can
+show up here as “axiom-free” and still be conditional on explicit analytic inputs in its type. The
+main Option-B pipeline entry point is gold-grade in this transparency sense; a separate pinned-cap
+turnkey route remains available and is audited separately.
 
 **Gold acceptance check (local)**
 - Run `lake env lean Goldbach/AxiomAuditGold.lean`.
@@ -193,6 +209,19 @@ This section lists only potential question-beggers that can enter the Goldbach p
 
 **Axioms currently used by the canonical Goldbach theorem (explicit `axiom`s)**
 - None (as of `Goldbach/AxiomAuditGold.lean`).
+
+**Remaining hypotheses in the canonical Goldbach theorem type**
+- `Goldbach/GoldFunX.lean` still requires `AO_SigmaPos.SigmaUpperOnWindow`,
+  `AO_SigmaPos.SigmaLowerOnWindow`, `BG_Calib.WeightsBridgeHyp`, and
+  `ParallelFunXCanonScale.BudgetHyp`.
+
+**Axioms currently used by the gold-grade Option-B route (explicit `axiom`s)**
+- `Goldbach/Cert/MajorArcPowerSavingSpec.lean`
+  `majorArc_powerSaving`.
+
+**Remaining hypotheses in the gold-grade Option-B theorem type**
+- `Goldbach/GoldFunX_OptionB_TextbookMajorArc.lean` still leaves the canonical `ε < c0` input,
+  `WeightsBridgeHyp`, and the global budget inequality explicit.
 
 **Axioms currently used by the “turnkey” pinned-cap Option-B route (explicit `axiom`s)**
 - ε₁ minor-energy ledger engine export (project-pinned route): `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean:55`
@@ -348,4 +377,4 @@ This section lists (1) the hypothesis surface of the gold entrypoint(s), and (2)
 - December 2025 was all coding and revisions, mainly struggles with compiling the finite base chunks on an underpowered laptop, and then unexpected wiring issues in hooking up the finite base to the analytic engine. Mid-December, Codex was functionally useless, and Copilot on Github was of very limited help. Progress became noticeably quicker when I created files to help it understand the limits of our codebase (Mathlib) and also started to use AGENTS.md to guide it using Codex in VS Code Studio. The project had more or less grown beyond MathGPT by this point.
 - By early January 2026, Codex was operating more or less on its own with minimal prompting; something has clearly changed. Most work was now in decomposing bespoke axioms into conventions, lemmas, and constants. Early January 2026: axiom audits became cleaner and the “gold vs fool’s-gold” boundary became more explicit; work on Alt‑Zeta begins. Then the haggling started; discovered problems with the sigma tail and major arc. Much of the month has been a battle over budgets and constants, trying to find a path toward “platinum” (unconditional, no axioms) and a more precise intermediate target (“polished gold”: auditable tool axioms + discharged project instantiations). 
 - Jan 30: I came to realize that the SSU part of the Goldbach was being treated as conventional or textbook math, as it is too ambitious to prove it as part of the Goldbach project end-to-end. So I split it into a separate project and let Goldbach work on an instantiation of SSU complete with project-specific parameters. New plan: bring Goldbach up to polished gold with SSU-I, then take a few months to prove SSU independently (to platinum), thereby (hopefully) bringing Goldbach to platinum.
-- Mar 3: The SSU grind continues, though with frequent stops due to rate limits.
+- Mar 3: The SSU grind continues, though with frequent stops due to rate limits. SSU was completed to platinum early thereafter in March, and we returned to the project getting Goldbach to platinum.

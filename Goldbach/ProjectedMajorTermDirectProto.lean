@@ -23,18 +23,20 @@ noncomputable abbrev Mproj (_X N : ℕ) : ℝ :=
   Goldbach.MainTerm.M Goldbach.Analytic.C2_numeric N
 
 /--
-Prototype lower term closer to the Tenor statement: a positive `log^{-2}`-scale floor obtained by
-combining the working singular-series lower bound with the crude factor bound
-`N / log^2 N ≥ 1` on the working window.
+Prototype lower term closer to the honest Hardy–Littlewood scale:
+use the singular-series floor `σmin_working` together with the window-uniform factor lower bound
+`N / log^2 N ≥ X / log^2 (X + H)` for `N ∈ EvenIn X H`.
 -/
 noncomputable def Lproj (X : ℕ) : ℝ :=
-  Goldbach.Analytic.σmin_working / (Real.log (X : ℝ)) ^ 2
+  Goldbach.Analytic.σmin_working * ((X : ℝ) / (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2)
 
-private lemma log_sq_pos {X : ℕ} (hX : Goldbach.Analytic.X0 ≤ X) :
-    0 < (Real.log (X : ℝ)) ^ 2 := by
-  have hlog_ge_ten : (10 : ℝ) ≤ Real.log (X : ℝ) :=
-    Goldbach.Cert.CanonLogBounds.ten_le_log_of_X0_le hX
-  have hlog_pos : 0 < Real.log (X : ℝ) := by
+private lemma log_sq_pos_XH {X : ℕ} (hX : Goldbach.Analytic.X0 ≤ X) :
+    0 < (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2 := by
+  have hXH_ge_X0 : Goldbach.Analytic.X0 ≤ X + Goldbach.Analytic.H := by
+    exact le_trans hX (Nat.le_add_right X Goldbach.Analytic.H)
+  have hlog_ge_ten : (10 : ℝ) ≤ Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ) :=
+    Goldbach.Cert.CanonLogBounds.ten_le_log_of_X0_le hXH_ge_X0
+  have hlog_pos : 0 < Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ) := by
     linarith
   exact sq_pos_of_pos hlog_pos
 
@@ -43,72 +45,121 @@ lemma Lproj_nonneg {X : ℕ} (hX : Goldbach.Analytic.X0 ≤ X) : 0 ≤ Lproj X :
     dsimp [Goldbach.Analytic.σmin_working]
     have hC : 0 ≤ Goldbach.Analytic.C2_numeric.C2 := le_of_lt Goldbach.Analytic.C2_numeric.pos
     nlinarith
-  exact div_nonneg hσ (le_of_lt (log_sq_pos hX))
+  have hX_nonneg : 0 ≤ (X : ℝ) := by positivity
+  exact mul_nonneg hσ (div_nonneg hX_nonneg (le_of_lt (log_sq_pos_XH hX)))
 
-lemma Lproj_le_sigma_floor {X : ℕ} (hX : Goldbach.Analytic.X0 ≤ X) :
-    Lproj X ≤ Goldbach.Analytic.σmin_working := by
-  have hσ : 0 ≤ Goldbach.Analytic.σmin_working := by
-    dsimp [Goldbach.Analytic.σmin_working]
-    have hC : 0 ≤ Goldbach.Analytic.C2_numeric.C2 := le_of_lt Goldbach.Analytic.C2_numeric.pos
-    nlinarith
-  have hlog_ge_ten : (10 : ℝ) ≤ Real.log (X : ℝ) :=
-    Goldbach.Cert.CanonLogBounds.ten_le_log_of_X0_le hX
-  have hsq_ge_one : (1 : ℝ) ≤ (Real.log (X : ℝ)) ^ 2 := by
-    nlinarith
-  simpa [Lproj] using div_le_self hσ hsq_ge_one
-
-/--
-On the canonical working window, the projected `log^{-2}` lower term is strictly below the old
-constant bank gap `0.01`.
-
-So the legacy certificate layer around `MainTerm.M C2_numeric` cannot be reused unchanged for the
-new direct route: a constant-gap certificate is too coarse even before any comparison with `R_bank`.
--/
-lemma Lproj_lt_old_gap_on_window {X : ℕ} (hX : Goldbach.Analytic.X0 ≤ X) :
-    Lproj X < (0.01 : ℝ) := by
-  have hlog_ge_ten : (10 : ℝ) ≤ Real.log (X : ℝ) :=
-    Goldbach.Cert.CanonLogBounds.ten_le_log_of_X0_le hX
-  have hsq_ge_hundred : (100 : ℝ) ≤ (Real.log (X : ℝ)) ^ 2 := by
-    nlinarith
-  have hσ_nonneg : 0 ≤ Goldbach.Analytic.σmin_working := by
-    dsimp [Goldbach.Analytic.σmin_working]
-    have hC : 0 ≤ Goldbach.Analytic.C2_numeric.C2 := le_of_lt Goldbach.Analytic.C2_numeric.pos
-    nlinarith
-  have hdiv :
-      Lproj X ≤ Goldbach.Analytic.σmin_working / 100 := by
-    have hdiv_raw :
-        Goldbach.Analytic.σmin_working / (Real.log (X : ℝ)) ^ 2
-          ≤ Goldbach.Analytic.σmin_working / 100 := by
-      exact div_le_div_of_nonneg_left hσ_nonneg (by positivity) hsq_ge_hundred
-    simpa [Lproj] using hdiv_raw
-  have hnum : Goldbach.Analytic.σmin_working / 100 < (0.01 : ℝ) := by
-    norm_num [Goldbach.Analytic.σmin_working, Goldbach.Analytic.C2_numeric]
-  exact lt_of_le_of_lt hdiv hnum
-
-/-- The projected major term already dominates the singular-series floor on the working window. -/
-lemma sigma_floor_le_Mproj {X N : ℕ}
+/-- Window-uniform lower bound for the Hardy–Littlewood scale factor. -/
+private lemma factor_lower_on_window {X N : ℕ}
     (hX : Goldbach.Analytic.X0 ≤ X)
     (hN : N ∈ Windows.EvenIn X Goldbach.Analytic.H) :
-    Goldbach.Analytic.σmin_working ≤ Mproj X N := by
-  let hmajor :
-      MajorBound Goldbach.Analytic.X0 Goldbach.Analytic.H (1 : ℝ)
-        Goldbach.Analytic.σmin_working
-        (Goldbach.MainTerm.M Goldbach.Analytic.C2_numeric) :=
-    Goldbach.Analytic.major_of_sigma_lower_S1
-      (A := Goldbach.Analytic.SigmaLowerOn_working)
-      (hc0 := le_rfl)
-      (two_le_of_mem := Goldbach.Analytic.two_le_of_window)
-  simpa [Mproj] using hmajor hX hN
+    ((X : ℝ) / (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2)
+      ≤ ((N : ℝ) / (Real.log (N : ℝ)) ^ 2) := by
+  have hN_ge_X : X ≤ N := by
+    have hI : N ∈ IccShift X Goldbach.Analytic.H := (Finset.mem_filter.mp hN).1
+    rcases Finset.mem_image.mp hI with ⟨k, hk, rfl⟩
+    exact Nat.le_add_right X k
+  have hN_le_XH : N ≤ X + Goldbach.Analytic.H := by
+    have hI : N ∈ IccShift X Goldbach.Analytic.H := (Finset.mem_filter.mp hN).1
+    rcases Finset.mem_image.mp hI with ⟨k, hk, rfl⟩
+    exact Nat.add_le_add_left (Nat.le_of_lt_succ (Finset.mem_range.mp hk)) X
+  have hXH_ge_X0 : Goldbach.Analytic.X0 ≤ X + Goldbach.Analytic.H := by
+    exact le_trans hX (Nat.le_add_right X Goldbach.Analytic.H)
+  have hN_ge_X0 : Goldbach.Analytic.X0 ≤ N := le_trans hX hN_ge_X
+  have hlog_sq_pos_XH : 0 < (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2 :=
+    log_sq_pos_XH hX
+  have hlog_sq_pos_N : 0 < (Real.log (N : ℝ)) ^ 2 := by
+    have hlog_ge_ten : (10 : ℝ) ≤ Real.log (N : ℝ) :=
+      Goldbach.Cert.CanonLogBounds.ten_le_log_of_X0_le hN_ge_X0
+    have hlog_pos : 0 < Real.log (N : ℝ) := by linarith
+    exact sq_pos_of_pos hlog_pos
+  have hlog_le :
+      Real.log (N : ℝ) ≤ Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ) := by
+    have hN_pos : (0 : ℝ) < (N : ℝ) := by
+      exact_mod_cast (lt_of_lt_of_le (by decide : 0 < Goldbach.Analytic.X0) hN_ge_X0)
+    have hcast : (N : ℝ) ≤ ((X + Goldbach.Analytic.H : ℕ) : ℝ) := by
+      exact_mod_cast hN_le_XH
+    exact Real.log_le_log hN_pos hcast
+  have hlog_sq_le :
+      (Real.log (N : ℝ)) ^ 2
+        ≤ (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2 := by
+    have hlogN_nonneg : 0 ≤ Real.log (N : ℝ) := by
+      have hlog_ge_ten : (10 : ℝ) ≤ Real.log (N : ℝ) :=
+        Goldbach.Cert.CanonLogBounds.ten_le_log_of_X0_le hN_ge_X0
+      linarith
+    have hlogXH_nonneg : 0 ≤ Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ) := by
+      have hlog_ge_ten : (10 : ℝ) ≤ Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ) :=
+        Goldbach.Cert.CanonLogBounds.ten_le_log_of_X0_le hXH_ge_X0
+      linarith
+    have hlogXH_nonneg' : 0 ≤ Real.log ((X : ℝ) + Goldbach.Analytic.H) := by
+      simpa [Nat.cast_add] using hlogXH_nonneg
+    have habs_le :
+        |Real.log (N : ℝ)| ≤ |Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)| := by
+      calc
+        |Real.log (N : ℝ)| = Real.log (N : ℝ) := by simp [abs_of_nonneg hlogN_nonneg]
+        _ ≤ Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ) := hlog_le
+        _ = |Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)| := by
+          symm
+          simp [abs_of_nonneg hlogXH_nonneg']
+    exact sq_le_sq.mpr habs_le
+  have hinv :
+      ((Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2)⁻¹
+        ≤ ((Real.log (N : ℝ)) ^ 2)⁻¹ := by
+    simpa [one_div] using one_div_le_one_div_of_le hlog_sq_pos_N hlog_sq_le
+  have hX_le_N : (X : ℝ) ≤ (N : ℝ) := by exact_mod_cast hN_ge_X
+  calc
+    ((X : ℝ) / (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2)
+        = (X : ℝ) * ((Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2)⁻¹ := by
+          rw [div_eq_mul_inv]
+    _ ≤ (N : ℝ) * ((Real.log (N : ℝ)) ^ 2)⁻¹ := by
+          exact mul_le_mul hX_le_N hinv (by positivity) (by positivity)
+    _ = ((N : ℝ) / (Real.log (N : ℝ)) ^ 2) := by
+          rw [div_eq_mul_inv]
 
-/--
-The projected lower package is genuinely different from the banked `cAO` route: it lowers directly
-against the global projected main term `MainTerm.M C2_numeric`.
--/
+/-- The projected major term dominates the corrected window-uniform lower term. -/
 lemma projected_major_lower {X N : ℕ}
     (hX : Goldbach.Analytic.X0 ≤ X)
     (hN : N ∈ Windows.EvenIn X Goldbach.Analytic.H) :
     Lproj X ≤ Mproj X N := by
-  exact le_trans (Lproj_le_sigma_floor hX) (sigma_floor_le_Mproj hX hN)
+  have hσ :
+      Goldbach.Analytic.σmin_working
+        ≤ Goldbach.Singular.sigma Goldbach.Analytic.C2_numeric N :=
+    Goldbach.Analytic.SigmaLowerOn_working.bound hX hN
+  have hfac :
+      ((X : ℝ) / (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2)
+        ≤ ((N : ℝ) / (Real.log (N : ℝ)) ^ 2) :=
+    factor_lower_on_window hX hN
+  have hσ_nonneg : 0 ≤ Goldbach.Analytic.σmin_working := by
+    dsimp [Goldbach.Analytic.σmin_working]
+    have hC : 0 ≤ Goldbach.Analytic.C2_numeric.C2 := le_of_lt Goldbach.Analytic.C2_numeric.pos
+    nlinarith
+  have hσN_nonneg : 0 ≤ Goldbach.Singular.sigma Goldbach.Analytic.C2_numeric N := by
+    have heven := Goldbach.Analytic.even_of_window hX hN
+    exact le_trans
+      (by nlinarith [Goldbach.Analytic.C2_numeric.pos])
+      (Goldbach.Singular.sigma_floor_even (C := Goldbach.Analytic.C2_numeric) heven)
+  have hfac_nonneg :
+      0 ≤ ((X : ℝ) / (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2) := by
+    exact div_nonneg (by positivity) (le_of_lt (log_sq_pos_XH hX))
+  have hmul_sigma :
+      Goldbach.Analytic.σmin_working
+        * ((X : ℝ) / (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2)
+      ≤ Goldbach.Singular.sigma Goldbach.Analytic.C2_numeric N
+        * ((X : ℝ) / (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2) := by
+    exact mul_le_mul_of_nonneg_right hσ hfac_nonneg
+  have hmul_factor :
+      Goldbach.Singular.sigma Goldbach.Analytic.C2_numeric N
+        * ((X : ℝ) / (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2)
+      ≤ Goldbach.Singular.sigma Goldbach.Analytic.C2_numeric N
+        * ((N : ℝ) / (Real.log (N : ℝ)) ^ 2) := by
+    exact mul_le_mul_of_nonneg_left hfac hσN_nonneg
+  have hmul :
+      Goldbach.Analytic.σmin_working
+        * ((X : ℝ) / (Real.log ((X + Goldbach.Analytic.H : ℕ) : ℝ)) ^ 2)
+      ≤ Goldbach.Singular.sigma Goldbach.Analytic.C2_numeric N
+        * ((N : ℝ) / (Real.log (N : ℝ)) ^ 2) := by
+    exact le_trans hmul_sigma hmul_factor
+  simpa [Lproj, Mproj, Goldbach.MainTerm.M, mul_assoc, mul_left_comm, mul_comm,
+    div_eq_mul_inv] using hmul
 
 /--
 Prototype direct tenor package using the projected major term and a user-supplied additive bank gap
@@ -178,14 +229,6 @@ def pointwiseWitness_projected
       (bank_gap := bank_gap))
 
 /--
-The legacy constant-gap certificate shape `Δ(X) = 0.01` cannot satisfy the positivity side of the
-new projected direct route on the canonical window.
--/
-theorem not_old_constant_gap_lt_Lproj {X : ℕ} (hX : Goldbach.Analytic.X0 ≤ X) :
-    ¬ (0.01 : ℝ) < Lproj X := by
-  exact not_lt_of_ge (Lproj_lt_old_gap_on_window hX).le
-
-/--
 Adapter from the refactored projected bank-gap certificate route.
 
 This is the theorem-shaped entry point the projected direct prototype needed: once the old bank
@@ -215,6 +258,36 @@ theorem bank_gap_from_ref_gap
       (Δref := Δref) (Δproj := Δproj) (hRef := hRef) (hCal := hCal)
       (X := X) (N := N) hX hN)
 
+/--
+Operator-level adapter from the refactored projected bank-gap certificate route.
+
+This is the same projected route, but stated against `bankOp_ref`, the operator that equals
+`MainTerm.M C2_numeric` on the canonical window. It is the preferred theorem surface for future
+normalization work because it avoids the older σ-mass wording.
+-/
+theorem bank_gap_from_ref_operator_gap
+    [Goldbach.BG_Calib.WeightsBridgeHyp]
+    (Δref Δproj : ℕ → ℝ)
+    (hRef :
+      ∀ {X N : ℕ}, Goldbach.Analytic.X0 ≤ X →
+        N ∈ Windows.EvenIn X Goldbach.Analytic.H →
+          |Goldbach.BG_Identity.conv_ref X N - Goldbach.BG_Identity.bankOp_ref X N| ≤ Δref X)
+    (hCal :
+      ∀ {X N : ℕ}, Goldbach.Analytic.X0 ≤ X →
+        N ∈ Windows.EvenIn X Goldbach.Analytic.H →
+          Goldbach.AO_WeightMass.weight_mass X
+            * (Goldbach.BG_Bank.payload_cap X N
+                * (((3 : ℝ) / 1000) + Goldbach.BG_Identity.C_tail_closed))
+            + Δref X ≤ Δproj X) :
+    ∀ {X N : ℕ}, Goldbach.Analytic.X0 ≤ X →
+      N ∈ Windows.EvenIn X Goldbach.Analytic.H →
+        |Goldbach.BG_Identity.R_bank X N - Mproj X N| ≤ Δproj X := by
+  intro X N hX hN
+  simpa [Mproj] using
+    (Goldbach.BankPieces.Cert.Projected.bank_gap_refOp
+      (Δref := Δref) (Δproj := Δproj) (hRef := hRef) (hCal := hCal)
+      (X := X) (N := N) hX hN)
+
 /-- The explicit projected certificate input produced in `BankPieces.Cert.ProjectedInput`. -/
 theorem bank_gap_from_actual_projected_input
     [Goldbach.BG_Calib.WeightsBridgeHyp] :
@@ -225,6 +298,30 @@ theorem bank_gap_from_actual_projected_input
   intro X N hX hN
   simpa [Mproj] using
     (Goldbach.BankPieces.Cert.ProjectedInput.projected_bank_gap (X := X) (N := N) hX hN)
+
+/--
+Adapter from the weighted `sigmaHonest` projected gap route.
+
+This is the sharper theorem surface now exposed by `ProjectedInput`: if the remaining normalization
+input is a comparison between the weighted honest sigma model and the Hardy–Littlewood main term,
+then the projected bank gap follows with envelope `ΔsigmaHonest_proj`.
+-/
+theorem bank_gap_from_sigmaHonest_input
+    [Goldbach.BG_Calib.WeightsBridgeHyp]
+    (Δhonest : ℕ → ℝ)
+    (hHonest :
+      ∀ {X N : ℕ}, Goldbach.Analytic.X0 ≤ X →
+        N ∈ Windows.EvenIn X Goldbach.Analytic.H →
+          |Goldbach.BankPieces.Cert.ProjectedSigmaBridge.sigmaHonestWeighted X N - Mproj X N|
+            ≤ Δhonest X) :
+    ∀ {X N : ℕ}, Goldbach.Analytic.X0 ≤ X →
+      N ∈ Windows.EvenIn X Goldbach.Analytic.H →
+        |Goldbach.BG_Identity.R_bank X N - Mproj X N|
+          ≤ Goldbach.BankPieces.Cert.ProjectedInput.Δproj_sigmaHonest Δhonest X := by
+  intro X N hX hN
+  simpa [Mproj] using
+    (Goldbach.BankPieces.Cert.ProjectedInput.projected_bank_gap_via_sigmaHonest
+      (Δhonest := Δhonest) (hHonest := hHonest) (X := X) (N := N) hX hN)
 
 end
 

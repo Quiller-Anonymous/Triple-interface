@@ -314,6 +314,35 @@ lemma pref_bound_on_window
     exact div_le_div_of_nonneg_right hmul hmass_nonneg
   simpa [hrewrite, mul_one] using hdiv
 
+/-- Weighted pointwise bound on the constant reference payload on the window. -/
+lemma pref_bound_on_window_weighted
+    [SigmaUpperOnWindow] {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H)
+    {k : ℤ} (hk : k ∈ BG_Identity.S_BG) :
+    |BG_Identity.Pref X N k|
+      ≤ (SigmaUpperOnWindow.Cσ * Goldbach.AO_WeightMass.weight_mass X) / BG_Identity.mass_BG := by
+  classical
+  have hmass_pos : 0 < BG_Identity.mass_BG := BG_Identity.mass_BG_pos
+  have hσ : |AO_SigmaPos.sigma N| ≤ SigmaUpperOnWindow.Cσ :=
+    SigmaUpperOnWindow.sigma_even_ub_on_window (X := X) (N := N) hX hN
+  have hwm_nonneg : 0 ≤ Goldbach.AO_WeightMass.weight_mass X := by
+    have hs : 0 ≤ Goldbach.BG_Bank.wScale X := Goldbach.BG_Bank.wScale_nonneg X
+    simpa [Goldbach.AO_WeightMass.weight_mass, pow_two] using mul_nonneg hs hs
+  have hmass_nonneg : 0 ≤ BG_Identity.mass_BG := le_of_lt hmass_pos
+  have hrewrite :
+      |BG_Identity.Pref X N k|
+        = (|AO_SigmaPos.sigma N| * Goldbach.AO_WeightMass.weight_mass X) / BG_Identity.mass_BG := by
+    simp [BG_Identity.Pref, hk, AO_SigmaPos.sigma, abs_div, abs_mul, abs_of_pos hmass_pos,
+      abs_of_nonneg hwm_nonneg, mul_assoc, mul_left_comm, mul_comm]
+  have hmul :
+      |AO_SigmaPos.sigma N| * Goldbach.AO_WeightMass.weight_mass X
+        ≤ SigmaUpperOnWindow.Cσ * Goldbach.AO_WeightMass.weight_mass X := by
+    exact mul_le_mul_of_nonneg_right hσ hwm_nonneg
+  have hdiv :
+      (|AO_SigmaPos.sigma N| * Goldbach.AO_WeightMass.weight_mass X) / BG_Identity.mass_BG
+        ≤ (SigmaUpperOnWindow.Cσ * Goldbach.AO_WeightMass.weight_mass X) / BG_Identity.mass_BG := by
+    exact div_le_div_of_nonneg_right hmul hmass_nonneg
+  simpa [hrewrite] using hdiv
+
 /-- Inner-band swap bound between the variable reference convolution and the constant reference. -/
 lemma conv_ref_sub_conv_ref_const_bound
     [SigmaUpperOnWindow]
@@ -352,6 +381,117 @@ lemma conv_ref_sub_conv_ref_const_bound
       (M := Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
       (hM := by intro k hk; exact hM (k := k) hk)
   simpa [hsum] using hswap'
+
+/-- Weighted inner-band swap bound between `conv_ref` and `conv_ref_const`. -/
+lemma conv_ref_sub_conv_ref_const_bound_weighted
+    [SigmaUpperOnWindow]
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+      ≤ Goldbach.AO_WeightMass.weight_mass X
+          * (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+          * ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
+  classical
+  have hwm_nonneg : 0 ≤ Goldbach.AO_WeightMass.weight_mass X := by
+    have hs : 0 ≤ Goldbach.BG_Bank.wScale X := Goldbach.BG_Bank.wScale_nonneg X
+    simpa [Goldbach.AO_WeightMass.weight_mass, pow_two] using mul_nonneg hs hs
+  have hsum :
+      BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N
+        = Finset.sum BG_Identity.S_BG (fun k =>
+            BG_Identity.K_full k *
+              (Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k)) := by
+    simpa using (BG_Identity.conv_ref_sub_conv_ref_const_eq_sum (X := X) (N := N))
+  have hM :
+      ∀ {k : ℤ}, k ∈ BG_Identity.S_BG →
+        |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
+          ≤ Goldbach.AO_WeightMass.weight_mass X
+              * (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
+    intro k hk
+    have hP :=
+      Goldbach.BG_Bank.payload_bound_window_wScale_sq (X := X) (N := N) hX hN (k := k)
+    have hQ := pref_bound_on_window_weighted (X := X) (N := N) hX hN hk
+    have htri :
+        |Goldbach.BG_Bank.P_BG X N k - BG_Identity.Pref X N k|
+          ≤ |Goldbach.BG_Bank.P_BG X N k| + |BG_Identity.Pref X N k| := by
+      simpa [sub_eq_add_neg, abs_neg] using
+        (abs_add_le (Goldbach.BG_Bank.P_BG X N k) (-BG_Identity.Pref X N k))
+    have hsum_le :
+        |Goldbach.BG_Bank.P_BG X N k| + |BG_Identity.Pref X N k|
+          ≤ Goldbach.AO_WeightMass.weight_mass X * Goldbach.BG_Bank.payload_cap X N
+              + (SigmaUpperOnWindow.Cσ * Goldbach.AO_WeightMass.weight_mass X) / BG_Identity.mass_BG := by
+      exact add_le_add (by
+        simpa [Goldbach.AO_WeightMass.weight_mass, mul_assoc, mul_left_comm, mul_comm] using hP) hQ
+    have hfactor :
+        Goldbach.AO_WeightMass.weight_mass X * Goldbach.BG_Bank.payload_cap X N
+          + (SigmaUpperOnWindow.Cσ * Goldbach.AO_WeightMass.weight_mass X) / BG_Identity.mass_BG
+        = Goldbach.AO_WeightMass.weight_mass X
+            * (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG) := by
+      ring
+    rw [hfactor] at hsum_le
+    exact htri.trans hsum_le
+  have hswap' :=
+    BG_Identity.swap_bound_linf_l1
+      (P := fun k => Goldbach.BG_Bank.P_BG X N k)
+      (Q := fun k => BG_Identity.Pref X N k)
+      (M := Goldbach.AO_WeightMass.weight_mass X
+          * (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG))
+      (hM := by intro k hk; exact hM (k := k) hk)
+  calc
+    |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+        ≤ Goldbach.AO_WeightMass.weight_mass X
+            * (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+            * ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
+              simpa [hsum, mul_assoc, mul_left_comm, mul_comm] using hswap'
+
+/-- Weighted variant of `ref_to_Mfun_bound_of_const_gap`. -/
+lemma ref_to_Mfun_bound_of_const_gap_weighted
+    [SigmaUpperOnWindow]
+    (Mfun : ℕ → ℕ → ℝ)
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H)
+    (δ : ℝ)
+    (hAO : |BG_Identity.conv_ref_const X N - Mfun X N| ≤ δ) :
+    |BG_Identity.conv_ref X N - Mfun X N|
+      ≤ δ
+        + Goldbach.AO_WeightMass.weight_mass X
+            * (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+            * ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
+  have hswap := conv_ref_sub_conv_ref_const_bound_weighted (X := X) (N := N) hX hN
+  have hdecomp :
+      BG_Identity.conv_ref X N - Mfun X N
+        = (BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+          + (BG_Identity.conv_ref_const X N - Mfun X N) := by ring
+  have htri :
+      |BG_Identity.conv_ref X N - Mfun X N|
+        ≤ |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+          + |BG_Identity.conv_ref_const X N - Mfun X N| := by
+    have habs : |BG_Identity.conv_ref X N - Mfun X N|
+        = |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+            + (BG_Identity.conv_ref_const X N - Mfun X N)| :=
+      congrArg (fun t : ℝ => |t|) hdecomp
+    calc
+      |BG_Identity.conv_ref X N - Mfun X N|
+          =
+        |(BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+            + (BG_Identity.conv_ref_const X N - Mfun X N)| := habs
+      _ ≤ |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+            + |BG_Identity.conv_ref_const X N - Mfun X N| := by
+              simpa using
+                (abs_add_le
+                  (BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N)
+                  (BG_Identity.conv_ref_const X N - Mfun X N))
+  calc
+    |BG_Identity.conv_ref X N - Mfun X N|
+        ≤ |BG_Identity.conv_ref X N - BG_Identity.conv_ref_const X N|
+          + |BG_Identity.conv_ref_const X N - Mfun X N| := htri
+    _ ≤ Goldbach.AO_WeightMass.weight_mass X
+            * (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+            * ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ))
+          + δ := by
+            exact add_le_add hswap hAO
+    _ = δ
+        + Goldbach.AO_WeightMass.weight_mass X
+            * (Goldbach.BG_Bank.payload_cap X N + SigmaUpperOnWindow.Cσ / BG_Identity.mass_BG)
+            * ((2 * H + 1 : ℝ) / (BG_Identity.Ucut : ℝ)) := by
+              ring
 
 /-- Variant of `ref_to_M_bound` that only needs a bound on the constant-reference gap. -/
 lemma ref_to_Mfun_bound_of_const_gap

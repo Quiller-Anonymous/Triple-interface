@@ -162,4 +162,60 @@ theorem bank_gap
   intro X N hX hN
   exact le_trans (bank_gap_raw (Δref := Δref) (hRef := hRef) hX hN) (hCal (X := X) (N := N) hX hN)
 
+/--
+`bankOp_ref`-based projected bank-gap route.
+
+This is the preferred theorem surface for the projected normalization route: the reference operator
+already equals `MainTerm.M C2_numeric` on the canonical window, so callers can target
+`|conv_ref - bankOp_ref|` directly without routing the statement through the older σ-mass model.
+-/
+theorem bank_gap_raw_refOp
+    [Goldbach.BG_Calib.WeightsBridgeHyp]
+    (Δref : ℕ → ℝ)
+    (hRef :
+      ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+        |Goldbach.BG_Identity.conv_ref X N - Goldbach.BG_Identity.bankOp_ref X N| ≤ Δref X) :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+      |Goldbach.BG_Identity.R_bank X N - (Goldbach.MainTerm.M C2_numeric) N|
+        ≤ Goldbach.AO_WeightMass.weight_mass X
+            * (Goldbach.BG_Bank.payload_cap X N
+                * (((3 : ℝ) / 1000) + Goldbach.BG_Identity.C_tail_closed))
+            + Δref X := by
+  intro X N hX hN
+  have hRefMain :
+      ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+        |Goldbach.BG_Identity.conv_ref X N - (Goldbach.MainTerm.M C2_numeric) N| ≤ Δref X := by
+    intro X N hX hN
+    have hbank :
+        Goldbach.BG_Identity.bankOp_ref X N = (Goldbach.MainTerm.M C2_numeric) N :=
+      Goldbach.BG_Identity.bankOp_ref_eq_M_on_window hX hN
+    simpa [hbank] using (hRef (X := X) (N := N) hX hN)
+  exact bank_gap_raw (Δref := Δref) (hRef := hRefMain) (X := X) (N := N) hX hN
+
+/--
+`X`-uniform projected bank-gap certificate phrased against `bankOp_ref`.
+
+This is the same result as `bank_gap`, but with the more honest projected interface:
+the reference comparison is made to `bankOp_ref`, the operator that is definitionally the main
+term on the canonical window.
+-/
+theorem bank_gap_refOp
+    [Goldbach.BG_Calib.WeightsBridgeHyp]
+    (Δref Δproj : ℕ → ℝ)
+    (hRef :
+      ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+        |Goldbach.BG_Identity.conv_ref X N - Goldbach.BG_Identity.bankOp_ref X N| ≤ Δref X)
+    (hCal :
+      ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+        Goldbach.AO_WeightMass.weight_mass X
+          * (Goldbach.BG_Bank.payload_cap X N
+              * (((3 : ℝ) / 1000) + Goldbach.BG_Identity.C_tail_closed))
+          + Δref X ≤ Δproj X) :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+      |Goldbach.BG_Identity.R_bank X N - (Goldbach.MainTerm.M C2_numeric) N| ≤ Δproj X := by
+  intro X N hX hN
+  exact le_trans
+    (bank_gap_raw_refOp (Δref := Δref) (hRef := hRef) (X := X) (N := N) hX hN)
+    (hCal (X := X) (N := N) hX hN)
+
 end Goldbach.BankPieces.Cert.Projected

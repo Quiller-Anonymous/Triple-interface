@@ -39,9 +39,19 @@ In `Goldbach/BG_Identity.lean`:
 
 - `conv_ref_const_eq_sigma_mass` proves
   `conv_ref_const X N = sigma N * weight_mass X`
+- `bankOp_ref_eq_M_on_window` proves
+  `bankOp_ref X N = MainTerm.M C2_numeric N` on the canonical window
 
 This is the key normalization change. The staged constant-reference object is no longer `sigma N`;
 it is `sigma N * weight_mass X`.
+
+This also identifies the correct projected theorem surface:
+
+- `conv_ref_const` is a σ-mass staging object tied to the old banked normalization,
+- `bankOp_ref` is the reference operator that already matches the projected main term on-window.
+
+So future projected-gap theorems should be phrased as `|conv_ref - bankOp_ref| ≤ Δ(X)`, not as
+improvements to `|conv_ref_const - MainTerm.M|`.
 
 ### 3. AO lower packaging subtracts an absolute envelope from that suppressed term
 
@@ -270,3 +280,37 @@ closure witness machinery without forcing any product normalization.
    - a refactored Mellin/deweighted major object.
 
 Until that decision is made, more wrapper-level normalization work is low-yield.
+
+## Projected-route blocker
+
+The projected/direct route is now a real theorem surface:
+
+- `Goldbach/ProjectedMajorTermDirectProto.lean`
+- `Goldbach/CompleteTenorFunX_DirectProjectedCanon.lean`
+- `Goldbach/BankPieces/Cert/ProjectedInput.lean`
+
+The latest cleanup removed the broken scratch dependency and routed the projected reference gap
+through the honest theorem
+
+- `Goldbach.BG_Calib.ref_to_Mfun_bound_of_const_gap`.
+
+That route builds, but it still does **not** close the projected canonical inequality
+`Δproj(X) < Lproj(X)`.
+
+The key reason is now explicit:
+
+- `conv_ref` is built around `BG_Identity.conv_ref_const`,
+- `conv_ref_const` uses `Goldbach.AO_SigmaModel.sigma`,
+- `bankOp_ref` / `MainTerm.M` use the Hardy–Littlewood singular-series main term.
+
+So there is no cheap “algebra-only” direct comparison theorem
+`|conv_ref - bankOp_ref| ≤ ...`
+waiting to be extracted from the current code. Any genuinely direct projected theorem has to bridge
+two different σ-models:
+
+1. the staged/truncated AO σ-model in `Goldbach/AO_SigmaModel.lean`,
+2. the projected Hardy–Littlewood main term in `Goldbach/MainTerm.lean`.
+
+This means the next honest theorem task is not more repackaging of
+`conv_ref_const -> MainTerm.M`, but a new comparison theorem between the AO σ-model side and the
+projected main-term side.

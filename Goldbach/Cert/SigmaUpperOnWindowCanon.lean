@@ -211,4 +211,7 @@ instance : Goldbach.AO_SigmaPos.SigmaUpperOnWindow where
       exact le_trans hsigma (by simpa [one_mul] using hmul)
     simpa [Cσ_canon] using this
 
+theorem Cσ_eq_Q0 : Goldbach.AO_SigmaPos.SigmaUpperOnWindow.Cσ = (TailBlock.Q0 : ℝ) := by
+  rfl
+
 end Goldbach.Cert.SigmaUpperOnWindowCanon

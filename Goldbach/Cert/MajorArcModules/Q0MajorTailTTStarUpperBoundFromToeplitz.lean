@@ -470,7 +470,7 @@ private lemma coeffMass_le_one_div_20001 {X : ℕ} (hX : X0 ≤ X) :
   exact le_trans hsum_le_coeff (le_trans hsum_le' (le_of_eq hfinal))
 
 private lemma toeplitzExprTopTight_le_36742000 {X : ℕ} (hX : X0 ≤ X) :
-    toeplitzExprTopTight X (1 : ℝ) ≤ (80000000 : ℝ) := by
+    toeplitzExprTopTight X (1 : ℝ) ≤ (36742000 : ℝ) := by
   classical
   have hNcard :
       ((2 * (X + H) + 1 : ℕ) : ℝ) ≤ (3 : ℝ) * (X : ℝ) := by
