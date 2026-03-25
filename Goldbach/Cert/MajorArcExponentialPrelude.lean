@@ -1,6 +1,7 @@
 import Mathlib.Analysis.Complex.Exponential
 import Mathlib.Analysis.Complex.Trigonometric
 import Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic
+import Mathlib.Analysis.SpecialFunctions.Trigonometric.Bounds
 
 /-!
 Basic complex-exponential estimates for major-arc style arguments.
@@ -110,6 +111,36 @@ lemma norm_e_sub_e_le_of_abs_two_pi_mul_sub_le_one {x y : ℝ}
               _ = 2 * |2 * Real.pi * (x - y)| := by simp [hz']
               _ = 2 * ((2 * Real.pi) * |x - y|) := by simp [habs]
               _ = 4 * Real.pi * |x - y| := by ring
+
+lemma e_add_e_neg_sub_two_eq_real (x : ℝ) :
+    e x + e (-x) - 2 = ((2 * (Real.cos (2 * Real.pi * x) - 1) : ℝ) : ℂ) := by
+  have hx :
+      e x = Real.cos (2 * Real.pi * x) + Real.sin (2 * Real.pi * x) * Complex.I := by
+    simpa [e, mul_comm, mul_left_comm, mul_assoc] using (Complex.exp_mul_I (2 * Real.pi * x))
+  have hnegx :
+      e (-x) = Real.cos (2 * Real.pi * x) - Real.sin (2 * Real.pi * x) * Complex.I := by
+    simpa [e, Real.cos_neg, Real.sin_neg, sub_eq_add_neg, mul_comm, mul_left_comm, mul_assoc]
+      using (Complex.exp_mul_I (2 * Real.pi * (-x)))
+  rw [hx, hnegx]
+  norm_num
+  ring
+
+lemma norm_e_add_e_neg_sub_two_le_sq (x : ℝ) :
+    ‖e x + e (-x) - 2‖ ≤ (2 * Real.pi * x) ^ 2 := by
+  have hmain :
+      ‖e x + e (-x) - 2‖ = 2 * (1 - Real.cos (2 * Real.pi * x)) := by
+    rw [e_add_e_neg_sub_two_eq_real]
+    rw [Complex.norm_real, Real.norm_eq_abs]
+    have hcos : Real.cos (2 * Real.pi * x) ≤ 1 := Real.cos_le_one _
+    have habs : |2 * (Real.cos (2 * Real.pi * x) - 1)| = 2 * (1 - Real.cos (2 * Real.pi * x)) := by
+      have hnonpos : 2 * (Real.cos (2 * Real.pi * x) - 1) ≤ 0 := by nlinarith
+      rw [abs_of_nonpos hnonpos]
+      ring
+    exact habs
+  rw [hmain]
+  have hcoslb : 1 - (2 * Real.pi * x) ^ 2 / 2 ≤ Real.cos (2 * Real.pi * x) := by
+    simpa using (Real.one_sub_sq_div_two_le_cos (x := 2 * Real.pi * x))
+  nlinarith
 
 end
 

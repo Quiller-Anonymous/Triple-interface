@@ -100,11 +100,22 @@ theorem rescaled_shell_summand_q1_eq_phase_corrected_centered
   have h :=
     rescaled_shell_summand_eq_single_phase
       (X := X) (N := N) (q := 1) (n := n) (m := m) (u := u) (β := β)
-  simp only [one_mul] at h
-  rw [h]
-  congr 1
-  norm_num
-  ring
+  calc
+    e (((-(N : ℤ) : ℝ) * (u / (X : ℝ))))
+        * (gExp ((u / (X : ℝ)) + β) n
+            * gExp ((u / (X : ℝ)) - β) m)
+      =
+    e (β * ((n : ℝ) - (m : ℝ)) + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (N : ℝ))) := by
+        simpa [one_mul] using h
+    _ =
+    e (2 * u / (X : ℝ))
+      * e
+          (β * ((n : ℝ) - (m : ℝ))
+            + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ)))) := by
+        rw [← e_add]
+        congr 1
+        norm_num
+        ring
 
 /--
 Exact difference identity for the midpoint-corrected `q = 1` defect.
@@ -131,6 +142,331 @@ theorem rescaled_shell_summand_sub_phase_corrected_frozen_q1_eq_phase_diff
   rw [centered_shell_summand_eq_single_phase (N := N) (n := n) (m := m) (θ := 0) (β := β)]
   simp
   ring
+
+/--
+The midpoint-corrected `q = 1` defect factors as the base phase `e(β(n-m))` times the centered
+shift defect `e(δ) - 1`, where `δ = (u/X)(n+m-(N+2))`.
+-/
+theorem rescaled_shell_summand_sub_phase_corrected_frozen_q1_eq_base_mul_shift_sub_one
+    (X N n m : ℕ) (u β : ℝ) :
+    e (((-(N : ℤ) : ℝ) * (u / (X : ℝ))))
+        * (gExp ((u / (X : ℝ)) + β) n
+            * gExp ((u / (X : ℝ)) - β) m)
+      -
+      e (2 * u / (X : ℝ))
+        * (e (((-(N : ℤ) : ℝ) * (0 : ℝ))) * (gExp (0 + β) n * gExp (0 - β) m))
+      =
+    e (2 * u / (X : ℝ))
+      * e (β * ((n : ℝ) - (m : ℝ)))
+      * (e ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ)))) - 1) := by
+  rw [rescaled_shell_summand_sub_phase_corrected_frozen_q1_eq_phase_diff]
+  have hphase :
+      e
+        (β * ((n : ℝ) - (m : ℝ))
+          + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+      =
+    e (β * ((n : ℝ) - (m : ℝ)))
+      * e ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ)))) := by
+    rw [e_add]
+  calc
+    e (2 * u / (X : ℝ))
+      * (e
+          (β * ((n : ℝ) - (m : ℝ))
+            + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+          -
+        e (β * ((n : ℝ) - (m : ℝ))))
+      =
+    e (2 * u / (X : ℝ))
+      * (e (β * ((n : ℝ) - (m : ℝ)))
+          * e ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+        - e (β * ((n : ℝ) - (m : ℝ)))) := by
+          rw [hphase]
+    _ =
+    e (2 * u / (X : ℝ))
+      * (e (β * ((n : ℝ) - (m : ℝ)))
+          * (e ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ)))) - 1)) := by
+          ring
+    _ =
+    e (2 * u / (X : ℝ))
+      * e (β * ((n : ℝ) - (m : ℝ)))
+      * (e ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ)))) - 1) := by
+          ring
+
+/--
+The stripped midpoint-corrected phase difference factors as the base phase `e(β(n-m))` times the
+centered shift defect `e(δ) - 1`.
+-/
+theorem phase_diff_q1_eq_base_mul_shift_sub_one
+    (X N n m : ℕ) (u β : ℝ) :
+    e (2 * u / (X : ℝ))
+      * (e
+          (β * ((n : ℝ) - (m : ℝ))
+            + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+          -
+        e (β * ((n : ℝ) - (m : ℝ))))
+      =
+    e (2 * u / (X : ℝ))
+      * e (β * ((n : ℝ) - (m : ℝ)))
+      * (e ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ)))) - 1) := by
+  have h :=
+    rescaled_shell_summand_sub_phase_corrected_frozen_q1_eq_base_mul_shift_sub_one
+      (X := X) (N := N) (n := n) (m := m) (u := u) (β := β)
+  rw [rescaled_shell_summand_sub_phase_corrected_frozen_q1_eq_phase_diff] at h
+  simpa using h
+
+/-- Under midpoint reflection, the base phase `β (n-m)` is unchanged. -/
+theorem reflected_q1_base_phase_eq
+    (N n m : ℕ) (β : ℝ)
+    (hn : n ≤ N + 2) (hm : m ≤ N + 2) :
+    β * ((((N + 2 - m : ℕ) : ℝ)) - (((N + 2 - n : ℕ) : ℝ)))
+      =
+    β * ((n : ℝ) - (m : ℝ)) := by
+  rw [Nat.cast_sub hm, Nat.cast_sub hn]
+  ring
+
+/-- Under midpoint reflection, the centered shift changes sign. -/
+theorem reflected_q1_centered_shift_eq_neg
+    (X N n m : ℕ) (u : ℝ)
+    (hn : n ≤ N + 2) (hm : m ≤ N + 2) :
+    (u / (X : ℝ))
+      * ((((N + 2 - m : ℕ) : ℝ) + ((N + 2 - n : ℕ) : ℝ)) - ((N + 2 : ℕ) : ℝ))
+      =
+    -((u / (X : ℝ)) * (((n : ℝ) + (m : ℝ)) - ((N + 2 : ℕ) : ℝ))) := by
+  rw [Nat.cast_sub hm, Nat.cast_sub hn]
+  ring
+
+/--
+The factorized midpoint-corrected defect for a pair and its midpoint reflection collapses to the
+two-sided centered shift expression.
+-/
+theorem factorized_q1_pair_eq_two_sided_shift
+    (X N n m : ℕ) (u β : ℝ)
+    (hn : n ≤ N + 2) (hm : m ≤ N + 2) :
+    Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+      * Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ)))
+      * (Goldbach.Cert.MajorArcExponential.e
+          ((u / (X : ℝ)) * (((n : ℝ) + (m : ℝ)) - ((N + 2 : ℕ) : ℝ)))
+        - 1)
+      +
+    Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+      * Goldbach.Cert.MajorArcExponential.e
+          (β * ((((N + 2 - m : ℕ) : ℝ)) - (((N + 2 - n : ℕ) : ℝ))))
+      * (Goldbach.Cert.MajorArcExponential.e
+          ((u / (X : ℝ))
+            * ((((N + 2 - m : ℕ) : ℝ) + ((N + 2 - n : ℕ) : ℝ)) - ((N + 2 : ℕ) : ℝ)))
+        - 1)
+      =
+    Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+      * Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ)))
+      * ((Goldbach.Cert.MajorArcExponential.e
+            ((u / (X : ℝ)) * (((n : ℝ) + (m : ℝ)) - ((N + 2 : ℕ) : ℝ)))
+          +
+          Goldbach.Cert.MajorArcExponential.e
+            (-((u / (X : ℝ)) * (((n : ℝ) + (m : ℝ)) - ((N + 2 : ℕ) : ℝ)))))
+          - 2) := by
+  rw [reflected_q1_base_phase_eq (N := N) (n := n) (m := m) (β := β) hn hm]
+  rw [reflected_q1_centered_shift_eq_neg (X := X) (N := N) (n := n) (m := m) (u := u) hn hm]
+  ring
+
+private lemma sum_Ico_mul_sum_Ico_eq_double
+    (N : ℕ) (f g : ℕ → ℂ) :
+    (∑ n ∈ Finset.Ico 4 ((N - 2) + 1), f n)
+      * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1), g m)
+      =
+    ∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+      ∑ m ∈ Finset.Ico 4 ((N - 2) + 1), f n * g m := by
+  rw [Finset.sum_mul]
+  refine Finset.sum_congr rfl ?_
+  intro n hn
+  rw [Finset.mul_sum]
+
+private lemma scalar_mul_sum_Ico_mul_sum_Ico_eq_double
+    (a : ℂ) (N : ℕ) (f g : ℕ → ℂ) :
+    a * ((∑ n ∈ Finset.Ico 4 ((N - 2) + 1), f n)
+        * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1), g m))
+      =
+    ∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+      ∑ m ∈ Finset.Ico 4 ((N - 2) + 1), a * (f n * g m) := by
+  rw [sum_Ico_mul_sum_Ico_eq_double]
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro n hn
+  rw [Finset.mul_sum]
+
+/--
+Exact double-sum rewrite of the midpoint-corrected `q = 1` inner oscillatory defect.
+
+This is the cancellation surface before the outer kernel is reattached: the corrected defect is a
+double sum of exact phase differences, with no norm or triangle inequality applied.
+-/
+theorem rescaled_q1_innerFactor_sub_phase_corrected_frozen_eq_double_sum_phase_diff
+    (X N : ℕ) (u β : ℝ) :
+    (fourier (T := (1 : ℝ)) (-(N : ℤ))
+        ((u / (X : ℝ)) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+        * ((∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+              Goldbach.Cert.MajorArcStep2ExpSums.gExp ((u / (X : ℝ)) + β) n)
+            * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+                Goldbach.Cert.MajorArcStep2ExpSums.gExp ((u / (X : ℝ)) - β) m))
+      -
+      Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+        * ((fourier (T := (1 : ℝ)) (-(N : ℤ))
+              ((0 : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+            * ((∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+                  Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 + β) n)
+                * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+                    Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 - β) m)))
+      =
+    ∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+      ∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+        Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+          * (Goldbach.Cert.MajorArcExponential.e
+              (β * ((n : ℝ) - (m : ℝ))
+                + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+            -
+            Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ)))) := by
+  let s := Finset.Ico 4 ((N - 2) + 1)
+  let θ := u / (X : ℝ)
+  let e2 := Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+  let A : ℕ → ℕ → ℂ := fun n m =>
+    (fourier (T := (1 : ℝ)) (-(N : ℤ))
+        (θ : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+      * (Goldbach.Cert.MajorArcStep2ExpSums.gExp (θ + β) n
+          * Goldbach.Cert.MajorArcStep2ExpSums.gExp (θ - β) m)
+  let B : ℕ → ℕ → ℂ := fun n m =>
+    e2
+      * ((fourier (T := (1 : ℝ)) (-(N : ℤ))
+            ((0 : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+          * (Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 + β) n
+              * Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 - β) m))
+  have hrescaled :
+      (fourier (T := (1 : ℝ)) (-(N : ℤ))
+          (θ : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+        * ((∑ n ∈ s, Goldbach.Cert.MajorArcStep2ExpSums.gExp (θ + β) n)
+            * (∑ m ∈ s, Goldbach.Cert.MajorArcStep2ExpSums.gExp (θ - β) m))
+        =
+      ∑ n ∈ s, ∑ m ∈ s, A n m := by
+    simpa [A, s, θ] using
+      scalar_mul_sum_Ico_mul_sum_Ico_eq_double
+        (a := (fourier (T := (1 : ℝ)) (-(N : ℤ))
+            (θ : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ))
+        (N := N)
+        (f := fun n => Goldbach.Cert.MajorArcStep2ExpSums.gExp (θ + β) n)
+        (g := fun m => Goldbach.Cert.MajorArcStep2ExpSums.gExp (θ - β) m)
+  have hfrozen :
+      e2
+        * ((fourier (T := (1 : ℝ)) (-(N : ℤ))
+              ((0 : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+            * ((∑ n ∈ s, Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 + β) n)
+                * (∑ m ∈ s, Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 - β) m)))
+        =
+      ∑ n ∈ s, ∑ m ∈ s, B n m := by
+    simpa [B, s, e2] using
+      scalar_mul_sum_Ico_mul_sum_Ico_eq_double
+        (a := e2 * (fourier (T := (1 : ℝ)) (-(N : ℤ))
+            ((0 : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ))
+        (N := N)
+        (f := fun n => Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 + β) n)
+        (g := fun m => Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 - β) m)
+  have hsub :
+      (∑ n ∈ s, ∑ m ∈ s, A n m) - (∑ n ∈ s, ∑ m ∈ s, B n m)
+        =
+      ∑ n ∈ s, ∑ m ∈ s, (A n m - B n m) := by
+    rw [sub_eq_add_neg]
+    rw [← Finset.sum_neg_distrib]
+    rw [← Finset.sum_add_distrib]
+    refine Finset.sum_congr rfl ?_
+    intro n hn
+    rw [← Finset.sum_neg_distrib]
+    rw [← Finset.sum_add_distrib]
+    refine Finset.sum_congr rfl ?_
+    intro m hm
+    simp [sub_eq_add_neg]
+  rw [hrescaled, hfrozen, hsub]
+  refine Finset.sum_congr rfl ?_
+  intro n hn
+  refine Finset.sum_congr rfl ?_
+  intro m hm
+  have hθ :
+      (fourier (T := (1 : ℝ)) (-(N : ℤ))
+          (θ : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+        =
+      Goldbach.Cert.MajorArcExponential.e (((-(N : ℤ) : ℝ) * θ)) := by
+    simpa [mul_comm] using
+      (Goldbach.Cert.MajorArcStep13RealToCircle.fourier_coe_eq_e
+        (k := (-(N : ℤ))) (x := θ))
+  have h0 :
+      (fourier (T := (1 : ℝ)) (-(N : ℤ))
+          ((0 : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+        =
+      Goldbach.Cert.MajorArcExponential.e (((-(N : ℤ) : ℝ) * (0 : ℝ))) := by
+    simpa [mul_comm] using
+      (Goldbach.Cert.MajorArcStep13RealToCircle.fourier_coe_eq_e
+        (k := (-(N : ℤ))) (x := (0 : ℝ)))
+  calc
+    A n m - B n m
+        = (fourier (T := (1 : ℝ)) (-(N : ℤ))
+              (θ : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+            * (gExp (θ + β) n * gExp (θ - β) m)
+          -
+          e2
+            * ((fourier (T := (1 : ℝ)) (-(N : ℤ))
+                ((0 : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+                * (gExp (0 + β) n * gExp (0 - β) m)) := by
+            rfl
+    _ =
+      e (((-(N : ℤ) : ℝ) * (u / (X : ℝ))))
+          * (gExp ((u / (X : ℝ)) + β) n * gExp ((u / (X : ℝ)) - β) m)
+        -
+        e (2 * u / (X : ℝ))
+          * (e (((-(N : ℤ) : ℝ) * (0 : ℝ))) * (gExp (0 + β) n * gExp (0 - β) m)) := by
+            rw [hθ, h0]
+    _ =
+      Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+        * (Goldbach.Cert.MajorArcExponential.e
+            (β * ((n : ℝ) - (m : ℝ))
+              + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+          -
+          Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ)))) := by
+            simpa using
+              rescaled_shell_summand_sub_phase_corrected_frozen_q1_eq_phase_diff
+                (X := X) (N := N) (n := n) (m := m) (u := u) (β := β)
+
+/--
+The midpoint-corrected `q = 1` inner defect rewritten with the base phase factored out and the
+centered shift carried only by `e(δ) - 1`.
+-/
+theorem rescaled_q1_innerFactor_sub_phase_corrected_frozen_eq_double_sum_base_mul_shift_sub_one
+    (X N : ℕ) (u β : ℝ) :
+    (fourier (T := (1 : ℝ)) (-(N : ℤ))
+        (((u / (X : ℝ)) : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+      * ((∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+            Goldbach.Cert.MajorArcStep2ExpSums.gExp ((u / (X : ℝ)) + β) n)
+          * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+              Goldbach.Cert.MajorArcStep2ExpSums.gExp ((u / (X : ℝ)) - β) m))
+      -
+      Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+        * ((fourier (T := (1 : ℝ)) (-(N : ℤ))
+              ((0 : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+            * ((∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+                  Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 + β) n)
+                * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+                    Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 - β) m)))
+      =
+    ∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+      ∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+        Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+          * Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ)))
+          * (Goldbach.Cert.MajorArcExponential.e
+              ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+            - 1) := by
+  rw [rescaled_q1_innerFactor_sub_phase_corrected_frozen_eq_double_sum_phase_diff]
+  refine Finset.sum_congr rfl ?_
+  intro n hn
+  refine Finset.sum_congr rfl ?_
+  intro m hm
+  simpa using
+    phase_diff_q1_eq_base_mul_shift_sub_one
+      (X := X) (N := N) (n := n) (m := m) (u := u) (β := β)
 
 /--
 Norm bound for the local oscillatory difference, conditional on the standard smallness hypothesis

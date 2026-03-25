@@ -22,7 +22,7 @@ separate those cases clearly.
 - Silver standard: builds; end-to-end conditional proof where a required project component (finite base, numeric certificates, calibration bounds, etc.) is still incomplete or not wired in.
 - Iron standard: builds; partial/leaf theorems exist but there is no stable end-to-end pipeline yet (assumptions may be idiosyncratic; certificates/components typically incomplete).
 - Lead standard: machine checked (it builds, whatever it is).
-- Tin standard: not machine checked / not building yet, but it works on paper... probably.
+- Tin standard: not machine checked / not building yet, but as a technical argument it works on paper... probably.
 - Mud standard: informal sketch.
 
 ## Project status:
@@ -42,6 +42,22 @@ separate those cases clearly.
   In that workbench, the remaining polished-gold blockers are concentrated in the pinned `Q0`
   major-arc/minor-energy seam, especially `ssu_minor_energy_calibration`; the project-neutral
   dyadic existence boundary `q0MinorDyadicGramDecayPoly_exists` also remains explicit there.
+- Important strategy note: the current live Goldbach work has now taken its first deliberate major
+  departure from the manuscript math. The repo is presently treating "identify the structured /
+  singular part of `R₂`" as an upstream task before trying to close the paper's Route A / Route B.
+  See `SupportingDocs/Goldbach_FirstMajorDeparture.md`.
+- Current obstruction note: after the weighted-channel cleanup on the pinned `Q0` route, the live
+  ε₁ minor object is now `zeroMode + meanChannel`, not the older `coeffArith` / subspace
+  diagnostic object. That cleanup does **not** create a stronger minor engine; it recovers the
+  existing certified ε₁ engine on a cleaner route-visible explanation. The remaining pinned ε₁
+  seam is therefore calibration (`ssu_minor_energy_calibration` / `CalibrationTarget`), while the
+  canonical endpoint obstruction remains the scale-sensitive closure budget (`BudgetHyp`), as
+  documented by `Goldbach/ParallelFunXCanonScaleObstacle.lean`.
+-- Axiom-status note for that departure: the new singularity-first bridge layer is being developed
+  on the exact repo objects and, so far, adds **no new explicit axioms**. It is infrastructure for
+  exposing candidate structured major/minor components, not yet a new end-to-end closure theorem.
+  So the audited endpoint status above is unchanged, while the active research task has moved
+  upstream.
 -- Type-I note: the legacy file `Goldbach/TypeI_Leak.lean` still contains a zero placeholder and
   should not be read as the active AO/FunX story. The live AO kernel-tail path uses the nontrivial
   `BG_Identity.errTI` bound through `Goldbach/AO_KernelTail.lean`.
@@ -239,6 +255,20 @@ The ε₂-large branch is now discharged deterministically in
 `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarUpperBoundFromToeplitz.lean` and is likewise no
 longer an active pinned axiom in the turnkey `Q0` route.
 
+**Active singularity-object bridge layer (exact-weight; no new explicit `axiom`s)**
+- Major-side exact bookkeeping for the current structured candidate `R23-S7`:
+  `Goldbach/BankPieces/Cert/RawScaleSmallBetaS7Decomposition.lean`.
+- Minor-side exact-weight object and projector/subspace infrastructure:
+  - `Goldbach/Cert/MajorArcModules/Q0MinorSingularityBridge.lean`
+  - `Goldbach/Cert/MajorArcModules/Q0MinorSingularityProjectors.lean`
+  - `Goldbach/Cert/MajorArcModules/Q0MinorSingularityFamilies.lean`
+  - `Goldbach/Cert/MajorArcModules/Q0MinorSingularitySubspaces.lean`
+  - `Goldbach/Cert/MajorArcModules/Q0MinorSingularityCertificates.lean`
+- These modules are the current theorem-facing bridge infrastructure for the singularity-first
+  program described in `SupportingDocs/Goldbach_FirstMajorDeparture.md`. They do **not** yet prove
+  Route A / Route B closure and they do **not** currently change the audited endpoint axiom lists
+  above.
+
 **Path from fool’s gold → gold**
 - Major arcs: discharge the pinned Q0 workbench assumptions above (ε₂-small, ε₂-large, ε₁) by proved
   theorems and/or checkable certificates, then export a conventional theorem-shaped boundary (e.g.
@@ -377,4 +407,4 @@ This section lists (1) the hypothesis surface of the gold entrypoint(s), and (2)
 - December 2025 was all coding and revisions, mainly struggles with compiling the finite base chunks on an underpowered laptop, and then unexpected wiring issues in hooking up the finite base to the analytic engine. Mid-December, Codex was functionally useless, and Copilot on Github was of very limited help. Progress became noticeably quicker when I created files to help it understand the limits of our codebase (Mathlib) and also started to use AGENTS.md to guide it using Codex in VS Code Studio. The project had more or less grown beyond MathGPT by this point.
 - By early January 2026, Codex was operating more or less on its own with minimal prompting; something has clearly changed. Most work was now in decomposing bespoke axioms into conventions, lemmas, and constants. Early January 2026: axiom audits became cleaner and the “gold vs fool’s-gold” boundary became more explicit; work on Alt‑Zeta begins. Then the haggling started; discovered problems with the sigma tail and major arc. Much of the month has been a battle over budgets and constants, trying to find a path toward “platinum” (unconditional, no axioms) and a more precise intermediate target (“polished gold”: auditable tool axioms + discharged project instantiations). 
 - Jan 30: I came to realize that the SSU part of the Goldbach was being treated as conventional or textbook math, as it is too ambitious to prove it as part of the Goldbach project end-to-end. So I split it into a separate project and let Goldbach work on an instantiation of SSU complete with project-specific parameters. New plan: bring Goldbach up to polished gold with SSU-I, then take a few months to prove SSU independently (to platinum), thereby (hopefully) bringing Goldbach to platinum.
-- Mar 3: The SSU grind continues, though with frequent stops due to rate limits. SSU was completed to platinum early thereafter in March, and we returned to the project getting Goldbach to platinum.
+- Mar 3: The SSU grind continues, though with frequent stops due to rate limits. SSU was completed to platinum early thereafter in March, and we returned to the project getting Goldbach to platinum. March 20: uncovered yet another "one last thing", an apparent missing premise in the Goldbach proof that establishes the density of the arithmetic leading into Routes A/B. This has required us (for the first time) to attempt to build a new analytical object and construct a bridge that goes beyond the proof in the source document. Too many of these ad hoc additions spell doom for the program, but I'll keep at it. To avoid wasted effort, I am now running feasibility studies before coding, and forcing different LLMs (MathGPT and Claude Opus) to cross-review.

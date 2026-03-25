@@ -3,8 +3,7 @@ import Goldbach.Cert.MajorArcModules.Q0MajorRoute
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundFromCert
 import Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundDeterministic
-import Goldbach.Cert.MajorArcModules.Q0MinorSplitEngine
-import Goldbach.Cert.MajorArcModules.Q0MinorSSUFromCert
+import Goldbach.Cert.MajorArcModules.Q0MinorWeightedChannelEngine
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromCert
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundFromToeplitz
 import Goldbach.Cert.MajorArcModules.Q0MajorTailTTStarUpperBoundSpec
@@ -25,8 +24,8 @@ open Goldbach.Windows
 
 open Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedger
 open Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
-open Goldbach.Cert.MajorArcModules.Q0MinorSplitEngine
 open Goldbach.Cert.MajorArcModules.Q0MinorSSUFromCert
+open Goldbach.Cert.MajorArcModules.Q0MinorWeightedChannelEngine
 open Goldbach.Cert.MajorArcModules.Q0MajorRoute
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallCertData
 open Goldbach.Cert.MajorArcModules.Q0MajorSmallUpperBoundSpec
@@ -48,6 +47,8 @@ noncomputable abbrev Ut : ℝ := Goldbach.Cert.MajorArcModules.Q0MajorTailTTStar
 Notes provenance: Theorem 9.17 + SSU Theorem 6.27 / (6.7).
 
 Lean interface: `Q0MinorEnergyLedgerEngine Δ C2 C3` with certified `C2,C3`.
+The current deterministic route-visible explanation is the weighted-channel decomposition
+`minorResidual = zeroMode + meanChannel`.
 -/
 
 theorem ssu_minor_energy_ledger_engine :
@@ -63,7 +64,7 @@ theorem ssu_minor_energy_ledger_engine :
       Goldbach.Cert.MajorArcModules.Q0MinorLedgerCertData.data,
       Goldbach.Cert.MajorArcModules.Q0MinorTypeICertData.data]
   simpa [hC2, hC3] using
-    (ledgerEngine_of_ssuCertBound Q0MinorSSUFromCert.nonzeroModeEnergyBound :
+    (ledgerEngine_of_currentWeightedChannelCerts :
       Q0MinorEnergyLedgerEngine Δ_canon
         (2 * Q0MinorSSUFromCert.A2)
         (2 * Goldbach.Cert.MajorArcModules.Q0MinorTypeIFromCert.A3))

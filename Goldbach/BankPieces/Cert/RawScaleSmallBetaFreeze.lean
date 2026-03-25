@@ -3,6 +3,7 @@ import Goldbach.BankPieces.Cert.RawScaleSmallBetaQFactorC
 import Goldbach.BankPieces.Cert.RawScaleSmallBetaExtracted
 import Goldbach.BankPieces.Cert.RawScaleSmallBetaOscillation
 import Goldbach.BankPieces.Cert.ProjectedConstGapBridge
+import Goldbach.Cert.MajorArcExponentialPrelude
 import Goldbach.Cert.MajorArcModules.ArcSetBounds
 import Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit
 import Mathlib.MeasureTheory.Integral.Bochner.Set
@@ -236,6 +237,51 @@ private theorem norm_integral_indicator_centeredUnitSet_one_le
     _ = C * (volume s).toReal := by rw [hreal]
     _ = C * 2 := by simp [s, volume_centeredUnitSet_one_toReal]
     _ = 2 * C := by ring
+
+private theorem norm_intervalIntegral_zero_one_le
+    {f : ℝ → ℂ} {C : ℝ}
+    (hC : 0 ≤ C)
+    (hf : ∀ u, 0 ≤ u → u ≤ 1 → ‖f u‖ ≤ C) :
+    ‖∫ u in (0 : ℝ)..(1 : ℝ), f u‖ ≤ C := by
+  let s : Set ℝ := Set.Icc (0 : ℝ) (1 : ℝ)
+  have hs : MeasurableSet s := measurableSet_Icc
+  haveI : IsFiniteMeasure (volume.restrict s) := by
+    refine ⟨?_⟩
+    have hfin : volume s < ⊤ := by
+      simp [s]
+    simpa [s] using hfin
+  have hAeImp : ∀ᵐ u ∂volume, u ∈ s → ‖f u‖ ≤ C := by
+    refine Filter.Eventually.of_forall ?_
+    intro u hu
+    exact hf u hu.1 hu.2
+  have hAe : ∀ᵐ u ∂volume.restrict s, ‖f u‖ ≤ C :=
+    (MeasureTheory.ae_restrict_iff' (μ := volume) (s := s) hs).2 hAeImp
+  have hbound :
+      ‖∫ u, f u ∂(volume.restrict s)‖ ≤ C * (volume.restrict s).real Set.univ :=
+    MeasureTheory.norm_integral_le_of_norm_le_const (μ := volume.restrict s) (f := f) (C := C) hAe
+  have hind :
+      (∫ u in (0 : ℝ)..(1 : ℝ), f u) = ∫ u, f u ∂(volume.restrict s) := by
+    calc
+      (∫ u in (0 : ℝ)..(1 : ℝ), f u)
+          = ∫ u in Set.Ioc (0 : ℝ) (1 : ℝ), f u := by
+              simpa using
+                (intervalIntegral.integral_of_le (μ := volume)
+                  (f := f) (a := (0 : ℝ)) (b := (1 : ℝ)) (by norm_num : (0 : ℝ) ≤ 1))
+      _ = ∫ u in Set.Icc (0 : ℝ) (1 : ℝ), f u := by
+            simpa using
+              (MeasureTheory.integral_Icc_eq_integral_Ioc
+                (μ := volume) (f := f) (x := (0 : ℝ)) (y := (1 : ℝ))).symm
+      _ = ∫ u, f u ∂(volume.restrict s) := by
+            simpa [s] using
+              (MeasureTheory.integral_indicator (μ := volume) (s := s) (f := f) hs).symm
+  have hreal :
+      (volume.restrict s).real Set.univ = (volume s).toReal := by
+    simp [Measure.real, s, hs, Measure.restrict_apply]
+  calc
+    ‖∫ u in (0 : ℝ)..(1 : ℝ), f u‖ = ‖∫ u, f u ∂(volume.restrict s)‖ := by rw [hind]
+    _ ≤ C * (volume.restrict s).real Set.univ := hbound
+    _ = C * (volume s).toReal := by rw [hreal]
+    _ = C := by simp [s, Real.volume_Icc]
 
 private theorem norm_intervalIntegral_betaSmallSet_indicator_le_one_div_six
     {g : ℝ → ℂ} {C : ℝ}
@@ -763,6 +809,751 @@ noncomputable def smallBetaRescaledGapExtractedArcHalfQ1Corrected (X N : ℕ) : 
         (smallBetaRescaledArchShell X N 1 u β
           - smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β)) β
 
+/--
+The exact midpoint-corrected principal-arc shell defect after factoring out the kernel.
+
+This is the honest `q = 1` cancellation object: the kernel remains outside, and the inner
+oscillation is a double sum of exact phase differences.
+-/
+noncomputable def q1PhaseCorrectedDoubleSumShellDefect (X N : ℕ) (u β : ℝ) : ℂ :=
+  (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+    * (∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+        ∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+          Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+            * (Goldbach.Cert.MajorArcExponential.e
+                (β * ((n : ℝ) - (m : ℝ))
+                  + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+              -
+              Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ)))))
+
+/--
+The same `q = 1` shell defect rewritten on the shifted box `j,k ∈ range (N-5)` via
+`n = 4 + j`, `m = 4 + k`.
+-/
+noncomputable def q1PhaseCorrectedDoubleSumShellDefectRange (X N : ℕ) (u β : ℝ) : ℂ :=
+  (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+    * (∑ j ∈ Finset.range (N - 5),
+        ∑ k ∈ Finset.range (N - 5),
+          Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+            * (Goldbach.Cert.MajorArcExponential.e
+                (β * (((4 + j : ℕ) : ℝ) - ((4 + k : ℕ) : ℝ))
+                  + (u / (X : ℝ))
+                      * ((((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ))))
+              -
+              Goldbach.Cert.MajorArcExponential.e
+                (β * (((4 + j : ℕ) : ℝ) - ((4 + k : ℕ) : ℝ)))))
+
+/--
+Exact shell-level rewrite of the corrected principal-arc defect.
+
+This is the first `q = 1` theorem on the honest cancellation surface: the kernel stays outside, and
+the inner oscillatory defect is rewritten as a double sum of exact phase differences after the
+midpoint correction.
+-/
+theorem smallBetaRescaledArchShell_q1_sub_phaseCorrectedFrozen_eq_kernel_mul_double_sum
+    (X N : ℕ) (u β : ℝ) :
+    smallBetaRescaledArchShell X N 1 u β
+      - smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β
+      = q1PhaseCorrectedDoubleSumShellDefect X N u β := by
+  let K : ℂ := Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC)
+  have hinner :=
+    rescaled_q1_innerFactor_sub_phase_corrected_frozen_eq_double_sum_phase_diff
+      (X := X) (N := N) (u := u) (β := β)
+  unfold smallBetaRescaledArchShell smallBetaCenteredArchShell
+  unfold smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 smallBetaFrozenRescaledArchShell
+  calc
+    smallBetaCenteredArchShell N (u / (((1 : ℕ) : ℝ) * (X : ℝ))) β
+      - Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ)) * smallBetaCenteredArchShell N 0 β
+        =
+    K
+      * ((fourier (T := (1 : ℝ)) (-(N : ℤ))
+            (((u / (X : ℝ)) : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+          * ((∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+                Goldbach.Cert.MajorArcStep2ExpSums.gExp ((u / (X : ℝ)) + β) n)
+              * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+                  Goldbach.Cert.MajorArcStep2ExpSums.gExp ((u / (X : ℝ)) - β) m))
+        -
+        Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+          * ((fourier (T := (1 : ℝ)) (-(N : ℤ))
+                ((0 : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+              * ((∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+                    Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 + β) n)
+                      * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+                          Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 - β) m)))) := by
+          simp [smallBetaCenteredArchShell, K, one_mul, sub_eq_add_neg]
+          ring_nf
+    _ =
+    K
+      * (∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+          ∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+            Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+              * (Goldbach.Cert.MajorArcExponential.e
+                  (β * ((n : ℝ) - (m : ℝ))
+                    + (u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+                -
+                Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ))))) := by
+          simpa [K, one_mul] using congrArg (fun z : ℂ => K * z) hinner
+    _ = q1PhaseCorrectedDoubleSumShellDefect X N u β := by
+          simp [q1PhaseCorrectedDoubleSumShellDefect, K]
+
+/-- Exact box-shift rewrite of the midpoint-corrected `q = 1` shell defect. -/
+theorem q1PhaseCorrectedDoubleSumShellDefect_eq_range
+    (X N : ℕ) (u β : ℝ) :
+    q1PhaseCorrectedDoubleSumShellDefect X N u β
+      = q1PhaseCorrectedDoubleSumShellDefectRange X N u β := by
+  unfold q1PhaseCorrectedDoubleSumShellDefect q1PhaseCorrectedDoubleSumShellDefectRange
+  refine congrArg (fun z : ℂ =>
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC)) * z) ?_
+  rw [Finset.sum_Ico_eq_sum_range]
+  refine Finset.sum_congr rfl ?_
+  intro j hj
+  rw [Finset.sum_Ico_eq_sum_range]
+  refine Finset.sum_congr rfl ?_
+  intro k hk
+  simp
+
+/--
+Exact midpoint-reflection rewrite of the shifted `q = 1` box:
+`(j,k) ↦ (N-6-k, N-6-j)`.
+
+This is the finite-sum reindexing needed before forming the paired two-sided-shift expression.
+-/
+theorem q1PhaseCorrectedDoubleSumShellDefectRange_eq_reflect
+    (X N : ℕ) (u β : ℝ) :
+    q1PhaseCorrectedDoubleSumShellDefectRange X N u β
+      =
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+      * (∑ j ∈ Finset.range (N - 5),
+          ∑ k ∈ Finset.range (N - 5),
+            Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+              * (Goldbach.Cert.MajorArcExponential.e
+                  (β
+                    * ((((N - 5 - 1 - j + 4 : ℕ) : ℝ))
+                        - (((N - 5 - 1 - k + 4 : ℕ) : ℝ)))
+                    + (u / (X : ℝ))
+                        * ((((N - 5 - 1 - j + 4 : ℕ) : ℝ)
+                            + ((N - 5 - 1 - k + 4 : ℕ) : ℝ))
+                          - (((N + 2 : ℕ) : ℝ))))
+                -
+                Goldbach.Cert.MajorArcExponential.e
+                  (β
+                    * ((((N - 5 - 1 - j + 4 : ℕ) : ℝ))
+                        - (((N - 5 - 1 - k + 4 : ℕ) : ℝ)))))) := by
+  unfold q1PhaseCorrectedDoubleSumShellDefectRange
+  refine congrArg (fun z : ℂ =>
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC)) * z) ?_
+  rw [← Finset.sum_range_reflect
+    (fun j =>
+      ∑ k ∈ Finset.range (N - 5),
+        Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+          * (Goldbach.Cert.MajorArcExponential.e
+              (β * (((4 + j : ℕ) : ℝ) - ((4 + k : ℕ) : ℝ))
+                + (u / (X : ℝ))
+                    * ((((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ))))
+            -
+            Goldbach.Cert.MajorArcExponential.e
+              (β * (((4 + j : ℕ) : ℝ) - ((4 + k : ℕ) : ℝ)))))
+    (N - 5)]
+  refine Finset.sum_congr rfl ?_
+  intro j hj
+  rw [← Finset.sum_range_reflect
+    (fun k =>
+      Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+        * (Goldbach.Cert.MajorArcExponential.e
+            (β * (((4 + (N - 5 - 1 - j) : ℕ) : ℝ) - ((4 + k : ℕ) : ℝ))
+              + (u / (X : ℝ))
+                  * ((((4 + (N - 5 - 1 - j) : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ))
+                    - (((N + 2 : ℕ) : ℝ))))
+          -
+          Goldbach.Cert.MajorArcExponential.e
+            (β * (((4 + (N - 5 - 1 - j) : ℕ) : ℝ) - ((4 + k : ℕ) : ℝ)))))
+    (N - 5)]
+  refine Finset.sum_congr rfl ?_
+  intro k hk
+  ring_nf
+
+/-- The original factorized midpoint-corrected `q = 1` range term. -/
+noncomputable def q1FactorizedRangeTerm
+    (X N : ℕ) (u β : ℝ) (j k : ℕ) : ℂ :=
+  Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+    * Goldbach.Cert.MajorArcExponential.e
+        (β * (((4 + j : ℕ) : ℝ) - ((4 + k : ℕ) : ℝ)))
+    * (Goldbach.Cert.MajorArcExponential.e
+        ((u / (X : ℝ))
+          * ((((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ))))
+      - 1)
+
+/-- The midpoint-reflected factorized `q = 1` range term. -/
+noncomputable def q1ReflectedFactorizedRangeTerm
+    (X N : ℕ) (u β : ℝ) (j k : ℕ) : ℂ :=
+  Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+    * Goldbach.Cert.MajorArcExponential.e
+        (β
+          * ((((N - 5 - 1 - j + 4 : ℕ) : ℝ))
+              - (((N - 5 - 1 - k + 4 : ℕ) : ℝ))))
+    * (Goldbach.Cert.MajorArcExponential.e
+        ((u / (X : ℝ))
+          * ((((N - 5 - 1 - j + 4 : ℕ) : ℝ)
+              + ((N - 5 - 1 - k + 4 : ℕ) : ℝ))
+            - (((N + 2 : ℕ) : ℝ))))
+      - 1)
+
+/--
+The midpoint-pair reflected factorized `q = 1` range term, with the reflection
+`(n,m) ↦ (N+2-m, N+2-n)`.
+-/
+noncomputable def q1PairReflectedFactorizedRangeTerm
+    (X N : ℕ) (u β : ℝ) (j k : ℕ) : ℂ :=
+  Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+    * Goldbach.Cert.MajorArcExponential.e
+        (β
+          * ((((N - 5 - 1 - k + 4 : ℕ) : ℝ))
+              - (((N - 5 - 1 - j + 4 : ℕ) : ℝ))))
+    * (Goldbach.Cert.MajorArcExponential.e
+        ((u / (X : ℝ))
+          * ((((N - 5 - 1 - k + 4 : ℕ) : ℝ)
+              + ((N - 5 - 1 - j + 4 : ℕ) : ℝ))
+            - (((N + 2 : ℕ) : ℝ))))
+      - 1)
+
+/-- The paired two-sided-shift `q = 1` range term after midpoint reflection. -/
+noncomputable def q1TwoSidedShiftRangeTerm
+    (X N : ℕ) (u β : ℝ) (j k : ℕ) : ℂ :=
+  Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+    * Goldbach.Cert.MajorArcExponential.e
+        (β * (((4 + j : ℕ) : ℝ) - ((4 + k : ℕ) : ℝ)))
+    * ((Goldbach.Cert.MajorArcExponential.e
+          ((u / (X : ℝ))
+            * ((((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ))))
+        +
+        Goldbach.Cert.MajorArcExponential.e
+          (-((u / (X : ℝ))
+            * ((((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ)))))
+      - 2))
+
+theorem norm_q1TwoSidedShiftRangeTerm_le_sq
+    (X N : ℕ) (u β : ℝ) (j k : ℕ) :
+    ‖q1TwoSidedShiftRangeTerm X N u β j k‖
+      ≤
+    (((u / (X : ℝ))
+        * ((((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ)))) * (2 * Real.pi)) ^ 2 := by
+  unfold q1TwoSidedShiftRangeTerm
+  rw [norm_mul, norm_mul]
+  rw [Goldbach.Cert.MajorArcExponential.norm_e, Goldbach.Cert.MajorArcExponential.norm_e]
+  simp only [one_mul]
+  simpa [mul_comm, mul_left_comm, mul_assoc, sq]
+    using Goldbach.Cert.MajorArcExponential.norm_e_add_e_neg_sub_two_le_sq
+      ((u / (X : ℝ))
+        * ((((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ))))
+
+theorem q1TwoSidedShiftRangeTerm_eq_phase_mul_real_cos_defect
+    (X N : ℕ) (u β : ℝ) (j k : ℕ) :
+    q1TwoSidedShiftRangeTerm X N u β j k
+      =
+    Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+      * Goldbach.Cert.MajorArcExponential.e
+          (β * (((4 + j : ℕ) : ℝ) - ((4 + k : ℕ) : ℝ)))
+      * (((2 * (Real.cos
+            (2 * Real.pi
+              * ((u / (X : ℝ))
+                  * ((((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ)))))
+            - 1) : ℝ) : ℂ)) := by
+  unfold q1TwoSidedShiftRangeTerm
+  rw [Goldbach.Cert.MajorArcExponential.e_add_e_neg_sub_two_eq_real]
+
+private lemma abs_q1_centered_shift_le_N_of_mem_range
+    {N j k : ℕ}
+    (hj : j ∈ Finset.range (N - 5)) (hk : k ∈ Finset.range (N - 5)) :
+    let t : ℝ := (((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ))
+    |t| ≤ (N : ℝ) := by
+  dsimp
+  have hjlt : j < N - 5 := Finset.mem_range.mp hj
+  have hklt : k < N - 5 := Finset.mem_range.mp hk
+  have hjle : 4 + j ≤ N - 2 := by
+    omega
+  have hkle : 4 + k ≤ N - 2 := by
+    omega
+  have hlow : (6 : ℝ) - N ≤ (((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ)) := by
+    have h4j : (4 : ℝ) ≤ ((4 + j : ℕ) : ℝ) := by
+      exact_mod_cast (Nat.le_add_right 4 j)
+    have h4k : (4 : ℝ) ≤ ((4 + k : ℕ) : ℝ) := by
+      exact_mod_cast (Nat.le_add_right 4 k)
+    have hsum_low : (8 : ℝ) ≤ ((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ) := by
+      nlinarith
+    have hNcast : (((N + 2 : ℕ) : ℝ)) = (N : ℝ) + 2 := by
+      norm_num [Nat.cast_add]
+    nlinarith [hsum_low, hNcast]
+  have hupp : ((((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ))) ≤ (N : ℝ) - 6 := by
+    have h4j : ((4 + j : ℕ) : ℝ) ≤ ((N - 2 : ℕ) : ℝ) := by exact_mod_cast hjle
+    have h4k : ((4 + k : ℕ) : ℝ) ≤ ((N - 2 : ℕ) : ℝ) := by exact_mod_cast hkle
+    have hsum_hi : ((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ) ≤ 2 * ((N - 2 : ℕ) : ℝ) := by
+      nlinarith
+    have hNge2 : 2 ≤ N := by omega
+    have hNm2 : (((N - 2 : ℕ) : ℝ)) = (N : ℝ) - 2 := by
+      rw [Nat.cast_sub hNge2]
+      norm_num
+    have hNcast : (((N + 2 : ℕ) : ℝ)) = (N : ℝ) + 2 := by
+      norm_num [Nat.cast_add]
+    nlinarith [hsum_hi, hNm2, hNcast]
+  have hNnonneg : 0 ≤ (N : ℝ) := by positivity
+  refine abs_le.2 ?_
+  constructor
+  · nlinarith
+  · nlinarith
+
+theorem norm_q1TwoSidedShiftRangeTerm_le_sq_N
+    {N : ℕ} (X : ℕ) (u β : ℝ) {j k : ℕ}
+    (hj : j ∈ Finset.range (N - 5)) (hk : k ∈ Finset.range (N - 5)) :
+    ‖q1TwoSidedShiftRangeTerm X N u β j k‖
+      ≤ (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2) := by
+  have hmain := norm_q1TwoSidedShiftRangeTerm_le_sq (X := X) (N := N) (u := u) (β := β) (j := j) (k := k)
+  have hXnn : 0 ≤ (X : ℝ) := by positivity
+  let t : ℝ := (((4 + j : ℕ) : ℝ) + ((4 + k : ℕ) : ℝ)) - (((N + 2 : ℕ) : ℝ))
+  have habs_shift :
+      |t| ≤ (N : ℝ) := by
+    dsimp [t]
+    simpa using abs_q1_centered_shift_le_N_of_mem_range hj hk
+  have hubound :
+      |(u / (X : ℝ)) * t|
+        ≤ (|u| * (N : ℝ)) / (X : ℝ) := by
+    calc
+      |(u / (X : ℝ)) * t| = |u / (X : ℝ)| * |t| := by
+            rw [abs_mul]
+      _ ≤ |u / (X : ℝ)| * (N : ℝ) := by
+          gcongr
+      _ = (|u| / (X : ℝ)) * (N : ℝ) := by
+          rw [abs_div]
+          simp [abs_of_nonneg hXnn]
+      _ = (|u| * (N : ℝ)) / (X : ℝ) := by
+          ring
+  have hsq :
+      (((u / (X : ℝ)) * t) * (2 * Real.pi)) ^ 2
+        ≤ (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2) := by
+    have htwoPi_nonneg : 0 ≤ 2 * Real.pi := by positivity
+    let a : ℝ := ((u / (X : ℝ)) * t) * (2 * Real.pi)
+    let B : ℝ := ((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ))
+    have habs_mul :
+        |a| ≤ B := by
+      calc
+        |a| = |(u / (X : ℝ)) * t| * |2 * Real.pi| := by
+          dsimp [a]
+          rw [abs_mul]
+        _ ≤ ((|u| * (N : ℝ)) / (X : ℝ)) * |2 * Real.pi| := by
+          gcongr
+        _ = B := by
+          dsimp [B]
+          rw [abs_of_nonneg htwoPi_nonneg]
+          ring_nf
+    have hBnonneg : 0 ≤ B := by
+      dsimp [B]
+      positivity
+    have hsq' : a ^ 2 ≤ B ^ 2 := by
+      have hsigned := abs_le.mp habs_mul
+      nlinarith
+    simpa [a, B] using hsq'
+  exact le_trans hmain hsq
+
+
+/-- The original `q = 1` range defect in factorized form. -/
+theorem q1PhaseCorrectedDoubleSumShellDefectRange_eq_factorized
+    (X N : ℕ) (u β : ℝ) :
+    q1PhaseCorrectedDoubleSumShellDefectRange X N u β
+      =
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+      * (∑ j ∈ Finset.range (N - 5),
+          ∑ k ∈ Finset.range (N - 5),
+            q1FactorizedRangeTerm X N u β j k) := by
+  unfold q1PhaseCorrectedDoubleSumShellDefectRange
+  refine congrArg (fun z : ℂ =>
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC)) * z) ?_
+  refine Finset.sum_congr rfl ?_
+  intro j hj
+  refine Finset.sum_congr rfl ?_
+  intro k hk
+  simp [q1FactorizedRangeTerm]
+  simpa using phase_diff_q1_eq_base_mul_shift_sub_one
+    (X := X) (N := N) (n := 4 + j) (m := 4 + k) (u := u) (β := β)
+
+/-- The midpoint-reflected `q = 1` range defect in factorized form. -/
+theorem q1PhaseCorrectedDoubleSumShellDefectRange_eq_reflected_factorized
+    (X N : ℕ) (u β : ℝ) :
+    q1PhaseCorrectedDoubleSumShellDefectRange X N u β
+      =
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+      * (∑ j ∈ Finset.range (N - 5),
+          ∑ k ∈ Finset.range (N - 5),
+            q1ReflectedFactorizedRangeTerm X N u β j k) := by
+  rw [q1PhaseCorrectedDoubleSumShellDefectRange_eq_reflect (X := X) (N := N) (u := u) (β := β)]
+  refine congrArg (fun z : ℂ =>
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC)) * z) ?_
+  refine Finset.sum_congr rfl ?_
+  intro j hj
+  refine Finset.sum_congr rfl ?_
+  intro k hk
+  simp [q1ReflectedFactorizedRangeTerm]
+  simpa using phase_diff_q1_eq_base_mul_shift_sub_one
+    (X := X) (N := N)
+    (n := N - 5 - 1 - j + 4) (m := N - 5 - 1 - k + 4) (u := u) (β := β)
+
+/--
+The summed unswapped reflected box equals the summed midpoint-pair reflected box.
+-/
+theorem sum_q1ReflectedFactorizedRangeTerm_eq_sum_pairReflected
+    (X N : ℕ) (u β : ℝ) :
+    (∑ j ∈ Finset.range (N - 5),
+        ∑ k ∈ Finset.range (N - 5),
+          q1ReflectedFactorizedRangeTerm X N u β j k)
+      =
+    (∑ j ∈ Finset.range (N - 5),
+        ∑ k ∈ Finset.range (N - 5),
+          q1PairReflectedFactorizedRangeTerm X N u β j k) := by
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl ?_
+  intro k hk
+  refine Finset.sum_congr rfl ?_
+  intro j hj
+  simp [q1ReflectedFactorizedRangeTerm, q1PairReflectedFactorizedRangeTerm, add_comm, add_left_comm]
+
+/-- Pointwise midpoint-pair collapse on the shifted `q = 1` box. -/
+theorem q1FactorizedRangeTerm_add_pairReflected_eq_two_sided_shift_of_mem_range
+    (X N : ℕ) (u β : ℝ) {j k : ℕ}
+    (hj : j ∈ Finset.range (N - 5)) (hk : k ∈ Finset.range (N - 5)) :
+    q1FactorizedRangeTerm X N u β j k
+      + q1PairReflectedFactorizedRangeTerm X N u β j k
+      =
+    q1TwoSidedShiftRangeTerm X N u β j k := by
+  have hjlt : j < N - 5 := Finset.mem_range.mp hj
+  have hklt : k < N - 5 := Finset.mem_range.mp hk
+  have hn : 4 + j ≤ N + 2 := by
+    omega
+  have hm : 4 + k ≤ N + 2 := by
+    omega
+  have hnk : N + 2 - (4 + k) = N - 5 - 1 - k + 4 := by
+    omega
+  have hnj : N + 2 - (4 + j) = N - 5 - 1 - j + 4 := by
+    omega
+  simpa [q1FactorizedRangeTerm, q1PairReflectedFactorizedRangeTerm, q1TwoSidedShiftRangeTerm,
+    hnk, hnj] using
+    factorized_q1_pair_eq_two_sided_shift
+      (X := X) (N := N) (n := 4 + j) (m := 4 + k) (u := u) (β := β) hn hm
+
+/-- Summing the original and midpoint-pair reflected range terms gives the two-sided shift sum. -/
+theorem sum_q1FactorizedRangeTerm_add_sum_pairReflected_eq_sum_twoSided
+    (X N : ℕ) (u β : ℝ) :
+    (∑ j ∈ Finset.range (N - 5),
+        ∑ k ∈ Finset.range (N - 5),
+          q1FactorizedRangeTerm X N u β j k)
+      +
+    (∑ j ∈ Finset.range (N - 5),
+        ∑ k ∈ Finset.range (N - 5),
+          q1PairReflectedFactorizedRangeTerm X N u β j k)
+      =
+    (∑ j ∈ Finset.range (N - 5),
+        ∑ k ∈ Finset.range (N - 5),
+          q1TwoSidedShiftRangeTerm X N u β j k) := by
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro j hj
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro k hk
+  simpa using
+    q1FactorizedRangeTerm_add_pairReflected_eq_two_sided_shift_of_mem_range
+      (X := X) (N := N) (u := u) (β := β) hj hk
+
+/--
+Twice the corrected `q = 1` shifted-box defect collapses to the paired two-sided-shift sum.
+-/
+theorem two_mul_q1PhaseCorrectedDoubleSumShellDefectRange_eq_kernel_mul_twoSided
+    (X N : ℕ) (u β : ℝ) :
+    (2 : ℂ) * q1PhaseCorrectedDoubleSumShellDefectRange X N u β
+      =
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+      * (∑ j ∈ Finset.range (N - 5),
+          ∑ k ∈ Finset.range (N - 5),
+            q1TwoSidedShiftRangeTerm X N u β j k) := by
+  let K := Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC)
+  let S :=
+    ∑ j ∈ Finset.range (N - 5),
+      ∑ k ∈ Finset.range (N - 5),
+        q1FactorizedRangeTerm X N u β j k
+  let T :=
+    ∑ j ∈ Finset.range (N - 5),
+      ∑ k ∈ Finset.range (N - 5),
+        q1PairReflectedFactorizedRangeTerm X N u β j k
+  let U :=
+    ∑ j ∈ Finset.range (N - 5),
+      ∑ k ∈ Finset.range (N - 5),
+        q1TwoSidedShiftRangeTerm X N u β j k
+  have hfac : q1PhaseCorrectedDoubleSumShellDefectRange X N u β = K * S := by
+    simpa [K, S] using
+      q1PhaseCorrectedDoubleSumShellDefectRange_eq_factorized (X := X) (N := N) (u := u) (β := β)
+  have hpair : q1PhaseCorrectedDoubleSumShellDefectRange X N u β = K * T := by
+    simpa [K, T, sum_q1ReflectedFactorizedRangeTerm_eq_sum_pairReflected (X := X) (N := N) (u := u) (β := β)] using
+      q1PhaseCorrectedDoubleSumShellDefectRange_eq_reflected_factorized (X := X) (N := N) (u := u) (β := β)
+  have hsum : S + T = U := by
+    simpa [S, T, U] using
+      sum_q1FactorizedRangeTerm_add_sum_pairReflected_eq_sum_twoSided (X := X) (N := N) (u := u) (β := β)
+  calc
+    (2 : ℂ) * q1PhaseCorrectedDoubleSumShellDefectRange X N u β
+        = q1PhaseCorrectedDoubleSumShellDefectRange X N u β
+            + q1PhaseCorrectedDoubleSumShellDefectRange X N u β := by ring
+    _ = K * S + q1PhaseCorrectedDoubleSumShellDefectRange X N u β := by rw [hfac]
+    _ = K * S + K * T := by rw [hpair]
+    _ = K * (S + T) := by ring
+    _ = K * U := by rw [hsum]
+    _ =
+        (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+          * (∑ j ∈ Finset.range (N - 5),
+              ∑ k ∈ Finset.range (N - 5),
+                q1TwoSidedShiftRangeTerm X N u β j k) := by rfl
+
+/--
+Twice the corrected `q = 1` shell defect collapses to the paired two-sided-shift sum.
+-/
+theorem two_mul_q1PhaseCorrectedDoubleSumShellDefect_eq_kernel_mul_twoSided
+    (X N : ℕ) (u β : ℝ) :
+    (2 : ℂ) * q1PhaseCorrectedDoubleSumShellDefect X N u β
+      =
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+      * (∑ j ∈ Finset.range (N - 5),
+          ∑ k ∈ Finset.range (N - 5),
+            q1TwoSidedShiftRangeTerm X N u β j k) := by
+  rw [q1PhaseCorrectedDoubleSumShellDefect_eq_range (X := X) (N := N) (u := u) (β := β)]
+  exact two_mul_q1PhaseCorrectedDoubleSumShellDefectRange_eq_kernel_mul_twoSided
+    (X := X) (N := N) (u := u) (β := β)
+
+theorem norm_two_mul_q1PhaseCorrectedDoubleSumShellDefect_le_kernelCap_card_sq_quadratic
+    (X N : ℕ) (u β : ℝ) :
+    ‖(2 : ℂ) * q1PhaseCorrectedDoubleSumShellDefect X N u β‖
+      ≤
+    Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap
+      * (((N - 5 : ℝ) ^ 2) * (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2)) := by
+  rw [two_mul_q1PhaseCorrectedDoubleSumShellDefect_eq_kernel_mul_twoSided]
+  have hK :
+      ‖Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC)‖
+        ≤ Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap :=
+    Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.norm_kernelPolyC_le_kernelCap (x := (β : UC))
+  have hsum :
+      ‖∑ j ∈ Finset.range (N - 5),
+          ∑ k ∈ Finset.range (N - 5), q1TwoSidedShiftRangeTerm X N u β j k‖
+        ≤ (N - 5 : ℝ) ^ 2 * (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2) := by
+    calc
+      ‖∑ j ∈ Finset.range (N - 5),
+          ∑ k ∈ Finset.range (N - 5), q1TwoSidedShiftRangeTerm X N u β j k‖
+          ≤ ∑ j ∈ Finset.range (N - 5),
+              ‖∑ k ∈ Finset.range (N - 5), q1TwoSidedShiftRangeTerm X N u β j k‖ := by
+                simpa using
+                  (norm_sum_le
+                    (s := Finset.range (N - 5))
+                    (f := fun j =>
+                      ∑ k ∈ Finset.range (N - 5), q1TwoSidedShiftRangeTerm X N u β j k))
+      _ ≤ ∑ j ∈ Finset.range (N - 5),
+            ∑ k ∈ Finset.range (N - 5), ‖q1TwoSidedShiftRangeTerm X N u β j k‖ := by
+              refine Finset.sum_le_sum ?_
+              intro j hj
+              simpa using
+                (norm_sum_le
+                  (s := Finset.range (N - 5))
+                  (f := fun k => q1TwoSidedShiftRangeTerm X N u β j k))
+      _ ≤ ∑ j ∈ Finset.range (N - 5),
+            ∑ k ∈ Finset.range (N - 5), (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2) := by
+              refine Finset.sum_le_sum ?_
+              intro j hj
+              refine Finset.sum_le_sum ?_
+              intro k hk
+              exact norm_q1TwoSidedShiftRangeTerm_le_sq_N (X := X) (u := u) (β := β) hj hk
+      _ = (((N - 5 : ℕ) : ℝ))
+            * ((((N - 5 : ℕ) : ℝ)) * (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2)) := by
+              simp
+      _ ≤ (N - 5 : ℝ) ^ 2 * (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2) := by
+              by_cases hN : 5 ≤ N
+              · have hcast : (((N - 5 : ℕ) : ℝ)) = (N : ℝ) - 5 := by
+                  rw [Nat.cast_sub hN]
+                  norm_num
+                rw [hcast]
+                ring_nf
+                exact le_rfl
+              · have hsmall : N < 5 := by omega
+                have hcard0 : (N - 5 : ℕ) = 0 := by omega
+                simp [hcard0]
+                positivity
+  calc
+    ‖(Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+      * (∑ j ∈ Finset.range (N - 5),
+          ∑ k ∈ Finset.range (N - 5), q1TwoSidedShiftRangeTerm X N u β j k)‖
+        = ‖Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC)‖
+            * ‖∑ j ∈ Finset.range (N - 5),
+                ∑ k ∈ Finset.range (N - 5), q1TwoSidedShiftRangeTerm X N u β j k‖ := by
+            rw [norm_mul]
+    _ ≤ Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap
+          * (((N - 5 : ℝ) ^ 2) * (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2)) := by
+            exact mul_le_mul hK hsum (norm_nonneg _) Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap_nonneg
+
+theorem norm_smallBetaRescaledArchShell_q1_sub_phaseCorrectedFrozen_le_quadratic
+    (X N : ℕ) (u β : ℝ) (hu0 : 0 ≤ u) (hu1 : u ≤ 1) :
+    ‖smallBetaRescaledArchShell X N 1 u β
+        - smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β‖
+      ≤
+    Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap
+      * (((N - 5 : ℝ) ^ 2) * (((2 * Real.pi * (N : ℝ)) / (X : ℝ)) ^ 2)) / 2 := by
+  let z : ℂ :=
+    smallBetaRescaledArchShell X N 1 u β
+      - smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β
+  have htwo :=
+    norm_two_mul_q1PhaseCorrectedDoubleSumShellDefect_le_kernelCap_card_sq_quadratic
+      (X := X) (N := N) (u := u) (β := β)
+  have hz :
+      q1PhaseCorrectedDoubleSumShellDefect X N u β = z := by
+    dsimp [z]
+    symm
+    exact smallBetaRescaledArchShell_q1_sub_phaseCorrectedFrozen_eq_kernel_mul_double_sum
+      (X := X) (N := N) (u := u) (β := β)
+  rw [hz] at htwo
+  have hnorm2 : ‖(2 : ℂ) * z‖ = 2 * ‖z‖ := by
+    rw [norm_mul]
+    norm_num
+  rw [hnorm2] at htwo
+  have huabs : |u| ≤ 1 := by
+    rw [abs_of_nonneg hu0]
+    exact hu1
+  have huquad :
+      (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2)
+        ≤ (((2 * Real.pi * (N : ℝ)) / (X : ℝ)) ^ 2) := by
+    have huabs_sq : |u| ^ 2 ≤ 1 := by
+      have huabs_nonneg : 0 ≤ |u| := abs_nonneg u
+      nlinarith
+    have hCnonneg : 0 ≤ (((2 * Real.pi * (N : ℝ)) / (X : ℝ)) ^ 2) := by positivity
+    have hrew :
+        (((2 * Real.pi * |u| * (N : ℝ)) / (X : ℝ)) ^ 2)
+          = (((2 * Real.pi * (N : ℝ)) / (X : ℝ)) ^ 2) * |u| ^ 2 := by
+      ring_nf
+    rw [hrew]
+    nlinarith
+  have hbound :
+      2 * ‖z‖
+        ≤ Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap
+            * (((N - 5 : ℝ) ^ 2) * (((2 * Real.pi * (N : ℝ)) / (X : ℝ)) ^ 2)) := by
+    have hcap0 : 0 ≤ Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap :=
+      Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap_nonneg
+    refine le_trans htwo ?_
+    gcongr
+  have htwo_pos : (0 : ℝ) < 2 := by norm_num
+  nlinarith
+
+theorem norm_smallBetaRescaledGapExtractedArcHalfQ1Corrected_le_quadratic
+    (X N : ℕ) :
+    ‖smallBetaRescaledGapExtractedArcHalfQ1Corrected X N‖
+      ≤
+    Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap
+      * (((N - 5 : ℝ) ^ 2) * (((2 * Real.pi * (N : ℝ)) / (X : ℝ)) ^ 2)) / 12 := by
+  unfold smallBetaRescaledGapExtractedArcHalfQ1Corrected
+  refine le_trans
+    (norm_intervalIntegral_betaSmallSet_indicator_le_one_div_six
+      (C := Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap
+        * (((N - 5 : ℝ) ^ 2) * (((2 * Real.pi * (N : ℝ)) / (X : ℝ)) ^ 2)) / 2)
+      (hC := by
+        have hcap0 : 0 ≤ Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap :=
+          Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap_nonneg
+        positivity)
+      (hg := ?_))
+    ?_
+  · intro β hβ
+    exact norm_intervalIntegral_zero_one_le
+      (C := Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap
+        * (((N - 5 : ℝ) ^ 2) * (((2 * Real.pi * (N : ℝ)) / (X : ℝ)) ^ 2)) / 2)
+      (hC := by
+        have hcap0 : 0 ≤ Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap :=
+          Goldbach.Cert.MajorArcModules.Q0MajorBoundSplit.kernelCap_nonneg
+        positivity)
+      (hf := fun u hu0 hu1 =>
+        norm_smallBetaRescaledArchShell_q1_sub_phaseCorrectedFrozen_le_quadratic
+          (X := X) (N := N) (u := u) (β := β) hu0 hu1)
+  · ring_nf
+    nlinarith
+
+/--
+Twice the corrected `q = 1` shell defect equals the kernel times the paired two-sided-shift sum.
+-/
+theorem two_mul_smallBetaRescaledArchShell_q1_sub_phaseCorrectedFrozen_eq_kernel_mul_twoSided
+    (X N : ℕ) (u β : ℝ) :
+    (2 : ℂ)
+      * (smallBetaRescaledArchShell X N 1 u β
+          - smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β)
+      =
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+      * (∑ j ∈ Finset.range (N - 5),
+          ∑ k ∈ Finset.range (N - 5),
+            q1TwoSidedShiftRangeTerm X N u β j k) := by
+  rw [smallBetaRescaledArchShell_q1_sub_phaseCorrectedFrozen_eq_kernel_mul_double_sum
+    (X := X) (N := N) (u := u) (β := β)]
+  exact two_mul_q1PhaseCorrectedDoubleSumShellDefect_eq_kernel_mul_twoSided
+    (X := X) (N := N) (u := u) (β := β)
+
+/--
+The same shell-level `q = 1` rewrite with the main base phase factored out and the midpoint
+correction isolated in the centered shift defect `e(δ) - 1`.
+-/
+theorem smallBetaRescaledArchShell_q1_sub_phaseCorrectedFrozen_eq_kernel_mul_base_mul_shift_sub_one
+    (X N : ℕ) (u β : ℝ) :
+    smallBetaRescaledArchShell X N 1 u β
+      - smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 X N u β
+      =
+    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+      * (∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+          ∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+            Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+              * Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ)))
+              * (Goldbach.Cert.MajorArcExponential.e
+                  ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+                - 1)) := by
+  let K : ℂ := Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC)
+  have hinner :=
+    rescaled_q1_innerFactor_sub_phase_corrected_frozen_eq_double_sum_base_mul_shift_sub_one
+      (X := X) (N := N) (u := u) (β := β)
+  unfold smallBetaRescaledArchShell smallBetaCenteredArchShell
+  unfold smallBetaPhaseCorrectedFrozenRescaledArchShellQ1 smallBetaFrozenRescaledArchShell
+  calc
+    smallBetaCenteredArchShell N (u / (((1 : ℕ) : ℝ) * (X : ℝ))) β
+      - Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ)) * smallBetaCenteredArchShell N 0 β
+        =
+    K
+      * ((fourier (T := (1 : ℝ)) (-(N : ℤ))
+            (((u / (X : ℝ)) : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+          * ((∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+                Goldbach.Cert.MajorArcStep2ExpSums.gExp ((u / (X : ℝ)) + β) n)
+              * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+                  Goldbach.Cert.MajorArcStep2ExpSums.gExp ((u / (X : ℝ)) - β) m))
+        -
+        Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+          * ((fourier (T := (1 : ℝ)) (-(N : ℤ))
+                ((0 : ℝ) : Goldbach.Cert.MajorArcStep7FourierOrthogonality.UC) : ℂ)
+              * ((∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+                    Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 + β) n)
+                  * (∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+                      Goldbach.Cert.MajorArcStep2ExpSums.gExp (0 - β) m)))) := by
+          simp [smallBetaCenteredArchShell, K, one_mul, sub_eq_add_neg]
+          ring_nf
+    _ =
+    K
+      * (∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+          ∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+            Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+              * Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ)))
+              * (Goldbach.Cert.MajorArcExponential.e
+                  ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+                - 1)) := by
+          simpa [K, one_mul] using congrArg (fun z : ℂ => K * z) hinner
+    _ = (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+      * (∑ n ∈ Finset.Ico 4 ((N - 2) + 1),
+          ∑ m ∈ Finset.Ico 4 ((N - 2) + 1),
+            Goldbach.Cert.MajorArcExponential.e (2 * u / (X : ℝ))
+              * Goldbach.Cert.MajorArcExponential.e (β * ((n : ℝ) - (m : ℝ)))
+              * (Goldbach.Cert.MajorArcExponential.e
+                  ((u / (X : ℝ)) * ((n : ℝ) + (m : ℝ) - (((N + 2 : ℕ) : ℝ))))
+                - 1)) := by
+          simp [K]
+
 private lemma integral_centeredUnitSet_one_indicator_const (z : ℂ) :
     ∫ u : ℝ, (centeredUnitSet (1 : ℝ)).indicator (fun _ : ℝ => z) u = (2 : ℂ) * z := by
   have hs : MeasurableSet (centeredUnitSet (1 : ℝ)) := measurableSet_centeredUnitSet (1 : ℝ)
@@ -1083,11 +1874,12 @@ private lemma continuous_smallBetaPhaseCorrectedFrozenRescaledArchShellQ1_uncurr
   have hphase : Continuous fun p : ℝ × ℝ =>
       Goldbach.Cert.MajorArcExponential.e (2 * p.2 / (X : ℝ)) := by
     unfold Goldbach.Cert.MajorArcExponential.e
+    have hreal : Continuous fun p : ℝ × ℝ =>
+        2 * Real.pi * (2 * p.2 / (X : ℝ)) := by
+      continuity
     have harg : Continuous fun p : ℝ × ℝ =>
-        (Complex.I : ℂ) * (2 * Real.pi * (2 * p.2 / (X : ℝ))) := by
-      exact continuous_const.mul <|
-        (continuous_ofReal.comp <|
-          (continuous_const.mul continuous_snd).div_const (X : ℝ))
+        (Complex.I : ℂ) * ((2 * Real.pi * (2 * p.2 / (X : ℝ)) : ℝ) : ℂ) := by
+      exact continuous_const.mul (continuous_ofReal.comp hreal)
     simpa using Complex.continuous_exp.comp harg
   simpa [smallBetaPhaseCorrectedFrozenRescaledArchShellQ1]
     using hphase.mul (continuous_smallBetaFrozenRescaledArchShell_uncurry N)
@@ -1591,6 +2383,93 @@ theorem smallBetaRescaledGapExtractedArcHalfQ1Corrected_eq_sub
             (intervalIntegrable_betaSmall_indicator_inner_smallBetaRescaledArchShell_halfQ1 X N)
             (intervalIntegrable_betaSmall_indicator_inner_smallBetaPhaseCorrectedFrozenRescaledArchShell_halfQ1 X N)]
 
+/--
+Exact integral rewrite of the corrected principal-arc half-gap through the shell-level double-sum
+defect.
+
+This is the principal-arc endpoint before any norm estimate: the half-gap is literally the
+`β`-integral of the `u`-integral of the kernel-weighted midpoint-corrected double-sum defect.
+-/
+theorem smallBetaRescaledGapExtractedArcHalfQ1Corrected_eq_integral_doubleSumDefect
+    (X N : ℕ) :
+    smallBetaRescaledGapExtractedArcHalfQ1Corrected X N
+      =
+    ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+      Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+        ∫ u in (0 : ℝ)..(1 : ℝ), q1PhaseCorrectedDoubleSumShellDefect X N u β) β := by
+  unfold smallBetaRescaledGapExtractedArcHalfQ1Corrected
+  refine intervalIntegral.integral_congr_ae ?_
+  exact Filter.Eventually.of_forall <| fun β _ => by
+    by_cases hβ : β ∈ Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet
+    · simp [hβ]
+      refine intervalIntegral.integral_congr_ae ?_
+      exact Filter.Eventually.of_forall <| fun u _ =>
+        smallBetaRescaledArchShell_q1_sub_phaseCorrectedFrozen_eq_kernel_mul_double_sum
+          (X := X) (N := N) (u := u) (β := β)
+    · simp [hβ]
+
+/--
+Twice the corrected principal-arc half-gap is the `β`/`u` integral of the paired two-sided-shift
+`q = 1` shell defect.
+-/
+theorem two_mul_smallBetaRescaledGapExtractedArcHalfQ1Corrected_eq_integral_twoSided
+    (X N : ℕ) :
+    (2 : ℂ) * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N
+      =
+    ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+        Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+      Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+        ∫ u in (0 : ℝ)..(1 : ℝ),
+          (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+            * (∑ j ∈ Finset.range (N - 5),
+                ∑ k ∈ Finset.range (N - 5),
+                  q1TwoSidedShiftRangeTerm X N u β j k)) β := by
+  calc
+    (2 : ℂ) * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N
+        =
+      (2 : ℂ)
+        * ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+            Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+            Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+              ∫ u in (0 : ℝ)..(1 : ℝ), q1PhaseCorrectedDoubleSumShellDefect X N u β) β := by
+          rw [smallBetaRescaledGapExtractedArcHalfQ1Corrected_eq_integral_doubleSumDefect
+            (X := X) (N := N)]
+    _ =
+      ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+          Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+          (2 : ℂ)
+            * Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+                ∫ u in (0 : ℝ)..(1 : ℝ), q1PhaseCorrectedDoubleSumShellDefect X N u β) β := by
+          rw [intervalIntegral.integral_const_mul]
+    _ =
+      ∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+          Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+          Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+            ∫ u in (0 : ℝ)..(1 : ℝ),
+              (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+                * (∑ j ∈ Finset.range (N - 5),
+                    ∑ k ∈ Finset.range (N - 5),
+                      q1TwoSidedShiftRangeTerm X N u β j k)) β := by
+          refine intervalIntegral.integral_congr_ae ?_
+          exact Filter.Eventually.of_forall <| fun β _ => by
+            by_cases hβ : β ∈ Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet
+            · simp [hβ]
+              have hinner :
+                  ∫ u in (0 : ℝ)..(1 : ℝ), (2 : ℂ) * q1PhaseCorrectedDoubleSumShellDefect X N u β
+                    =
+                  ∫ u in (0 : ℝ)..(1 : ℝ),
+                    (Goldbach.Cert.MajorArcStep10RLSmoothIntegral.kernelPolyC (β : UC))
+                      * (∑ j ∈ Finset.range (N - 5),
+                          ∑ k ∈ Finset.range (N - 5),
+                            q1TwoSidedShiftRangeTerm X N u β j k) := by
+                refine intervalIntegral.integral_congr_ae ?_
+                exact Filter.Eventually.of_forall <| fun u _ =>
+                  two_mul_q1PhaseCorrectedDoubleSumShellDefect_eq_kernel_mul_twoSided
+                    (X := X) (N := N) (u := u) (β := β)
+              simpa [intervalIntegral.integral_const_mul] using hinner
+            · simp [hβ]
+
 theorem AqLocalC_q1_sub_AqFrozenHalfQ1CorrectedC_eq_inv_weight_mass_mul_inv_X_mul_halfGapCorrected
     (X N : ℕ) (hX : 2 ≤ X) :
     AqLocalC X N 1 - AqFrozenHalfQ1CorrectedC X N
@@ -1602,6 +2481,172 @@ theorem AqLocalC_q1_sub_AqFrozenHalfQ1CorrectedC_eq_inv_weight_mass_mul_inv_X_mu
   unfold AqFrozenHalfQ1CorrectedC
   rw [smallBetaRescaledGapExtractedArcHalfQ1Corrected_eq_sub]
   ring
+
+/-- The `q = 1` phase factor is exactly `1`. -/
+private lemma qPhaseFactor_one (N : ℕ) : qPhaseFactor 1 N = 1 := by
+  unfold qPhaseFactor
+  simp [Goldbach.Cert.MajorArcStep23RamanujanSum.Rcop, Goldbach.Cert.MajorArcExponential.e]
+
+/--
+The weighted `q ≥ 2` freeze defect kept as a single summed object, before taking norms.
+-/
+noncomputable def weightedFreezeDefectGe2C (X N : ℕ) : ℂ :=
+  ∑ q ∈ Finset.Icc (2 : ℕ) Q0,
+    (AqLocalC X N q - AqFrozenC X N q (1 : ℝ)) * qPhaseFactor q N
+
+/--
+Exact `q ≥ 2` rewrite of the weighted freeze defect through the rescaled archimedean family.
+
+This keeps the already-weighted defect as a single summed object, but replaces `AqLocalC` by the
+honest rescaled scalar `AqCRescaled` on the range where that identification is exact.
+-/
+theorem weightedFreezeDefectGe2C_eq_sum_AqCRescaled_sub_AqFrozenC
+    (X N : ℕ) (hX : 2 ≤ X) :
+    weightedFreezeDefectGe2C X N
+      =
+    ∑ q ∈ Finset.Icc (2 : ℕ) Q0,
+      (AqCRescaled X N q (1 : ℝ) - AqFrozenC X N q (1 : ℝ)) * qPhaseFactor q N := by
+  unfold weightedFreezeDefectGe2C
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rw [AqLocalC_eq_AqCRescaled_of_two_le hX (Finset.mem_Icc.mp hq).1]
+
+/--
+The corrected frozen weighted endpoint: the principal arc uses the phase-corrected half comparator,
+while the `q ≥ 2` arcs keep the usual frozen model.
+-/
+noncomputable def frozenWeightedMainTermQ1CorrectedC (X N : ℕ) : ℂ :=
+  (((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))
+    * (AqFrozenHalfQ1CorrectedC X N
+        + ∑ q ∈ Finset.Icc (2 : ℕ) Q0, AqFrozenC X N q (1 : ℝ) * qPhaseFactor q N)
+
+/--
+Exact weighted freeze decomposition against the corrected principal-arc endpoint.
+
+This is the right algebraic surface for the next quantitative work: the `q = 1` defect is isolated
+from the already weighted `q ≥ 2` sum before any norm or triangle inequality is applied.
+-/
+theorem smallBetaModelWeightedQC_sub_frozenWeightedMainTermQ1CorrectedC_eq
+    (X N : ℕ) :
+    smallBetaModelWeightedQC AqLocalC X N - frozenWeightedMainTermQ1CorrectedC X N
+      =
+    (((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))
+      * ((AqLocalC X N 1 - AqFrozenHalfQ1CorrectedC X N)
+          + weightedFreezeDefectGe2C X N) := by
+  let w : ℂ := (((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))
+  have hsplitLocal :
+      ∑ q ∈ Finset.Icc (1 : ℕ) Q0, AqLocalC X N q * qPhaseFactor q N
+        =
+      AqLocalC X N 1 * qPhaseFactor 1 N
+        + ∑ q ∈ Finset.Icc (2 : ℕ) Q0, AqLocalC X N q * qPhaseFactor q N := by
+    have hsplit :
+        Finset.Icc (1 : ℕ) Q0 = insert 1 (Finset.Icc (2 : ℕ) Q0) := by
+      ext q
+      simp [Nat.succ_le_iff]
+      omega
+    have hnotmem : 1 ∉ Finset.Icc (2 : ℕ) Q0 := by simp
+    rw [hsplit, Finset.sum_insert hnotmem]
+  have hsplitFrozen :
+      ∑ q ∈ Finset.Icc (2 : ℕ) Q0,
+          (AqLocalC X N q - AqFrozenC X N q (1 : ℝ)) * qPhaseFactor q N
+        =
+      (∑ q ∈ Finset.Icc (2 : ℕ) Q0, AqLocalC X N q * qPhaseFactor q N)
+        -
+      (∑ q ∈ Finset.Icc (2 : ℕ) Q0, AqFrozenC X N q (1 : ℝ) * qPhaseFactor q N) := by
+    rw [← Finset.sum_sub_distrib]
+    refine Finset.sum_congr rfl ?_
+    intro q hq
+    ring
+  calc
+    smallBetaModelWeightedQC AqLocalC X N - frozenWeightedMainTermQ1CorrectedC X N
+      =
+    w * (AqLocalC X N 1 * qPhaseFactor 1 N
+          + ∑ q ∈ Finset.Icc (2 : ℕ) Q0, AqLocalC X N q * qPhaseFactor q N)
+      - w * (AqFrozenHalfQ1CorrectedC X N
+          + ∑ q ∈ Finset.Icc (2 : ℕ) Q0, AqFrozenC X N q (1 : ℝ) * qPhaseFactor q N) := by
+          unfold smallBetaModelWeightedQC frozenWeightedMainTermQ1CorrectedC
+          rw [hsplitLocal]
+    _ =
+    w * ((AqLocalC X N 1 * qPhaseFactor 1 N - AqFrozenHalfQ1CorrectedC X N)
+          + ((∑ q ∈ Finset.Icc (2 : ℕ) Q0, AqLocalC X N q * qPhaseFactor q N)
+              -
+             (∑ q ∈ Finset.Icc (2 : ℕ) Q0, AqFrozenC X N q (1 : ℝ) * qPhaseFactor q N))) := by
+          ring
+    _ =
+    w * ((AqLocalC X N 1 * qPhaseFactor 1 N - AqFrozenHalfQ1CorrectedC X N)
+          + ∑ q ∈ Finset.Icc (2 : ℕ) Q0,
+              (AqLocalC X N q - AqFrozenC X N q (1 : ℝ)) * qPhaseFactor q N) := by
+          rw [hsplitFrozen]
+    _ =
+    w * ((AqLocalC X N 1 - AqFrozenHalfQ1CorrectedC X N)
+          + weightedFreezeDefectGe2C X N) := by
+          rw [qPhaseFactor_one]
+          simp [weightedFreezeDefectGe2C]
+
+/--
+The same exact weighted freeze decomposition with the corrected `q = 1` term rewritten through the
+half-gap object.
+-/
+theorem smallBetaModelWeightedQC_sub_frozenWeightedMainTermQ1CorrectedC_eq_inv_X_mul_halfGap_add
+    (X N : ℕ) (hX : 2 ≤ X) :
+    smallBetaModelWeightedQC AqLocalC X N - frozenWeightedMainTermQ1CorrectedC X N
+      =
+    ((((X : ℝ) : ℂ))⁻¹) * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N
+      + (((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ)) * weightedFreezeDefectGe2C X N := by
+  have hwpos : 0 < Goldbach.AO_WeightMass.weight_mass X := weight_mass_pos_of_two_le hX
+  have hwneR : (Goldbach.AO_WeightMass.weight_mass X : ℝ) ≠ 0 := ne_of_gt hwpos
+  have hwneC : (((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ)) ≠ 0 := by
+    exact_mod_cast hwneR
+  let w : ℂ := (((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))
+  calc
+    smallBetaModelWeightedQC AqLocalC X N - frozenWeightedMainTermQ1CorrectedC X N
+      = w * ((AqLocalC X N 1 - AqFrozenHalfQ1CorrectedC X N)
+            + weightedFreezeDefectGe2C X N) := by
+            simpa [w] using
+              smallBetaModelWeightedQC_sub_frozenWeightedMainTermQ1CorrectedC_eq (X := X) (N := N)
+    _ = w * (((w⁻¹ * ((((X : ℝ) : ℂ))⁻¹)
+              * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N))
+            + weightedFreezeDefectGe2C X N) := by
+            rw [AqLocalC_q1_sub_AqFrozenHalfQ1CorrectedC_eq_inv_weight_mass_mul_inv_X_mul_halfGapCorrected
+              (X := X) (N := N) hX]
+    _ = w * (w⁻¹ * ((((X : ℝ) : ℂ))⁻¹) * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N)
+          + w * weightedFreezeDefectGe2C X N := by
+            rw [mul_add]
+    _ = ((((X : ℝ) : ℂ))⁻¹) * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N
+          + w * weightedFreezeDefectGe2C X N := by
+            congr 1
+            calc
+              w * (w⁻¹ * ((((X : ℝ) : ℂ))⁻¹) * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N)
+                = (w * w⁻¹) * ((((X : ℝ) : ℂ))⁻¹)
+                    * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N := by
+                      ring
+              _ = ((((X : ℝ) : ℂ))⁻¹) * smallBetaRescaledGapExtractedArcHalfQ1Corrected X N := by
+                      rw [mul_inv_cancel₀ hwneC]
+                      simp
+
+/--
+Exact top-level split of the corrected frozen defect into the honest `q = 1` double-sum integral
+and the already-weighted `q ≥ 2` defect.
+
+This is the right endpoint before any norm estimate: both live pieces are now on their exact
+cancellation surfaces.
+-/
+theorem smallBetaModelWeightedQC_sub_frozenWeightedMainTermQ1CorrectedC_eq_integral_doubleSumDefect_add_weightedGe2
+    (X N : ℕ) (hX : 2 ≤ X) :
+    smallBetaModelWeightedQC AqLocalC X N - frozenWeightedMainTermQ1CorrectedC X N
+      =
+    ((((X : ℝ) : ℂ))⁻¹)
+      * (∫ β in Goldbach.Cert.MajorArcModules.BetaInterval.aβ..
+            Goldbach.Cert.MajorArcModules.BetaInterval.bβ,
+          Goldbach.Cert.MajorArcModules.BetaLocalization.betaSmallSet.indicator (fun β : ℝ =>
+            ∫ u in (0 : ℝ)..(1 : ℝ), q1PhaseCorrectedDoubleSumShellDefect X N u β) β)
+      + (((Goldbach.AO_WeightMass.weight_mass X : ℝ) : ℂ))
+          * (∑ q ∈ Finset.Icc (2 : ℕ) Q0,
+              (AqCRescaled X N q (1 : ℝ) - AqFrozenC X N q (1 : ℝ)) * qPhaseFactor q N) := by
+  rw [smallBetaModelWeightedQC_sub_frozenWeightedMainTermQ1CorrectedC_eq_inv_X_mul_halfGap_add
+      (X := X) (N := N) hX]
+  rw [smallBetaRescaledGapExtractedArcHalfQ1Corrected_eq_integral_doubleSumDefect]
+  rw [weightedFreezeDefectGe2C_eq_sum_AqCRescaled_sub_AqFrozenC (X := X) (N := N) hX]
 
 theorem AqFrozenC_eq_inv_weight_mass_mul_inv_qX_mul_frozenRawScalarC
     (X N q : ℕ) (Δ : ℝ) :
