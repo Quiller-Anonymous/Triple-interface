@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    100000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.3133333333333333,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "hybrid bank bridge plus projected true/Q0 bridge family",
+  "family_size": 9,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 1.0,
+  "min_full_capture": 1.0,
+  "name": "hybrid_bank_bridge_projected_true_q0",
+  "rank_capture": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "rank_residual_route_ratio": {
+    "1": 2.021098380289541e-27,
+    "2": 2.021098380289541e-27,
+    "3": 2.021098380289541e-27,
+    "5": 2.021098380289541e-27
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "hybrid_bank_projected",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.94,
+  "verdict": "plausible_but_incomplete",
+  "verdict_reason": "passes benchmark prefilter; full-even admission still pending",
+  "window_kind": "five",
+  "worst_full_residual_route_ratio": 2.021098380289541e-27
+}

@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    10000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.20342853673047864,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "full exact operator-channel ambient family",
+  "family_size": 18,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 0.9738753371789746,
+  "min_full_capture": 0.9738753371789746,
+  "name": "operator_ambient_full",
+  "rank_capture": {
+    "1": 0.97387533718044,
+    "2": 0.97387533718044,
+    "3": 0.97387533718044,
+    "5": 0.97387533718044
+  },
+  "rank_residual_route_ratio": {
+    "1": 1226802.8809361751,
+    "2": 1226802.8809361751,
+    "3": 1226802.8809361751,
+    "5": 1226802.8809361751
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "operator_ambient",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.91,
+  "verdict": "benchmark_only_mirage",
+  "verdict_reason": "looked alive on the five-point benchmark but fails full-even admission",
+  "window_kind": "even",
+  "worst_full_residual_route_ratio": 1226802.8810049905
+}

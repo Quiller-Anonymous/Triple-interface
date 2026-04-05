@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    100000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.1716197346839102,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "exact AqLocalC q-family on the canonical window",
+  "family_size": 30,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 0.9999999999969648,
+  "min_full_capture": 0.9999999999969648,
+  "name": "aq_local_q30",
+  "rank_capture": {
+    "1": 0.9999999999969648,
+    "2": 0.9999999999969648,
+    "3": 0.9999999999969648,
+    "5": 0.9999999999969648
+  },
+  "rank_residual_route_ratio": {
+    "1": 2.2108261270952644e-08,
+    "2": 2.2108261270952644e-08,
+    "3": 2.2108261270952644e-08,
+    "5": 2.2108261270952644e-08
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v1",
+  "source_class": "local_arithmetic",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.94,
+  "verdict": "plausible_but_incomplete",
+  "verdict_reason": "passes benchmark prefilter; full-even admission still pending",
+  "window_kind": "five",
+  "worst_full_residual_route_ratio": 2.2108261270445688e-08
+}

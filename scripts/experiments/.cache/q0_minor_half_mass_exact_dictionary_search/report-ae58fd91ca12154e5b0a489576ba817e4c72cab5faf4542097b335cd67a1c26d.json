@@ -1,0 +1,43 @@
+{
+  "Xs": [
+    10000,
+    30000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.2864333651467712,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "hybrid projected true/Q0 bridge plus sigma/scale family",
+  "family_size": 11,
+  "loo_min_principal_cos": {
+    "1": 0.2651362576087325,
+    "2": 0.2651362576087325,
+    "3": 0.2651362576087325,
+    "5": 0.2651362576087325
+  },
+  "mean_full_capture": 0.9999978325267412,
+  "min_full_capture": 0.9999957891156545,
+  "name": "hybrid_projected_sigma_scale",
+  "rank_capture": {
+    "1": 0.3678324620843991,
+    "2": 0.9999957894252487,
+    "3": 0.9999957894252487,
+    "5": 0.9999957894252487
+  },
+  "rank_residual_route_ratio": {
+    "1": 29686314.503110908,
+    "2": 197.72677148221638,
+    "3": 197.72677148221638,
+    "5": 197.72677148221638
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "hybrid_projected_sigma_scale",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.95,
+  "verdict": "benchmark_only_mirage",
+  "verdict_reason": "looked alive on the five-point benchmark but fails full-even admission",
+  "window_kind": "even",
+  "worst_full_residual_route_ratio": 197.7413098946297
+}

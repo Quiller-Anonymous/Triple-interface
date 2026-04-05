@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    100000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.025880125005696204,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "exact bank bridge family",
+  "family_size": 4,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 0.2359156264598614,
+  "min_full_capture": 0.2359156264598614,
+  "name": "bank_bridge_g_ss",
+  "rank_capture": {
+    "1": 0.23591562645986128,
+    "2": 0.23591562645986128,
+    "3": 0.23591562645986128,
+    "5": 0.23591562645986128
+  },
+  "rank_residual_route_ratio": {
+    "1": 5565.635971918311,
+    "2": 5565.635971918311,
+    "3": 5565.635971918311,
+    "5": 5565.635971918311
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v1",
+  "source_class": "bank_bridge",
+  "stage_a_exact": true,
+  "stage_b_prefilter": false,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.93,
+  "verdict": "impossible",
+  "verdict_reason": "fails Stage B five-point prefilter",
+  "window_kind": "five",
+  "worst_full_residual_route_ratio": 5565.63597191831
+}

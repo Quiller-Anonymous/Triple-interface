@@ -1,0 +1,44 @@
+{
+  "Xs": [
+    3000,
+    10000,
+    30000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.28342066390309434,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "hybrid sigma/scale plus extracted core-5 family",
+  "family_size": 11,
+  "loo_min_principal_cos": {
+    "1": 0.0800934873679789,
+    "2": 0.15220090456327992,
+    "3": 0.15220090456327992,
+    "5": 0.15220090456327992
+  },
+  "mean_full_capture": 0.9999999999999959,
+  "min_full_capture": 0.9999999999999939,
+  "name": "hybrid_sigma_scale_extracted_core5",
+  "rank_capture": {
+    "1": 0.005516844667300708,
+    "2": 0.6318594989273363,
+    "3": 0.9999999999999939,
+    "5": 0.9999999999999939
+  },
+  "rank_residual_route_ratio": {
+    "1": 39616766.49333604,
+    "2": 14665443.240068015,
+    "3": 2.434976508052744e-07,
+    "5": 2.434976508052744e-07
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "hybrid_sigma_scale_extracted",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.94,
+  "verdict": "benchmark_only_mirage",
+  "verdict_reason": "looked alive on the five-point benchmark but fails full-even admission",
+  "window_kind": "even",
+  "worst_full_residual_route_ratio": 2.4612688329944406e-07
+}

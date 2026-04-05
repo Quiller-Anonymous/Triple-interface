@@ -1,0 +1,44 @@
+{
+  "Xs": [
+    3000,
+    10000,
+    30000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.39186985574122063,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "exact sigma/scale operator family",
+  "family_size": 6,
+  "loo_min_principal_cos": {
+    "1": 0.07987217086844083,
+    "2": 0.15238181637798867,
+    "3": 0.15238181637798867,
+    "5": 0.15238181637798867
+  },
+  "mean_full_capture": 0.9999779739125908,
+  "min_full_capture": 0.9999380733160392,
+  "name": "sigma_scale_profiles",
+  "rank_capture": {
+    "1": 0.005514848275947117,
+    "2": 0.6315886908748337,
+    "3": 0.9999381646714158,
+    "5": 0.9999381646714158
+  },
+  "rank_residual_route_ratio": {
+    "1": 39616846.02265703,
+    "2": 14676231.295474464,
+    "3": 2463.3054470786124,
+    "5": 2463.3054470786124
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "sigma_scale_operator",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.96,
+  "verdict": "benchmark_only_mirage",
+  "verdict_reason": "looked alive on the five-point benchmark but fails full-even admission",
+  "window_kind": "even",
+  "worst_full_residual_route_ratio": 2466.9447290554567
+}

@@ -1,0 +1,43 @@
+{
+  "Xs": [
+    10000,
+    30000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.4106147815418322,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "projected true/Q0 bridge operator family",
+  "family_size": 5,
+  "loo_min_principal_cos": {
+    "1": 0.2570602556260872,
+    "2": 0.2570602556260872,
+    "3": 0.2570602556260872,
+    "5": 0.2570602556260872
+  },
+  "mean_full_capture": 0.9834627904723003,
+  "min_full_capture": 0.972874338413397,
+  "name": "projected_true_q0_bridge",
+  "rank_capture": {
+    "1": 0.3423391069520413,
+    "2": 0.9729512919111906,
+    "3": 0.9729512919111906,
+    "5": 0.9729512919111906
+  },
+  "rank_residual_route_ratio": {
+    "1": 30883471.447762046,
+    "2": 1270195.647620305,
+    "3": 1270195.647620305,
+    "5": 1270195.647620305
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "projected_operator",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.97,
+  "verdict": "benchmark_only_mirage",
+  "verdict_reason": "looked alive on the five-point benchmark but fails full-even admission",
+  "window_kind": "even",
+  "worst_full_residual_route_ratio": 1273809.3506350806
+}

@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    10000
+  ],
+  "centering_exact": true,
+  "composite_score": 9.470852943597862e-06,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "hybrid extracted plus AqLocal ambient family",
+  "family_size": 60,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 0.009078974559931997,
+  "min_full_capture": 0.009078974559931997,
+  "name": "hybrid_extracted_aqlocal_q30",
+  "rank_capture": {
+    "1": 0.009078997837144238,
+    "2": 0.009078997837144238,
+    "3": 0.009078997837144238,
+    "5": 0.009078997837144238
+  },
+  "rank_residual_route_ratio": {
+    "1": 46533222.213431254,
+    "2": 46533222.213431254,
+    "3": 46533222.213431254,
+    "5": 46533222.213431254
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v1",
+  "source_class": "hybrid_extracted_local_arithmetic",
+  "stage_a_exact": true,
+  "stage_b_prefilter": false,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.89,
+  "verdict": "benchmark_only_mirage",
+  "verdict_reason": "looked alive on the five-point benchmark but fails full-even admission",
+  "window_kind": "even",
+  "worst_full_residual_route_ratio": 46533223.30651908
+}

@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    100000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.28643577734887543,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "hybrid projected true/Q0 bridge plus sigma/scale family",
+  "family_size": 11,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 1.0,
+  "min_full_capture": 1.0,
+  "name": "hybrid_projected_sigma_scale",
+  "rank_capture": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "rank_residual_route_ratio": {
+    "1": 1.5072245049378295e-20,
+    "2": 1.5072245049378295e-20,
+    "3": 1.5072245049378295e-20,
+    "5": 1.5072245049378295e-20
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "hybrid_projected_sigma_scale",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.95,
+  "verdict": "plausible_but_incomplete",
+  "verdict_reason": "passes benchmark prefilter; full-even admission still pending",
+  "window_kind": "five",
+  "worst_full_residual_route_ratio": 1.5072245256008162e-20
+}

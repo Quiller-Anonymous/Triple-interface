@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    100000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.1697939928266015,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "full extracted q-family through the exact small-beta decomposition",
+  "family_size": 30,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 1.0,
+  "min_full_capture": 1.0,
+  "name": "extracted_full_q30",
+  "rank_capture": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "rank_residual_route_ratio": {
+    "1": 2.450522057155325e-24,
+    "2": 2.450522057155325e-24,
+    "3": 2.450522057155325e-24,
+    "5": 2.450522057155325e-24
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v1",
+  "source_class": "extracted_small_beta",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.93,
+  "verdict": "plausible_but_incomplete",
+  "verdict_reason": "passes benchmark prefilter; full-even admission still pending",
+  "window_kind": "five",
+  "worst_full_residual_route_ratio": 2.448906147028592e-24
+}

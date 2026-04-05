@@ -42,6 +42,58 @@ observable and the arithmetic model with fixed normalization.
 noncomputable def halfMassShellResidual (X N : ℕ) : ℂ :=
   halfMassRecenteredZeroModeObservable X N - halfMassArithmeticModel X N
 
+/--
+Exact shell formula: the shell residual is the arithmetic model multiplied by the unscaled
+half-mass deviation of the geometric zero slice.
+-/
+theorem halfMassShellResidual_eq_two_mul_arithmeticModel_mul_halfMassError
+    (X N : ℕ) (hunscaled : unscaledGeometricZeroSliceMass X N ≠ 0) :
+    halfMassShellResidual X N
+      =
+    (2 : ℂ) * halfMassArithmeticModel X N * unscaledGeometricZeroSliceHalfMassError X N := by
+  unfold halfMassShellResidual halfMassArithmeticModel
+    halfMassRecenteredZeroModeObservable unscaledZeroModeMassRatioObservable
+    unscaledGeometricZeroSliceHalfMassError unscaledGeometricZeroSliceHalfMass
+  have hhalf : ((1 / 2 : ℝ) : ℂ) ≠ 0 := by norm_num
+  field_simp [hunscaled, hhalf]
+  norm_num
+  ring_nf
+
+/--
+Exact ratio formula for the arithmetic-model term in terms of the half-mass observable and the
+unscaled geometric zero slice.
+-/
+theorem halfMassArithmeticModel_eq_halfMassRecentered_mul_halfMass_div_unscaled
+    (X N : ℕ) :
+    halfMassArithmeticModel X N
+      =
+    halfMassRecenteredZeroModeObservable X N
+      * (unscaledGeometricZeroSliceHalfMass / unscaledGeometricZeroSliceMass X N) := by
+  unfold halfMassArithmeticModel halfMassRecenteredZeroModeObservable
+    unscaledZeroModeMassRatioObservable unscaledGeometricZeroSliceHalfMass
+  rw [div_eq_mul_inv, div_eq_mul_inv]
+  norm_num
+  ring_nf
+
+/--
+Exact shell formula with the denominator isolated in the unscaled geometric zero slice.
+
+This is the form directly suited to a future pointwise lower/upper comparison for the geometric
+zero slice on the canonical window.
+-/
+theorem halfMassShellResidual_eq_halfMassRecentered_mul_error_div_unscaled
+    (X N : ℕ) (hunscaled : unscaledGeometricZeroSliceMass X N ≠ 0) :
+    halfMassShellResidual X N
+      =
+    halfMassRecenteredZeroModeObservable X N
+      * (unscaledGeometricZeroSliceHalfMassError X N / unscaledGeometricZeroSliceMass X N) := by
+  rw [halfMassShellResidual_eq_two_mul_arithmeticModel_mul_halfMassError X N hunscaled]
+  rw [halfMassArithmeticModel_eq_halfMassRecentered_mul_halfMass_div_unscaled X N]
+  rw [div_eq_mul_inv, div_eq_mul_inv]
+  unfold unscaledGeometricZeroSliceHalfMass
+  norm_num
+  ring_nf
+
 /-- Exact decomposition of the half-mass observable into arithmetic model plus shell residual. -/
 theorem halfMassRecenteredZeroModeObservable_eq_arithmeticModel_add_shellResidual
     (X N : ℕ) :
@@ -140,6 +192,75 @@ noncomputable def centeredHalfMassTailWindowEnergy
 noncomputable def centeredHalfMassShellWindowEnergy
     (d : HalfMassCenteredDecomposition) (X : ℕ) : ℝ :=
   ∑ N ∈ EvenIn X H, ‖d.shellResidual X N‖ ^ 2
+
+/-- Raw window energy of the uncentered shell residual. -/
+noncomputable def halfMassShellResidualWindowEnergy (X : ℕ) : ℝ :=
+  ∑ N ∈ EvenIn X H, ‖halfMassShellResidual X N‖ ^ 2
+
+/--
+Exact shell-energy rewrite under nonvanishing of the unscaled geometric zero slice on the
+canonical window.
+
+This isolates the shell contribution as a weighted window energy of the existing half-mass error
+layer `unscaledGeometricZeroSliceHalfMassError`.
+-/
+theorem halfMassShellResidualWindowEnergy_eq_weighted_halfMassError
+    (X : ℕ)
+    (hNZ : ∀ N ∈ EvenIn X H, unscaledGeometricZeroSliceMass X N ≠ 0) :
+    halfMassShellResidualWindowEnergy X
+      =
+    ∑ N ∈ EvenIn X H,
+      4 * ‖halfMassArithmeticModel X N‖ ^ 2 * ‖unscaledGeometricZeroSliceHalfMassError X N‖ ^ 2 := by
+  unfold halfMassShellResidualWindowEnergy
+  apply Finset.sum_congr rfl
+  intro N hN
+  rw [halfMassShellResidual_eq_two_mul_arithmeticModel_mul_halfMassError X N (hNZ N hN)]
+  rw [norm_mul, norm_mul]
+  norm_num [pow_two]
+  ring
+
+/--
+Alternative exact shell-energy rewrite with the denominator isolated in the unscaled geometric zero
+slice.
+-/
+theorem halfMassShellResidualWindowEnergy_eq_weighted_error_div_unscaled
+    (X : ℕ)
+    (hNZ : ∀ N ∈ EvenIn X H, unscaledGeometricZeroSliceMass X N ≠ 0) :
+    halfMassShellResidualWindowEnergy X
+      =
+    ∑ N ∈ EvenIn X H,
+      ‖halfMassRecenteredZeroModeObservable X N‖ ^ 2
+        * ‖unscaledGeometricZeroSliceHalfMassError X N / unscaledGeometricZeroSliceMass X N‖ ^ 2 := by
+  unfold halfMassShellResidualWindowEnergy
+  apply Finset.sum_congr rfl
+  intro N hN
+  rw [halfMassShellResidual_eq_halfMassRecentered_mul_error_div_unscaled X N (hNZ N hN)]
+  rw [norm_mul]
+  ring
+
+/--
+Pointwise canonical-window comparison target for the unscaled geometric zero slice.
+
+This is stated on norms because the zero-slice mass is currently packaged as a complex quantity.
+-/
+structure UnscaledGeometricZeroSliceMassWindowNormTarget (c0 c1 : ℝ) : Prop where
+  c0_pos : 0 < c0
+  c1_nonneg : 0 ≤ c1
+  lower :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H → c0 ≤ ‖unscaledGeometricZeroSliceMass X N‖
+  upper :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H → ‖unscaledGeometricZeroSliceMass X N‖ ≤ c1
+
+theorem UnscaledGeometricZeroSliceMassWindowNormTarget.nonzero
+    {c0 c1 : ℝ} (hT : UnscaledGeometricZeroSliceMassWindowNormTarget c0 c1)
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    unscaledGeometricZeroSliceMass X N ≠ 0 := by
+  have hlow : c0 ≤ ‖unscaledGeometricZeroSliceMass X N‖ := hT.lower hX hN
+  have hnorm_pos : 0 < ‖unscaledGeometricZeroSliceMass X N‖ := by
+    exact lt_of_lt_of_le hT.c0_pos hlow
+  intro hz
+  have hnorm_zero : ‖unscaledGeometricZeroSliceMass X N‖ = 0 := by simp [hz]
+  linarith
 
 /--
 Route-sized target for the centered arithmetic tail contribution.

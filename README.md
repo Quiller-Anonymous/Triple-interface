@@ -26,7 +26,7 @@ separate those cases clearly.
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: gold
+1. Goldbach conjecture -- Current status: fool's gold
 -- The final wrapper `Goldbach.goldbach_final` is a theorem of the shape “finite base + global
   pointwise witness => Goldbach for every even integer.” The formal endpoint is pointwise in `N`,
   not merely a density statement on windows.
@@ -42,7 +42,7 @@ separate those cases clearly.
   In that workbench, the remaining polished-gold blockers are concentrated in the pinned `Q0`
   major-arc/minor-energy seam, especially `ssu_minor_energy_calibration`; the project-neutral
   dyadic existence boundary `q0MinorDyadicGramDecayPoly_exists` also remains explicit there.
-- Important strategy note: the current live Goldbach work has now taken its first deliberate major
+-- Important strategy note: the current live Goldbach work has now taken its first deliberate major
   departure from the manuscript math. The repo is presently treating "identify the structured /
   singular part of `R₂`" as an upstream task before trying to close the paper's Route A / Route B.
   See `SupportingDocs/Goldbach_FirstMajorDeparture.md`.
@@ -408,3 +408,4 @@ This section lists (1) the hypothesis surface of the gold entrypoint(s), and (2)
 - By early January 2026, Codex was operating more or less on its own with minimal prompting; something has clearly changed. Most work was now in decomposing bespoke axioms into conventions, lemmas, and constants. Early January 2026: axiom audits became cleaner and the “gold vs fool’s-gold” boundary became more explicit; work on Alt‑Zeta begins. Then the haggling started; discovered problems with the sigma tail and major arc. Much of the month has been a battle over budgets and constants, trying to find a path toward “platinum” (unconditional, no axioms) and a more precise intermediate target (“polished gold”: auditable tool axioms + discharged project instantiations). 
 - Jan 30: I came to realize that the SSU part of the Goldbach was being treated as conventional or textbook math, as it is too ambitious to prove it as part of the Goldbach project end-to-end. So I split it into a separate project and let Goldbach work on an instantiation of SSU complete with project-specific parameters. New plan: bring Goldbach up to polished gold with SSU-I, then take a few months to prove SSU independently (to platinum), thereby (hopefully) bringing Goldbach to platinum.
 - Mar 3: The SSU grind continues, though with frequent stops due to rate limits. SSU was completed to platinum early thereafter in March, and we returned to the project getting Goldbach to platinum. March 20: uncovered yet another "one last thing", an apparent missing premise in the Goldbach proof that establishes the density of the arithmetic leading into Routes A/B. This has required us (for the first time) to attempt to build a new analytical object and construct a bridge that goes beyond the proof in the source document. Too many of these ad hoc additions spell doom for the program, but I'll keep at it. To avoid wasted effort, I am now running feasibility studies before coding, and forcing different LLMs (MathGPT and Claude Opus) to cross-review.
+- Mar 28: Claude Opus makes overconfident mistakes that could be prevented by having more context. I'm switching back to MathGPT, which seems to have a better sense of the background. The search for a new "subspace" object became a diagnostic tool instead of a bridge (the two were conflated because Opus mixed witnesses). We've learned more though. Now we are trying to build a Vaughan bridge with a better sense of the gap.

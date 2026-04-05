@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    10000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.41058230484546715,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "projected true/Q0 bridge operator family",
+  "family_size": 5,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 0.972874338413397,
+  "min_full_capture": 0.972874338413397,
+  "name": "projected_true_q0_bridge",
+  "rank_capture": {
+    "1": 0.9728743384133971,
+    "2": 0.9728743384133971,
+    "3": 0.9728743384133971,
+    "5": 0.9728743384133971
+  },
+  "rank_residual_route_ratio": {
+    "1": 1273809.3506350797,
+    "2": 1273809.3506350797,
+    "3": 1273809.3506350797,
+    "5": 1273809.3506350797
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "projected_operator",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": false,
+  "stage_d_compression": false,
+  "theorem_friendliness": 0.97,
+  "verdict": "benchmark_only_mirage",
+  "verdict_reason": "looked alive on the five-point benchmark but fails full-even admission",
+  "window_kind": "even",
+  "worst_full_residual_route_ratio": 1273809.3506350806
+}

@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    100000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.3918775626446052,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "exact sigma/scale operator family",
+  "family_size": 6,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 0.9999479518355113,
+  "min_full_capture": 0.9999479518355113,
+  "name": "sigma_scale_profiles",
+  "rank_capture": {
+    "1": 0.9999479518355113,
+    "2": 0.9999479518355113,
+    "3": 0.9999479518355113,
+    "5": 0.9999479518355113
+  },
+  "rank_residual_route_ratio": {
+    "1": 4510.520535653508,
+    "2": 4510.520535653508,
+    "3": 4510.520535653508,
+    "5": 4510.520535653508
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "sigma_scale_operator",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": true,
+  "stage_d_compression": true,
+  "theorem_friendliness": 0.96,
+  "verdict": "live_theorem_candidate",
+  "verdict_reason": "passes full-even admission and low-rank compression gates",
+  "window_kind": "even",
+  "worst_full_residual_route_ratio": 4510.520535653528
+}

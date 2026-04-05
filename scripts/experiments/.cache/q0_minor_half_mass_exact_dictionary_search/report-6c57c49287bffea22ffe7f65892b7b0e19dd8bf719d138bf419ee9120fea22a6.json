@@ -1,0 +1,42 @@
+{
+  "Xs": [
+    10000
+  ],
+  "centering_exact": true,
+  "composite_score": 0.2864333650580927,
+  "exactness_tag": "exact",
+  "expected_theorem_path": "hybrid projected true/Q0 bridge plus sigma/scale family",
+  "family_size": 11,
+  "loo_min_principal_cos": {
+    "1": 1.0,
+    "2": 1.0,
+    "3": 1.0,
+    "5": 1.0
+  },
+  "mean_full_capture": 0.9999957891156545,
+  "min_full_capture": 0.9999957891156545,
+  "name": "hybrid_projected_sigma_scale",
+  "rank_capture": {
+    "1": 0.9999957891156545,
+    "2": 0.9999957891156545,
+    "3": 0.9999957891156545,
+    "5": 0.9999957891156545
+  },
+  "rank_residual_route_ratio": {
+    "1": 197.7413098946292,
+    "2": 197.7413098946292,
+    "3": 197.7413098946292,
+    "5": 197.7413098946292
+  },
+  "search_cache_version": "2026-04-03-extracted-s7-svd-fullspan-v2-normalized-family-basis",
+  "source_class": "hybrid_projected_sigma_scale",
+  "stage_a_exact": true,
+  "stage_b_prefilter": true,
+  "stage_c_full_even": true,
+  "stage_d_compression": true,
+  "theorem_friendliness": 0.95,
+  "verdict": "live_theorem_candidate",
+  "verdict_reason": "passes full-even admission and low-rank compression gates",
+  "window_kind": "even",
+  "worst_full_residual_route_ratio": 197.7413098946297
+}

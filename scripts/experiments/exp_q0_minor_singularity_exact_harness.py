@@ -700,6 +700,14 @@ def coeffarith_report(
 
 
 def object_support(X: int, slices: list[SliceData], obj: str) -> list[int]:
+    if obj == "zeromode":
+        return [0]
+    if obj == "meanchannel":
+        ambient_max = X + H
+        return [t for t in range(-ambient_max, ambient_max + 1) if t != 0]
+    if obj == "routevisible":
+        ambient_max = X + H
+        return [t for t in range(-ambient_max, ambient_max + 1)]
     if obj == "weighted":
         supp = {0}
         for sl in slices:
@@ -718,6 +726,16 @@ def object_value(
     wstats: WeightStats | None,
     alpha: float | None,
 ) -> float:
+    if obj == "zeromode":
+        return sl.raw0 if t == 0 else 0.0
+    if obj == "meanchannel":
+        if t == 0:
+            return 0.0
+        return sl.mean_nonzero
+    if obj == "routevisible":
+        if t == 0:
+            return sl.raw0
+        return sl.mean_nonzero
     if obj == "weighted":
         if t == 0:
             return sl.raw0
