@@ -657,6 +657,21 @@ private lemma unscaledGeometricZeroSliceMass_re_lower
           * uniformWindowSupportIndicator X (N - n)
           * KHatH (((N - n : ℕ) : ℤ) - (n : ℤ))).re) := hsingle
 
+/-- The real part of the unscaled geometric zero slice is nonnegative on the canonical even window. -/
+theorem unscaledGeometricZeroSliceMass_re_nonneg_of_mem_even_window
+    {X N : ℕ} (_hX : X0 ≤ X) (_hN : N ∈ EvenIn X H) :
+    0 ≤ (unscaledGeometricZeroSliceMass X N).re := by
+  exact unscaledGeometricZeroSliceMass_re_nonneg X N
+
+/--
+The diagonal term `n = N / 2` gives a uniform real-part lower bound for the unscaled geometric
+zero slice on the canonical even window.
+-/
+theorem unscaledGeometricZeroSliceMass_re_lower_of_mem_even_window
+    {X N : ℕ} (hX : X0 ≤ X) (hN : N ∈ EvenIn X H) :
+    Goldbach.BG_Identity.K_full (0 : ℤ) ≤ (unscaledGeometricZeroSliceMass X N).re := by
+  exact unscaledGeometricZeroSliceMass_re_lower hX hN
+
 private lemma unscaledGeometricZeroSliceMass_norm_le_two
     (X N : ℕ) (hX : X0 ≤ X) :
     ‖unscaledGeometricZeroSliceMass X N‖ ≤ 2 := by
