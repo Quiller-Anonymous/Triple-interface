@@ -337,6 +337,12 @@ noncomputable def normalizedZeroModeShapeObservable (X N : ℕ) : ℂ :=
 noncomputable def halfMassToNormalizedShapeCorrection (X N : ℕ) : ℂ :=
   halfMassToZeroModeEnvelopeCorrection X N / ((routeVisibleWindowNormFloor X : ℝ) : ℂ)
 
+/--
+Deviation of the half-mass-to-normalized-shape correction from the ideal bookkeeping value `1`.
+-/
+noncomputable def normalizedZeroModeShapeCorrectionError (X N : ℕ) : ℂ :=
+  halfMassToNormalizedShapeCorrection X N - 1
+
 theorem normalizedZeroModeShapeObservable_eq_halfMassToCorrection_mul_halfMassRecentered
     (X N : ℕ)
     (hq0 : Q0MinorNormalizationBridge.q0NormFactor N ≠ 0)
@@ -470,6 +476,34 @@ theorem zeroModeScalar_eq_kappa_times_sigmaFloor_plus_error
   unfold zeroModeEnvelopeError
   ring
 
+/--
+Exact pointwise normalization identity behind the zero-mode shape transfer.
+
+When the defining denominators are nonzero, the route-facing envelope error is precisely the
+normalized shape error multiplied back by `zeroModeSigmaBaseline` and the route floor. The
+inequality packaged by `ZeroModeEnvelopeNormalizationTransferTarget` is therefore a pure
+normalization-size question, not new half-mass arithmetic.
+-/
+theorem zeroModeEnvelopeError_eq_sigma_floor_mul_normalizedShapeError
+    (κ : ℝ) (X N : ℕ)
+    (hsigma : zeroModeSigmaBaseline X N ≠ 0)
+    (hfloor : (routeVisibleWindowNormFloor X : ℂ) ≠ 0) :
+    zeroModeEnvelopeError κ X N
+      =
+    zeroModeSigmaBaseline X N
+      * ((routeVisibleWindowNormFloor X : ℝ) : ℂ)
+      * normalizedZeroModeShapeError κ X N := by
+  unfold zeroModeEnvelopeError normalizedZeroModeShapeError normalizedZeroModeShapeObservable
+    zeroModeEnvelopeObservable
+  field_simp [hsigma, hfloor]
+  have hcast :
+      (((κ * routeVisibleWindowNormFloor X : ℝ) : ℂ))
+        =
+      (((routeVisibleWindowNormFloor X : ℝ) : ℂ) * (κ : ℂ)) := by
+    simp [Complex.ofReal_mul, mul_comm]
+  rw [hcast]
+  ring_nf
+
 /-- Squared `ℓ²(EvenIn X H)` energy of the zero-mode envelope error. -/
 noncomputable def zeroModeEnvelopeErrorWindowEnergy (κ : ℝ) (X : ℕ) : ℝ :=
   ∑ N ∈ EvenIn X H, ‖zeroModeEnvelopeError κ X N‖ ^ 2
@@ -495,12 +529,37 @@ structure ZeroModeEnvelopeShapeTarget (κ C2 C3 : ℝ) : Prop where
 noncomputable def normalizedZeroModeShapeErrorWindowEnergy (κ : ℝ) (X : ℕ) : ℝ :=
   ∑ N ∈ EvenIn X H, ‖normalizedZeroModeShapeError κ X N‖ ^ 2
 
+/-- Raw sum of the normalized zero-mode shape observable on the canonical even window. -/
+noncomputable def normalizedZeroModeShapeWindowRawSum (X : ℕ) : ℂ :=
+  ∑ N ∈ EvenIn X H, normalizedZeroModeShapeObservable X N
+
+/-- Canonical even-window average of the normalized zero-mode shape observable. -/
+noncomputable def normalizedZeroModeShapeWindowAverage (X : ℕ) : ℂ :=
+  ((EvenIn X H).card : ℂ)⁻¹ * normalizedZeroModeShapeWindowRawSum X
+
+/-- Centered `ℓ²(EvenIn X H)` energy of the normalized zero-mode shape observable. -/
+noncomputable def normalizedZeroModeShapeVarianceWindowEnergy (X : ℕ) : ℝ :=
+  ∑ N ∈ EvenIn X H, ‖normalizedZeroModeShapeObservable X N - normalizedZeroModeShapeWindowAverage X‖ ^ 2
+
+/-- Window-scale average defect of the normalized zero-mode shape observable relative to `κ`. -/
+noncomputable def normalizedZeroModeShapeWindowAverageStabilityEnergy (κ : ℝ) (X : ℕ) : ℝ :=
+  ((EvenIn X H).card : ℝ) * ‖normalizedZeroModeShapeWindowAverage X - (κ : ℂ)‖ ^ 2
+
 /--
 The normalized-observable form of the zero-mode target:
 
 `normalizedZeroModeShapeObservable = κ + error`
 
 with the error controlled on the canonical route window.
+
+This is the live arithmetic frontier for the numerically viable normalized route. A proof that is
+meant to preserve that route should hit this target directly, or through a theorem that stays on
+the normalized shape surface. In particular, the fallback path through
+`normalizedZeroModeBookkeepingTarget_of_halfMass_and_correction` imports
+`HalfMassRecenteredZeroModeTarget`; combined with the current half-mass variance seam downstream of
+`Goldbach.Cert.MajorArcModules.Q0MinorRawEnergyLedgerRoute.rawLedger_canon_one_one_axiom`, that
+fallback path inherits the raw-ledger `C2 * (H / X)` profile with `C2 = 1`, which is numerically
+incompatible with the calibrated admissibility cap for the bookkeeping comparison theorem.
 -/
 structure NormalizedZeroModeBookkeepingTarget (κ C2 C3 : ℝ) : Prop where
   C2_nonneg : 0 ≤ C2
@@ -511,6 +570,124 @@ structure NormalizedZeroModeBookkeepingTarget (κ C2 C3 : ℝ) : Prop where
         ≤
       C2 * ((H : ℝ) / (X : ℝ))
         + C3 / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)
+
+/--
+Named direct-frontier alias for the normalized zero-mode bookkeeping problem.
+
+This alias is intentionally non-innovative mathematically: it records that the next viable theorem
+must be a direct proof on the normalized observable itself, rather than a reduction through the
+older half-mass variance route.
+-/
+abbrev DirectNormalizedZeroModeBookkeepingTarget (κ C2 C3 : ℝ) : Prop :=
+  NormalizedZeroModeBookkeepingTarget κ C2 C3
+
+/--
+Direct arithmetic average target for the normalized zero-mode shape observable.
+
+This is the normalized-surface analogue of the half-mass average witness, but it lives directly on
+the Route-A bookkeeping observable rather than the half-mass-recentered proxy.
+-/
+structure NormalizedZeroModeWindowAverageTarget (κ : ℝ) : Prop where
+  average_eq :
+    ∀ {X : ℕ}, X0 ≤ X →
+      normalizedZeroModeShapeWindowAverage X = (κ : ℂ)
+
+/--
+Raw-sum form of the normalized window-average target.
+
+This is the smallest honest arithmetic source theorem for the direct normalized Route-A branch:
+identify the canonical even-window raw sum of the normalized shape observable with
+`|EvenIn(X,H)| * κ`.
+-/
+structure NormalizedZeroModeWindowRawSumTarget (κ : ℝ) : Prop where
+  sum_eq :
+    ∀ {X : ℕ}, X0 ≤ X →
+      normalizedZeroModeShapeWindowRawSum X = ((EvenIn X H).card : ℂ) * (κ : ℂ)
+
+/--
+Direct centered-variance target for the normalized zero-mode shape observable.
+
+This is the route-preserving replacement for proving a variance theorem only after dropping back to
+the half-mass endpoint.
+-/
+structure NormalizedZeroModeArithmeticVarianceTarget (C2 C3 : ℝ) : Prop where
+  C2_nonneg : 0 ≤ C2
+  C3_nonneg : 0 ≤ C3
+  bound :
+    ∀ {X : ℕ}, X0 ≤ X →
+      normalizedZeroModeShapeVarianceWindowEnergy X
+        ≤
+      C2 * ((H : ℝ) / (X : ℝ))
+        + C3 / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)
+
+/--
+Average-stability target for the normalized zero-mode shape observable.
+
+This lets the direct normalized route separate centered fluctuation from the question of whether
+the canonical window average stabilizes to a single bookkeeping scalar `κ`.
+-/
+structure NormalizedZeroModeWindowAverageStabilityTarget (κ C2 C3 : ℝ) : Prop where
+  C2_nonneg : 0 ≤ C2
+  C3_nonneg : 0 ≤ C3
+  bound :
+    ∀ {X : ℕ}, X0 ≤ X →
+      normalizedZeroModeShapeWindowAverageStabilityEnergy κ X
+        ≤
+      C2 * ((H : ℝ) / (X : ℝ))
+        + C3 / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)
+
+/--
+Pointwise transfer from the normalized zero-mode shape error back to the route-facing envelope
+error.
+
+This is the normalization seam in the zero-mode shape problem. It is deliberately separated from
+the arithmetic bookkeeping target: proving this target should be a deterministic comparison of the
+`zeroModeSigmaBaseline` and route-floor normalizations, while `NormalizedZeroModeBookkeepingTarget`
+contains the actual scalar/half-mass arithmetic.
+-/
+structure ZeroModeEnvelopeNormalizationTransferTarget (κ : ℝ) : Prop where
+  bound :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+      ‖zeroModeEnvelopeError κ X N‖ ^ 2
+        ≤
+      routeVisibleWindowNormFloorSq X * ‖normalizedZeroModeShapeError κ X N‖ ^ 2
+
+/--
+Assemble the route-facing zero-mode envelope shape target from two smaller inputs:
+
+* a deterministic normalization transfer from the normalized shape error to the envelope error;
+* the normalized bookkeeping/half-mass arithmetic bound.
+
+This exposes the real obstruction: after this reduction, `ZeroModeEnvelopeShapeTarget` no longer
+hides whether the hard work is arithmetic or normalization bookkeeping.
+-/
+theorem zeroModeEnvelopeShapeTarget_of_normalizedBookkeeping_and_transfer
+    {κ C2 C3 : ℝ}
+    (htransfer : ZeroModeEnvelopeNormalizationTransferTarget κ)
+    (hbook : NormalizedZeroModeBookkeepingTarget κ C2 C3) :
+    ZeroModeEnvelopeShapeTarget κ C2 C3 := by
+  refine ⟨hbook.C2_nonneg, hbook.C3_nonneg, ?_⟩
+  intro X hX
+  unfold zeroModeEnvelopeErrorWindowEnergy
+  calc
+    Finset.sum (EvenIn X H) (fun N => ‖zeroModeEnvelopeError κ X N‖ ^ 2)
+        ≤
+      Finset.sum (EvenIn X H) (fun N =>
+        routeVisibleWindowNormFloorSq X * ‖normalizedZeroModeShapeError κ X N‖ ^ 2) := by
+          refine Finset.sum_le_sum ?_
+          intro N hN
+          exact htransfer.bound hX hN
+    _ =
+      routeVisibleWindowNormFloorSq X *
+        Finset.sum (EvenIn X H) (fun N => ‖normalizedZeroModeShapeError κ X N‖ ^ 2) := by
+          rw [Finset.mul_sum]
+    _ ≤
+      routeVisibleWindowNormFloorSq X
+        * (C2 * ((H : ℝ) / (X : ℝ))
+            + C3 / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)) := by
+          exact mul_le_mul_of_nonneg_left
+            (by simpa [normalizedZeroModeShapeErrorWindowEnergy] using hbook.bound hX)
+            (routeVisibleWindowNormFloorSq_nonneg X)
 
 /-- Squared `ℓ²(EvenIn X H)` energy of the raw post-`σ` mass-ratio error. -/
 noncomputable def rawZeroModeMassRatioErrorWindowEnergy (κ : ℝ) (X : ℕ) : ℝ :=
@@ -582,6 +759,43 @@ structure HalfMassRecenteredZeroModeTarget (κ C2 C3 : ℝ) : Prop where
   bound :
     ∀ {X : ℕ}, X0 ≤ X →
       halfMassRecenteredZeroModeErrorWindowEnergy κ X
+        ≤
+      C2 * ((H : ℝ) / (X : ℝ))
+        + C3 / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)
+
+/--
+Window-local factorization surface for the normalized zero-mode shape observable.
+
+This keeps denominator nonvanishing and exact algebra separate from the arithmetic target. If a
+future proof of `NormalizedZeroModeBookkeepingTarget` uses this surface, then the proof route has
+explicitly passed back through the half-mass-recentered observable.
+-/
+structure NormalizedZeroModeHalfMassFactorizationTarget : Prop where
+  eq_factor :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+      normalizedZeroModeShapeObservable X N
+        =
+      halfMassToNormalizedShapeCorrection X N * halfMassRecenteredZeroModeObservable X N
+
+/--
+Stability package for the correction factor relating the half-mass-recentered observable to the
+normalized shape observable.
+
+The first field bounds the multiplicative amplification of half-mass error. The second bounds the
+additive scalar drift caused by the correction factor not being exactly `1`.
+-/
+structure NormalizedZeroModeShapeCorrectionStabilityTarget
+    (κ A C2 C3 : ℝ) : Prop where
+  A_nonneg : 0 ≤ A
+  C2_nonneg : 0 ≤ C2
+  C3_nonneg : 0 ≤ C3
+  correction_norm :
+    ∀ {X N : ℕ}, X0 ≤ X → N ∈ EvenIn X H →
+      ‖halfMassToNormalizedShapeCorrection X N‖ ^ 2 ≤ A
+  correction_error_bound :
+    ∀ {X : ℕ}, X0 ≤ X →
+      (∑ N ∈ EvenIn X H,
+          ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2)
         ≤
       C2 * ((H : ℝ) / (X : ℝ))
         + C3 / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)
@@ -772,6 +986,344 @@ lemma norm_sq_add_le_two_mul_sum_norm_sq (a b : ℂ) :
   have h_expand : (‖a‖ + ‖b‖) ^ 2 ≤ 2 * (‖a‖ ^ 2 + ‖b‖ ^ 2) := by
     nlinarith [sq_nonneg (‖a‖ - ‖b‖)]
   exact le_trans h_sq h_expand
+
+lemma norm_sub_sq_le_two_mul_norm_sub_sq_add_two_mul_norm_sub_sq
+    (z a b : ℂ) :
+    ‖z - b‖ ^ 2 ≤ 2 * ‖z - a‖ ^ 2 + 2 * ‖a - b‖ ^ 2 := by
+  have htri : ‖z - b‖ ≤ ‖z - a‖ + ‖a - b‖ := by
+    have := norm_add_le (z - a) (a - b)
+    simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using this
+  have hsq : ‖z - b‖ ^ 2 ≤ (‖z - a‖ + ‖a - b‖) ^ 2 := by
+    nlinarith [htri, norm_nonneg (z - b), norm_nonneg (z - a), norm_nonneg (a - b)]
+  have hquad : (‖z - a‖ + ‖a - b‖) ^ 2 ≤ 2 * ‖z - a‖ ^ 2 + 2 * ‖a - b‖ ^ 2 := by
+    nlinarith [sq_nonneg (‖z - a‖ - ‖a - b‖)]
+  exact le_trans hsq hquad
+
+/--
+Direct normalized-surface reduction from a fixed average witness and a centered variance bound.
+
+This is the first theorem in the Route-A-native bookkeeping route: it closes the normalized target
+without passing through `HalfMassRecenteredZeroModeTarget`.
+-/
+theorem normalizedZeroModeBookkeepingTarget_of_average_and_variance
+    {κ C2 C3 : ℝ}
+    (hAvg : NormalizedZeroModeWindowAverageTarget κ)
+    (hVar : NormalizedZeroModeArithmeticVarianceTarget C2 C3) :
+    NormalizedZeroModeBookkeepingTarget κ C2 C3 := by
+  refine ⟨hVar.C2_nonneg, hVar.C3_nonneg, ?_⟩
+  intro X hX
+  have hEq :
+      normalizedZeroModeShapeErrorWindowEnergy κ X
+        =
+      normalizedZeroModeShapeVarianceWindowEnergy X := by
+    unfold normalizedZeroModeShapeErrorWindowEnergy normalizedZeroModeShapeVarianceWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [show normalizedZeroModeShapeError κ X N
+        = normalizedZeroModeShapeObservable X N - (κ : ℂ) by rfl]
+    rw [hAvg.average_eq hX]
+  rw [hEq]
+  exact hVar.bound hX
+
+/--
+Direct-frontier packaging of the normalized bookkeeping target from native average and variance
+inputs.
+
+This is the preferred closure theorem for the numerically viable Route-A branch: it stays entirely
+on `normalizedZeroModeShapeObservable` and its window operators.
+-/
+theorem directNormalizedZeroModeBookkeepingTarget_of_average_and_variance
+    {κ C2 C3 : ℝ}
+    (hAvg : NormalizedZeroModeWindowAverageTarget κ)
+    (hVar : NormalizedZeroModeArithmeticVarianceTarget C2 C3) :
+    DirectNormalizedZeroModeBookkeepingTarget κ C2 C3 := by
+  exact normalizedZeroModeBookkeepingTarget_of_average_and_variance hAvg hVar
+
+/--
+Upgrade a raw normalized window-sum identity to the corresponding normalized window-average target.
+
+This isolates the remaining arithmetic content in the average step: once the raw sum is identified,
+no further Route-A bookkeeping is needed to recover the exact average.
+-/
+theorem normalizedZeroModeWindowAverageTarget_of_rawSum
+    {κ : ℝ}
+    (hSum : NormalizedZeroModeWindowRawSumTarget κ) :
+    NormalizedZeroModeWindowAverageTarget κ := by
+  refine ⟨?_⟩
+  intro X hX
+  unfold normalizedZeroModeShapeWindowAverage
+  rw [hSum.sum_eq hX]
+  have hcard_nat : (EvenIn X H).card ≠ 0 := by
+    refine Finset.card_ne_zero.mpr ?_
+    by_cases hEven : Goldbach.Windows.IsEven X
+    · exact ⟨X, Goldbach.Windows.mem_EvenIn_self (N := X) (H := H) hEven⟩
+    · have h1 : 1 ∈ Finset.range (H + 1) := by
+        norm_num [H]
+      have hEvenSucc : Goldbach.Windows.IsEven (X + 1) := by
+        dsimp [Goldbach.Windows.IsEven] at hEven ⊢
+        omega
+      unfold Goldbach.Windows.EvenIn Goldbach.Windows.IccShift
+      refine ⟨X + 1, Finset.mem_filter.mpr ?_⟩
+      refine ⟨Finset.mem_image.mpr ?_, hEvenSucc⟩
+      exact ⟨1, h1, by simp⟩
+  have hcardC : (((EvenIn X H).card : ℂ)) ≠ 0 := by
+    exact_mod_cast hcard_nat
+  rw [← mul_assoc, inv_mul_cancel₀ hcardC, one_mul]
+
+/--
+Direct-frontier packaging from the raw normalized window sum and native normalized variance.
+
+This theorem isolates the remaining arithmetic source theorem for the direct normalized route:
+prove the exact raw sum on the normalized observable and a native variance bound, and the
+bookkeeping target follows without any half-mass reduction.
+-/
+theorem directNormalizedZeroModeBookkeepingTarget_of_rawSum_and_variance
+    {κ C2 C3 : ℝ}
+    (hSum : NormalizedZeroModeWindowRawSumTarget κ)
+    (hVar : NormalizedZeroModeArithmeticVarianceTarget C2 C3) :
+    DirectNormalizedZeroModeBookkeepingTarget κ C2 C3 := by
+  exact
+    directNormalizedZeroModeBookkeepingTarget_of_average_and_variance
+      (normalizedZeroModeWindowAverageTarget_of_rawSum hSum)
+      hVar
+
+/--
+An exact average witness gives zero average-stability energy on the normalized surface.
+-/
+theorem normalizedZeroModeWindowAverageStabilityTarget_of_averageTarget
+    {κ : ℝ} (hAvg : NormalizedZeroModeWindowAverageTarget κ) :
+    NormalizedZeroModeWindowAverageStabilityTarget κ 0 0 := by
+  refine ⟨by norm_num, by norm_num, ?_⟩
+  intro X hX
+  unfold normalizedZeroModeShapeWindowAverageStabilityEnergy
+  rw [hAvg.average_eq hX, sub_self, norm_zero, pow_two]
+  have hleft : (((EvenIn X H).card : ℝ) * ((0 : ℝ) * 0)) = 0 := by ring
+  have hright :
+      (0 : ℝ) * ((H : ℝ) / (X : ℝ))
+        + (0 : ℝ) / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2) = 0 := by
+    ring
+  rw [hleft, hright]
+
+/--
+Direct normalized-surface reduction from centered variance plus scale-by-scale average stability.
+
+This is the honest Route-A version of the projection-to-constants step: keep the whole argument on
+`normalizedZeroModeShapeObservable` until a direct proof either succeeds or visibly collapses.
+-/
+theorem normalizedZeroModeBookkeepingTarget_of_variance_and_averageStability
+    {κ C2v C3v C2a C3a : ℝ}
+    (hVar : NormalizedZeroModeArithmeticVarianceTarget C2v C3v)
+    (hAvg : NormalizedZeroModeWindowAverageStabilityTarget κ C2a C3a) :
+    NormalizedZeroModeBookkeepingTarget κ
+      (2 * C2v + 2 * C2a)
+      (2 * C3v + 2 * C3a) := by
+  refine ⟨by nlinarith [hVar.C2_nonneg, hAvg.C2_nonneg],
+    by nlinarith [hVar.C3_nonneg, hAvg.C3_nonneg], ?_⟩
+  intro X hX
+  have hterm :
+      ∀ N ∈ EvenIn X H,
+        ‖normalizedZeroModeShapeError κ X N‖ ^ 2
+          ≤
+        2 * ‖normalizedZeroModeShapeObservable X N - normalizedZeroModeShapeWindowAverage X‖ ^ 2
+          + 2 * ‖normalizedZeroModeShapeWindowAverage X - (κ : ℂ)‖ ^ 2 := by
+    intro N hN
+    simpa [normalizedZeroModeShapeError] using
+      norm_sub_sq_le_two_mul_norm_sub_sq_add_two_mul_norm_sub_sq
+        (normalizedZeroModeShapeObservable X N) (normalizedZeroModeShapeWindowAverage X) (κ : ℂ)
+  have hsum :
+      (∑ N ∈ EvenIn X H, ‖normalizedZeroModeShapeError κ X N‖ ^ 2)
+        ≤
+      ∑ N ∈ EvenIn X H,
+        (2 * ‖normalizedZeroModeShapeObservable X N - normalizedZeroModeShapeWindowAverage X‖ ^ 2
+          + 2 * ‖normalizedZeroModeShapeWindowAverage X - (κ : ℂ)‖ ^ 2) := by
+    exact Finset.sum_le_sum (fun N hN => hterm N hN)
+  have hsplit :
+      ∑ N ∈ EvenIn X H,
+        (2 * ‖normalizedZeroModeShapeObservable X N - normalizedZeroModeShapeWindowAverage X‖ ^ 2
+          + 2 * ‖normalizedZeroModeShapeWindowAverage X - (κ : ℂ)‖ ^ 2)
+        =
+      2 * normalizedZeroModeShapeVarianceWindowEnergy X
+        + 2 * normalizedZeroModeShapeWindowAverageStabilityEnergy κ X := by
+    unfold normalizedZeroModeShapeVarianceWindowEnergy normalizedZeroModeShapeWindowAverageStabilityEnergy
+    rw [Finset.sum_add_distrib]
+    rw [Finset.mul_sum]
+    have hconst :
+        ∑ _N ∈ EvenIn X H, 2 * ‖normalizedZeroModeShapeWindowAverage X - (κ : ℂ)‖ ^ 2
+          =
+        ((EvenIn X H).card : ℝ) * (2 * ‖normalizedZeroModeShapeWindowAverage X - (κ : ℂ)‖ ^ 2) := by
+      rw [Finset.sum_const, nsmul_eq_mul]
+    rw [hconst]
+    ring
+  have hVarBound := hVar.bound (X := X) hX
+  have hAvgBound := hAvg.bound (X := X) hX
+  calc
+    normalizedZeroModeShapeErrorWindowEnergy κ X
+        = ∑ N ∈ EvenIn X H, ‖normalizedZeroModeShapeError κ X N‖ ^ 2 := by
+            rfl
+    _ ≤
+      ∑ N ∈ EvenIn X H,
+        (2 * ‖normalizedZeroModeShapeObservable X N - normalizedZeroModeShapeWindowAverage X‖ ^ 2
+          + 2 * ‖normalizedZeroModeShapeWindowAverage X - (κ : ℂ)‖ ^ 2) := hsum
+    _ =
+      2 * normalizedZeroModeShapeVarianceWindowEnergy X
+        + 2 * normalizedZeroModeShapeWindowAverageStabilityEnergy κ X := hsplit
+    _ ≤
+      2 * (C2v * ((H : ℝ) / (X : ℝ))
+          + C3v / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2))
+        + 2 * (C2a * ((H : ℝ) / (X : ℝ))
+          + C3a / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)) := by
+      exact add_le_add
+        (mul_le_mul_of_nonneg_left hVarBound (by norm_num))
+        (mul_le_mul_of_nonneg_left hAvgBound (by norm_num))
+    _ =
+      (2 * C2v + 2 * C2a) * ((H : ℝ) / (X : ℝ))
+        + (2 * C3v + 2 * C3a) / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2) := by
+      ring
+
+/--
+Reduction from the normalized bookkeeping target to the older half-mass-recentered target plus a
+separate correction-factor stability package.
+
+This theorem is intentionally diagnostic. If the only available proof of
+`NormalizedZeroModeBookkeepingTarget` goes through this lemma and then through
+`HalfMassRecenteredZeroModeTarget`, the Route A zero-mode residual has inherited the old half-mass
+arithmetic burden. If the normalized target is proved directly, it is genuinely weaker than that
+old endpoint. Under the current repo seam, the downstream fallback path eventually reaches
+`Goldbach.Cert.MajorArcModules.Q0MinorRawEnergyLedgerRoute.rawLedger_canon_one_one_axiom`, so this
+reduction should be treated as structurally informative but numerically dead for the calibrated
+bookkeeping comparison problem.
+-/
+theorem normalizedZeroModeBookkeepingTarget_of_halfMass_and_correction
+    {κ A C2h C3h C2c C3c : ℝ}
+    (hfactor : NormalizedZeroModeHalfMassFactorizationTarget)
+    (hhalf : HalfMassRecenteredZeroModeTarget κ C2h C3h)
+    (hcorr : NormalizedZeroModeShapeCorrectionStabilityTarget κ A C2c C3c) :
+    NormalizedZeroModeBookkeepingTarget κ
+      (2 * A * C2h + 2 * C2c)
+      (2 * A * C3h + 2 * C3c) := by
+  refine ⟨?_, ?_, ?_⟩
+  · have hmain : 0 ≤ 2 * A * C2h := by
+      exact mul_nonneg (mul_nonneg (by norm_num) hcorr.A_nonneg) hhalf.C2_nonneg
+    have hcorrC : 0 ≤ 2 * C2c := by
+      exact mul_nonneg (by norm_num) hcorr.C2_nonneg
+    nlinarith
+  · have hmain : 0 ≤ 2 * A * C3h := by
+      exact mul_nonneg (mul_nonneg (by norm_num) hcorr.A_nonneg) hhalf.C3_nonneg
+    have hcorrC : 0 ≤ 2 * C3c := by
+      exact mul_nonneg (by norm_num) hcorr.C3_nonneg
+    nlinarith
+  · intro X hX
+    let denom : ℝ := (H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2
+    let halfBudget : ℝ := C2h * ((H : ℝ) / (X : ℝ)) + C3h / denom
+    let corrBudget : ℝ := C2c * ((H : ℝ) / (X : ℝ)) + C3c / denom
+    have hpoint :
+        ∀ N ∈ EvenIn X H,
+          ‖normalizedZeroModeShapeError κ X N‖ ^ 2
+            ≤
+          2 * A * ‖halfMassRecenteredZeroModeError κ X N‖ ^ 2
+            + 2 * ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2 := by
+      intro N hN
+      have herr :
+          normalizedZeroModeShapeError κ X N
+            =
+          halfMassToNormalizedShapeCorrection X N
+              * halfMassRecenteredZeroModeError κ X N
+            + normalizedZeroModeShapeCorrectionError X N * (κ : ℂ) := by
+        unfold normalizedZeroModeShapeError halfMassRecenteredZeroModeError
+          normalizedZeroModeShapeCorrectionError
+        rw [hfactor.eq_factor hX hN]
+        ring
+      have hsplit :
+          ‖normalizedZeroModeShapeError κ X N‖ ^ 2
+            ≤
+          2 *
+            (‖halfMassToNormalizedShapeCorrection X N
+                * halfMassRecenteredZeroModeError κ X N‖ ^ 2
+              + ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2) := by
+        rw [herr]
+        exact norm_sq_add_le_two_mul_sum_norm_sq _ _
+      have hmul_exact :
+          ‖halfMassToNormalizedShapeCorrection X N
+              * halfMassRecenteredZeroModeError κ X N‖ ^ 2
+            =
+          ‖halfMassToNormalizedShapeCorrection X N‖ ^ 2
+            * ‖halfMassRecenteredZeroModeError κ X N‖ ^ 2 := by
+        rw [norm_mul, mul_pow]
+      have hmul_bound :
+          ‖halfMassToNormalizedShapeCorrection X N
+              * halfMassRecenteredZeroModeError κ X N‖ ^ 2
+            ≤
+          A * ‖halfMassRecenteredZeroModeError κ X N‖ ^ 2 := by
+        rw [hmul_exact]
+        exact mul_le_mul_of_nonneg_right
+          (hcorr.correction_norm hX hN)
+          (sq_nonneg ‖halfMassRecenteredZeroModeError κ X N‖)
+      nlinarith [
+        hsplit,
+        hmul_bound,
+        sq_nonneg ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖,
+        sq_nonneg ‖halfMassRecenteredZeroModeError κ X N‖,
+        hcorr.A_nonneg]
+    have hsum_point :
+        (∑ N ∈ EvenIn X H, ‖normalizedZeroModeShapeError κ X N‖ ^ 2)
+          ≤
+        ∑ N ∈ EvenIn X H,
+          (2 * A * ‖halfMassRecenteredZeroModeError κ X N‖ ^ 2
+            + 2 * ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2) := by
+      exact Finset.sum_le_sum (fun N hN => hpoint N hN)
+    have hsplit_sum :
+        (∑ N ∈ EvenIn X H,
+          (2 * A * ‖halfMassRecenteredZeroModeError κ X N‖ ^ 2
+            + 2 * ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2))
+          =
+        2 * A * halfMassRecenteredZeroModeErrorWindowEnergy κ X
+          +
+        2 * (∑ N ∈ EvenIn X H,
+          ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2) := by
+      unfold halfMassRecenteredZeroModeErrorWindowEnergy
+      rw [Finset.sum_add_distrib]
+      rw [Finset.mul_sum]
+      rw [Finset.mul_sum]
+    have hhalf_bound :
+        halfMassRecenteredZeroModeErrorWindowEnergy κ X ≤ halfBudget := by
+      simpa [halfBudget, denom] using hhalf.bound (X := X) hX
+    have hcorr_bound :
+        (∑ N ∈ EvenIn X H,
+          ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2) ≤ corrBudget := by
+      simpa [corrBudget, denom] using hcorr.correction_error_bound (X := X) hX
+    have hcombined :
+        2 * A * halfMassRecenteredZeroModeErrorWindowEnergy κ X
+          +
+        2 * (∑ N ∈ EvenIn X H,
+          ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2)
+          ≤
+        2 * A * halfBudget + 2 * corrBudget := by
+      exact add_le_add
+        (mul_le_mul_of_nonneg_left hhalf_bound
+          (mul_nonneg (by norm_num) hcorr.A_nonneg))
+        (mul_le_mul_of_nonneg_left hcorr_bound (by norm_num))
+    calc
+      normalizedZeroModeShapeErrorWindowEnergy κ X
+          =
+        ∑ N ∈ EvenIn X H, ‖normalizedZeroModeShapeError κ X N‖ ^ 2 := by
+          rfl
+      _ ≤
+        ∑ N ∈ EvenIn X H,
+          (2 * A * ‖halfMassRecenteredZeroModeError κ X N‖ ^ 2
+            + 2 * ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2) := hsum_point
+      _ =
+        2 * A * halfMassRecenteredZeroModeErrorWindowEnergy κ X
+          +
+        2 * (∑ N ∈ EvenIn X H,
+          ‖normalizedZeroModeShapeCorrectionError X N * (κ : ℂ)‖ ^ 2) := hsplit_sum
+      _ ≤
+        2 * A * halfBudget + 2 * corrBudget := hcombined
+      _ =
+        (2 * A * C2h + 2 * C2c) * ((H : ℝ) / (X : ℝ))
+          + (2 * A * C3h + 2 * C3c)
+              / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2) := by
+          simp [halfBudget, corrBudget, denom]
+          ring
 
 theorem routeVisibleResidualOfHalfMassScalarWindowEnergy_le_two_mul_zeroMode_mean
     (κ : ℝ) (X : ℕ) :

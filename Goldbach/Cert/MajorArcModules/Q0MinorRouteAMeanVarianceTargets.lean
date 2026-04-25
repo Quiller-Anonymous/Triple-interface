@@ -782,7 +782,7 @@ def routeAPSBVisibleMeanErrorProfile (C2g C3g C2r C3r : ℝ) (X : ℕ) : ℝ :=
     + Real.sqrt (((EvenIn X H).card : ℝ) * routeAPSBWindowEnergyProfile C2r C3r X)
 
 lemma routeAPSBWindowEnergyProfile_nonneg
-    {C2 C3 X : ℝ} (hC2 : 0 ≤ C2) (hC3 : 0 ≤ C3) :
+    {C2 C3 : ℝ} {X : ℕ} (hC2 : 0 ≤ C2) (hC3 : 0 ≤ C3) :
     0 ≤ routeAPSBWindowEnergyProfile C2 C3 X := by
   unfold routeAPSBWindowEnergyProfile
   refine mul_nonneg (routeVisibleWindowNormFloorSq_nonneg _) ?_
@@ -802,15 +802,19 @@ lemma routeAPSBSum_norm_le_sqrt_card_mul_sum_norm_sq
         ≤
       (((EvenIn X H).card : ℝ))
         * Finset.sum (EvenIn X H) (fun N => ‖f N‖ ^ 2) := by
-    simpa using
-      (sq_sum_le_card_mul_sum_sq (s := EvenIn X H) (f := fun N => ‖f N‖))
+    exact
+      (sq_sum_le_card_mul_sum_sq (s := EvenIn X H) (f := fun N => ‖f N‖) :
+        (Finset.sum (EvenIn X H) (fun N => ‖f N‖)) ^ 2
+          ≤
+        (((EvenIn X H).card : ℝ))
+          * Finset.sum (EvenIn X H) (fun N => ‖f N‖ ^ 2))
   have hsum_nonneg : 0 ≤ Finset.sum (EvenIn X H) (fun N => ‖f N‖) := by
     exact Finset.sum_nonneg (fun _ _ => norm_nonneg _)
   have hrhs_nonneg :
       0 ≤
         (((EvenIn X H).card : ℝ))
           * Finset.sum (EvenIn X H) (fun N => ‖f N‖ ^ 2) := by
-    refine mul_nonneg (by positivity) ?_
+    refine mul_nonneg (by exact_mod_cast Nat.zero_le (EvenIn X H).card) ?_
     exact Finset.sum_nonneg (fun _ _ => sq_nonneg _)
   have hsqrt_sq :
       (Real.sqrt
@@ -819,7 +823,7 @@ lemma routeAPSBSum_norm_le_sqrt_card_mul_sum_norm_sq
         =
       (((EvenIn X H).card : ℝ))
         * Finset.sum (EvenIn X H) (fun N => ‖f N‖ ^ 2) := by
-    simpa using Real.sq_sqrt hrhs_nonneg
+    exact Real.sq_sqrt hrhs_nonneg
   have hsqrt_nonneg :
       0 ≤
         Real.sqrt
@@ -857,6 +861,93 @@ structure RouteAPSBVisibleMeanErrorAbsUpperBound
     (Merr : ℕ → ℝ) : Prop where
   bound :
     ∀ {X : ℕ}, X0 ≤ X → routeAPSBVisibleMeanErrorAbsSum X ≤ Merr X
+
+/--
+Deterministic `L² → L¹` transport for the dyadic visible error.
+
+This separates the paper arithmetic from the bookkeeping: any window-energy bounds for
+`G_formula` and `R_formula` immediately control the conservative absolute error
+`G_formula + R_formula`.
+-/
+theorem routeAPSBVisibleMeanErrorAbsUpperBound_of_windowEnergyBounds
+    (EG ER : ℕ → ℝ)
+    (hG :
+      ∀ {X : ℕ}, X0 ≤ X →
+        Finset.sum (EvenIn X H) (fun N => ‖G_formula X N‖ ^ 2) ≤ EG X)
+    (hR :
+      ∀ {X : ℕ}, X0 ≤ X →
+        routeVisibleResidualWindowEnergy X ≤ ER X) :
+    RouteAPSBVisibleMeanErrorAbsUpperBound
+      (fun X =>
+        Real.sqrt (((EvenIn X H).card : ℝ) * EG X)
+          + Real.sqrt (((EvenIn X H).card : ℝ) * ER X)) := by
+  refine ⟨?_⟩
+  intro X hX
+  have hsplit := routeAPSBVisibleMeanErrorAbsSum_le_sum_norm_G_add_sum_norm_R X
+  have hG_l1 :=
+    routeAPSBSum_norm_le_sqrt_card_mul_sum_norm_sq X (fun N => G_formula X N)
+  have hR_l1 :=
+    routeAPSBSum_norm_le_sqrt_card_mul_sum_norm_sq X (fun N => R_formula X N)
+  have hG_sq :
+      Finset.sum (EvenIn X H) (fun N => ‖G_formula X N‖ ^ 2) ≤ EG X :=
+    hG hX
+  have hR_sq :
+      Finset.sum (EvenIn X H) (fun N => ‖R_formula X N‖ ^ 2) ≤ ER X := by
+    simpa [routeVisibleResidualWindowEnergy] using hR hX
+  have hcard_nonneg : 0 ≤ (((EvenIn X H).card : ℝ)) := by
+    exact_mod_cast Nat.zero_le (EvenIn X H).card
+  have hG_sqrt :
+      Real.sqrt
+          ((((EvenIn X H).card : ℝ))
+            * Finset.sum (EvenIn X H) (fun N => ‖G_formula X N‖ ^ 2))
+        ≤ Real.sqrt ((((EvenIn X H).card : ℝ)) * EG X) := by
+    exact Real.sqrt_le_sqrt (mul_le_mul_of_nonneg_left hG_sq hcard_nonneg)
+  have hR_sqrt :
+      Real.sqrt
+          ((((EvenIn X H).card : ℝ))
+            * Finset.sum (EvenIn X H) (fun N => ‖R_formula X N‖ ^ 2))
+        ≤ Real.sqrt ((((EvenIn X H).card : ℝ)) * ER X) := by
+    exact Real.sqrt_le_sqrt (mul_le_mul_of_nonneg_left hR_sq hcard_nonneg)
+  exact le_trans hsplit
+    (add_le_add (le_trans hG_l1 hG_sqrt) (le_trans hR_l1 hR_sqrt))
+
+/--
+Energy-target form of the dyadic visible-error bound.
+
+The `G_formula` side is supplied by `GFormulaEnergyTarget`; the remaining live arithmetic input is
+the route-visible residual target for `R_formula`.
+-/
+theorem routeAPSBVisibleMeanErrorAbsUpperBound_of_energyTargets
+    {C2g C3g C2r C3r : ℝ}
+    (hG : Q0MinorGFormulaRouteA.GFormulaEnergyTarget C2g C3g)
+    (hR : RouteVisibleResidualTarget C2r C3r) :
+    RouteAPSBVisibleMeanErrorAbsUpperBound
+      (routeAPSBVisibleMeanErrorProfile C2g C3g C2r C3r) := by
+  exact
+    routeAPSBVisibleMeanErrorAbsUpperBound_of_windowEnergyBounds
+      (EG := routeAPSBWindowEnergyProfile C2g C3g)
+      (ER := routeAPSBWindowEnergyProfile C2r C3r)
+      (hG := by
+        intro X hX
+        exact hG.bound (X := X) hX)
+      (hR := by
+        intro X hX
+        exact hR.bound (X := X) hX)
+
+/--
+Explicit `G_formula` closure plus a residual-energy target gives the full visible-error upper
+bound. Thus the Route-A mean subtractive side is reduced to the residual theorem for `R_formula`.
+-/
+theorem routeAPSBVisibleMeanErrorAbsUpperBound_of_explicitG_and_residualTarget
+    {C2r C3r : ℝ}
+    (hR : RouteVisibleResidualTarget C2r C3r) :
+    RouteAPSBVisibleMeanErrorAbsUpperBound
+      (routeAPSBVisibleMeanErrorProfile
+        ((((14 : ℝ) / 13) ^ 4)
+          * Q0MinorGFormulaRouteA.gFormulaCoreBudgetConst)
+        0 C2r C3r) := by
+  exact routeAPSBVisibleMeanErrorAbsUpperBound_of_energyTargets
+    Q0MinorGFormulaClosure.gFormulaEnergyTarget_explicit hR
 
 /--
 Exact dyadic-sum inequality underlying the PSB `main contribution - error` packet.
@@ -1007,6 +1098,31 @@ theorem routeAPSBMinorResidualDyadicMeanLowerBound_of_SS_main_and_errorAbs
       (Goldbach.Cert.MajorArcModules.Q0MinorNormalizedEnergy.minorResidual X N
         Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0.Δ_canon).re)
   linarith
+
+/--
+Route-A PSB dyadic mean lower bound with the positive `SS_formula` main term already explicit.
+
+After this theorem, the mean-side arithmetic still needed upstream is exactly the residual-energy
+target for `R_formula`; the `G_formula` contribution is handled by its explicit closure theorem.
+-/
+theorem routeAPSBMinorResidualDyadicMeanLowerBound_of_explicitSSMain_and_residualTarget
+    {C2r C3r : ℝ}
+    (hR : RouteVisibleResidualTarget C2r C3r) :
+    RouteAPSBMinorResidualDyadicMeanLowerBound
+      (fun X =>
+        routeAPSBSSMainLowerProfile X
+          - routeAPSBVisibleMeanErrorProfile
+              ((((14 : ℝ) / 13) ^ 4)
+                * Q0MinorGFormulaRouteA.gFormulaCoreBudgetConst)
+              0 C2r C3r X) := by
+  exact routeAPSBMinorResidualDyadicMeanLowerBound_of_SS_main_and_errorAbs
+    routeAPSBSSMainLowerProfile
+    (routeAPSBVisibleMeanErrorProfile
+      ((((14 : ℝ) / 13) ^ 4)
+        * Q0MinorGFormulaRouteA.gFormulaCoreBudgetConst)
+      0 C2r C3r)
+    routeAPSBSSMainContributionLowerBound_explicit
+    (routeAPSBVisibleMeanErrorAbsUpperBound_of_explicitG_and_residualTarget hR)
 
 /--
 Assemble the raw PSB dyadic mean lower bound from a `main contribution - error` estimate.

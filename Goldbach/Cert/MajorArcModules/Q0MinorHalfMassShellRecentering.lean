@@ -22,7 +22,7 @@ def canonicalEvenWindowPoint (X : ℕ) : ℕ :=
   if IsEven X then X else X + 1
 
 theorem canonicalEvenWindowPoint_mem_even_window
-    {X : ℕ} (hX : X0 ≤ X) :
+    {X : ℕ} :
     canonicalEvenWindowPoint X ∈ EvenIn X H := by
   unfold canonicalEvenWindowPoint
   by_cases hEven : IsEven X
@@ -31,7 +31,7 @@ theorem canonicalEvenWindowPoint_mem_even_window
       unfold EvenIn IccShift
       exact Finset.mem_filter.mpr
         ⟨Finset.mem_image.mpr ⟨0, Finset.mem_range.mpr (Nat.succ_pos _), by simp⟩, hEven⟩
-    simpa [hEven] using hmem
+    simpa [canonicalEvenWindowPoint, hEven] using hmem
   · have h1 : 1 ∈ Finset.range (H + 1) := by
       norm_num [H]
     have hEvenSucc : IsEven (X + 1) := by
@@ -55,7 +55,7 @@ theorem unscaledGeometricZeroSliceMass_eq_exactGeometricScalar
     unscaledGeometricZeroSliceMass X N = exactGeometricScalar X := by
   unfold exactGeometricScalar
   exact unscaledGeometricZeroSliceMass_eq_of_mem_even_window hX hN
-    (canonicalEvenWindowPoint_mem_even_window hX)
+    canonicalEvenWindowPoint_mem_even_window
 
 theorem exactGeometricScalar_ne_zero
     {X : ℕ} (hX : X0 ≤ X) :
@@ -64,7 +64,7 @@ theorem exactGeometricScalar_ne_zero
   exact
     (UnscaledGeometricZeroSliceMassWindowNormTarget.nonzero
       (hT := unscaledGeometricZeroSliceMassWindowNormTarget_explicit)
-      hX (canonicalEvenWindowPoint_mem_even_window hX))
+      hX canonicalEvenWindowPoint_mem_even_window)
 
 /--
 Arithmetic-model term after recentering at the exact geometric scalar `γ_X` rather than the
@@ -107,6 +107,75 @@ theorem exactGeometricShellResidual_eq_zero_of_mem_even_window
   unfold exactGeometricShellResidual
   rw [halfMassRecenteredZeroModeObservable_eq_exactGeometricArithmeticModel_of_mem_even_window hX hN]
   ring
+
+/--
+On the canonical even window, the half-mass raw window sum is exactly the arithmetic-model raw
+window sum scaled by the explicit factor `2 * exactGeometricScalar X`.
+-/
+theorem halfMassWindowRawSum_eq_two_mul_exactGeometricScalar_mul_arithmeticModelWindowRawSum
+    {X : ℕ} (hX : X0 ≤ X) :
+    halfMassWindowRawSum X
+      =
+    ((2 : ℂ) * exactGeometricScalar X) * halfMassArithmeticModelWindowRawSum X := by
+  unfold halfMassWindowRawSum halfMassArithmeticModelWindowRawSum
+  calc
+    ∑ N ∈ EvenIn X H, halfMassRecenteredZeroModeObservable X N
+        =
+      ∑ N ∈ EvenIn X H, exactGeometricArithmeticModel X N := by
+          refine Finset.sum_congr rfl ?_
+          intro N hN
+          exact halfMassRecenteredZeroModeObservable_eq_exactGeometricArithmeticModel_of_mem_even_window hX hN
+    _ =
+      ∑ N ∈ EvenIn X H, ((2 : ℂ) * exactGeometricScalar X) * halfMassArithmeticModel X N := by
+          refine Finset.sum_congr rfl ?_
+          intro N hN
+          unfold exactGeometricArithmeticModel
+          rfl
+    _ = ((2 : ℂ) * exactGeometricScalar X) * ∑ N ∈ EvenIn X H, halfMassArithmeticModel X N := by
+          rw [← Finset.mul_sum]
+
+/--
+On the canonical even window, the half-mass window average is exactly the arithmetic-model window
+average scaled by the explicit factor `2 * exactGeometricScalar X`.
+
+This shows that the remaining arithmetic-model average obstruction is not new arithmetic content:
+it is the old half-mass window average, modulo a fully explicit deterministic scalar.
+-/
+theorem halfMassRecenteredWindowAverage_eq_two_mul_exactGeometricScalar_mul_arithmeticModelWindowAverage
+    {X : ℕ} (hX : X0 ≤ X) :
+    halfMassRecenteredWindowAverage X
+      =
+    ((2 : ℂ) * exactGeometricScalar X) * halfMassArithmeticModelWindowAverage X := by
+  unfold halfMassRecenteredWindowAverage halfMassArithmeticModelWindowAverage
+  rw [halfMassWindowRawSum_eq_two_mul_exactGeometricScalar_mul_arithmeticModelWindowRawSum hX]
+  ring
+
+/--
+Inverse form of the arithmetic-model average identity.
+
+This is the clean diagnostic statement: once `exactGeometricScalar X` is fixed, controlling the
+arithmetic-model average is equivalent to controlling the old half-mass window average.
+-/
+theorem halfMassArithmeticModelWindowAverage_eq_inv_two_mul_exactGeometricScalar_mul_average
+    {X : ℕ} (hX : X0 ≤ X) :
+    halfMassArithmeticModelWindowAverage X
+      =
+    (((2 : ℂ) * exactGeometricScalar X)⁻¹) * halfMassRecenteredWindowAverage X := by
+  set fac : ℂ := ((2 : ℂ) * exactGeometricScalar X)
+  have hγ : exactGeometricScalar X ≠ 0 := exactGeometricScalar_ne_zero hX
+  have hfac : fac ≠ 0 := by
+    dsimp [fac]
+    exact mul_ne_zero (by norm_num) hγ
+  have hmain : halfMassRecenteredWindowAverage X = fac * halfMassArithmeticModelWindowAverage X := by
+    simpa [fac] using
+      halfMassRecenteredWindowAverage_eq_two_mul_exactGeometricScalar_mul_arithmeticModelWindowAverage hX
+  calc
+    halfMassArithmeticModelWindowAverage X
+        = fac⁻¹ * (fac * halfMassArithmeticModelWindowAverage X) := by
+            field_simp [hfac]
+    _ = fac⁻¹ * halfMassRecenteredWindowAverage X := by rw [hmain]
+    _ = (((2 : ℂ) * exactGeometricScalar X)⁻¹) * halfMassRecenteredWindowAverage X := by
+            simp [fac]
 
 /-- Window energy of the exactly recentered shell residual on the canonical even window. -/
 noncomputable def exactGeometricShellResidualWindowEnergy (X : ℕ) : ℝ :=

@@ -449,7 +449,7 @@ theorem centeredRawHalfMassTrueTailResidual_eq_zero_of_constant_on_even_window
       _ = ((EvenIn X H).card : ℂ) * ρ := by
             rw [Finset.sum_const, nsmul_eq_mul]
   have hcard_nat : (EvenIn X H).card ≠ 0 := by
-    exact Finset.card_ne_zero.mpr ⟨canonicalEvenWindowPoint X, canonicalEvenWindowPoint_mem_even_window hX⟩
+    exact Finset.card_ne_zero.mpr ⟨canonicalEvenWindowPoint X, canonicalEvenWindowPoint_mem_even_window⟩
   have hcard : ((EvenIn X H).card : ℂ) ≠ 0 := by
     exact_mod_cast hcard_nat
   unfold centeredRawHalfMassTrueTailResidual rawHalfMassTrueTailResidualWindowAverage
@@ -489,7 +489,7 @@ theorem rawHalfMassTrueTailResidual_eq_canonical_of_pairwise_constant_on_even_wi
     rawHalfMassTrueTailResidual S X N
       =
     rawHalfMassTrueTailResidual S X (canonicalEvenWindowPoint X) := by
-  exact hpair hN (canonicalEvenWindowPoint_mem_even_window hX)
+  exact hpair hN canonicalEvenWindowPoint_mem_even_window
 
 theorem rawHalfMassSeriesTruncCombination_eq_canonical_of_pairwise_constant_on_even_window
     (S : TrueSingularSeriesOnWindow) {X N : ℕ}
@@ -499,7 +499,7 @@ theorem rawHalfMassSeriesTruncCombination_eq_canonical_of_pairwise_constant_on_e
     rawHalfMassSeriesTruncCombination S X N
       =
     rawHalfMassSeriesTruncCombination S X (canonicalEvenWindowPoint X) := by
-  exact hpair hN (canonicalEvenWindowPoint_mem_even_window hX)
+  exact hpair hN canonicalEvenWindowPoint_mem_even_window
 
 theorem rawHalfMassTailOnlyObservable_eq_normalizedSigmaTail_add_canonicalResidual_of_residual_pairwise_constant_on_even_window
     (S : TrueSingularSeriesOnWindow) {X N : ℕ}
@@ -538,12 +538,12 @@ theorem rawHalfMassTrueTailResidual_pairwise_constant_on_even_window_of_canonica
   have h1 : rawHalfMassTrueTailResidual S X M1
       = rawHalfMassTrueTailResidual S X (canonicalEvenWindowPoint X) := by
     refine rawHalfMassTrueTailResidual_eq_of_sub_eq_normalizedSigmaTail_sub S X M1 (canonicalEvenWindowPoint X) ?_
-    rw [haff hM1, haff (canonicalEvenWindowPoint_mem_even_window hX)]
+    rw [haff hM1, haff canonicalEvenWindowPoint_mem_even_window]
     ring
   have h2 : rawHalfMassTrueTailResidual S X M2
       = rawHalfMassTrueTailResidual S X (canonicalEvenWindowPoint X) := by
     refine rawHalfMassTrueTailResidual_eq_of_sub_eq_normalizedSigmaTail_sub S X M2 (canonicalEvenWindowPoint X) ?_
-    rw [haff hM2, haff (canonicalEvenWindowPoint_mem_even_window hX)]
+    rw [haff hM2, haff canonicalEvenWindowPoint_mem_even_window]
     ring
   rw [h1, h2]
 
@@ -581,7 +581,7 @@ theorem halfMassTailOnlyObservable_eq_centeredTrueSigmaTail_of_residual_pairwise
     (S := S) (hX := hX) (hN := hN)
     (ρ := rawHalfMassTrueTailResidual S X (canonicalEvenWindowPoint X)) ?_
   intro M hM
-  exact hpair hM (canonicalEvenWindowPoint_mem_even_window hX)
+  exact hpair hM canonicalEvenWindowPoint_mem_even_window
 
 theorem centeredTrueSigmaTailWindowEnergy_eq_tailOnlyWindowEnergy_of_eq
     (S : TrueSingularSeriesOnWindow)
