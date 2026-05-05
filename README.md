@@ -26,41 +26,7 @@ separate those cases clearly.
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: fool's gold
--- The final wrapper `Goldbach.goldbach_final` is a theorem of the shape “finite base + global
-  pointwise witness => Goldbach for every even integer.” The formal endpoint is pointwise in `N`,
-  not merely a density statement on windows.
--- The canonical entry point `Goldbach/GoldFunX.lean` is **axiom-free in the `#print axioms`
-  sense**, but it is still conditional: it requires explicit hypotheses/typeclass inputs
-  (`SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and
-  `ParallelFunXCanonScale.BudgetHyp`).
--- The “gold-grade” Option-B route `Goldbach/GoldFunX_OptionB_Gold.lean` replaces the major-arc
-  inner-swap input by one conventional theorem-shaped axiom,
-  `Goldbach/Cert/MajorArcPowerSavingSpec.lean` (`majorArc_powerSaving`), but it still leaves the
-  remaining global budget inequality explicit in the theorem type.
--- The pinned-cap convenience route `Goldbach/GoldFunX_OptionB_Cert.lean` is still **fool's gold**.
-  In that workbench, the remaining polished-gold blockers are concentrated in the pinned `Q0`
-  major-arc/minor-energy seam, especially `ssu_minor_energy_calibration`; the project-neutral
-  dyadic existence boundary `q0MinorDyadicGramDecayPoly_exists` also remains explicit there.
--- Important strategy note: the current live Goldbach work has now taken its first deliberate major
-  departure from the manuscript math. The repo is presently treating "identify the structured /
-  singular part of `R₂`" as an upstream task before trying to close the paper's Route A / Route B.
-  See `SupportingDocs/Goldbach_FirstMajorDeparture.md`.
-- Current obstruction note: after the weighted-channel cleanup on the pinned `Q0` route, the live
-  ε₁ minor object is now `zeroMode + meanChannel`, not the older `coeffArith` / subspace
-  diagnostic object. That cleanup does **not** create a stronger minor engine; it recovers the
-  existing certified ε₁ engine on a cleaner route-visible explanation. The remaining pinned ε₁
-  seam is therefore calibration (`ssu_minor_energy_calibration` / `CalibrationTarget`), while the
-  canonical endpoint obstruction remains the scale-sensitive closure budget (`BudgetHyp`), as
-  documented by `Goldbach/ParallelFunXCanonScaleObstacle.lean`.
--- Axiom-status note for that departure: the new singularity-first bridge layer is being developed
-  on the exact repo objects and, so far, adds **no new explicit axioms**. It is infrastructure for
-  exposing candidate structured major/minor components, not yet a new end-to-end closure theorem.
-  So the audited endpoint status above is unchanged, while the active research task has moved
-  upstream.
--- Type-I note: the legacy file `Goldbach/TypeI_Leak.lean` still contains a zero placeholder and
-  should not be read as the active AO/FunX story. The live AO kernel-tail path uses the nontrivial
-  `BG_Identity.errTI` bound through `Goldbach/AO_KernelTail.lean`.
+1. Goldbach conjecture -- Current status: silver overall, with a gold-grade conditional boundary and fool's-gold pinned/staging workbenches. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves the closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches build and contain substantial checked infrastructure, but they are not final endpoints: the remaining live obstructions are the scale-sensitive closure budget, the half-mass/zero-mode endpoint (`vaughanHalfMassRecenteredEndpoint`), the mean-channel approximation (`vaughanMeanChannelApproxTarget`), and calibration of the minor-energy route rather than another formal assembly layer.
 
 2. Twin primes conjecture -- Current status: conditional entrypoint + fool's-gold default build
 -- The hypothesis-only checklist entry point `Twin/ChecklistEntrypoint.lean`
@@ -409,3 +375,4 @@ This section lists (1) the hypothesis surface of the gold entrypoint(s), and (2)
 - Jan 30: I came to realize that the SSU part of the Goldbach was being treated as conventional or textbook math, as it is too ambitious to prove it as part of the Goldbach project end-to-end. So I split it into a separate project and let Goldbach work on an instantiation of SSU complete with project-specific parameters. New plan: bring Goldbach up to polished gold with SSU-I, then take a few months to prove SSU independently (to platinum), thereby (hopefully) bringing Goldbach to platinum.
 - Mar 3: The SSU grind continues, though with frequent stops due to rate limits. SSU was completed to platinum early thereafter in March, and we returned to the project getting Goldbach to platinum. March 20: uncovered yet another "one last thing", an apparent missing premise in the Goldbach proof that establishes the density of the arithmetic leading into Routes A/B. This has required us (for the first time) to attempt to build a new analytical object and construct a bridge that goes beyond the proof in the source document. Too many of these ad hoc additions spell doom for the program, but I'll keep at it. To avoid wasted effort, I am now running feasibility studies before coding, and forcing different LLMs (MathGPT and Claude Opus) to cross-review.
 - Mar 28: Claude Opus makes overconfident mistakes that could be prevented by having more context. I'm switching back to MathGPT, which seems to have a better sense of the background. The search for a new "subspace" object became a diagnostic tool instead of a bridge (the two were conflated because Opus mixed witnesses). We've learned more though. Now we are trying to build a Vaughan bridge with a better sense of the gap.
+- In April the main project was clarity about the math we're missing. The code now separates checked reductions, conventional axiom boundaries, pinned workbenches, and the true remaining obstructions. The project is not platinum or gold, it is silver, but with a much cleaner map of what has to be proved next. Maybe this is all a waste of time after all.

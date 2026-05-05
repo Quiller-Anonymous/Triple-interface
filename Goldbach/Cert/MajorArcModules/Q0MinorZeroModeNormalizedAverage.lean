@@ -42,6 +42,22 @@ private lemma even_window_card_ne_zero
     refine ⟨Finset.mem_image.mpr ?_, hEvenSucc⟩
     exact ⟨1, h1, by simp⟩
 
+private lemma even_window_card_ne_zero_unconditional
+    (X : ℕ) :
+    (EvenIn X H).card ≠ 0 := by
+  refine Finset.card_ne_zero.mpr ?_
+  by_cases hEven : Goldbach.Windows.IsEven X
+  · exact ⟨X, Goldbach.Windows.mem_EvenIn_self (N := X) (H := H) hEven⟩
+  · have h1 : 1 ∈ Finset.range (H + 1) := by
+      norm_num [H]
+    have hEvenSucc : Goldbach.Windows.IsEven (X + 1) := by
+      dsimp [Goldbach.Windows.IsEven] at hEven ⊢
+      omega
+    unfold Goldbach.Windows.EvenIn Goldbach.Windows.IccShift
+    refine ⟨X + 1, Finset.mem_filter.mpr ?_⟩
+    refine ⟨Finset.mem_image.mpr ?_, hEvenSucc⟩
+    exact ⟨1, h1, by simp⟩
+
 private lemma even_window_card_le_H_add_one (X : ℕ) :
     (EvenIn X H).card ≤ H + 1 := by
   classical
@@ -65,6 +81,43 @@ private lemma even_window_card_le_H_add_one (X : ℕ) :
     intro a b hab
     exact Nat.add_left_cancel hab
   exact le_trans hcard_le (le_of_eq hcard_eq)
+
+private lemma even_window_eq_image_range_halfH_add_one_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    EvenIn X H = (Finset.range (H / 2 + 1)).image (fun k : ℕ => X + 2 * k) := by
+  classical
+  ext N
+  constructor
+  · intro hN
+    rcases Goldbach.ProofTools.Windows.mem_EvenIn_iff (X := X) (H := H) (N := N) |>.mp hN with ⟨hIcc, hNEven⟩
+    have hXle : X ≤ N := Goldbach.ProofTools.Windows.le_left_of_mem_IccShift hIcc
+    have hdiffEven : Goldbach.Windows.IsEven (N - X) := by
+      dsimp [Goldbach.Windows.IsEven] at hXEven hNEven ⊢
+      omega
+    have hdiffNatEven : Even (N - X) := Goldbach.Windows.even_of_isEven hdiffEven
+    refine Finset.mem_image.mpr ?_
+    refine ⟨(N - X) / 2, Finset.mem_range.mpr ?_, ?_⟩
+    · have hsub : N - X ≤ H := by
+        exact Goldbach.ProofTools.Windows.sub_left_le_of_mem_IccShift hIcc
+      have hk : (N - X) / 2 ≤ H / 2 := Nat.div_le_div_right hsub
+      exact Nat.lt_succ_of_le hk
+    · calc
+        X + 2 * ((N - X) / 2)
+            = X + (N - X) := by
+                rw [Nat.two_mul_div_two_of_even hdiffNatEven]
+        _ = N := Nat.add_sub_of_le hXle
+  · intro hN
+    rcases Finset.mem_image.mp hN with ⟨k, hk, rfl⟩
+    refine Goldbach.ProofTools.Windows.mem_EvenIn_of_mem_IccShift_of_even ?_ ?_
+    · unfold Goldbach.Windows.IccShift
+      refine Finset.mem_image.mpr ?_
+      refine ⟨2 * k, Finset.mem_range.mpr ?_, rfl⟩
+      have hk' : k ≤ H / 2 := Nat.le_of_lt_succ (Finset.mem_range.mp hk)
+      have : 2 * k ≤ H := by
+        omega
+      exact lt_of_le_of_lt this (Nat.lt_succ_self H)
+    · dsimp [Goldbach.Windows.IsEven] at hXEven ⊢
+      omega
 
 private lemma centered_window_rawSum_eq_zero
     {X : ℕ} (f : ℕ → ℂ) :
@@ -119,11 +172,200 @@ theorem centeredNormalizedSigmaTrunc_windowRawSum_eq_zero
   unfold normalizedSigmaTruncWindowRawSum
   exact centered_window_rawSum_eq_zero (f := fun N => normalizedSigmaTruncQ0 S N)
 
+theorem normalizedSigmaTruncQ0_im_eq_zero
+    (S : TrueSingularSeriesOnWindow) (N : ℕ) :
+    (normalizedSigmaTruncQ0 S N).im = 0 := by
+  rw [normalizedSigmaTruncQ0, Complex.ofReal_im]
+
+theorem normalizedSigmaTruncWindowAverage_im_eq_zero
+    (S : TrueSingularSeriesOnWindow) (X : ℕ) :
+    (normalizedSigmaTruncWindowAverage S X).im = 0 := by
+  have hsum_im :
+      (∑ N ∈ EvenIn X H, normalizedSigmaTruncQ0 S N).im = 0 := by
+    refine Finset.induction_on (EvenIn X H) ?_ ?_
+    · simp
+    · intro N s hNhs ih
+      simp [Finset.sum_insert, hNhs, Complex.add_im, normalizedSigmaTruncQ0_im_eq_zero, ih]
+  unfold normalizedSigmaTruncWindowAverage normalizedSigmaTruncWindowRawSum
+  rw [Complex.mul_im]
+  have hscalar_im : (((↑(EvenIn X H).card : ℂ)⁻¹).im = 0) := by
+    rw [← Complex.ofReal_natCast, ← Complex.ofReal_inv, Complex.ofReal_im]
+  rw [hsum_im, hscalar_im]
+  ring
+
+theorem centeredNormalizedSigmaTrunc_im_eq_zero
+    (S : TrueSingularSeriesOnWindow) (X N : ℕ) :
+    (centeredNormalizedSigmaTrunc S X N).im = 0 := by
+  unfold centeredNormalizedSigmaTrunc
+  rw [Complex.sub_im]
+  rw [normalizedSigmaTruncQ0_im_eq_zero, normalizedSigmaTruncWindowAverage_im_eq_zero]
+  norm_num
+
+theorem normalizedSigmaTruncSummand_im_eq_zero
+    (S : TrueSingularSeriesOnWindow) (q N : ℕ) :
+    (normalizedSigmaTruncSummand S q N).im = 0 := by
+  rw [normalizedSigmaTruncSummand, Complex.ofReal_im]
+
 /-- Canonical-window average of one fixed `q ≤ Q0` truncation summand. -/
 noncomputable def normalizedSigmaTruncSummandWindowAverage
     (S : TrueSingularSeriesOnWindow) (X q : ℕ) : ℂ :=
   ((EvenIn X H).card : ℂ)⁻¹
     * ∑ N ∈ EvenIn X H, normalizedSigmaTruncSummand S q N
+
+/-- Real part of the canonical-window average of one fixed `q ≤ Q0` truncation summand. -/
+noncomputable def normalizedSigmaTruncSummandWindowAverageRe
+    (S : TrueSingularSeriesOnWindow) (X q : ℕ) : ℝ :=
+  (normalizedSigmaTruncSummandWindowAverage S X q).re
+
+/-- Real part of the canonical-window average of the full truncation observable. -/
+noncomputable def normalizedSigmaTruncWindowAverageRe
+    (S : TrueSingularSeriesOnWindow) (X : ℕ) : ℝ :=
+  (normalizedSigmaTruncWindowAverage S X).re
+
+theorem normalizedSigmaTruncSummandWindowAverage_im_eq_zero
+    (S : TrueSingularSeriesOnWindow) (X q : ℕ) :
+    (normalizedSigmaTruncSummandWindowAverage S X q).im = 0 := by
+  have hsum_im :
+      (∑ N ∈ EvenIn X H, normalizedSigmaTruncSummand S q N).im = 0 := by
+    refine Finset.induction_on (EvenIn X H) ?_ ?_
+    · simp
+    · intro N s hNhs ih
+      simp [Finset.sum_insert, hNhs, Complex.add_im, normalizedSigmaTruncSummand_im_eq_zero, ih]
+  unfold normalizedSigmaTruncSummandWindowAverage
+  rw [Complex.mul_im]
+  have hscalar_im : (((↑(EvenIn X H).card : ℂ)⁻¹).im = 0) := by
+    rw [← Complex.ofReal_natCast, ← Complex.ofReal_inv, Complex.ofReal_im]
+  rw [hsum_im, hscalar_im]
+  ring
+
+theorem normalizedSigmaTruncSummandRawSum_re_eq_sum_re
+    (S : TrueSingularSeriesOnWindow) (X q : ℕ) :
+    (∑ N ∈ EvenIn X H, normalizedSigmaTruncSummand S q N).re
+      =
+    ∑ N ∈ EvenIn X H, (normalizedSigmaTruncSummand S q N).re := by
+  rw [Complex.re_sum]
+
+theorem normalizedSigmaTruncSummandWindowAverageRe_eq_coeff_mul_sum_re
+    (S : TrueSingularSeriesOnWindow) (X q : ℕ) :
+    normalizedSigmaTruncSummandWindowAverageRe S X q
+      =
+    (((EvenIn X H).card : ℝ)⁻¹)
+      * ∑ N ∈ EvenIn X H, (normalizedSigmaTruncSummand S q N).re := by
+  have hsum_im :
+      (∑ N ∈ EvenIn X H, normalizedSigmaTruncSummand S q N).im = 0 := by
+    refine Finset.induction_on (EvenIn X H) ?_ ?_
+    · simp
+    · intro N s hNhs ih
+      simp [Finset.sum_insert, hNhs, Complex.add_im, normalizedSigmaTruncSummand_im_eq_zero, ih]
+  unfold normalizedSigmaTruncSummandWindowAverageRe normalizedSigmaTruncSummandWindowAverage
+  rw [Complex.mul_re, hsum_im]
+  have hscalar_im : (((↑(EvenIn X H).card : ℂ)⁻¹).im = 0) := by
+    rw [← Complex.ofReal_natCast, ← Complex.ofReal_inv, Complex.ofReal_im]
+  rw [hscalar_im]
+  have hscalar_re :
+      (((↑(EvenIn X H).card : ℂ)⁻¹).re) = (((EvenIn X H).card : ℝ)⁻¹) := by
+    rw [← Complex.ofReal_natCast, ← Complex.ofReal_inv, Complex.ofReal_re]
+  rw [hscalar_re, normalizedSigmaTruncSummandRawSum_re_eq_sum_re]
+  ring
+
+theorem normalizedSigmaTruncWindowAverageRe_eq_coeff_mul_sum_re
+    (S : TrueSingularSeriesOnWindow) (X : ℕ) :
+    normalizedSigmaTruncWindowAverageRe S X
+      =
+    (((EvenIn X H).card : ℝ)⁻¹)
+      * ∑ N ∈ EvenIn X H, (normalizedSigmaTruncQ0 S N).re := by
+  have hsum_im :
+      (∑ N ∈ EvenIn X H, normalizedSigmaTruncQ0 S N).im = 0 := by
+    refine Finset.induction_on (EvenIn X H) ?_ ?_
+    · simp
+    · intro N s hNhs ih
+      simp [Finset.sum_insert, hNhs, Complex.add_im, normalizedSigmaTruncQ0_im_eq_zero, ih]
+  unfold normalizedSigmaTruncWindowAverageRe normalizedSigmaTruncWindowAverage
+    normalizedSigmaTruncWindowRawSum
+  rw [Complex.mul_re, hsum_im]
+  have hscalar_im : (((↑(EvenIn X H).card : ℂ)⁻¹).im = 0) := by
+    rw [← Complex.ofReal_natCast, ← Complex.ofReal_inv, Complex.ofReal_im]
+  rw [hscalar_im]
+  have hscalar_re :
+      (((↑(EvenIn X H).card : ℂ)⁻¹).re) = (((EvenIn X H).card : ℝ)⁻¹) := by
+    rw [← Complex.ofReal_natCast, ← Complex.ofReal_inv, Complex.ofReal_re]
+  rw [hscalar_re, Complex.re_sum]
+  ring
+
+theorem normalizedSigmaTruncQ0_re_eq_sum_truncSummand_re
+    (S : TrueSingularSeriesOnWindow) (N : ℕ) :
+    (normalizedSigmaTruncQ0 S N).re
+      =
+    ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      (normalizedSigmaTruncSummand S q N).re := by
+  rw [normalizedSigmaTruncQ0_eq_sum_truncSummand, Complex.re_sum]
+
+theorem normalizedSigmaTruncWindowAverageRe_eq_sum_summandAveragesRe
+    (S : TrueSingularSeriesOnWindow) (X : ℕ) :
+    normalizedSigmaTruncWindowAverageRe S X
+      =
+    ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      normalizedSigmaTruncSummandWindowAverageRe S X q := by
+  have hNsum :
+      ∑ N ∈ EvenIn X H, (normalizedSigmaTruncQ0 S N).re
+        =
+      ∑ N ∈ EvenIn X H,
+        ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          (normalizedSigmaTruncSummand S q N).re := by
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [normalizedSigmaTruncQ0_re_eq_sum_truncSummand_re]
+  have hswap :
+      ∑ N ∈ EvenIn X H,
+        ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          (normalizedSigmaTruncSummand S q N).re
+        =
+      ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        ∑ N ∈ EvenIn X H, (normalizedSigmaTruncSummand S q N).re := by
+    rw [Finset.sum_comm]
+  have hmul :
+      (((EvenIn X H).card : ℝ)⁻¹) *
+          ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+            ∑ N ∈ EvenIn X H, (normalizedSigmaTruncSummand S q N).re
+        =
+      ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        ((((EvenIn X H).card : ℝ)⁻¹) *
+          ∑ N ∈ EvenIn X H, (normalizedSigmaTruncSummand S q N).re) := by
+    rw [Finset.mul_sum]
+  have hqavg :
+      ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        ((((EvenIn X H).card : ℝ)⁻¹) *
+          ∑ N ∈ EvenIn X H, (normalizedSigmaTruncSummand S q N).re)
+        =
+      ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        normalizedSigmaTruncSummandWindowAverageRe S X q := by
+    refine Finset.sum_congr rfl ?_
+    intro q hq
+    rw [normalizedSigmaTruncSummandWindowAverageRe_eq_coeff_mul_sum_re]
+  calc
+    normalizedSigmaTruncWindowAverageRe S X
+      = (((EvenIn X H).card : ℝ)⁻¹) * ∑ N ∈ EvenIn X H, (normalizedSigmaTruncQ0 S N).re := by
+          rw [normalizedSigmaTruncWindowAverageRe_eq_coeff_mul_sum_re]
+    _ =
+      (((EvenIn X H).card : ℝ)⁻¹) *
+        ∑ N ∈ EvenIn X H,
+          ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+            (normalizedSigmaTruncSummand S q N).re := by
+              rw [hNsum]
+    _ =
+      (((EvenIn X H).card : ℝ)⁻¹) *
+        ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          ∑ N ∈ EvenIn X H, (normalizedSigmaTruncSummand S q N).re := by
+            rw [hswap]
+    _ =
+      ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        ((((EvenIn X H).card : ℝ)⁻¹) *
+          ∑ N ∈ EvenIn X H, (normalizedSigmaTruncSummand S q N).re) := by
+            rw [hmul]
+    _ =
+      ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        normalizedSigmaTruncSummandWindowAverageRe S X q := by
+            rw [hqavg]
 
 /-- Centered fixed-`q` truncation summand on the canonical even window. -/
 noncomputable def centeredNormalizedSigmaTruncSummand
@@ -161,6 +403,99 @@ theorem centeredNormalizedSigmaTrunc_eq_sum_truncSummands_sub_average
       - normalizedSigmaTruncWindowAverage S X := by
   unfold centeredNormalizedSigmaTrunc
   rw [normalizedSigmaTruncQ0_eq_sum_truncSummand]
+
+theorem centeredNormalizedSigmaTrunc_re_eq_sum_centeredSummands_re
+    (S : TrueSingularSeriesOnWindow) (X N : ℕ) :
+    (centeredNormalizedSigmaTrunc S X N).re
+      =
+    ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      (centeredNormalizedSigmaTruncSummand S X q N).re := by
+  rw [centeredNormalizedSigmaTrunc_eq_sum_truncSummands_sub_average]
+  rw [Complex.sub_re, Complex.re_sum]
+  rw [← normalizedSigmaTruncWindowAverageRe, normalizedSigmaTruncWindowAverageRe_eq_sum_summandAveragesRe]
+  rw [← Finset.sum_sub_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  unfold centeredNormalizedSigmaTruncSummand normalizedSigmaTruncSummandWindowAverageRe
+  rw [Complex.sub_re]
+
+theorem Finset.sum_sq_eq_sum_sq_add_sum_offdiag_if
+    {α : Type*} [DecidableEq α] (s : Finset α) (x : α → ℝ) :
+    (∑ a ∈ s, x a) ^ 2
+      =
+    (∑ a ∈ s, (x a) ^ 2)
+      +
+    ∑ a ∈ s, ∑ b ∈ s, if a = b then 0 else x a * x b := by
+  calc
+    (∑ a ∈ s, x a) ^ 2
+      = (∑ a ∈ s, x a) * (∑ b ∈ s, x b) := by ring
+    _ = ∑ a ∈ s, ∑ b ∈ s, x a * x b := by
+          rw [Finset.sum_mul]
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          rw [Finset.mul_sum]
+    _ =
+      ∑ a ∈ s, ∑ b ∈ s,
+        ((if a = b then (x a) ^ 2 else 0)
+          + (if a = b then 0 else x a * x b)) := by
+            refine Finset.sum_congr rfl ?_
+            intro a ha
+            refine Finset.sum_congr rfl ?_
+            intro b hb
+            by_cases hab : a = b
+            · subst hab
+              simp [pow_two]
+            · simp [hab]
+    _ =
+      (∑ a ∈ s, ∑ b ∈ s, if a = b then (x a) ^ 2 else 0)
+        +
+      ∑ a ∈ s, ∑ b ∈ s, if a = b then 0 else x a * x b := by
+          simp_rw [Finset.sum_add_distrib]
+    _ =
+      (∑ a ∈ s, (x a) ^ 2)
+        +
+      ∑ a ∈ s, ∑ b ∈ s, if a = b then 0 else x a * x b := by
+          congr 1
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          simp [ha]
+
+private theorem centeredNormalizedSigmaTrunc_norm_sq_eq_re_sq
+    (S : TrueSingularSeriesOnWindow) (X N : ℕ) :
+    ‖centeredNormalizedSigmaTrunc S X N‖ ^ 2
+      =
+    (centeredNormalizedSigmaTrunc S X N).re ^ 2 := by
+  have him : (centeredNormalizedSigmaTrunc S X N).im = 0 :=
+    centeredNormalizedSigmaTrunc_im_eq_zero S X N
+  have hz :
+      centeredNormalizedSigmaTrunc S X N
+        =
+      Complex.ofReal ((centeredNormalizedSigmaTrunc S X N).re) := by
+    apply Complex.ext
+    · simp
+    · simpa using him
+  rw [hz, Complex.sq_norm, Complex.normSq_ofReal]
+  rw [pow_two]
+  rfl
+
+theorem centeredNormalizedSigmaTrunc_norm_sq_eq_diagonal_add_offDiagonal_at_N
+    (S : TrueSingularSeriesOnWindow) (X N : ℕ) :
+    ‖centeredNormalizedSigmaTrunc S X N‖ ^ 2
+      =
+    (∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      (centeredNormalizedSigmaTruncSummand S X q N).re ^ 2)
+      +
+    ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        if q = q' then 0
+        else
+          (centeredNormalizedSigmaTruncSummand S X q N).re
+            * (centeredNormalizedSigmaTruncSummand S X q' N).re := by
+  rw [centeredNormalizedSigmaTrunc_norm_sq_eq_re_sq]
+  rw [centeredNormalizedSigmaTrunc_re_eq_sum_centeredSummands_re]
+  exact Finset.sum_sq_eq_sum_sq_add_sum_offdiag_if
+    (Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0)
+    (fun q => (centeredNormalizedSigmaTruncSummand S X q N).re)
 
 theorem centeredNormalizedSigmaTruncSummand_windowRawSum_eq_zero
     (S : TrueSingularSeriesOnWindow) {X q : ℕ} :
@@ -1097,10 +1432,225 @@ noncomputable def centeredNormalizedSigmaTruncOffDiagonalCorrelation (X : ℕ) :
           (centeredNormalizedSigmaTruncSummand ramanujanSeriesOnWindow X q N).re
             * (centeredNormalizedSigmaTruncSummand ramanujanSeriesOnWindow X q' N).re
 
+theorem centeredNormalizedSigmaTruncWindowEnergy_eq_diagonal_add_offDiagonal
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncWindowEnergy X
+      =
+    centeredNormalizedSigmaTruncDiagonalEnergy X
+      +
+    centeredNormalizedSigmaTruncOffDiagonalCorrelation X := by
+  unfold centeredNormalizedSigmaTruncWindowEnergy
+    centeredNormalizedSigmaTruncDiagonalEnergy
+    centeredNormalizedSigmaTruncOffDiagonalCorrelation
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  simpa using
+    centeredNormalizedSigmaTrunc_norm_sq_eq_diagonal_add_offDiagonal_at_N
+      ramanujanSeriesOnWindow X N
+
 /-- The fixed real `q`-amplitude in the normalized truncation summand. -/
 noncomputable def normalizedSigmaTruncSummandRealCoeff (q : ℕ) : ℝ :=
   ((Goldbach.AO_OffDiag.TailBlock.muSq q) * (1 / ((Nat.totient q : ℝ) ^ 2)))
     / ((2 : ℝ) * ramanujanSeriesOnWindow.C.C2)
+
+/-- True one-variable support for the normalized truncation coefficients up to `Q0`. -/
+def normalizedSigmaTruncSummandCoeffSupportUpToQ0 : Finset ℕ :=
+  (Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0).filter
+    (fun q => normalizedSigmaTruncSummandRealCoeff q ≠ 0)
+
+/-- The odd part of the normalized coefficient support up to `Q0`. -/
+def normalizedSigmaTruncSummandOddCoeffSupportUpToQ0 : Finset ℕ :=
+  normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Odd
+
+theorem normalizedSigmaTruncSummandRealCoeff_eq_zero_iff_not_squarefree
+    {q : ℕ} (hq : 1 ≤ q) :
+    normalizedSigmaTruncSummandRealCoeff q = 0 ↔ ¬ Squarefree q := by
+  constructor
+  · intro hcoeff
+    have hC2pos : 0 < ramanujanSeriesOnWindow.C.C2 := ramanujanSeriesOnWindow.C.pos
+    have hden_ne : ((2 : ℝ) * ramanujanSeriesOnWindow.C.C2) ≠ 0 := by
+      nlinarith
+    have hqpos : 0 < q := by omega
+    have hphi_pos : 0 < (Nat.totient q : ℝ) := by
+      exact_mod_cast (Nat.totient_pos.mpr hqpos)
+    have hinv_ne : (1 / ((Nat.totient q : ℝ) ^ 2)) ≠ 0 := by
+      apply one_div_ne_zero
+      positivity
+    unfold normalizedSigmaTruncSummandRealCoeff at hcoeff
+    have hmul :
+        Goldbach.AO_OffDiag.TailBlock.muSq q * (1 / ((Nat.totient q : ℝ) ^ 2)) = 0 := by
+      rw [div_eq_zero_iff] at hcoeff
+      exact hcoeff.resolve_right hden_ne
+    have hmu0 : Goldbach.AO_OffDiag.TailBlock.muSq q = 0 := by
+      exact (mul_eq_zero.mp hmul).resolve_right hinv_ne
+    exact (Goldbach.AO_OffDiag.TailBlock.muSq_eq_zero_iff_not_squarefree q).1 hmu0
+  · intro hnsq
+    have hmu0 :
+        Goldbach.AO_OffDiag.TailBlock.muSq q = 0 :=
+      (Goldbach.AO_OffDiag.TailBlock.muSq_eq_zero_iff_not_squarefree q).2 hnsq
+    unfold normalizedSigmaTruncSummandRealCoeff
+    simp [hmu0]
+
+theorem normalizedSigmaTruncSummandRealCoeff_ne_zero_iff_squarefree
+    {q : ℕ} (hq : 1 ≤ q) :
+    normalizedSigmaTruncSummandRealCoeff q ≠ 0 ↔ Squarefree q := by
+  constructor
+  · intro hne
+    by_contra hnsq
+    exact hne ((normalizedSigmaTruncSummandRealCoeff_eq_zero_iff_not_squarefree hq).2 hnsq)
+  · intro hsq
+    by_contra hzero
+    exact ((normalizedSigmaTruncSummandRealCoeff_eq_zero_iff_not_squarefree hq).1 hzero) hsq
+
+theorem mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff
+    {q : ℕ} :
+    q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0
+      ↔ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 ∧ Squarefree q := by
+  constructor
+  · intro hqmem
+    rcases Finset.mem_filter.mp hqmem with ⟨hqIcc, hcoeff⟩
+    have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+    exact ⟨hqIcc, (normalizedSigmaTruncSummandRealCoeff_ne_zero_iff_squarefree hq).1 hcoeff⟩
+  · intro hqmem
+    rcases hqmem with ⟨hqIcc, hsq⟩
+    refine Finset.mem_filter.mpr ?_
+    refine ⟨hqIcc, ?_⟩
+    have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+    exact (normalizedSigmaTruncSummandRealCoeff_ne_zero_iff_squarefree hq).2 hsq
+
+theorem mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff
+    {q : ℕ} :
+    q ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0
+      ↔ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 ∧ Odd q := by
+  simp [normalizedSigmaTruncSummandOddCoeffSupportUpToQ0]
+
+theorem normalizedSigmaTruncSummandRealCoeff_two_mul_eq_of_mem_support
+    {a : ℕ} (haOdd : Odd a)
+    (h2a : 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0) :
+    normalizedSigmaTruncSummandRealCoeff (2 * a)
+      =
+    normalizedSigmaTruncSummandRealCoeff a := by
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp h2a with ⟨h2aIcc, hsq2a⟩
+  have ha : 1 ≤ a := by
+    have h2a_pos : 1 ≤ 2 * a := (Finset.mem_Icc.mp h2aIcc).1
+    have ha_pos : 0 < a := haOdd.pos
+    omega
+  have hasq : Squarefree a := by
+    refine hsq2a.squarefree_of_dvd ?_
+    exact ⟨2, by ring⟩
+  have hphi : Nat.totient (2 * a) = Nat.totient a := by
+    have hcop : Nat.Coprime 2 a := by simpa using haOdd.coprime_two_left
+    rw [Nat.totient_mul hcop]
+    norm_num
+  unfold normalizedSigmaTruncSummandRealCoeff
+  simp [Goldbach.AO_OffDiag.TailBlock.muSq, hasq, hsq2a, hphi]
+
+theorem normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_coprime_two_mul_eq
+    {a : ℕ} (haOdd : Odd a) :
+    normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime (2 * a))
+      =
+    normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a) := by
+  apply Finset.ext
+  intro b
+  constructor
+  · intro hb
+    rcases Finset.mem_filter.mp hb with ⟨hbmem, hcop⟩
+    have hbNotEven : ¬ Goldbach.Windows.IsEven b := by
+      intro hbEven
+      have h2dvdLeft : 2 ∣ 2 * a := by
+        exact dvd_mul_of_dvd_left (dvd_refl 2) a
+      have h2dvdRight : 2 ∣ b := by
+        exact (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hbEven)
+      exact (Nat.not_coprime_of_dvd_of_dvd one_lt_two h2dvdLeft h2dvdRight) hcop
+    have hbOdd : Odd b := by
+      refine Nat.not_even_iff_odd.mp ?_
+      intro hbEvenNat
+      exact hbNotEven (Goldbach.Windows.isEven_of_even hbEvenNat)
+    have hcop' : Nat.Coprime a b := by
+      have hsplit :
+          Nat.Coprime (2 * a) b ↔ Nat.Coprime 2 b ∧ Nat.Coprime a b := by
+        simpa [Nat.mul_comm, and_left_comm, and_assoc] using
+          (Nat.coprime_mul_iff_left : Nat.Coprime (2 * a) b ↔ Nat.Coprime 2 b ∧ Nat.Coprime a b)
+      exact (hsplit.mp hcop).2
+    exact Finset.mem_filter.mpr ⟨Finset.mem_filter.mpr ⟨hbmem, hbOdd⟩, hcop'⟩
+  · intro hb
+    rcases Finset.mem_filter.mp hb with ⟨hbOddMem, hcop⟩
+    rcases Finset.mem_filter.mp hbOddMem with ⟨hbmem, hbOdd⟩
+    have hcop2 : Nat.Coprime 2 b := by
+      simpa using hbOdd.coprime_two_left
+    have hjoin :
+        Nat.Coprime (2 * a) b ↔ Nat.Coprime 2 b ∧ Nat.Coprime a b := by
+      simpa [Nat.mul_comm, and_left_comm, and_assoc] using
+        (Nat.coprime_mul_iff_left : Nat.Coprime (2 * a) b ↔ Nat.Coprime 2 b ∧ Nat.Coprime a b)
+    exact Finset.mem_filter.mpr ⟨hbmem, (hjoin.mpr ⟨hcop2, hcop⟩)⟩
+
+theorem mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven_iff
+    {q : ℕ} :
+    q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Goldbach.Windows.IsEven
+      ↔ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 ∧ Goldbach.Windows.IsEven q := by
+  simp
+
+theorem half_mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_of_mem_even_support
+    {q : ℕ}
+    (hq : q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Goldbach.Windows.IsEven) :
+    q / 2 ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0 := by
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven_iff.mp hq with ⟨hqmem, hqEven⟩
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hqmem with ⟨hqIcc, hsq⟩
+  have hqEvenNat : Even q := Goldbach.Windows.even_of_isEven hqEven
+  have h2dvdq : 2 ∣ q := (even_iff_two_dvd).1 hqEvenNat
+  have hqEq : q = 2 * (q / 2) := (Nat.two_mul_div_two_of_even hqEvenNat).symm
+  have hqHalfNeZero : q / 2 ≠ 0 := by
+    intro h0
+    have : q = 0 := by simpa [h0] using hqEq
+    exact Nat.ne_of_gt ((Finset.mem_Icc.mp hqIcc).1) this
+  have hqHalf : 1 ≤ q / 2 := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hqHalfNeZero)
+  have hnot4q : ¬ 4 ∣ q := by
+    intro h4
+    have hsqPrime := Nat.squarefree_iff_prime_squarefree.mp hsq
+    exact hsqPrime 2 Nat.prime_two (by simpa using h4)
+  have hhalfNotEven : ¬ Goldbach.Windows.IsEven (q / 2) := by
+    intro hhalfEven
+    rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hhalfEven) with ⟨m, hm⟩
+    have h4 : 4 ∣ q := by
+      refine ⟨m, ?_⟩
+      calc
+        q = 2 * (q / 2) := hqEq
+        _ = 2 * (2 * m) := by rw [hm]
+        _ = 4 * m := by ring
+    exact hnot4q h4
+  have hhalfOdd : Odd (q / 2) := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hEvenNat
+    exact hhalfNotEven (Goldbach.Windows.isEven_of_even hEvenNat)
+  have hsqHalf : Squarefree (q / 2) := by
+    refine hsq.squarefree_of_dvd ?_
+    refine ⟨2, ?_⟩
+    calc
+      q = 2 * (q / 2) := hqEq
+      _ = (q / 2) * 2 := by ring
+  exact (mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff).2
+    ⟨(mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff).2
+      ⟨by
+          have hqLe : q ≤ Goldbach.AO_OffDiag.TailBlock.Q0 := (Finset.mem_Icc.mp hqIcc).2
+          have : q / 2 ≤ q := Nat.div_le_self _ _
+          exact Finset.mem_Icc.mpr ⟨hqHalf, le_trans this hqLe⟩,
+        hsqHalf⟩,
+      hhalfOdd⟩
+
+theorem two_mul_half_eq_of_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven
+    {q : ℕ}
+    (hq : q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Goldbach.Windows.IsEven) :
+    2 * (q / 2) = q := by
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven_iff.mp hq with ⟨_, hqEven⟩
+  exact Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hqEven)
+
+theorem two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven
+    {a : ℕ}
+    (ha : a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (h2a : 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0) :
+    2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Goldbach.Windows.IsEven := by
+  exact Finset.mem_filter.mpr ⟨h2a, Goldbach.Windows.isEven_of_even ⟨a, by simp [two_mul]⟩⟩
 
 theorem normalizedSigmaTruncSummand_re_eq_coeff_mul_ramanujan
     (q N : ℕ) :
@@ -1121,6 +1671,16 @@ theorem centeredNormalizedSigmaTruncSummand_re_eq_coeff_mul_ramanujan_sub_averag
       - (normalizedSigmaTruncSummandWindowAverage ramanujanSeriesOnWindow X q).re := by
   unfold centeredNormalizedSigmaTruncSummand
   rw [Complex.sub_re, normalizedSigmaTruncSummand_re_eq_coeff_mul_ramanujan]
+
+theorem normalizedSigmaTruncSummand_eq_zero_of_coeff_zero
+    {q N : ℕ}
+    (hcoeff : normalizedSigmaTruncSummandRealCoeff q = 0) :
+    normalizedSigmaTruncSummand ramanujanSeriesOnWindow q N = 0 := by
+  apply Complex.ext
+  · rw [normalizedSigmaTruncSummand_re_eq_coeff_mul_ramanujan, hcoeff]
+    simp
+  · rw [normalizedSigmaTruncSummand_im_eq_zero]
+    norm_num
 
 /-- Canonical-window average of the raw Ramanujan sum at fixed `q`. -/
 noncomputable def ramanujanWindowAverage (X q : ℕ) : ℝ :=
@@ -1167,6 +1727,46 @@ noncomputable def centeredRamanujanGcdClassPairCorrelation
   ∑ N ∈ EvenIn X H,
     centeredRamanujanGcdClassObservable X q g N
       * centeredRamanujanGcdClassObservable X q' h N
+
+private lemma isEven_of_mem_EvenIn
+    {X N : ℕ} (hN : N ∈ EvenIn X H) :
+    Goldbach.Windows.IsEven N := by
+  unfold EvenIn IccShift at hN
+  exact (Finset.mem_filter.mp hN).2
+
+private lemma isEven_gcd_of_isEven
+    {q N : ℕ} (hqEven : Goldbach.Windows.IsEven q) (hNEven : Goldbach.Windows.IsEven N) :
+    Goldbach.Windows.IsEven (Nat.gcd q N) := by
+  have h2q : 2 ∣ q := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hqEven)
+  have h2N : 2 ∣ N := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hNEven)
+  exact Goldbach.Windows.isEven_of_even <| (even_iff_two_dvd).2 (Nat.dvd_gcd h2q h2N)
+
+private lemma ramanujanGcdClassIndicator_eq_zero_of_isEven_q_of_not_isEven_g_of_mem_EvenIn
+    {X q g N : ℕ}
+    (hqEven : Goldbach.Windows.IsEven q) (hgOdd : ¬ Goldbach.Windows.IsEven g)
+    (hN : N ∈ EvenIn X H) :
+    ramanujanGcdClassIndicator q g N = 0 := by
+  unfold ramanujanGcdClassIndicator
+  by_cases hEq : Nat.gcd q N = g
+  · have hgEven : Goldbach.Windows.IsEven g := by
+      rw [← hEq]
+      exact isEven_gcd_of_isEven hqEven (isEven_of_mem_EvenIn hN)
+    exact (hgOdd hgEven).elim
+  · simp [hEq]
+
+theorem ramanujanGcdClassWindowAverage_eq_zero_of_isEven_q_of_not_isEven_g
+    {X q g : ℕ}
+    (hqEven : Goldbach.Windows.IsEven q) (hgOdd : ¬ Goldbach.Windows.IsEven g) :
+    ramanujanGcdClassWindowAverage X q g = 0 := by
+  unfold ramanujanGcdClassWindowAverage
+  have hsum :
+      ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator q g N = 0 := by
+    refine Finset.sum_eq_zero ?_
+    intro N hN
+    exact ramanujanGcdClassIndicator_eq_zero_of_isEven_q_of_not_isEven_g_of_mem_EvenIn
+      hqEven hgOdd hN
+  rw [hsum]
+  ring
 
 private lemma gcd_eq_dvd_and_coprime_div_iff_of_mem_divisors
     {q g N : ℕ} (hg : g ∈ q.divisors) :
@@ -1519,6 +2119,39 @@ noncomputable def centeredEvenRamanujanPairOffset
 /-- Common even-block period for the centered Ramanujan pair kernel. -/
 @[simp] def centeredRamanujanPairBlockPeriod (q q' : ℕ) : ℕ :=
   2 * Nat.lcm q q'
+
+theorem nat_div_eq_two_mul_div_two_mul_add_mod_two_of_pos
+    {n P : ℕ} (hP : 0 < P) :
+    n / P = 2 * (n / (2 * P)) + (n / P) % 2 := by
+  calc
+    n / P = 2 * ((n / P) / 2) + (n / P) % 2 := by
+      have h := (Nat.div_add_mod (n / P) 2).symm
+      simpa [Nat.mul_comm] using h
+    _ = 2 * (n / (2 * P)) + (n / P) % 2 := by
+      rw [Nat.div_div_eq_div_mul]
+      ring
+
+theorem nat_div_sub_two_mul_div_two_mul_eq_mod_two_of_pos
+    {n P : ℕ} (hP : 0 < P) :
+    n / P - 2 * (n / (2 * P)) = (n / P) % 2 := by
+  rw [nat_div_eq_two_mul_div_two_mul_add_mod_two_of_pos hP]
+  omega
+
+theorem nat_div_sub_two_mul_div_two_mul_le_one_of_pos
+    {n P : ℕ} (hP : 0 < P) :
+    n / P - 2 * (n / (2 * P)) ≤ 1 := by
+  rw [nat_div_sub_two_mul_div_two_mul_eq_mod_two_of_pos hP]
+  have hmod : (n / P) % 2 < 2 := Nat.mod_lt _ (by omega)
+  omega
+
+theorem centeredRamanujanPairBlockScalar_sub_two_mul_halfScalar_le_one
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') :
+    (H + 1) / centeredRamanujanPairBlockPeriod q q'
+      - 2 * ((H + 1) / (2 * centeredRamanujanPairBlockPeriod q q')) ≤ 1 := by
+  have hP : 0 < centeredRamanujanPairBlockPeriod q q' := by
+    dsimp [centeredRamanujanPairBlockPeriod]
+    exact Nat.mul_pos (by omega) (Nat.lcm_pos hq hq')
+  exact nat_div_sub_two_mul_div_two_mul_le_one_of_pos (n := H + 1) hP
 
 theorem centeredEvenRamanujanPairOffset_add_blockPeriod
     (X q q' k : ℕ) :
@@ -2717,6 +3350,84 @@ private theorem card_filter_range_coprime_shift_eq_totient
     _ = Nat.totient M := by
         simpa [Nat.coprime_comm] using (Nat.filter_coprime_Ico_eq_totient M A)
 
+private theorem isEven_add_odd_iff_not_isEven
+    (n m : ℕ) (hmOdd : Odd m) :
+    Goldbach.Windows.IsEven (n + m) ↔ ¬ Goldbach.Windows.IsEven n := by
+  rcases hmOdd with ⟨t, rfl⟩
+  dsimp [Goldbach.Windows.IsEven]
+  omega
+
+private theorem evenCoprime_fullPeriod_card_eq_totient_of_odd
+    (A M : ℕ) (hM : 0 < M) (hMOdd : Odd M) :
+    (((Finset.range (2 * M)).filter
+        (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card : ℕ)
+      = Nat.totient M := by
+  let f : ℕ → ℕ := fun k =>
+    if Goldbach.Windows.IsEven (A + k) ∧ Nat.Coprime M (A + k) then 1 else 0
+  have hsplit :
+      (∑ k ∈ Finset.range (2 * M), f k)
+        =
+      (∑ k ∈ Finset.range M, f k)
+        + ∑ k ∈ Finset.range M, f (M + k) := by
+    simpa [f, two_mul, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
+      (Finset.sum_range_add (f := f) M M)
+  have hpair :
+      ∀ k,
+        f k + f (M + k)
+          =
+        if Nat.Coprime M (A + k) then 1 else 0 := by
+    intro k
+    have hcop :
+        Nat.Coprime M (A + (M + k)) ↔ Nat.Coprime M (A + k) := by
+      simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm, Nat.mul_comm, Nat.mul_left_comm,
+        Nat.mul_assoc] using
+        (Nat.coprime_add_mul_left_right M (A + k) 1)
+    have hpar :
+        Goldbach.Windows.IsEven (A + (M + k))
+          ↔ ¬ Goldbach.Windows.IsEven (A + k) := by
+      simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using
+        (isEven_add_odd_iff_not_isEven (n := A + k) (m := M) hMOdd)
+    by_cases hkcop : Nat.Coprime M (A + k)
+    · by_cases hkEven : Goldbach.Windows.IsEven (A + k)
+      · simp [f, hkcop, hkEven, hcop, hpar]
+      · simp [f, hkcop, hkEven, hcop, hpar]
+    · simp [f, hkcop, hcop]
+  calc
+    (((Finset.range (2 * M)).filter
+        (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card : ℕ)
+      = ∑ k ∈ Finset.range (2 * M), f k := by
+          unfold f
+          rw [card_filter_range_eq_sum_indicator]
+    _ = (∑ k ∈ Finset.range M, f k) + ∑ k ∈ Finset.range M, f (M + k) := hsplit
+    _ = ∑ k ∈ Finset.range M, (if Nat.Coprime M (A + k) then 1 else 0) := by
+          rw [← Finset.sum_add_distrib]
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hpair k
+    _ = (((Finset.range M).filter (fun t => Nat.Coprime M (A + t))).card : ℕ) := by
+          rw [card_filter_range_eq_sum_indicator]
+    _ = Nat.totient M := card_filter_range_coprime_shift_eq_totient A M hM
+
+private theorem not_coprime_of_isEven_modulus_of_isEven
+    {M n : ℕ} (hMEven : Goldbach.Windows.IsEven M) (hnEven : Goldbach.Windows.IsEven n) :
+    ¬ Nat.Coprime M n := by
+  intro hcop
+  have h2M : 2 ∣ M := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hMEven)
+  have h2n : 2 ∣ n := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hnEven)
+  have h2gcd : 2 ∣ Nat.gcd M n := Nat.dvd_gcd h2M h2n
+  have : 2 ∣ 1 := by simpa [Nat.Coprime.gcd_eq_one hcop] using h2gcd
+  norm_num at this
+
+private theorem evenCoprime_range_card_eq_zero_of_isEven_modulus
+    (A L M : ℕ) (hMEven : Goldbach.Windows.IsEven M) :
+    (((Finset.range L).filter
+        (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card : ℕ) = 0 := by
+  apply Finset.card_eq_zero.mpr
+  apply Finset.eq_empty_iff_forall_notMem.mpr
+  intro t ht
+  rcases Finset.mem_filter.mp ht with ⟨_, htEven, hcop⟩
+  exact not_coprime_of_isEven_modulus_of_isEven hMEven htEven hcop
+
 private theorem evenCoprime_shiftedRange_card_eq_fullPeriods_add_remainder
     (A L M : ℕ) :
     (((Finset.range L).filter
@@ -2776,6 +3487,179 @@ private theorem evenCoprime_shiftedRange_card_eq_fullPeriods_add_remainder
   · have hM0 : M = 0 := by omega
     subst hM0
     norm_num
+
+private theorem ramanujanGcdClassIndicator_three_one_add_three_three_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicator 3 1 N + ramanujanGcdClassIndicator 3 3 N = 1 := by
+  unfold ramanujanGcdClassIndicator
+  by_cases h1 : Nat.gcd 3 N = 1
+  · have h3 : Nat.gcd 3 N ≠ 3 := by
+      rw [h1]
+      norm_num
+    simp [h1, h3]
+  · have hdiv : Nat.gcd 3 N ∣ 3 := Nat.gcd_dvd_left 3 N
+    have h3 : Nat.gcd 3 N = 3 := by
+      have hgcdpos : 0 < Nat.gcd 3 N := Nat.gcd_pos_of_pos_left N (by norm_num)
+      have hgcdle : Nat.gcd 3 N ≤ 3 := Nat.le_of_dvd (by norm_num) hdiv
+      have hne2 : Nat.gcd 3 N ≠ 2 := by
+        intro h2
+        have : 2 ∣ 3 := by simpa [h2] using hdiv
+        norm_num at this
+      omega
+    simp [h1, h3]
+
+private theorem ramanujanGcdClassIndicator_three_one_period_three_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 3 1 (X + 2 * (k + 3))
+      =
+    ramanujanGcdClassIndicator 3 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 3 (X + 2 * (k + 3)) = Nat.gcd 3 (X + 2 * k) := by
+    calc
+      Nat.gcd 3 (X + 2 * (k + 3))
+          = Nat.gcd 3 ((X + 2 * k) + 2 * 3) := by ring_nf
+      _ = Nat.gcd 3 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_three_one_sum_range_three_eq_two_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 3, ramanujanGcdClassIndicator 3 1 (X + 2 * k) = 2 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 3 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 3 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop32 : Nat.Coprime 3 2 := by norm_num
+    have hcop :
+        Nat.Coprime 3 (2 * (X / 2 + k)) ↔ Nat.Coprime 3 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 3 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 3 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop32.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (3 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 3, ramanujanGcdClassIndicator 3 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 3, (if Nat.Coprime 3 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 3).filter (fun k => Nat.Coprime 3 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 3) (p := fun k => Nat.Coprime 3 (X / 2 + k))).symm
+    _ = 2 := by
+          have hcard :
+              (((Finset.range 3).filter (fun k => Nat.Coprime 3 (X / 2 + k))).card : ℕ) = 2 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 3 (by norm_num)
+          exact_mod_cast hcard
+
+private theorem ramanujanGcdClassWindowAverage_three_one_eq_two_thirds_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ramanujanGcdClassWindowAverage X 3 1 = (2 / 3 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven hXEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X + 2 * k),
+            ramanujanGcdClassIndicator 3 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 3 1 (X + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 1667 * 3 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_mul
+      (f := fun k => ramanujanGcdClassIndicator 3 1 (X + 2 * k))
+      (P := 3)
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_three_one_period_three_on_even_progression (X := X) (k := k))
+      (m := 1667)]
+    rw [ramanujanGcdClassIndicator_three_one_sum_range_three_eq_two_of_isEven hXEven]
+    rw [nsmul_eq_mul]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_three_three_eq_one_third_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ramanujanGcdClassWindowAverage X 3 3 = (1 / 3 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven hXEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum1 :
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 3 1 (X + 2 * k)
+          = 3334 := by
+      have hlen : H / 2 + 1 = 1667 * 3 := by
+        norm_num [H]
+      rw [hlen]
+      rw [periodic_sum_range_mul
+        (f := fun k => ramanujanGcdClassIndicator 3 1 (X + 2 * k))
+        (P := 3)
+        (hP := by norm_num)
+        (hper := fun k =>
+          ramanujanGcdClassIndicator_three_one_period_three_on_even_progression (X := X) (k := k))
+        (m := 1667)]
+      rw [ramanujanGcdClassIndicator_three_one_sum_range_three_eq_two_of_isEven hXEven]
+      norm_num
+    have hsumPair :
+        (∑ k ∈ Finset.range (H / 2 + 1),
+            (ramanujanGcdClassIndicator 3 1 (X + 2 * k)
+              + ramanujanGcdClassIndicator 3 3 (X + 2 * k)))
+          = (H / 2 + 1 : ℝ) := by
+      calc
+        (∑ k ∈ Finset.range (H / 2 + 1),
+            (ramanujanGcdClassIndicator 3 1 (X + 2 * k)
+              + ramanujanGcdClassIndicator 3 3 (X + 2 * k)))
+                =
+          ∑ k ∈ Finset.range (H / 2 + 1), (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro k hk
+            exact ramanujanGcdClassIndicator_three_one_add_three_three_eq_one (X + 2 * k)
+        _ = (H / 2 + 1 : ℝ) := by
+            norm_num [H, Finset.sum_const, nsmul_eq_mul]
+    have hsum3 :
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 3 3 (X + 2 * k)
+          = 1667 := by
+      rw [Finset.sum_add_distrib] at hsumPair
+      have hlen : (H / 2 + 1 : ℝ) = 5001 := by norm_num [H]
+      linarith
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X + 2 * k),
+            ramanujanGcdClassIndicator 3 3 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 3 3 (X + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum, hsum3]
+    change ((5001 : ℝ)⁻¹) * 1667 = (1 / 3 : ℝ)
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
 
 /-- Quotient image of the single gcd-class block-hit set under `m = (X+k)/g0`. -/
 noncomputable def rawEvenRamanujanGcdClassReducedQuotientSet
@@ -3406,6 +4290,16 @@ private theorem isEven_lcm_of_isEven_right
   rw [hm]
   exact isEven_mul_of_isEven_left hhEven
 
+private theorem isEven_quotient_of_isEven_of_mem_divisors_of_not_isEven_divisor
+    {q g : ℕ} (hqEven : Goldbach.Windows.IsEven q)
+    (hg : g ∈ q.divisors) (hgOdd : ¬ Goldbach.Windows.IsEven g) :
+    Goldbach.Windows.IsEven (q / g) := by
+  have hg_dvd_q : g ∣ q := (Nat.mem_divisors.mp hg).1
+  have hEvenMul : Goldbach.Windows.IsEven (g * (q / g)) := by
+    rw [Nat.mul_comm, Nat.div_mul_cancel hg_dvd_q]
+    exact hqEven
+  exact (isEven_mul_iff_of_not_isEven_left hgOdd).1 hEvenMul
+
 private theorem quotient_pos_of_mem_divisors
     {q g : ℕ} (hq : 1 ≤ q) (hg : g ∈ q.divisors) : 0 < q / g := by
   rcases (Nat.mem_divisors.mp hg).1 with ⟨k, hk⟩
@@ -3969,6 +4863,82 @@ theorem rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_product_normalized_add
   unfold rawEvenRamanujanGcdClassPeriodicProductDefect
   ring
 
+theorem rawEvenRamanujanGcdClassBlockPeriodicCount_eq_odd_g_totient_main_add_remainder_of_odd_quotient
+    (X q q' q0 g0 : ℕ) (hg0pos : 0 < g0)
+    (hPpos : 0 < centeredRamanujanPairBlockPeriod q q')
+    (hgOdd : ¬ Goldbach.Windows.IsEven g0)
+    (hMpos : 0 < q0 / g0) (hMOdd : Odd (q0 / g0)) :
+    rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q0 g0
+      =
+    let A := X ⌈/⌉ g0
+    let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g0 + 1) - A
+    let M := q0 / g0
+    ((((L / (2 * M)) * Nat.totient M
+        + (((Finset.range (L % (2 * M))).filter
+            (fun t =>
+              Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card)) : ℕ) : ℝ) := by
+  rw [rawEvenRamanujanGcdClassBlockPeriodicCount, if_neg hgOdd]
+  dsimp
+  rw [evenCoprime_fullPeriod_card_eq_totient_of_odd
+    (A := X ⌈/⌉ g0) (M := q0 / g0) hMpos hMOdd]
+
+theorem rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_odd_lcm_totient_main_add_remainder_of_odd_jointModulus
+    (X q q' g h : ℕ) (hLpos : 0 < Nat.lcm g h)
+    (hPpos : 0 < centeredRamanujanPairBlockPeriod q q')
+    (hcompat : ramanujanGcdClassJointCompatibility q q' g h)
+    (hOddL : ¬ Goldbach.Windows.IsEven (Nat.lcm g h))
+    (hMpos : 0 < ramanujanGcdClassJointModulus q q' g h)
+    (hMOdd : Odd (ramanujanGcdClassJointModulus q q' g h)) :
+    rawEvenRamanujanGcdClassPairBlockPeriodicCount X q q' g h
+      =
+    let A := X ⌈/⌉ Nat.lcm g h
+    let L :=
+      ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1) - A
+    let M := ramanujanGcdClassJointModulus q q' g h
+    ((((L / (2 * M)) * Nat.totient M
+        + (((Finset.range (L % (2 * M))).filter
+            (fun t =>
+              Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card)) : ℕ) : ℝ) := by
+  rw [rawEvenRamanujanGcdClassPairBlockPeriodicCount, if_neg hOddL]
+  dsimp
+  rw [evenCoprime_fullPeriod_card_eq_totient_of_odd
+    (A := X ⌈/⌉ Nat.lcm g h) (M := ramanujanGcdClassJointModulus q q' g h) hMpos hMOdd]
+
+theorem rawEvenRamanujanGcdClassBlockPeriodicCount_eq_zero_of_not_isEven_g_of_isEven_quotient
+    (X q q' q0 g0 : ℕ) (hgOdd : ¬ Goldbach.Windows.IsEven g0)
+    (hMEven : Goldbach.Windows.IsEven (q0 / g0)) :
+    rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q0 g0 = 0 := by
+  rw [rawEvenRamanujanGcdClassBlockPeriodicCount, if_neg hgOdd]
+  dsimp [centeredRamanujanPairBlockPeriod]
+  rw [evenCoprime_range_card_eq_zero_of_isEven_modulus
+    (A := X ⌈/⌉ g0) (L := 2 * (q0 / g0)) (M := q0 / g0) hMEven]
+  rw [evenCoprime_range_card_eq_zero_of_isEven_modulus
+    (A := X ⌈/⌉ g0 + (((X + 2 * Nat.lcm q q' - 1) / g0 + 1 - X ⌈/⌉ g0) / (2 * (q0 / g0))) * (2 * (q0 / g0)))
+    (L := ((X + 2 * Nat.lcm q q' - 1) / g0 + 1 - X ⌈/⌉ g0) % (2 * (q0 / g0)))
+    (M := q0 / g0) hMEven]
+  norm_num
+
+theorem rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_zero_of_not_isEven_lcm_of_isEven_jointModulus
+    (X q q' g h : ℕ) (hOddL : ¬ Goldbach.Windows.IsEven (Nat.lcm g h))
+    (hMEven : Goldbach.Windows.IsEven (ramanujanGcdClassJointModulus q q' g h)) :
+    rawEvenRamanujanGcdClassPairBlockPeriodicCount X q q' g h = 0 := by
+  rw [rawEvenRamanujanGcdClassPairBlockPeriodicCount, if_neg hOddL]
+  dsimp [centeredRamanujanPairBlockPeriod]
+  rw [evenCoprime_range_card_eq_zero_of_isEven_modulus
+    (A := X ⌈/⌉ Nat.lcm g h) (L := 2 * ramanujanGcdClassJointModulus q q' g h)
+    (M := ramanujanGcdClassJointModulus q q' g h) hMEven]
+  rw [evenCoprime_range_card_eq_zero_of_isEven_modulus
+    (A := X ⌈/⌉ Nat.lcm g h
+        + ((((X + 2 * Nat.lcm q q' - 1) / Nat.lcm g h + 1 - X ⌈/⌉ Nat.lcm g h)
+            / (2 * ramanujanGcdClassJointModulus q q' g h))
+          * (2 * ramanujanGcdClassJointModulus q q' g h)))
+    (L := ((X + 2 * Nat.lcm q q' - 1) / Nat.lcm g h + 1 - X ⌈/⌉ Nat.lcm g h)
+        % (2 * ramanujanGcdClassJointModulus q q' g h))
+    (M := ramanujanGcdClassJointModulus q q' g h) hMEven]
+  norm_num
+
 theorem totient_product_eq_overlap_factor
     {A B : ℕ} (hA : 0 < A) (_hB : 0 < B) :
     (Nat.totient (A * B) : ℝ)
@@ -4036,6 +5006,36 @@ noncomputable def rawEvenRamanujanGcdClassPeriodicRemainderTerm
   rawEvenRamanujanGcdClassPeriodicTotientComparison X q q' g h
     - rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
     - rawEvenRamanujanGcdClassPeriodicCommonPrimeOverlapTerm X q q' g h
+
+noncomputable def rawEvenRamanujanGcdClassPeriodicParityDensityDefectTerm
+    (X q q' g h : ℕ) : ℝ :=
+  rawEvenRamanujanGcdClassPeriodicProductDefect X q q' g h
+    - rawEvenRamanujanGcdClassPeriodicTotientComparison X q q' g h
+
+noncomputable def centeredRamanujanGcdClassPeriodicDensityMismatchTerm
+    (X q q' g h : ℕ) : ℝ :=
+  evenRamanujanBlockCount X q q'
+    * ((rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q g
+          / evenRamanujanBlockCount X q q'
+          - ramanujanGcdClassWindowAverage X q g)
+        * (rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q' h
+            / evenRamanujanBlockCount X q q'
+            - ramanujanGcdClassWindowAverage X q' h))
+
+noncomputable def centeredRamanujanGcdClassOddLcmDensityDefectTerm
+    (X q q' g h : ℕ) : ℝ :=
+  rawEvenRamanujanGcdClassPeriodicParityDensityDefectTerm X q q' g h
+    + rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+    + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+
+theorem rawEvenRamanujanGcdClassPeriodicProductDefect_eq_parityDensityDefect_add_totientComparison
+    (X q q' g h : ℕ) :
+    rawEvenRamanujanGcdClassPeriodicProductDefect X q q' g h
+      =
+    rawEvenRamanujanGcdClassPeriodicParityDensityDefectTerm X q q' g h
+      + rawEvenRamanujanGcdClassPeriodicTotientComparison X q q' g h := by
+  unfold rawEvenRamanujanGcdClassPeriodicParityDensityDefectTerm
+  ring
 
 theorem rawEvenRamanujanGcdClassPeriodicProductDefect_eq_even_even_totientComparison
     {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
@@ -7575,6 +8575,154 @@ private theorem mem_two_mul_odd_divisors_filter_even_quotient_iff
       dsimp [Goldbach.Windows.IsEven]
       omega
 
+private theorem sum_filter_isEven_two_mul_odd_divisors_eq_sum_divisors
+    {β : Type*} [AddCommMonoid β] {n : ℕ} (hnOdd : Odd n) (f : ℕ → β) :
+    ∑ g ∈ (2 * n).divisors.filter Goldbach.Windows.IsEven, f g
+      =
+    ∑ b ∈ n.divisors, f (2 * b) := by
+  refine Finset.sum_nbij'
+    (i := fun g => g / 2)
+    (j := fun b => 2 * b) ?_ ?_ ?_ ?_ ?_
+  · intro g hg
+    rcases Finset.mem_filter.mp hg with ⟨hgDiv, hgEven⟩
+    rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hgEven) with ⟨b, hb⟩
+    have hbDiv : b ∈ n.divisors := by
+      rcases (mem_two_mul_odd_divisors_iff hnOdd).1 hgDiv with hbad | ⟨b', hb', hb'Eq⟩
+      · exfalso
+        have hgOddNat : Odd g := odd_of_mem_divisors_odd hnOdd hbad
+        exact (Nat.not_even_iff_odd.mpr hgOddNat) (Goldbach.Windows.even_of_isEven hgEven)
+      · have hbb' : b = b' := by
+          apply Nat.mul_left_cancel (by norm_num : 0 < 2)
+          rw [← hb, hb'Eq]
+        simpa [hbb'] using hb'
+    simpa [hb] using hbDiv
+  · intro b hb
+    refine Finset.mem_filter.mpr ?_
+    constructor
+    · exact (mem_two_mul_odd_divisors_iff hnOdd).2 (Or.inr ⟨b, hb, rfl⟩)
+    · exact Goldbach.Windows.isEven_of_even ((even_iff_two_dvd).2 ⟨b, by ring⟩)
+  · intro g hg
+    rcases Finset.mem_filter.mp hg with ⟨_hgDiv, hgEven⟩
+    rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hgEven) with ⟨b, hb⟩
+    simpa [hb]
+  · intro b hb
+    norm_num
+  · intro g hg
+    rcases Finset.mem_filter.mp hg with ⟨_hgDiv, hgEven⟩
+    rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hgEven) with ⟨b, hb⟩
+    exact congrArg f (by simpa [hb])
+
+theorem ramanujanGcdClassIndicator_two_mul_eq_of_isEven_of_odd_divisor
+    {n g N : ℕ}
+    (hnOdd : Odd n) (hg : g ∈ n.divisors) (hNEven : Goldbach.Windows.IsEven N) :
+    ramanujanGcdClassIndicator (2 * n) (2 * g) N
+      = ramanujanGcdClassIndicator n g N := by
+  have h2gDiv : 2 * g ∈ (2 * n).divisors := by
+    exact (mem_two_mul_odd_divisors_iff hnOdd).2 (Or.inr ⟨g, hg, rfl⟩)
+  have hgOddNat : Odd g := odd_of_mem_divisors_odd hnOdd hg
+  have hgOdd : ¬ Goldbach.Windows.IsEven g := by
+    intro hgEven
+    exact (Nat.not_even_iff_odd.mpr hgOddNat) (Goldbach.Windows.even_of_isEven hgEven)
+  have hnpos : 1 ≤ n := Nat.succ_le_of_lt <| Nat.pos_of_ne_zero (by
+    intro hn
+    subst n
+    norm_num at hnOdd)
+  have hgpos : 0 < g := divisor_pos_of_mem_divisors_of_pos hg hnpos
+  have hquot : (2 * n) / (2 * g) = n / g := by
+    simpa using div_two_pow_mul_by_two_mul_of_dvd (k := 1) (n := n) (b := g) (by omega) hg
+  rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := N) h2gDiv]
+  rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := N) hg]
+  unfold ramanujanGcdClassCoprimeIndicator
+  have hiff :
+      (2 * g ∣ N ∧ Nat.Coprime ((2 * n) / (2 * g)) (N / (2 * g)))
+        ↔
+      (g ∣ N ∧ Nat.Coprime (n / g) (N / g)) := by
+    constructor
+    · intro h
+      rcases h with ⟨h2gN', hcop⟩
+      have hg2g : g ∣ 2 * g := ⟨2, by ring⟩
+      have hgN : g ∣ N := dvd_trans hg2g h2gN'
+      rcases h2gN' with ⟨m, hm⟩
+      have hNg : N / g = 2 * m := by
+        calc
+          N / g = ((2 * g) * m) / g := by rw [hm]
+          _ = 2 * m := by
+            simp [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm, hgpos]
+      have hN2g : N / (2 * g) = m := by
+        exact Nat.div_eq_of_eq_mul_left (by positivity : 0 < 2 * g)
+          (by simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using hm)
+      have hAodd : Odd (n / g) := odd_div_of_dvd_odd hnOdd (Nat.mem_divisors.mp hg).1
+      have hA2 : Nat.Coprime (n / g) 2 := by
+        simpa [Nat.coprime_comm] using hAodd.coprime_two_right
+      have hcop' : Nat.Coprime (n / g) m := by
+        simpa [hquot, hN2g] using hcop
+      have hcop' : Nat.Coprime (n / g) (N / g) := by
+        rw [hNg]
+        simpa [Nat.coprime_comm] using
+          (Nat.coprime_mul_iff_left (m := 2) (n := m) (k := n / g)).2
+            ⟨by simpa [Nat.coprime_comm] using hA2,
+             by simpa [Nat.coprime_comm] using hcop'⟩
+      exact ⟨hgN, hcop'⟩
+    · intro h
+      rcases h with ⟨hgN, hcop⟩
+      rcases hgN with ⟨m, hm⟩
+      have hEvenMul : Goldbach.Windows.IsEven (g * m) := by
+        simpa [hm, Nat.mul_comm] using hNEven
+      have hmEven : Goldbach.Windows.IsEven m :=
+        (isEven_mul_iff_of_not_isEven_left hgOdd).1 hEvenMul
+      rcases Goldbach.Windows.even_of_isEven hmEven with ⟨t, ht⟩
+      have h2gN' : 2 * g ∣ N := by
+        refine ⟨t, ?_⟩
+        rw [hm, ht]
+        ring
+      have hNg : N / g = 2 * t := by
+        calc
+          N / g = (g * (t + t)) / g := by rw [hm, ht]
+          _ = g * (2 * t) / g := by ring_nf
+          _ = 2 * t := by
+            simp [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm, hgpos]
+      have hN2g : N / (2 * g) = t := by
+        apply Nat.div_eq_of_eq_mul_left (by positivity : 0 < 2 * g)
+        rw [hm, ht]
+        ring
+      have hAodd : Odd (n / g) := odd_div_of_dvd_odd hnOdd (Nat.mem_divisors.mp hg).1
+      have hA2 : Nat.Coprime (n / g) 2 := by
+        simpa [Nat.coprime_comm] using hAodd.coprime_two_right
+      have hcop' : Nat.Coprime (n / g) t := by
+        have hcopMul : Nat.Coprime (n / g) (2 * t) := by
+          simpa [hNg] using hcop
+        have hsplit :
+            Nat.Coprime 2 (n / g) ∧ Nat.Coprime t (n / g) := by
+          simpa [Nat.coprime_comm] using
+            (Nat.coprime_mul_iff_left (m := 2) (n := t) (k := n / g)).1
+              (by simpa [Nat.coprime_comm] using hcopMul)
+        simpa [Nat.coprime_comm] using hsplit.2
+      rw [hquot, hN2g]
+      exact ⟨h2gN', hcop'⟩
+  by_cases hleft : 2 * g ∣ N ∧ Nat.Coprime ((2 * n) / (2 * g)) (N / (2 * g))
+  · have hright : g ∣ N ∧ Nat.Coprime (n / g) (N / g) := hiff.mp hleft
+    rw [if_pos hleft, if_pos hright]
+  · have hright : ¬ (g ∣ N ∧ Nat.Coprime (n / g) (N / g)) := by
+      intro hr
+      exact hleft (hiff.mpr hr)
+    simp [hleft, hright]
+
+theorem ramanujanGcdClassWindowAverage_two_mul_eq_of_odd_divisor
+    {X n g : ℕ} (hnOdd : Odd n) (hg : g ∈ n.divisors) :
+    ramanujanGcdClassWindowAverage X (2 * n) (2 * g)
+      =
+    ramanujanGcdClassWindowAverage X n g := by
+  unfold ramanujanGcdClassWindowAverage
+  have hsum :
+      ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator (2 * n) (2 * g) N
+        =
+      ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator n g N := by
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    exact ramanujanGcdClassIndicator_two_mul_eq_of_isEven_of_odd_divisor
+      hnOdd hg (isEven_of_mem_EvenIn hN)
+  rw [hsum]
+
 private theorem div_four_mul_by_two_mul_of_dvd
     {n b : ℕ} (hb : b ∈ n.divisors) :
     (4 * n) / (2 * b) = 2 * (n / b) := by
@@ -8197,6 +9345,11 @@ def centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 : Finset ℕ :=
   (Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0).filter
     centeredRamanujanPairCleanPeriodicOneVariableSupport
 
+/-- One-variable moduli up to `Q0` that fail the clean periodic support condition. -/
+def centeredRamanujanPairCleanPeriodicOneVariableUnsupportedUpToQ0 : Finset ℕ :=
+  (Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0).filter
+    (fun q => ¬ centeredRamanujanPairCleanPeriodicOneVariableSupport q)
+
 theorem centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0_card :
     centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.card = 291 := by
   native_decide
@@ -8204,6 +9357,66 @@ theorem centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0_card :
 theorem centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0_sum :
     centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.sum id = 3008698 := by
   native_decide
+
+theorem centeredRamanujanPairCleanPeriodicOneVariableSupport_squarefree_iff_eq_two
+    {q : ℕ} (hq : 1 ≤ q)
+    (hsup : centeredRamanujanPairCleanPeriodicOneVariableSupport q) :
+    Squarefree q ↔ q = 2 := by
+  constructor
+  · intro hsq
+    rcases centeredRamanujanPairCleanPeriodicOneVariableSupport_has_shape hq hsup with
+      ⟨k, n, hk1, hnodd, hdecomp, hfactor⟩
+    have hk_le_one : k ≤ 1 := by
+      by_contra hgt
+      have hk_two : 2 ≤ k := by omega
+      have h4dvd_pow : 4 ∣ 2 ^ k := by
+        refine ⟨2 ^ (k - 2), ?_⟩
+        have hkdecomp : k = 2 + (k - 2) := by omega
+        rw [hkdecomp, pow_add, pow_two]
+        simp [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+      have h4dvd_q : 4 ∣ q := by
+        rw [hdecomp]
+        exact dvd_mul_of_dvd_left h4dvd_pow n
+      have hsquarefree := Nat.squarefree_iff_prime_squarefree.mp hsq
+      exact hsquarefree 2 Nat.prime_two (by simpa using h4dvd_q)
+    have hk : k = 1 := by omega
+    have hn0 : n ≠ 0 := by
+      intro hnzero
+      rcases hnodd with ⟨t, ht⟩
+      omega
+    have hnsq : Squarefree n := by
+      refine hsq.squarefree_of_dvd ?_
+      refine ⟨2 ^ k, ?_⟩
+      simpa [Nat.mul_comm] using hdecomp
+    have hnfac : ∀ p, n.factorization p ≤ 1 :=
+      (Nat.squarefree_iff_factorization_le_one hn0).1 hnsq
+    have hprime_empty : n.primeFactors = ∅ := by
+      apply Finset.eq_empty_iff_forall_notMem.mpr
+      intro p hp
+      have hge_two : 2 ≤ n.factorization p := hfactor p hp
+      have hle_one : n.factorization p ≤ 1 := hnfac p
+      omega
+    have hn1 : n = 1 := by
+      rcases Nat.primeFactors_eq_empty.mp hprime_empty with hnzero | hnone
+      · exact False.elim (hn0 hnzero)
+      · exact hnone
+    simpa [hk, hn1] using hdecomp
+  · intro hq2
+    simpa [hq2] using Nat.squarefree_two
+
+theorem normalizedSigmaTruncSummandRealCoeff_eq_zero_of_support_ne_two
+    {q : ℕ} (hq : 1 ≤ q)
+    (hsup : centeredRamanujanPairCleanPeriodicOneVariableSupport q)
+    (hqne : q ≠ 2) :
+    normalizedSigmaTruncSummandRealCoeff q = 0 := by
+  have hnsq : ¬ Squarefree q := by
+    intro hsq
+    exact hqne ((centeredRamanujanPairCleanPeriodicOneVariableSupport_squarefree_iff_eq_two hq hsup).1 hsq)
+  have hmu :
+      Goldbach.AO_OffDiag.TailBlock.muSq q = 0 :=
+    (Goldbach.AO_OffDiag.TailBlock.muSq_eq_zero_iff_not_squarefree q).2 hnsq
+  unfold normalizedSigmaTruncSummandRealCoeff
+  simp [hmu]
 
 theorem centeredRamanujanPairCleanPeriodicGcdLeftFactor_sum_eq_blockCount_mul_oneVariableBaseSum
     (q q' : ℕ) :
@@ -8360,6 +9573,506 @@ theorem centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_half_gcd_eq_zero_of_not
     norm_num at this
   simp [hnotcop]
 
+theorem centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_half_gcd_eq_coprime_reindexed_of_four_dvd
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (h4G : 4 ∣ Nat.gcd q q') :
+    centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q' / 2)
+      =
+    ∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+        if Nat.Coprime a b then
+          centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+            ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+        else 0 := by
+  let G := Nat.gcd q q'
+  let d := G / 2
+  have h2G : 2 ∣ G := dvd_trans (by decide : 2 ∣ 4) h4G
+  have hGpos : 0 < G := by
+    dsimp [G]
+    exact Nat.gcd_pos_of_pos_right q hq'
+  have hdq : d ∣ q := by
+    dsimp [d, G]
+    exact dvd_trans (Nat.div_dvd_of_dvd h2G) (Nat.gcd_dvd_left q q')
+  have hdq' : d ∣ q' := by
+    dsimp [d, G]
+    exact dvd_trans (Nat.div_dvd_of_dvd h2G) (Nat.gcd_dvd_right q q')
+  have hd_eq : d * 2 = G := by
+    dsimp [d]
+    simpa [Nat.mul_comm] using (Nat.mul_div_cancel' h2G)
+  have hdEven : Goldbach.Windows.IsEven d := by
+    rcases h4G with ⟨k, hk⟩
+    have hd_eq' : d = 2 * k := by
+      omega
+    have h2Even : Goldbach.Windows.IsEven 2 := by decide
+    simpa [hd_eq', Nat.mul_comm] using
+      (isEven_mul_of_isEven_left (a := 2) (m := k) h2Even)
+  have hqd : q / d = 2 * (q / G) := by
+    rcases Nat.gcd_dvd_left q q' with ⟨m, hm⟩
+    have hqdivG : q / G = m := by
+      rw [hm]
+      exact Nat.mul_div_right m hGpos
+    have hdpos : 0 < d := Nat.pos_of_dvd_of_pos hdq hq
+    have hqdivd : q / d = 2 * m := by
+      apply Nat.div_eq_of_eq_mul_left hdpos
+      calc
+        q = G * m := hm
+        _ = (d * 2) * m := by rw [hd_eq]
+        _ = 2 * m * d := by ac_rfl
+    simpa [hqdivG] using hqdivd
+  have hq'd : q' / d = 2 * (q' / G) := by
+    rcases Nat.gcd_dvd_right q q' with ⟨m, hm⟩
+    have hq'divG : q' / G = m := by
+      rw [hm]
+      exact Nat.mul_div_right m hGpos
+    have hdpos : 0 < d := Nat.pos_of_dvd_of_pos hdq' hq'
+    have hq'divd : q' / d = 2 * m := by
+      apply Nat.div_eq_of_eq_mul_left hdpos
+      calc
+        q' = G * m := hm
+        _ = (d * 2) * m := by rw [hd_eq]
+        _ = 2 * m * d := by ac_rfl
+    simpa [hq'divG] using hq'divd
+  rw [centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_eq_coprime_reindexed
+    (q := q) (q' := q') (d := d) hq hq' hdq hdq']
+  have hfilterq :
+      (q / d).divisors.filter (fun a => Goldbach.Windows.IsEven (d * a)) = (q / d).divisors := by
+    ext a
+    simp [isEven_mul_of_isEven_left (a := d) (m := a) hdEven]
+  have hfilterq' :
+      (q' / d).divisors.filter (fun b => Goldbach.Windows.IsEven (d * b)) = (q' / d).divisors := by
+    ext b
+    simp [isEven_mul_of_isEven_left (a := d) (m := b) hdEven]
+  rw [hfilterq, hfilterq']
+  simp [hqd, hq'd, d, G]
+
+theorem centeredRamanujanPairCleanPeriodicGcdQuotients_coprime
+    {q q' : ℕ} (hq' : 1 ≤ q') :
+    Nat.Coprime (q / Nat.gcd q q') (q' / Nat.gcd q q') := by
+  have hGpos : 0 < Nat.gcd q q' := Nat.gcd_pos_of_pos_right q hq'
+  simpa using (Nat.coprime_div_gcd_div_gcd (H := hGpos))
+
+theorem centeredRamanujanPairCleanPeriodicGcdDoubleQuotients_gcd_eq_two
+    {q q' : ℕ} (hq' : 1 ≤ q') :
+    Nat.gcd (2 * (q / Nat.gcd q q')) (2 * (q' / Nat.gcd q q')) = 2 := by
+  have hcop := centeredRamanujanPairCleanPeriodicGcdQuotients_coprime (q := q) (q' := q') hq'
+  rw [Nat.gcd_mul_left]
+  simpa [Nat.Coprime.gcd_eq_one hcop]
+
+theorem centeredRamanujanPairCleanPeriodicGcdDoubleQuotientDivisor_coprime_iff_not_both_even
+    {q q' a b : ℕ} (hq' : 1 ≤ q')
+    (ha : a ∈ (2 * (q / Nat.gcd q q')).divisors)
+    (hb : b ∈ (2 * (q' / Nat.gcd q q')).divisors) :
+    Nat.Coprime a b ↔ ¬ (Goldbach.Windows.IsEven a ∧ Goldbach.Windows.IsEven b) := by
+  constructor
+  · intro hcop hEven
+    have h2a : 2 ∣ a := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven.1)
+    have h2b : 2 ∣ b := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven.2)
+    have h2gcd : 2 ∣ Nat.gcd a b := Nat.dvd_gcd h2a h2b
+    have : 2 ∣ 1 := by simpa [Nat.Coprime.gcd_eq_one hcop] using h2gcd
+    norm_num at this
+  · intro hnot
+    rw [Nat.coprime_iff_gcd_eq_one]
+    have hadiv : a ∣ 2 * (q / Nat.gcd q q') := (Nat.mem_divisors.mp ha).1
+    have hbdiv : b ∣ 2 * (q' / Nat.gcd q q') := (Nat.mem_divisors.mp hb).1
+    have hgdiv : Nat.gcd a b ∣ 2 := by
+      have hleft : Nat.gcd a b ∣ 2 * (q / Nat.gcd q q') :=
+        dvd_trans (Nat.gcd_dvd_left a b) hadiv
+      have hright : Nat.gcd a b ∣ 2 * (q' / Nat.gcd q q') :=
+        dvd_trans (Nat.gcd_dvd_right a b) hbdiv
+      have hgg :
+          Nat.gcd a b ∣
+            Nat.gcd (2 * (q / Nat.gcd q q')) (2 * (q' / Nat.gcd q q')) :=
+        Nat.dvd_gcd hleft hright
+      simpa [centeredRamanujanPairCleanPeriodicGcdDoubleQuotients_gcd_eq_two
+        (q := q) (q' := q') hq'] using hgg
+    have hbpos : 0 < b := Nat.pos_of_mem_divisors hb
+    have hgpos : 1 ≤ Nat.gcd a b := Nat.succ_le_of_lt (Nat.gcd_pos_of_pos_right a hbpos)
+    have hgle : Nat.gcd a b ≤ 2 := Nat.le_of_dvd (by norm_num : 0 < 2) hgdiv
+    have hgab : Nat.gcd a b = 1 ∨ Nat.gcd a b = 2 := by omega
+    rcases hgab with hgab | hgab
+    · exact hgab
+    · exfalso
+      have h2a : 2 ∣ a := by
+        rw [← hgab]
+        exact Nat.gcd_dvd_left a b
+      have h2b : 2 ∣ b := by
+        rw [← hgab]
+        exact Nat.gcd_dvd_right a b
+      apply hnot
+      exact ⟨Goldbach.Windows.isEven_of_even ((even_iff_two_dvd).2 h2a),
+        Goldbach.Windows.isEven_of_even ((even_iff_two_dvd).2 h2b)⟩
+
+noncomputable def centeredRamanujanPairCleanPeriodicGcdHalfTotalProduct
+    (q q' : ℕ) : ℝ :=
+  ∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+    ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+      centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+        ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+
+noncomputable def centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct
+    (q q' : ℕ) : ℝ :=
+  ∑ a ∈ ((2 * (q / Nat.gcd q q')).divisors.filter Goldbach.Windows.IsEven),
+    ∑ b ∈ ((2 * (q' / Nat.gcd q q')).divisors.filter Goldbach.Windows.IsEven),
+      centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+        ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+
+private theorem sum_filter_even_divisors_two_mul_reindexed
+    {n : ℕ} (hn : 1 ≤ n) (f : ℕ → ℝ) :
+    (∑ a ∈ (2 * n).divisors.filter Goldbach.Windows.IsEven, f a)
+      =
+    ∑ a ∈ n.divisors, f (2 * a) := by
+  have hnpos : 0 < n := Nat.succ_le_iff.mp hn
+  have h2n : 1 ≤ 2 * n := Nat.succ_le_of_lt (Nat.mul_pos (by decide : 0 < 2) hnpos)
+  have hredundant :
+      ((2 * n).divisors.filter Goldbach.Windows.IsEven).filter (fun a => 2 ∣ a)
+        =
+      (2 * n).divisors.filter Goldbach.Windows.IsEven := by
+    ext a
+    constructor
+    · intro ha
+      exact (Finset.mem_filter.mp ha).1
+    · intro ha
+      refine Finset.mem_filter.mpr ?_
+      refine ⟨ha, ?_⟩
+      exact (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven (Finset.mem_filter.mp ha).2)
+  have hfilter :
+      n.divisors.filter (fun a => Goldbach.Windows.IsEven (2 * a)) = n.divisors := by
+    ext a
+    simp [isEven_mul_of_isEven_left (a := 2) (m := a) (by decide : Goldbach.Windows.IsEven 2)]
+  have hfilter' :
+      n.divisors.filter (fun a => Goldbach.Windows.IsEven (a * 2)) = n.divisors := by
+    simpa [Nat.mul_comm] using hfilter
+  calc
+    (∑ a ∈ (2 * n).divisors.filter Goldbach.Windows.IsEven, f a)
+      =
+    ∑ a ∈ ((2 * n).divisors.filter Goldbach.Windows.IsEven).filter (fun a => 2 ∣ a), f a := by
+        rw [hredundant]
+    _ =
+    ∑ a ∈ ((2 * n) / 2).divisors.filter (fun a => Goldbach.Windows.IsEven (2 * a)), f (2 * a) := by
+        rw [sum_filter_even_divisors_dvd_reindexed_by_div
+          (q := 2 * n) (d := 2) h2n (dvd_mul_right 2 n) f]
+    _ = ∑ a ∈ n.divisors, f (2 * a) := by
+        rw [show ((2 * n) / 2).divisors = n.divisors by simp]
+        rw [hfilter]
+
+theorem centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct_eq_reindexed_of_two_dvd
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (h2G : 2 ∣ Nat.gcd q q') :
+    centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct q q'
+      =
+    ∑ a ∈ (q / Nat.gcd q q').divisors,
+      ∑ b ∈ (q' / Nat.gcd q q').divisors,
+        centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+          (Nat.gcd q q' * a) (Nat.gcd q q' * b) := by
+  have hGpos : 0 < Nat.gcd q q' := Nat.gcd_pos_of_pos_right q hq'
+  have hqdivG : 1 ≤ q / Nat.gcd q q' := by
+    exact Nat.succ_le_of_lt (Nat.div_pos (Nat.le_of_dvd hq (Nat.gcd_dvd_left q q')) hGpos)
+  have hq'divG : 1 ≤ q' / Nat.gcd q q' := by
+    exact Nat.succ_le_of_lt (Nat.div_pos (Nat.le_of_dvd hq' (Nat.gcd_dvd_right q q')) hGpos)
+  have hGhalf : (Nat.gcd q q' / 2) * 2 = Nat.gcd q q' := by
+    simpa [Nat.mul_comm] using (Nat.mul_div_cancel' h2G)
+  unfold centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct
+  rw [sum_filter_even_divisors_two_mul_reindexed (n := q / Nat.gcd q q') hqdivG]
+  refine Finset.sum_congr rfl ?_
+  intro a ha
+  rw [sum_filter_even_divisors_two_mul_reindexed (n := q' / Nat.gcd q q') hq'divG]
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  rw [show (Nat.gcd q q' / 2) * (2 * a) = Nat.gcd q q' * a by
+        calc
+          (Nat.gcd q q' / 2) * (2 * a) = ((Nat.gcd q q' / 2) * 2) * a := by ac_rfl
+          _ = Nat.gcd q q' * a := by rw [hGhalf],
+      show (Nat.gcd q q' / 2) * (2 * b) = Nat.gcd q q' * b by
+        calc
+          (Nat.gcd q q' / 2) * (2 * b) = ((Nat.gcd q q' / 2) * 2) * b := by ac_rfl
+          _ = Nat.gcd q q' * b := by rw [hGhalf]]
+
+theorem centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_gcd_eq_reindexed_of_two_dvd
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (h2G : 2 ∣ Nat.gcd q q') :
+    centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q')
+      =
+    ∑ a ∈ (q / Nat.gcd q q').divisors,
+      ∑ b ∈ (q' / Nat.gcd q q').divisors,
+        centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+          (Nat.gcd q q' * a) (Nat.gcd q q' * b) := by
+  let G := Nat.gcd q q'
+  have hGq : G ∣ q := Nat.gcd_dvd_left q q'
+  have hGq' : G ∣ q' := Nat.gcd_dvd_right q q'
+  have hGpos : 0 < G := by
+    dsimp [G]
+    exact Nat.gcd_pos_of_pos_right q hq'
+  have hcop : Nat.Coprime (q / G) (q' / G) := by
+    dsimp [G]
+    simpa using (Nat.coprime_div_gcd_div_gcd (H := hGpos))
+  have hGEven : Goldbach.Windows.IsEven G := by
+    exact Goldbach.Windows.isEven_of_even ((even_iff_two_dvd).2 (by simpa [G] using h2G))
+  rw [centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_eq_coprime_reindexed
+    (q := q) (q' := q') (d := G) hq hq' hGq hGq']
+  have hfilterq :
+      (q / G).divisors.filter (fun a => Goldbach.Windows.IsEven (G * a)) = (q / G).divisors := by
+    ext a
+    simp [isEven_mul_of_isEven_left (a := G) (m := a) hGEven]
+  have hfilterq' :
+      (q' / G).divisors.filter (fun b => Goldbach.Windows.IsEven (G * b)) = (q' / G).divisors := by
+    ext b
+    simp [isEven_mul_of_isEven_left (a := G) (m := b) hGEven]
+  rw [hfilterq, hfilterq']
+  refine Finset.sum_congr rfl ?_
+  intro a ha
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  have hab : Nat.Coprime a b := gcd_g_h_eq_one_of_coprime_moduli hcop ha hb
+  simp [hab, G]
+
+theorem centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct_eq_gcdWeightAtGcd_of_two_dvd
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (h2G : 2 ∣ Nat.gcd q q') :
+    centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct q q'
+      =
+    centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q') := by
+  rw [centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct_eq_reindexed_of_two_dvd
+    (q := q) (q' := q') hq hq' h2G]
+  rw [centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_gcd_eq_reindexed_of_two_dvd
+    (q := q) (q' := q') hq hq' h2G]
+
+theorem centeredRamanujanPairCleanPeriodicGcdHalfCoprimeSummand_eq_total_sub_evenEven
+    {q q' a b : ℕ} (hq' : 1 ≤ q')
+    (ha : a ∈ (2 * (q / Nat.gcd q q')).divisors)
+    (hb : b ∈ (2 * (q' / Nat.gcd q q')).divisors) :
+    (if Nat.Coprime a b then
+      centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+        ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+    else 0)
+      =
+    centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+      ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+      -
+    (if Goldbach.Windows.IsEven a ∧ Goldbach.Windows.IsEven b then
+      centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+        ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+    else 0) := by
+  let w : ℝ :=
+    centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+      ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+  have hcopiff :=
+    centeredRamanujanPairCleanPeriodicGcdDoubleQuotientDivisor_coprime_iff_not_both_even
+      (q := q) (q' := q') (a := a) (b := b) hq' ha hb
+  by_cases hEven : Goldbach.Windows.IsEven a ∧ Goldbach.Windows.IsEven b
+  · have hnotcop : ¬ Nat.Coprime a b := by
+      intro hcop
+      exact (hcopiff.mp hcop) hEven
+    simp [w, hEven, hnotcop]
+  · have hcop : Nat.Coprime a b := hcopiff.mpr hEven
+    simp [w, hEven, hcop]
+
+theorem centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct_eq_indicatorSum
+    {q q' : ℕ} :
+    centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct q q'
+      =
+    ∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+        if Goldbach.Windows.IsEven a ∧ Goldbach.Windows.IsEven b then
+          centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+            ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+        else 0 := by
+  unfold centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct
+  calc
+    (∑ a ∈ (2 * (q / Nat.gcd q q')).divisors.filter Goldbach.Windows.IsEven,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors.filter Goldbach.Windows.IsEven,
+        centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+          ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b))
+      =
+    (∑ a ∈ (2 * (q / Nat.gcd q q')).divisors.filter Goldbach.Windows.IsEven,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+        if Goldbach.Windows.IsEven b then
+          centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+            ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+        else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          rw [← Finset.sum_filter]
+    _ =
+    (∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      if Goldbach.Windows.IsEven a then
+        ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+          if Goldbach.Windows.IsEven b then
+            centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+              ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+          else 0
+      else 0) := by
+        rw [← Finset.sum_filter]
+    _ =
+    ∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+        if Goldbach.Windows.IsEven a ∧ Goldbach.Windows.IsEven b then
+          centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+            ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+        else 0 := by
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          by_cases haEven : Goldbach.Windows.IsEven a
+          · simp [haEven]
+          · simp [haEven]
+
+theorem centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_half_gcd_eq_total_sub_evenEven_of_four_dvd
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (h4G : 4 ∣ Nat.gcd q q') :
+    centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q' / 2)
+      =
+    centeredRamanujanPairCleanPeriodicGcdHalfTotalProduct q q'
+      - centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct q q' := by
+  let F : ℕ → ℕ → ℝ := fun a b =>
+    centeredRamanujanPairCleanPeriodicGcdBaseWeight q q'
+      ((Nat.gcd q q' / 2) * a) ((Nat.gcd q q' / 2) * b)
+  rw [centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_half_gcd_eq_coprime_reindexed_of_four_dvd
+    (q := q) (q' := q') hq hq' h4G]
+  calc
+    (∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+        if Nat.Coprime a b then F a b else 0)
+      =
+    (∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+        (F a b - if Goldbach.Windows.IsEven a ∧ Goldbach.Windows.IsEven b then F a b else 0)) := by
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          refine Finset.sum_congr rfl ?_
+          intro b hb
+          exact centeredRamanujanPairCleanPeriodicGcdHalfCoprimeSummand_eq_total_sub_evenEven
+            (q := q) (q' := q') (a := a) (b := b) hq' ha hb
+    _ =
+    (∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      ((∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors, F a b)
+        -
+      (∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+        if Goldbach.Windows.IsEven a ∧ Goldbach.Windows.IsEven b then F a b else 0))) := by
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          rw [Finset.sum_sub_distrib]
+    _ =
+    (∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors, F a b)
+      -
+    (∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+        if Goldbach.Windows.IsEven a ∧ Goldbach.Windows.IsEven b then F a b else 0) := by
+          rw [Finset.sum_sub_distrib]
+    _ =
+    centeredRamanujanPairCleanPeriodicGcdHalfTotalProduct q q'
+      -
+    (∑ a ∈ (2 * (q / Nat.gcd q q')).divisors,
+      ∑ b ∈ (2 * (q' / Nat.gcd q q')).divisors,
+        if Goldbach.Windows.IsEven a ∧ Goldbach.Windows.IsEven b then F a b else 0) := by
+          simp [centeredRamanujanPairCleanPeriodicGcdHalfTotalProduct, F]
+    _ = centeredRamanujanPairCleanPeriodicGcdHalfTotalProduct q q'
+          - centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct q q' := by
+          rw [← centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct_eq_indicatorSum]
+
+theorem centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_half_gcd_eq_total_sub_edge_of_four_dvd
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (h4G : 4 ∣ Nat.gcd q q') :
+    centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q' / 2)
+      =
+    centeredRamanujanPairCleanPeriodicGcdHalfTotalProduct q q'
+      - centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q') := by
+  have h2G : 2 ∣ Nat.gcd q q' := dvd_trans (by decide : 2 ∣ 4) h4G
+  rw [centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_half_gcd_eq_total_sub_evenEven_of_four_dvd
+    (q := q) (q' := q') hq hq' h4G]
+  rw [centeredRamanujanPairCleanPeriodicGcdHalfEvenEvenProduct_eq_gcdWeightAtGcd_of_two_dvd
+    (q := q) (q' := q') hq hq' h2G]
+
+theorem centeredRamanujanPairCleanPeriodicGcdTopHalfSignedSum_eq_edge_add_scalar_mul_total_of_four_dvd
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (h4G : 4 ∣ Nat.gcd q q') :
+    (∑ d ∈ ((Nat.gcd q q').divisors.filter fun d => ¬ 2 * d < Nat.gcd q q'),
+      centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' d
+        * centeredRamanujanPairCleanPeriodicGcdTopHalfScalar q q' d)
+      =
+    centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q')
+      +
+    centeredRamanujanPairCleanPeriodicGcdHalfTotalProduct q q'
+      * (((1 : ℝ) - (4 : ℝ) / (Nat.gcd q q' : ℝ))) := by
+  have h2G : 2 ∣ Nat.gcd q q' := dvd_trans (by decide : 2 ∣ 4) h4G
+  rw [centeredRamanujanPairCleanPeriodicGcdTopHalfSignedSum_eq_edge_add_tail (q := q) (q' := q') hq']
+  rw [centeredRamanujanPairCleanPeriodicGcdTopHalfTail_eq_half_or_zero (q := q) (q' := q') hq']
+  simp [h2G]
+  rw [centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_half_gcd_eq_total_sub_edge_of_four_dvd
+    (q := q) (q' := q') hq hq' h4G]
+  ring
+
+private theorem not_isEven_half_of_two_dvd_not_four_dvd
+    {n : ℕ} (h2 : 2 ∣ n) (hnot4 : ¬ 4 ∣ n) :
+    ¬ Goldbach.Windows.IsEven (n / 2) := by
+  intro hEven
+  rcases h2 with ⟨m, hm⟩
+  have hdiv : n / 2 = m := by
+    exact Nat.div_eq_of_eq_mul_left (by positivity : 0 < 2) (by simpa [Nat.mul_comm] using hm)
+  have h2m : 2 ∣ m := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven (by simpa [hdiv] using hEven))
+  rcases h2m with ⟨k, hk⟩
+  apply hnot4
+  refine ⟨k, ?_⟩
+  calc
+    n = 2 * m := hm
+    _ = 2 * (2 * k) := by rw [hk]
+    _ = 4 * k := by ring
+
+theorem centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_smallRegion_add_edge_of_not_two_dvd_gcd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hnot2G : ¬ 2 ∣ Nat.gcd q q') :
+    centeredRamanujanPairCleanPeriodicGcdCorrectionTerm X q q'
+      =
+    (∑ d ∈ ((Nat.gcd q q').divisors.filter fun d => 2 * d < Nat.gcd q q'),
+      centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' d
+        * (((0 : ℝ) - (4 : ℝ) / (Nat.gcd q q' : ℝ))))
+      +
+    centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q')
+      * (((2 : ℝ) - (4 : ℝ) / (Nat.gcd q q' : ℝ))) := by
+  rw [centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_smallRegion_add_edge_add_topHalfTail
+    (X := X) hq hq']
+  rw [centeredRamanujanPairCleanPeriodicGcdTopHalfTail_eq_half_or_zero (q := q) (q' := q') hq']
+  simp [hnot2G, add_assoc]
+
+theorem centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_smallRegion_add_edge_of_two_dvd_not_four_dvd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (h2G : 2 ∣ Nat.gcd q q') (hnot4G : ¬ 4 ∣ Nat.gcd q q') :
+    centeredRamanujanPairCleanPeriodicGcdCorrectionTerm X q q'
+      =
+    (∑ d ∈ ((Nat.gcd q q').divisors.filter fun d => 2 * d < Nat.gcd q q'),
+      centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' d
+        * (((0 : ℝ) - (4 : ℝ) / (Nat.gcd q q' : ℝ))))
+      +
+    centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q')
+      * (((2 : ℝ) - (4 : ℝ) / (Nat.gcd q q' : ℝ))) := by
+  have hhalfOdd : ¬ Goldbach.Windows.IsEven (Nat.gcd q q' / 2) :=
+    not_isEven_half_of_two_dvd_not_four_dvd h2G hnot4G
+  rw [centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_smallRegion_add_edge_add_topHalfTail
+    (X := X) hq hq']
+  rw [centeredRamanujanPairCleanPeriodicGcdTopHalfTail_eq_half_or_zero (q := q) (q' := q') hq']
+  simp [h2G]
+  rw [centeredRamanujanPairCleanPeriodicGcdWeightAtGcd_half_gcd_eq_zero_of_not_isEven_half
+    (q := q) (q' := q') hq hq' h2G hhalfOdd]
+  simp
+
+theorem centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_smallRegion_add_edge_add_scalar_mul_total_of_four_dvd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (h4G : 4 ∣ Nat.gcd q q') :
+    centeredRamanujanPairCleanPeriodicGcdCorrectionTerm X q q'
+      =
+    (∑ d ∈ ((Nat.gcd q q').divisors.filter fun d => 2 * d < Nat.gcd q q'),
+      centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' d
+        * (((0 : ℝ) - (4 : ℝ) / (Nat.gcd q q' : ℝ))))
+      +
+    centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' (Nat.gcd q q')
+      +
+    centeredRamanujanPairCleanPeriodicGcdHalfTotalProduct q q'
+      * (((1 : ℝ) - (4 : ℝ) / (Nat.gcd q q' : ℝ))) := by
+  rw [centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_smallRegion_add_topHalfSigned
+    (X := X) hq hq']
+  rw [centeredRamanujanPairCleanPeriodicGcdTopHalfSignedSum_eq_edge_add_scalar_mul_total_of_four_dvd
+    (q := q) (q' := q') hq hq' h4G]
+  simp [add_assoc]
+
 theorem centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_coprime_moduli_factorized
     {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') (hcop : Nat.Coprime q q') :
     centeredRamanujanPairCleanPeriodicGcdCorrectionTerm X q q'
@@ -8499,6 +10212,515 @@ theorem centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_zero_of_coprime_m
   rcases hbad with hqBad | hq'Bad
   · simp [centeredRamanujanPairCleanPeriodicOneVariableBaseSum_eq_zero_of_not_support hq hqBad]
   · simp [centeredRamanujanPairCleanPeriodicOneVariableBaseSum_eq_zero_of_not_support hq' hq'Bad]
+
+theorem centeredRamanujanPairCleanPeriodicOneVariableSupport_not_both_of_squarefree_coprime
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q') (hcop : Nat.Coprime q q') :
+    ¬ (centeredRamanujanPairCleanPeriodicOneVariableSupport q
+      ∧ centeredRamanujanPairCleanPeriodicOneVariableSupport q') := by
+  intro hs
+  have hq2 : q = 2 :=
+    (centeredRamanujanPairCleanPeriodicOneVariableSupport_squarefree_iff_eq_two hq hs.1).1 hsq
+  have hq'2 : q' = 2 :=
+    (centeredRamanujanPairCleanPeriodicOneVariableSupport_squarefree_iff_eq_two hq' hs.2).1 hsq'
+  subst q
+  subst q'
+  simp at hcop
+
+theorem centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_zero_of_squarefree_coprime
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q') (hcop : Nat.Coprime q q') :
+    centeredRamanujanPairCleanPeriodicGcdCorrectionTerm X q q' = 0 := by
+  have hbad :
+      ¬ centeredRamanujanPairCleanPeriodicOneVariableSupport q
+        ∨ ¬ centeredRamanujanPairCleanPeriodicOneVariableSupport q' := by
+    by_cases hsup : centeredRamanujanPairCleanPeriodicOneVariableSupport q
+    · right
+      intro hsup'
+      exact
+        centeredRamanujanPairCleanPeriodicOneVariableSupport_not_both_of_squarefree_coprime
+          hq hq' hsq hsq' hcop ⟨hsup, hsup'⟩
+    · exact Or.inl hsup
+  exact centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_zero_of_coprime_moduli_of_not_support
+    hq hq' hcop hbad
+
+theorem centeredRamanujanPairCleanPeriodicDefectTerm_eq_remainder_of_squarefree_coprime
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q') (hcop : Nat.Coprime q q') :
+    centeredRamanujanPairCleanPeriodicDefectTerm X q q'
+      = centeredRamanujanPairCleanPeriodicRemainderTerm X q q' := by
+  rw [centeredRamanujanPairCleanPeriodicDefectTerm_eq_commonPrime_add_gcdCorrection_add_remainder
+    hq hq']
+  rw [centeredRamanujanPairCleanPeriodicCommonPrimeTerm_eq_zero_of_coprime_moduli hq hq' hcop,
+    centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_zero_of_squarefree_coprime
+      hq hq' hsq hsq' hcop]
+  ring
+
+theorem centeredRamanujanPairCleanPeriodicDefectTerm_eq_remainder_of_coeffSupported_coprime
+    {X q q' : ℕ}
+    (hqmem : q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0)
+    (hq'mem : q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0)
+    (hcop : Nat.Coprime q q') :
+    centeredRamanujanPairCleanPeriodicDefectTerm X q q'
+      = centeredRamanujanPairCleanPeriodicRemainderTerm X q q' := by
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hqmem with ⟨hqIcc, hsq⟩
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hq'mem with ⟨hq'Icc, hsq'⟩
+  have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+  have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+  exact centeredRamanujanPairCleanPeriodicDefectTerm_eq_remainder_of_squarefree_coprime
+    hq hq' hsq hsq' hcop
+
+private theorem ramanujanGcdClassReducedQuotients_coprime_of_coprime_moduli
+    {q q' g h : ℕ} (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    Nat.Coprime (q / g) (q' / h) := by
+  have hqg_dvd : q / g ∣ q := Nat.div_dvd_of_dvd (Nat.mem_divisors.mp hg).1
+  have hq'h_dvd : q' / h ∣ q' := Nat.div_dvd_of_dvd (Nat.mem_divisors.mp hh).1
+  exact (hcop.coprime_dvd_left hqg_dvd).coprime_dvd_right hq'h_dvd
+
+private theorem ramanujanGcdClassDivisors_coprime_of_coprime_moduli
+    {q q' g h : ℕ} (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    Nat.Coprime g h := by
+  exact (hcop.coprime_dvd_left (Nat.mem_divisors.mp hg).1).coprime_dvd_right
+    (Nat.mem_divisors.mp hh).1
+
+private theorem ramanujanGcdClassDivisors_not_both_even_of_coprime_moduli
+    {q q' g h : ℕ} (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    ¬ (Goldbach.Windows.IsEven g ∧ Goldbach.Windows.IsEven h) := by
+  intro hEven
+  have h2g : 2 ∣ g := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven.1)
+  have h2h : 2 ∣ h := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven.2)
+  have h2q : 2 ∣ q := dvd_trans h2g (Nat.mem_divisors.mp hg).1
+  have h2q' : 2 ∣ q' := dvd_trans h2h (Nat.mem_divisors.mp hh).1
+  have h2gcd : 2 ∣ Nat.gcd q q' := Nat.dvd_gcd h2q h2q'
+  have hnot : ¬ 2 ∣ (1 : ℕ) := by decide
+  exact hnot (by simpa [hcop.gcd_eq_one] using h2gcd)
+
+private theorem ramanujanGcdClassDivisor_right_odd_of_left_even_of_coprime_moduli
+    {q q' g h : ℕ} (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgEven : Goldbach.Windows.IsEven g) :
+    ¬ Goldbach.Windows.IsEven h := by
+  intro hhEven
+  exact ramanujanGcdClassDivisors_not_both_even_of_coprime_moduli hcop hg hh ⟨hgEven, hhEven⟩
+
+private theorem ramanujanGcdClassDivisor_left_odd_of_right_even_of_coprime_moduli
+    {q q' g h : ℕ} (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hhEven : Goldbach.Windows.IsEven h) :
+    ¬ Goldbach.Windows.IsEven g := by
+  intro hgEven
+  exact ramanujanGcdClassDivisors_not_both_even_of_coprime_moduli hcop hg hh ⟨hgEven, hhEven⟩
+
+private theorem ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors
+    {q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    ramanujanGcdClassJointCompatibility q q' g h := by
+  have hgpos : 0 < g := divisor_pos_of_mem_divisors_of_pos hg hq
+  have hhpos : 0 < h := divisor_pos_of_mem_divisors_of_pos hh hq'
+  have hgh : Nat.Coprime g h := ramanujanGcdClassDivisors_coprime_of_coprime_moduli hcop hg hh
+  have hqg_dvd : q / g ∣ q := Nat.div_dvd_of_dvd (Nat.mem_divisors.mp hg).1
+  have hq'h_dvd : q' / h ∣ q' := Nat.div_dvd_of_dvd (Nat.mem_divisors.mp hh).1
+  have hlcm_div_g : Nat.lcm g h / g = h := by
+    rw [hgh.lcm_eq_mul]
+    simpa [Nat.mul_comm] using (Nat.mul_div_left h hgpos)
+  have hlcm_div_h : Nat.lcm g h / h = g := by
+    rw [hgh.lcm_eq_mul]
+    simpa [Nat.mul_comm] using (Nat.mul_div_right g hhpos)
+  unfold ramanujanGcdClassJointCompatibility
+  constructor
+  · rw [hlcm_div_g]
+    exact ((hcop.coprime_dvd_left hqg_dvd).coprime_dvd_right (Nat.mem_divisors.mp hh).1)
+  · rw [hlcm_div_h]
+    exact (((hcop.coprime_dvd_right hq'h_dvd).coprime_dvd_left (Nat.mem_divisors.mp hg).1).symm)
+
+theorem rawEvenRamanujanGcdClassPeriodicTotientComparison_eq_coprime_explicitCoefficientMismatch_add_remainder_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    rawEvenRamanujanGcdClassPeriodicTotientComparison X q q' g h
+      =
+    (let A := q / g
+     let B := q' / h
+     let PairLen := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+       - (X ⌈/⌉ Nat.lcm g h)
+     let LeftLen := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g)
+     let RightLen := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h)
+     ((Nat.totient A : ℝ) * (Nat.totient B : ℝ))
+       * ((((PairLen / (A * B) : ℕ) : ℝ))
+           - ((((LeftLen / A : ℕ) : ℝ) * (((RightLen / B : ℕ) : ℝ)))
+               / (Nat.lcm q q' : ℝ))))
+      + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h := by
+  rw [rawEvenRamanujanGcdClassPeriodicTotientComparison_eq_coprime_coefficientMismatch_add_remainder
+    hq hq' hg hh (ramanujanGcdClassReducedQuotients_coprime_of_coprime_moduli hcop hg hh)]
+  rw [rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm_eq_explicit_blockDensity]
+
+private theorem rawEvenRamanujanGcdClassPeriodicPairLen_eq_two_mul_jointModulus_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    (((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+        - (X ⌈/⌉ Nat.lcm g h))
+      =
+    2 * ramanujanGcdClassJointModulus q q' g h := by
+  have hgpos : 0 < g := divisor_pos_of_mem_divisors_of_pos hg hq
+  have hhpos : 0 < h := divisor_pos_of_mem_divisors_of_pos hh hq'
+  have hgh : Nat.Coprime g h := ramanujanGcdClassDivisors_coprime_of_coprime_moduli hcop hg hh
+  rw [rawEvenRamanujanGcdClassPeriodicPairLen_eq_blockPeriod_div hq hq' hg hh]
+  dsimp [centeredRamanujanPairBlockPeriod, ramanujanGcdClassJointModulus]
+  rw [hcop.lcm_eq_mul, hgh.lcm_eq_mul]
+  rcases (Nat.mem_divisors.mp hg).1 with ⟨a, ha⟩
+  rcases (Nat.mem_divisors.mp hh).1 with ⟨b, hb⟩
+  have hgdiv : g * a / g = a := by rw [Nat.mul_div_right _ hgpos]
+  have hhdiv : h * b / h = b := by rw [Nat.mul_div_right _ hhpos]
+  rw [ha, hb]
+  have hmul1 : g * a * (h * b) = (g * h) * (a * b) := by ac_rfl
+  have hmul2 : 2 * ((g * h) * (a * b)) = (g * h) * (2 * (a * b)) := by ac_rfl
+  calc
+    2 * (g * a * (h * b)) / (g * h)
+        = 2 * ((g * h) * (a * b)) / (g * h) := by rw [hmul1]
+    _ = ((g * h) * (2 * (a * b))) / (g * h) := by rw [hmul2]
+    _ = 2 * (a * b) := by
+          rw [Nat.mul_div_right _ (Nat.mul_pos hgpos hhpos)]
+    _ = 2 * (g * a / g * (h * b / h)) := by
+          simp [hgdiv, hhdiv, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+
+private theorem rawEvenRamanujanGcdClassPeriodicLeftLen_eq_two_mul_quotient_mul_of_divisor
+    {X q q' g : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) :
+    (((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g))
+      =
+    2 * ((q / g) * q') := by
+  have hgpos : 0 < g := divisor_pos_of_mem_divisors_of_pos hg hq
+  rw [rawEvenRamanujanGcdClassPeriodicLeftLen_eq_blockPeriod_div hq hq' hg]
+  dsimp [centeredRamanujanPairBlockPeriod]
+  rw [hcop.lcm_eq_mul]
+  rcases (Nat.mem_divisors.mp hg).1 with ⟨a, ha⟩
+  have hgdiv : g * a / g = a := by rw [Nat.mul_div_right _ hgpos]
+  rw [ha]
+  have hmul : 2 * (g * a * q') = g * (2 * (a * q')) := by ac_rfl
+  rw [hmul, Nat.mul_div_right _ hgpos]
+  simp [hgdiv, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+
+private theorem rawEvenRamanujanGcdClassPeriodicRightLen_eq_two_mul_quotient_mul_of_divisor
+    {X q q' h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hh : h ∈ q'.divisors) :
+    (((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h))
+      =
+    2 * ((q' / h) * q) := by
+  have hhpos : 0 < h := divisor_pos_of_mem_divisors_of_pos hh hq'
+  rw [rawEvenRamanujanGcdClassPeriodicRightLen_eq_blockPeriod_div hq hq' hh]
+  dsimp [centeredRamanujanPairBlockPeriod]
+  rw [hcop.lcm_eq_mul]
+  rcases (Nat.mem_divisors.mp hh).1 with ⟨b, hb⟩
+  have hhdiv : h * b / h = b := by rw [Nat.mul_div_right _ hhpos]
+  rw [hb]
+  have hmul : 2 * (q * (h * b)) = h * (2 * (b * q)) := by ac_rfl
+  rw [hmul, Nat.mul_div_right _ hhpos]
+  simp [hhdiv, Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm]
+
+private theorem rawEvenRamanujanGcdClassPeriodicPairLen_div_two_mul_jointModulus_eq_one_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+        - (X ⌈/⌉ Nat.lcm g h))
+      / (2 * ramanujanGcdClassJointModulus q q' g h))
+      = 1 := by
+  have hMpos : 0 < ramanujanGcdClassJointModulus q q' g h := by
+    dsimp [ramanujanGcdClassJointModulus]
+    exact Nat.mul_pos (quotient_pos_of_mem_divisors hq hg) (quotient_pos_of_mem_divisors hq' hh)
+  have h2Mpos : 0 < 2 * ramanujanGcdClassJointModulus q q' g h := by
+    exact Nat.mul_pos (by norm_num) hMpos
+  rw [rawEvenRamanujanGcdClassPeriodicPairLen_eq_two_mul_jointModulus_of_coprime_moduli_divisors
+    hq hq' hcop hg hh]
+  exact Nat.div_self h2Mpos
+
+private theorem rawEvenRamanujanGcdClassPeriodicPairLen_div_jointModulus_eq_two_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+        - (X ⌈/⌉ Nat.lcm g h))
+      / ramanujanGcdClassJointModulus q q' g h)
+      = 2 := by
+  have hMpos : 0 < ramanujanGcdClassJointModulus q q' g h := by
+    dsimp [ramanujanGcdClassJointModulus]
+    exact Nat.mul_pos (quotient_pos_of_mem_divisors hq hg) (quotient_pos_of_mem_divisors hq' hh)
+  rw [rawEvenRamanujanGcdClassPeriodicPairLen_eq_two_mul_jointModulus_of_coprime_moduli_divisors
+    hq hq' hcop hg hh]
+  simpa [Nat.mul_comm] using (Nat.mul_div_right 2 hMpos)
+
+private theorem rawEvenRamanujanGcdClassPeriodicLeftLen_div_two_mul_quotient_eq_rightModulus_of_divisor
+    {X q q' g : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g))
+      / (2 * (q / g)))
+      = q' := by
+  rw [rawEvenRamanujanGcdClassPeriodicLeftLen_eq_two_mul_quotient_mul_of_divisor hq hq' hcop hg]
+  have hpos : 0 < 2 * (q / g) := by
+    exact Nat.mul_pos (by norm_num) (quotient_pos_of_mem_divisors hq hg)
+  simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+    (Nat.mul_div_right q' hpos)
+
+private theorem rawEvenRamanujanGcdClassPeriodicLeftLen_div_quotient_eq_two_mul_rightModulus_of_divisor
+    {X q q' g : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g))
+      / (q / g))
+      = 2 * q' := by
+  have hApos : 0 < q / g := quotient_pos_of_mem_divisors hq hg
+  rw [rawEvenRamanujanGcdClassPeriodicLeftLen_eq_two_mul_quotient_mul_of_divisor hq hq' hcop hg]
+  simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+    (Nat.mul_div_right (2 * q') hApos)
+
+private theorem rawEvenRamanujanGcdClassPeriodicRightLen_div_two_mul_quotient_eq_leftModulus_of_divisor
+    {X q q' h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hh : h ∈ q'.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h))
+      / (2 * (q' / h)))
+      = q := by
+  rw [rawEvenRamanujanGcdClassPeriodicRightLen_eq_two_mul_quotient_mul_of_divisor hq hq' hcop hh]
+  have hpos : 0 < 2 * (q' / h) := by
+    exact Nat.mul_pos (by norm_num) (quotient_pos_of_mem_divisors hq' hh)
+  simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+    (Nat.mul_div_right q hpos)
+
+private theorem rawEvenRamanujanGcdClassPeriodicRightLen_div_quotient_eq_two_mul_leftModulus_of_divisor
+    {X q q' h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hh : h ∈ q'.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h))
+      / (q' / h))
+      = 2 * q := by
+  have hBpos : 0 < q' / h := quotient_pos_of_mem_divisors hq' hh
+  rw [rawEvenRamanujanGcdClassPeriodicRightLen_eq_two_mul_quotient_mul_of_divisor hq hq' hcop hh]
+  simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+    (Nat.mul_div_right (2 * q) hBpos)
+
+private theorem rawEvenRamanujanGcdClassPeriodicPairLen_mod_two_mul_jointModulus_eq_zero_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+        - (X ⌈/⌉ Nat.lcm g h))
+      % (2 * ramanujanGcdClassJointModulus q q' g h))
+      = 0 := by
+  rw [rawEvenRamanujanGcdClassPeriodicPairLen_eq_two_mul_jointModulus_of_coprime_moduli_divisors
+    hq hq' hcop hg hh]
+  simp
+
+private theorem rawEvenRamanujanGcdClassPeriodicPairLen_mod_jointModulus_eq_zero_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+        - (X ⌈/⌉ Nat.lcm g h))
+      % ramanujanGcdClassJointModulus q q' g h)
+      = 0 := by
+  rw [rawEvenRamanujanGcdClassPeriodicPairLen_eq_two_mul_jointModulus_of_coprime_moduli_divisors
+    hq hq' hcop hg hh]
+  refine Nat.mod_eq_zero_of_dvd ?_
+  exact dvd_mul_left (ramanujanGcdClassJointModulus q q' g h) 2
+
+private theorem rawEvenRamanujanGcdClassPeriodicLeftLen_mod_two_mul_quotient_eq_zero_of_divisor
+    {X q q' g : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g))
+      % (2 * (q / g)))
+      = 0 := by
+  rw [rawEvenRamanujanGcdClassPeriodicLeftLen_eq_two_mul_quotient_mul_of_divisor hq hq' hcop hg]
+  refine Nat.mod_eq_zero_of_dvd ?_
+  simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+    (dvd_mul_right (2 * (q / g)) q')
+
+private theorem rawEvenRamanujanGcdClassPeriodicLeftLen_mod_quotient_eq_zero_of_divisor
+    {X q q' g : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g))
+      % (q / g))
+      = 0 := by
+  rw [rawEvenRamanujanGcdClassPeriodicLeftLen_eq_two_mul_quotient_mul_of_divisor hq hq' hcop hg]
+  refine Nat.mod_eq_zero_of_dvd ?_
+  simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+    (dvd_mul_right (q / g) (2 * q'))
+
+private theorem rawEvenRamanujanGcdClassPeriodicRightLen_mod_two_mul_quotient_eq_zero_of_divisor
+    {X q q' h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hh : h ∈ q'.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h))
+      % (2 * (q' / h)))
+      = 0 := by
+  rw [rawEvenRamanujanGcdClassPeriodicRightLen_eq_two_mul_quotient_mul_of_divisor hq hq' hcop hh]
+  refine Nat.mod_eq_zero_of_dvd ?_
+  simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+    (dvd_mul_right (2 * (q' / h)) q)
+
+private theorem rawEvenRamanujanGcdClassPeriodicRightLen_mod_quotient_eq_zero_of_divisor
+    {X q q' h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hh : h ∈ q'.divisors) :
+    ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h))
+      % (q' / h))
+      = 0 := by
+  rw [rawEvenRamanujanGcdClassPeriodicRightLen_eq_two_mul_quotient_mul_of_divisor hq hq' hcop hh]
+  refine Nat.mod_eq_zero_of_dvd ?_
+  simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+    (dvd_mul_right (q' / h) (2 * q))
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_even_lcm_periodic_comparison_of_even_odd_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgEven : Goldbach.Windows.IsEven g) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    let Pair := by
+      let A := X ⌈/⌉ Nat.lcm g h
+      let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1) - A
+      let M := ramanujanGcdClassJointModulus q q' g h
+      exact (((L / M) * (((Finset.range M).filter
+          (fun t => Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % M)).filter
+            (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+    let Left := by
+      let A := X ⌈/⌉ g
+      let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - A
+      let M := q / g
+      exact (((L / M) * (((Finset.range M).filter
+          (fun t => Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % M)).filter
+            (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+    let Right := by
+      let A := X ⌈/⌉ h
+      let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - A
+      let M := q' / h
+      exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+          (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % (2 * M))).filter
+            (fun t =>
+              Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+    Pair
+      - ramanujanGcdClassWindowAverage X q' h * Left
+      - ramanujanGcdClassWindowAverage X q g * Right
+      + ramanujanGcdClassWindowAverage X q g * ramanujanGcdClassWindowAverage X q' h
+          * evenRamanujanBlockCount X q q' := by
+  exact centeredRamanujanGcdClassPairFullEvenBlockSum_eq_even_lcm_periodic_comparison_of_even_odd
+    hq hq' hg hh
+    (ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors hq hq' hcop hg hh)
+    hgEven
+    (ramanujanGcdClassDivisor_right_odd_of_left_even_of_coprime_moduli hcop hg hh hgEven)
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_even_lcm_periodic_comparison_of_odd_even_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hhEven : Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    let Pair := by
+      let A := X ⌈/⌉ Nat.lcm g h
+      let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1) - A
+      let M := ramanujanGcdClassJointModulus q q' g h
+      exact (((L / M) * (((Finset.range M).filter
+          (fun t => Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % M)).filter
+            (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+    let Left := by
+      let A := X ⌈/⌉ g
+      let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - A
+      let M := q / g
+      exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+          (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % (2 * M))).filter
+            (fun t =>
+              Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+    let Right := by
+      let A := X ⌈/⌉ h
+      let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - A
+      let M := q' / h
+      exact (((L / M) * (((Finset.range M).filter
+          (fun t => Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % M)).filter
+            (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+    Pair
+      - ramanujanGcdClassWindowAverage X q' h * Left
+      - ramanujanGcdClassWindowAverage X q g * Right
+      + ramanujanGcdClassWindowAverage X q g * ramanujanGcdClassWindowAverage X q' h
+          * evenRamanujanBlockCount X q q' := by
+  exact centeredRamanujanGcdClassPairFullEvenBlockSum_eq_even_lcm_periodic_comparison_of_odd_even
+    hq hq' hg hh
+    (ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors hq hq' hcop hg hh)
+    (ramanujanGcdClassDivisor_left_odd_of_right_even_of_coprime_moduli hcop hg hh hhEven)
+    hhEven
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_odd_lcm_periodic_comparison_of_odd_odd_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    let Pair := by
+      let A := X ⌈/⌉ Nat.lcm g h
+      let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1) - A
+      let M := ramanujanGcdClassJointModulus q q' g h
+      exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+          (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % (2 * M))).filter
+            (fun t =>
+              Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+    let Left := by
+      let A := X ⌈/⌉ g
+      let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - A
+      let M := q / g
+      exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+          (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % (2 * M))).filter
+            (fun t =>
+              Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+    let Right := by
+      let A := X ⌈/⌉ h
+      let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - A
+      let M := q' / h
+      exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+          (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % (2 * M))).filter
+            (fun t =>
+              Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+    Pair
+      - ramanujanGcdClassWindowAverage X q' h * Left
+      - ramanujanGcdClassWindowAverage X q g * Right
+      + ramanujanGcdClassWindowAverage X q g * ramanujanGcdClassWindowAverage X q' h
+          * evenRamanujanBlockCount X q q' := by
+  have hgh : Nat.Coprime g h := ramanujanGcdClassDivisors_coprime_of_coprime_moduli hcop hg hh
+  have hOddL : ¬ Goldbach.Windows.IsEven (Nat.lcm g h) := by
+    intro hEvenL
+    have hEvenMul : Goldbach.Windows.IsEven (g * h) := by
+      simpa [hgh.lcm_eq_mul] using hEvenL
+    have hEvenh : Goldbach.Windows.IsEven h :=
+      (isEven_mul_iff_of_not_isEven_left hgOdd).1 hEvenMul
+    exact hhOdd hEvenh
+  exact centeredRamanujanGcdClassPairFullEvenBlockSum_eq_odd_lcm_periodic_comparison
+    hq hq' hg hh
+    (ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors hq hq' hcop hg hh)
+    hOddL
 
 theorem centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_coprime_moduli_on_support
     {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') (hcop : Nat.Coprime q q')
@@ -8732,6 +10954,266 @@ noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpT
         (fun q' => ¬ Nat.Coprime q q'))
       (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
 
+/-- Dyadic-neighbor relation used in the supported non-coprime branch split. -/
+def centeredRamanujanPairCleanPeriodicDyadicNeighborPair (q q' : ℕ) : Prop :=
+  q' = 2 * q ∨ q = 2 * q'
+
+instance centeredRamanujanPairCleanPeriodicDyadicNeighborPair_decidablePred (q : ℕ) :
+    DecidablePred (centeredRamanujanPairCleanPeriodicDyadicNeighborPair q) := by
+  intro q'
+  unfold centeredRamanujanPairCleanPeriodicDyadicNeighborPair
+  infer_instance
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDiagonalDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      ((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' = q))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDyadicNeighborDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      ((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualDyadicDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      ((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+/-- Unordered normalized multiplier-pattern relation inside one exact gcd group. -/
+def centeredRamanujanPairCleanPeriodicMultiplierPatternPair
+    (r s q q' : ℕ) : Prop :=
+  let G := Nat.gcd q q'
+  (q = r * G ∧ q' = s * G) ∨ (q = s * G ∧ q' = r * G)
+
+instance centeredRamanujanPairCleanPeriodicMultiplierPatternPair_decidablePred
+    (r s q : ℕ) :
+    DecidablePred (centeredRamanujanPairCleanPeriodicMultiplierPatternPair r s q) := by
+  intro q'
+  unfold centeredRamanujanPairCleanPeriodicMultiplierPatternPair
+  infer_instance
+
+/-- Generic residual multiplier-pattern contribution on the clean supported non-coprime surface. -/
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternDefectUpToQ0
+    (r s X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair r s q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFourDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneEightDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      ((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThreeDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneNineDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      ((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixteenDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFiveDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      ((((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThirtyTwoDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (((((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      ((((((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoThreeDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (((((((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneTenDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      ((((((((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoFiveDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (((((((((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q')).filter
+        (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 5 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailTwoDefectUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (((((((((((((centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 5 q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+
 noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0
     (X : ℕ) : ℝ :=
   Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
@@ -8755,6 +11237,31 @@ noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainder
       (centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
         (fun q' => ¬ Nat.Coprime q q'))
       (fun q' => centeredRamanujanPairCleanPeriodicRemainderTerm X q q'))
+
+noncomputable def centeredRamanujanPairCleanPeriodicGcdCorrectionPreferredBranchwiseTerm
+    (X q q' : ℕ) : ℝ :=
+  let G := Nat.gcd q q'
+  let small :=
+    ∑ d ∈ (G.divisors.filter fun d => 2 * d < G),
+      centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' d
+        * (((0 : ℝ) - (4 : ℝ) / (G : ℝ)))
+  if 4 ∣ G then
+    small
+      + centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' G
+      + centeredRamanujanPairCleanPeriodicGcdHalfTotalProduct q q'
+          * (((1 : ℝ) - (4 : ℝ) / (G : ℝ)))
+  else
+    small
+      + centeredRamanujanPairCleanPeriodicGcdWeightAtGcd q q' G
+          * (((2 : ℝ) - (4 : ℝ) / (G : ℝ)))
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q'))
+      (fun q' => centeredRamanujanPairCleanPeriodicGcdCorrectionPreferredBranchwiseTerm X q q'))
 
 theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_eq_commonPrime_add_gcdCorrection_add_remainder
     (X : ℕ) :
@@ -8860,6 +11367,1080 @@ theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0_e
   exact centeredRamanujanPairCleanPeriodicCommonPrimeTerm_eq_sum_over_nontrivial_reducedGcdDivisors
     (X := X) hq hq'
 
+theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_eq_diagonal_add_dyadicNeighbor_add_residual
+    (X : ℕ) :
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X
+      =
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDiagonalDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDyadicNeighborDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualDyadicDefectUpToQ0 X := by
+  unfold centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDiagonalDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDyadicNeighborDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualDyadicDefectUpToQ0
+  let S := centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0
+  have hrow :
+      ∀ q, q ∈ S →
+        (Finset.sum
+            (S.filter (fun q' => ¬ Nat.Coprime q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')
+          =
+        Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter (fun q' => q' = q))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')
+          +
+        Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')
+          +
+        Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')) := by
+    intro q hqmem
+    let T := S.filter (fun q' => ¬ Nat.Coprime q q')
+    let f := fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'
+    have hsplit1 :
+        Finset.sum T f
+          =
+        Finset.sum (T.filter (fun q' => q' = q)) f
+          +
+        Finset.sum (T.filter (fun q' => q' ≠ q)) f := by
+      simpa [T, f] using
+        (Finset.sum_filter_add_sum_filter_not T (fun q' => q' = q) f).symm
+    have hsplit2 :
+        Finset.sum (T.filter (fun q' => q' ≠ q)) f
+          =
+        Finset.sum
+            ((T.filter (fun q' => q' ≠ q)).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            f
+          +
+        Finset.sum
+            ((T.filter (fun q' => q' ≠ q)).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            f := by
+      simpa [f] using
+        (Finset.sum_filter_add_sum_filter_not
+          (T.filter (fun q' => q' ≠ q))
+          (fun q' => centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')
+          f).symm
+    calc
+      Finset.sum
+          (S.filter (fun q' => ¬ Nat.Coprime q q'))
+          (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')
+        = Finset.sum T f := by
+            rfl
+      _ =
+        Finset.sum (T.filter (fun q' => q' = q)) f
+          +
+        Finset.sum (T.filter (fun q' => q' ≠ q)) f := hsplit1
+      _ =
+        Finset.sum (T.filter (fun q' => q' = q)) f
+          +
+        (Finset.sum
+            ((T.filter (fun q' => q' ≠ q)).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            f
+          +
+         Finset.sum
+            ((T.filter (fun q' => q' ≠ q)).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            f) := by
+            rw [hsplit2]
+      _ =
+        Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter (fun q' => q' = q))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')
+          +
+        Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')
+          +
+        Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q') := by
+            rw [add_assoc]
+            simp [T, f, Finset.filter_filter, and_assoc, and_left_comm, and_comm]
+  calc
+    Finset.sum S
+      (fun q =>
+        Finset.sum
+          (S.filter (fun q' => ¬ Nat.Coprime q q'))
+          (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+      =
+    Finset.sum S
+      (fun q =>
+        Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter (fun q' => q' = q))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')
+          +
+        Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')
+          +
+        Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')) := by
+            refine Finset.sum_congr rfl ?_
+            intro q hqmem
+            exact hrow q hqmem
+    _ =
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter (fun q' => q' = q))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')) := by
+            rw [Finset.sum_add_distrib, Finset.sum_add_distrib]
+
+theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualDyadicDefectUpToQ0_eq_patternOneFour_add_patternOneEight_add_patternOneThree_add_patternOneNine_add_patternOneSixteen_add_tail
+    (X : ℕ) :
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualDyadicDefectUpToQ0 X
+      =
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFourDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneEightDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThreeDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneNineDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixteenDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailDefectUpToQ0 X := by
+  unfold centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualDyadicDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFourDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneEightDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThreeDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneNineDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixteenDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailDefectUpToQ0
+  let S := centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0
+  have hrow :
+      ∀ q, q ∈ S →
+        let T :=
+          (S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+            (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')
+        let p14 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q'
+        let p18 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q'
+        let p13 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q'
+        let p19 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q'
+        let p116 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'
+        let f := fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'
+        Finset.sum T f
+          =
+        Finset.sum (T.filter p14) f
+          +
+        Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter p18) f
+          +
+        Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter p13) f
+          +
+        Finset.sum ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter p19) f
+          +
+        Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter p116) f
+          +
+        Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter
+            (fun q' => ¬ p116 q')) f := by
+    intro q hqmem
+    let T :=
+      (S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')
+    let p14 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q'
+    let p18 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q'
+    let p13 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q'
+    let p19 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q'
+    let p116 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'
+    let f := fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'
+    have h14 :
+        Finset.sum T f
+          =
+        Finset.sum (T.filter p14) f
+          + Finset.sum (T.filter (fun q' => ¬ p14 q')) f := by
+      simpa [T, p14, f] using
+        (Finset.sum_filter_add_sum_filter_not T p14 f).symm
+    have h18 :
+        Finset.sum (T.filter (fun q' => ¬ p14 q')) f
+          =
+        Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter p18) f
+          + Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')) f := by
+      simpa [p18, f] using
+        (Finset.sum_filter_add_sum_filter_not
+          (T.filter (fun q' => ¬ p14 q')) p18 f).symm
+    have h13 :
+        Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')) f
+          =
+        Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter p13) f
+          + Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+              (fun q' => ¬ p13 q')) f := by
+      simpa [p13, f] using
+        (Finset.sum_filter_add_sum_filter_not
+          ((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')) p13 f).symm
+    have h19 :
+        Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')) f
+          =
+        Finset.sum ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter p19) f
+          + Finset.sum ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+              (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')) f := by
+      simpa [p19, f] using
+        (Finset.sum_filter_add_sum_filter_not
+          (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')) p19 f).symm
+    have h116 :
+        Finset.sum ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')) f
+          =
+        Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter p116) f
+          + Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+              (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter
+              (fun q' => ¬ p116 q')) f := by
+      simpa [p116, f] using
+        (Finset.sum_filter_add_sum_filter_not
+          ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')) p116 f).symm
+    calc
+      Finset.sum T f
+          = Finset.sum (T.filter p14) f
+            + (Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter p18) f
+            + Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')) f) := by
+              rw [h14, h18]
+      _ = Finset.sum (T.filter p14) f
+            + (Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter p18) f
+            + (Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter p13) f
+            + Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+                (fun q' => ¬ p13 q')) f)) := by
+              rw [h13]
+      _ = Finset.sum (T.filter p14) f
+            + (Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter p18) f
+            + (Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter p13) f
+            + (Finset.sum ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+                (fun q' => ¬ p13 q')).filter p19) f
+            + Finset.sum ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+                (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')) f))) := by
+              rw [h19]
+      _ = Finset.sum (T.filter p14) f
+            + (Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter p18) f
+            + (Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter p13) f
+            + (Finset.sum ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+                (fun q' => ¬ p13 q')).filter p19) f
+            + (Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+                (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter p116) f
+            + Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+                (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter
+                (fun q' => ¬ p116 q')) f)))) := by
+              rw [h116]
+      _ =
+        Finset.sum (T.filter p14) f
+          +
+        Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter p18) f
+          +
+        Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter p13) f
+          +
+        Finset.sum ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter p19) f
+          +
+        Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter p116) f
+          +
+        Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+            (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter
+            (fun q' => ¬ p116 q')) f := by
+              simp [add_assoc]
+  have hexplicit :
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        =
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')) := by
+    calc
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        =
+      Finset.sum S
+        (fun q =>
+          let T :=
+            (S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')
+          let p14 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q'
+          let p18 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q'
+          let p13 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q'
+          let p19 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q'
+          let p116 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'
+          let f := fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'
+          Finset.sum (T.filter p14) f
+            +
+          Finset.sum ((T.filter (fun q' => ¬ p14 q')).filter p18) f
+            +
+          Finset.sum (((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter p13) f
+            +
+          Finset.sum ((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+              (fun q' => ¬ p13 q')).filter p19) f
+            +
+          Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+              (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter p116) f
+            +
+          Finset.sum (((((T.filter (fun q' => ¬ p14 q')).filter (fun q' => ¬ p18 q')).filter
+              (fun q' => ¬ p13 q')).filter (fun q' => ¬ p19 q')).filter
+              (fun q' => ¬ p116 q')) f) := by
+              refine Finset.sum_congr rfl ?_
+              intro q hqmem
+              exact hrow q hqmem
+      _ =
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              (((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              ((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              (((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              ((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              (((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              (((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')) := by
+              rw [Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+                Finset.sum_add_distrib, Finset.sum_add_distrib]
+  simpa [S,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFourDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneEightDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThreeDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneNineDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixteenDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailDefectUpToQ0] using hexplicit
+
+theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_eq_diagonal_add_dyadicNeighbor_add_patternOneFour_add_patternOneEight_add_patternOneThree_add_patternOneNine_add_patternOneSixteen_add_tail
+    (X : ℕ) :
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X
+      =
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDiagonalDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDyadicNeighborDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFourDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneEightDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThreeDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneNineDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixteenDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailDefectUpToQ0 X := by
+  rw [centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_eq_diagonal_add_dyadicNeighbor_add_residual]
+  rw [centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualDyadicDefectUpToQ0_eq_patternOneFour_add_patternOneEight_add_patternOneThree_add_patternOneNine_add_patternOneSixteen_add_tail]
+  simp [add_assoc]
+
+theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailDefectUpToQ0_eq_patternOneFive_add_patternOneThirtyTwo_add_patternOneSix_add_patternTwoThree_add_patternOneTen_add_patternTwoFive_add_tailTwo
+    (X : ℕ) :
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailDefectUpToQ0 X
+      =
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFiveDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThirtyTwoDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoThreeDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneTenDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoFiveDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailTwoDefectUpToQ0 X := by
+  unfold centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFiveDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThirtyTwoDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoThreeDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneTenDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoFiveDefectUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailTwoDefectUpToQ0
+  let S := centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0
+  have hrow :
+      ∀ q, q ∈ S →
+        let T :=
+          (((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+            (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+            (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+            (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+            (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+            (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+            (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+        let p15 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q'
+        let p132 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q'
+        let p16 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q'
+        let p23 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q'
+        let p110 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q'
+        let p25 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 5 q q'
+        let f := fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'
+        Finset.sum T f
+          =
+        Finset.sum (T.filter p15) f
+          +
+        Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter p132) f
+          +
+        Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter p16) f
+          +
+        Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter p23) f
+          +
+        Finset.sum (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter p110) f
+          +
+        Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+            (fun q' => ¬ p110 q')).filter p25) f
+          +
+        Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+            (fun q' => ¬ p110 q')).filter (fun q' => ¬ p25 q')) f := by
+    intro q hqmem
+    let T :=
+      (((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+        (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+        (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+    let p15 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q'
+    let p132 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q'
+    let p16 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q'
+    let p23 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q'
+    let p110 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q'
+    let p25 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 5 q q'
+    let f := fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'
+    have h15 :
+        Finset.sum T f
+          =
+        Finset.sum (T.filter p15) f
+          + Finset.sum (T.filter (fun q' => ¬ p15 q')) f := by
+      simpa [T, p15, f] using
+        (Finset.sum_filter_add_sum_filter_not T p15 f).symm
+    have h132 :
+        Finset.sum (T.filter (fun q' => ¬ p15 q')) f
+          =
+        Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter p132) f
+          + Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')) f := by
+      simpa [p132, f] using
+        (Finset.sum_filter_add_sum_filter_not
+          (T.filter (fun q' => ¬ p15 q')) p132 f).symm
+    have h16 :
+        Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')) f
+          =
+        Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter p16) f
+          + Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+              (fun q' => ¬ p16 q')) f := by
+      simpa [p16, f] using
+        (Finset.sum_filter_add_sum_filter_not
+          ((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')) p16 f).symm
+    have h23 :
+        Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')) f
+          =
+        Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter p23) f
+          + Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+              (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')) f := by
+      simpa [p23, f] using
+        (Finset.sum_filter_add_sum_filter_not
+          (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')) p23 f).symm
+    have h110 :
+        Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')) f
+          =
+        Finset.sum (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter p110) f
+          + Finset.sum (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+              (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+              (fun q' => ¬ p110 q')) f := by
+      simpa [p110, f] using
+        (Finset.sum_filter_add_sum_filter_not
+          ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')) p110 f).symm
+    have h25 :
+        Finset.sum (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+            (fun q' => ¬ p110 q')) f
+          =
+        Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+            (fun q' => ¬ p110 q')).filter p25) f
+          + Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+              (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+              (fun q' => ¬ p110 q')).filter (fun q' => ¬ p25 q')) f := by
+      simpa [p25, f] using
+        (Finset.sum_filter_add_sum_filter_not
+          (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+            (fun q' => ¬ p110 q')) p25 f).symm
+    calc
+      Finset.sum T f
+          = Finset.sum (T.filter p15) f
+            + (Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter p132) f
+            + Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')) f) := by
+              rw [h15, h132]
+      _ = Finset.sum (T.filter p15) f
+            + (Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter p132) f
+            + (Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter p16) f
+            + Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')) f)) := by
+              rw [h16]
+      _ = Finset.sum (T.filter p15) f
+            + (Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter p132) f
+            + (Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter p16) f
+            + (Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')).filter p23) f
+            + Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')) f))) := by
+              rw [h23]
+      _ = Finset.sum (T.filter p15) f
+            + (Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter p132) f
+            + (Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter p16) f
+            + (Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')).filter p23) f
+            + (Finset.sum (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter p110) f
+            + Finset.sum (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+                (fun q' => ¬ p110 q')) f)))) := by
+              rw [h110]
+      _ = Finset.sum (T.filter p15) f
+            + (Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter p132) f
+            + (Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter p16) f
+            + (Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')).filter p23) f
+            + (Finset.sum (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter p110) f
+            + (Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+                (fun q' => ¬ p110 q')).filter p25) f
+            + Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+                (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+                (fun q' => ¬ p110 q')).filter (fun q' => ¬ p25 q')) f))))) := by
+              rw [h25]
+      _ =
+        Finset.sum (T.filter p15) f
+          +
+        Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter p132) f
+          +
+        Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter p16) f
+          +
+        Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter p23) f
+          +
+        Finset.sum (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter p110) f
+          +
+        Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+            (fun q' => ¬ p110 q')).filter p25) f
+          +
+        Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+            (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+            (fun q' => ¬ p110 q')).filter (fun q' => ¬ p25 q')) f := by
+              simp [add_assoc]
+  have hexplicit :
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        =
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            ((((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q')).filter
+              (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 5 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        +
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 5 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')) := by
+    calc
+      Finset.sum S
+        (fun q =>
+          Finset.sum
+            (((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+            (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+        =
+      Finset.sum S
+        (fun q =>
+          let T :=
+            (((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+              (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+              (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q'))
+          let p15 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q'
+          let p132 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q'
+          let p16 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q'
+          let p23 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q'
+          let p110 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q'
+          let p25 := fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 5 q q'
+          let f := fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'
+          Finset.sum (T.filter p15) f
+            +
+          Finset.sum ((T.filter (fun q' => ¬ p15 q')).filter p132) f
+            +
+          Finset.sum (((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter p16) f
+            +
+          Finset.sum ((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+              (fun q' => ¬ p16 q')).filter p23) f
+            +
+          Finset.sum (((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+              (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter p110) f
+            +
+          Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+              (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+              (fun q' => ¬ p110 q')).filter p25) f
+            +
+          Finset.sum ((((((T.filter (fun q' => ¬ p15 q')).filter (fun q' => ¬ p132 q')).filter
+              (fun q' => ¬ p16 q')).filter (fun q' => ¬ p23 q')).filter
+              (fun q' => ¬ p110 q')).filter (fun q' => ¬ p25 q')) f) := by
+              refine Finset.sum_congr rfl ?_
+              intro q hqmem
+              exact hrow q hqmem
+      _ =
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              ((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              (((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              ((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              (((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              ((((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              (((((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q')).filter
+                (fun q' => centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 5 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q'))
+          +
+        Finset.sum S
+          (fun q =>
+            Finset.sum
+              (((((((((((((S.filter (fun q' => ¬ Nat.Coprime q q')).filter
+                (fun q' => q' ≠ q ∧ ¬ centeredRamanujanPairCleanPeriodicDyadicNeighborPair q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 4 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 8 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 9 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 16 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 5 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 32 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 6 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 3 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 1 10 q q')).filter
+                (fun q' => ¬ centeredRamanujanPairCleanPeriodicMultiplierPatternPair 2 5 q q'))
+              (fun q' => centeredRamanujanPairCleanPeriodicDefectTerm X q q')) := by
+              rw [Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+                Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib]
+  simpa [S,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFiveDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThirtyTwoDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoThreeDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneTenDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoFiveDefectUpToQ0,
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailTwoDefectUpToQ0] using hexplicit
+
+theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_eq_diagonal_add_dyadicNeighbor_add_patternOneFour_add_patternOneEight_add_patternOneThree_add_patternOneNine_add_patternOneSixteen_add_patternOneFive_add_patternOneThirtyTwo_add_patternOneSix_add_patternTwoThree_add_patternOneTen_add_patternTwoFive_add_tailTwo
+    (X : ℕ) :
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X
+      =
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDiagonalDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDyadicNeighborDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFourDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneEightDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThreeDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneNineDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixteenDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFiveDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThirtyTwoDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoThreeDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneTenDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoFiveDefectUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailTwoDefectUpToQ0 X := by
+  rw [centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_eq_diagonal_add_dyadicNeighbor_add_patternOneFour_add_patternOneEight_add_patternOneThree_add_patternOneNine_add_patternOneSixteen_add_tail]
+  rw [centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailDefectUpToQ0_eq_patternOneFive_add_patternOneThirtyTwo_add_patternOneSix_add_patternTwoThree_add_patternOneTen_add_patternTwoFive_add_tailTwo]
+  simp [add_assoc]
+
+noncomputable def centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0
+    (X : ℕ) : ℝ :=
+  |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDiagonalDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDyadicNeighborDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFourDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneEightDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThreeDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneNineDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixteenDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFiveDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThirtyTwoDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoThreeDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneTenDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoFiveDefectUpToQ0 X|
+    + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailTwoDefectUpToQ0 X|
+
+theorem abs_centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_le_refinedAbsMajorantUpToQ0
+    (X : ℕ) :
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X|
+      ≤
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0 X := by
+  rw [centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_eq_diagonal_add_dyadicNeighbor_add_patternOneFour_add_patternOneEight_add_patternOneThree_add_patternOneNine_add_patternOneSixteen_add_patternOneFive_add_patternOneThirtyTwo_add_patternOneSix_add_patternTwoThree_add_patternOneTen_add_patternTwoFive_add_tailTwo]
+  unfold centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0
+  let A := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDiagonalDefectUpToQ0 X
+  let B := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDyadicNeighborDefectUpToQ0 X
+  let C := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFourDefectUpToQ0 X
+  let D := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneEightDefectUpToQ0 X
+  let E := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThreeDefectUpToQ0 X
+  let F := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneNineDefectUpToQ0 X
+  let G := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixteenDefectUpToQ0 X
+  let H := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneFiveDefectUpToQ0 X
+  let I := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneThirtyTwoDefectUpToQ0 X
+  let J := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneSixDefectUpToQ0 X
+  let K := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoThreeDefectUpToQ0 X
+  let L := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternOneTenDefectUpToQ0 X
+  let M := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTwoFiveDefectUpToQ0 X
+  let N := centeredRamanujanPairCleanPeriodicSupportedNonCoprimeResidualPatternTailTwoDefectUpToQ0 X
+  let f : ℕ → ℝ := fun n =>
+    match n with
+    | 0 => A
+    | 1 => B
+    | 2 => C
+    | 3 => D
+    | 4 => E
+    | 5 => F
+    | 6 => G
+    | 7 => H
+    | 8 => I
+    | 9 => J
+    | 10 => K
+    | 11 => L
+    | 12 => M
+    | _ => N
+  have hsum := Finset.abs_sum_le_sum_abs (fun n => f n) (Finset.range 14)
+  simpa [f, Finset.sum_range_succ, A, B, C, D, E, F, G, H, I, J, K, L, M, N, add_assoc] using
+    hsum
+
 theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionUpToQ0_eq_sum_over_sharedDivisors
     (X : ℕ) :
     centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionUpToQ0 X
@@ -8927,6 +12508,38 @@ theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionUpToQ0
   have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
   exact centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_explicitScalar_splitRegions
     (X := X) hq hq'
+
+theorem centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionUpToQ0_eq_preferredBranchwise
+    (X : ℕ) :
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionUpToQ0 X
+      =
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X := by
+  unfold centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionUpToQ0
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0
+  refine Finset.sum_congr rfl ?_
+  intro q hqmem
+  refine Finset.sum_congr rfl ?_
+  intro q' hq'mem
+  have hqIcc : q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 :=
+    (Finset.mem_filter.mp hqmem).1
+  have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+  have hq'mem0 : q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 :=
+    (Finset.mem_filter.mp hq'mem).1
+  have hq'Icc : q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 :=
+    (Finset.mem_filter.mp hq'mem0).1
+  have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+  unfold centeredRamanujanPairCleanPeriodicGcdCorrectionPreferredBranchwiseTerm
+  dsimp
+  by_cases h4G : 4 ∣ Nat.gcd q q'
+  · rw [if_pos h4G]
+    exact centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_smallRegion_add_edge_add_scalar_mul_total_of_four_dvd
+      (X := X) hq hq' h4G
+  · rw [if_neg h4G]
+    by_cases h2G : 2 ∣ Nat.gcd q q'
+    · exact centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_smallRegion_add_edge_of_two_dvd_not_four_dvd
+        (X := X) hq hq' h2G h4G
+    · exact centeredRamanujanPairCleanPeriodicGcdCorrectionTerm_eq_smallRegion_add_edge_of_not_two_dvd_gcd
+        (X := X) hq hq' h2G
 
 theorem abs_centeredRamanujanPairCleanPeriodicCommonPrimeTerm_le_sum_abs_weights
     {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') :
@@ -9725,6 +13338,75 @@ theorem abs_centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_le
         · exact abs_centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0_le_sum_coprime_reindexedMajorants X
         · exact abs_centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionUpToQ0_le_absBaseWeight_mul_absCaseScalar_partitioned X
 
+theorem abs_centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_le_commonPrime_coprimeReindexed_add_abs_gcdCorrection_preferredBranchwise_add_abs_remainder
+    (X : ℕ) :
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X|
+      ≤
+    (Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+      Finset.sum
+        (centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+          (fun q' => ¬ Nat.Coprime q q'))
+        (fun q' =>
+          ∑ d ∈ (Nat.gcd q q').divisors.filter (fun d => d ≠ 1),
+            ∑ a1 ∈ (q / d).divisors.filter (fun a1 => Goldbach.Windows.IsEven ((q / d) / a1)),
+              ∑ b1 ∈ (q' / d).divisors.filter (fun b1 => Goldbach.Windows.IsEven ((q' / d) / b1)),
+                if Nat.Coprime a1 b1 then
+                  centeredRamanujanPairCleanPeriodicCommonPrimeReducedMajorant X q q' (d * a1) (d * b1)
+                else 0)))
+      +
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X|
+      +
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X| := by
+  rw [centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_eq_commonPrime_add_gcdCorrection_add_remainder]
+  rw [centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionUpToQ0_eq_preferredBranchwise]
+  calc
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+        + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X
+        + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X|
+      ≤
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X|
+      + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X|
+      + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X| := by
+        calc
+          |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+              + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X
+              + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X|
+            ≤
+          |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+              + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X|
+            + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X| := by
+              simpa [add_assoc] using
+                (abs_add_le
+                  (centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+                    + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X)
+                  (centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X))
+          _ ≤
+          (|centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X|
+            + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X|)
+            + |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X| := by
+              gcongr
+              exact abs_add_le
+                (centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X)
+                (centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X)
+    _ ≤
+    (Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+      Finset.sum
+        (centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+          (fun q' => ¬ Nat.Coprime q q'))
+        (fun q' =>
+          ∑ d ∈ (Nat.gcd q q').divisors.filter (fun d => d ≠ 1),
+            ∑ a1 ∈ (q / d).divisors.filter (fun a1 => Goldbach.Windows.IsEven ((q / d) / a1)),
+              ∑ b1 ∈ (q' / d).divisors.filter (fun b1 => Goldbach.Windows.IsEven ((q' / d) / b1)),
+                if Nat.Coprime a1 b1 then
+                  centeredRamanujanPairCleanPeriodicCommonPrimeReducedMajorant X q q' (d * a1) (d * b1)
+                else 0)))
+      +
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X|
+      +
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X| := by
+        gcongr
+        exact abs_centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0_le_sum_coprime_reindexedMajorants X
+
 
 theorem rawEvenRamanujanGcdClassPeriodicTotientComparison_eq_coprime_explicitCoefficientMismatch_add_remainder
     {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
@@ -9746,6 +13428,287 @@ theorem rawEvenRamanujanGcdClassPeriodicTotientComparison_eq_coprime_explicitCoe
   rw [rawEvenRamanujanGcdClassPeriodicTotientComparison_eq_coprime_coefficientMismatch_add_remainder
     hq hq' hg hh hcop]
   rw [rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm_eq_explicit_blockDensity]
+
+noncomputable def rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm
+    (X q q' g h : ℕ) : ℝ :=
+  let A := q / g
+  let B := q' / h
+  let PairStart := X ⌈/⌉ Nat.lcm g h
+  let PairLen := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1) - PairStart
+  let PairOddRem := (((Finset.range (PairLen % (2 * (A * B)))).filter
+      (fun t =>
+        Goldbach.Windows.IsEven
+            (PairStart + (PairLen / (2 * (A * B))) * (2 * (A * B)) + t)
+          ∧ Nat.Coprime (A * B)
+              (PairStart + (PairLen / (2 * (A * B))) * (2 * (A * B)) + t))).card : ℕ)
+  let PairCoprimeRem := (((Finset.range (PairLen % (A * B))).filter
+      (fun t => Nat.Coprime (A * B) (PairStart + (PairLen / (A * B)) * (A * B) + t))).card : ℕ)
+  let LeftStart := X ⌈/⌉ g
+  let LeftLen := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - LeftStart
+  let LeftOddRem := (((Finset.range (LeftLen % (2 * A))).filter
+      (fun t =>
+        Goldbach.Windows.IsEven
+            (LeftStart + (LeftLen / (2 * A)) * (2 * A) + t)
+          ∧ Nat.Coprime A (LeftStart + (LeftLen / (2 * A)) * (2 * A) + t))).card : ℕ)
+  let LeftCoprimeRem := (((Finset.range (LeftLen % A)).filter
+      (fun t => Nat.Coprime A (LeftStart + (LeftLen / A) * A + t))).card : ℕ)
+  let RightStart := X ⌈/⌉ h
+  let RightLen := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - RightStart
+  let RightOddRem := (((Finset.range (RightLen % (2 * B))).filter
+      (fun t =>
+        Goldbach.Windows.IsEven
+            (RightStart + (RightLen / (2 * B)) * (2 * B) + t)
+          ∧ Nat.Coprime B (RightStart + (RightLen / (2 * B)) * (2 * B) + t))).card : ℕ)
+  let RightCoprimeRem := (((Finset.range (RightLen % B)).filter
+      (fun t => Nat.Coprime B (RightStart + (RightLen / B) * B + t))).card : ℕ)
+  ((((PairLen / (2 * (A * B))) * Nat.totient (A * B) + PairOddRem : ℕ) : ℝ)
+      - ((((((LeftLen / (2 * A)) * Nat.totient A + LeftOddRem : ℕ) : ℝ)
+            * ((((RightLen / (2 * B)) * Nat.totient B + RightOddRem : ℕ) : ℝ)))
+          / evenRamanujanBlockCount X q q')))
+    -
+    ((((PairLen / (A * B)) * Nat.totient (A * B) + PairCoprimeRem : ℕ) : ℝ)
+      - ((((((LeftLen / A) * Nat.totient A + LeftCoprimeRem : ℕ) : ℝ)
+            * ((((RightLen / B) * Nat.totient B + RightCoprimeRem : ℕ) : ℝ)))
+          / evenRamanujanBlockCount X q q')))
+
+private theorem rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm_eq_two_mul_totient_mul_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm X q q' g h
+      =
+    2 * (Nat.totient (q / g) : ℝ) * (Nat.totient (q' / h) : ℝ) := by
+  have hqq' :
+      evenRamanujanBlockCount X q q' = ((q : ℝ) * (q' : ℝ)) := by
+    rw [evenRamanujanBlockCount_eq_lcm, hcop.lcm_eq_mul]
+    norm_num
+  have hφ :
+      (Nat.totient ((q / g) * (q' / h)) : ℝ)
+        =
+      (Nat.totient (q / g) : ℝ) * (Nat.totient (q' / h) : ℝ) := by
+    exact_mod_cast
+      (Nat.totient_mul
+        (ramanujanGcdClassReducedQuotients_coprime_of_coprime_moduli hcop hg hh))
+  have hPairDiv1 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+          - (X ⌈/⌉ Nat.lcm g h))
+        / (2 * ((q / g) * (q' / h))))
+        = 1 := by
+    simpa [ramanujanGcdClassJointModulus] using
+      rawEvenRamanujanGcdClassPeriodicPairLen_div_two_mul_jointModulus_eq_one_of_coprime_moduli_divisors
+        hq hq' hcop hg hh
+  have hPairDiv2 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+          - (X ⌈/⌉ Nat.lcm g h))
+        / ((q / g) * (q' / h)))
+        = 2 := by
+    simpa [ramanujanGcdClassJointModulus] using
+      rawEvenRamanujanGcdClassPeriodicPairLen_div_jointModulus_eq_two_of_coprime_moduli_divisors
+        hq hq' hcop hg hh
+  have hPairMod1 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+          - (X ⌈/⌉ Nat.lcm g h))
+        % (2 * ((q / g) * (q' / h))))
+        = 0 := by
+    simpa [ramanujanGcdClassJointModulus] using
+      rawEvenRamanujanGcdClassPeriodicPairLen_mod_two_mul_jointModulus_eq_zero_of_coprime_moduli_divisors
+        hq hq' hcop hg hh
+  have hPairMod2 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1)
+          - (X ⌈/⌉ Nat.lcm g h))
+        % ((q / g) * (q' / h)))
+        = 0 := by
+    simpa [ramanujanGcdClassJointModulus] using
+      rawEvenRamanujanGcdClassPeriodicPairLen_mod_jointModulus_eq_zero_of_coprime_moduli_divisors
+        hq hq' hcop hg hh
+  have hLeftDiv1 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g))
+        / (2 * (q / g)))
+        = q' := by
+    exact
+      rawEvenRamanujanGcdClassPeriodicLeftLen_div_two_mul_quotient_eq_rightModulus_of_divisor
+        hq hq' hcop hg
+  have hLeftDiv2 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g))
+        / (q / g))
+        = 2 * q' := by
+    exact
+      rawEvenRamanujanGcdClassPeriodicLeftLen_div_quotient_eq_two_mul_rightModulus_of_divisor
+        hq hq' hcop hg
+  have hLeftMod1 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g))
+        % (2 * (q / g)))
+        = 0 := by
+    exact
+      rawEvenRamanujanGcdClassPeriodicLeftLen_mod_two_mul_quotient_eq_zero_of_divisor
+        hq hq' hcop hg
+  have hLeftMod2 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - (X ⌈/⌉ g))
+        % (q / g))
+        = 0 := by
+    exact
+      rawEvenRamanujanGcdClassPeriodicLeftLen_mod_quotient_eq_zero_of_divisor
+        hq hq' hcop hg
+  have hRightDiv1 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h))
+        / (2 * (q' / h)))
+        = q := by
+    exact
+      rawEvenRamanujanGcdClassPeriodicRightLen_div_two_mul_quotient_eq_leftModulus_of_divisor
+        hq hq' hcop hh
+  have hRightDiv2 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h))
+        / (q' / h))
+        = 2 * q := by
+    exact
+      rawEvenRamanujanGcdClassPeriodicRightLen_div_quotient_eq_two_mul_leftModulus_of_divisor
+        hq hq' hcop hh
+  have hRightMod1 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h))
+        % (2 * (q' / h)))
+        = 0 := by
+    exact
+      rawEvenRamanujanGcdClassPeriodicRightLen_mod_two_mul_quotient_eq_zero_of_divisor
+        hq hq' hcop hh
+  have hRightMod2 :
+      ((((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - (X ⌈/⌉ h))
+        % (q' / h))
+        = 0 := by
+    exact
+      rawEvenRamanujanGcdClassPeriodicRightLen_mod_quotient_eq_zero_of_divisor
+        hq hq' hcop hh
+  have hPairDiv1' :
+      ((X + 2 * Nat.lcm q q' - 1) / Nat.lcm g h + 1 - X ⌈/⌉ Nat.lcm g h)
+        / (2 * (q / g * (q' / h)))
+        = 1 := by
+    simpa [centeredRamanujanPairBlockPeriod] using hPairDiv1
+  have hPairDiv2' :
+      ((X + 2 * Nat.lcm q q' - 1) / Nat.lcm g h + 1 - X ⌈/⌉ Nat.lcm g h)
+        / (q / g * (q' / h))
+        = 2 := by
+    simpa [centeredRamanujanPairBlockPeriod] using hPairDiv2
+  have hPairMod1' :
+      ((X + 2 * Nat.lcm q q' - 1) / Nat.lcm g h + 1 - X ⌈/⌉ Nat.lcm g h)
+        % (2 * (q / g * (q' / h)))
+        = 0 := by
+    simpa [centeredRamanujanPairBlockPeriod] using hPairMod1
+  have hPairMod2' :
+      ((X + 2 * Nat.lcm q q' - 1) / Nat.lcm g h + 1 - X ⌈/⌉ Nat.lcm g h)
+        % (q / g * (q' / h))
+        = 0 := by
+    simpa [centeredRamanujanPairBlockPeriod] using hPairMod2
+  have hLeftDiv1' :
+      ((X + 2 * Nat.lcm q q' - 1) / g + 1 - X ⌈/⌉ g)
+        / (2 * (q / g))
+        = q' := by
+    simpa [centeredRamanujanPairBlockPeriod] using hLeftDiv1
+  have hLeftDiv2' :
+      ((X + 2 * Nat.lcm q q' - 1) / g + 1 - X ⌈/⌉ g)
+        / (q / g)
+        = 2 * q' := by
+    simpa [centeredRamanujanPairBlockPeriod] using hLeftDiv2
+  have hLeftMod1' :
+      ((X + 2 * Nat.lcm q q' - 1) / g + 1 - X ⌈/⌉ g)
+        % (2 * (q / g))
+        = 0 := by
+    simpa [centeredRamanujanPairBlockPeriod] using hLeftMod1
+  have hLeftMod2' :
+      ((X + 2 * Nat.lcm q q' - 1) / g + 1 - X ⌈/⌉ g)
+        % (q / g)
+        = 0 := by
+    simpa [centeredRamanujanPairBlockPeriod] using hLeftMod2
+  have hRightDiv1' :
+      ((X + 2 * Nat.lcm q q' - 1) / h + 1 - X ⌈/⌉ h)
+        / (2 * (q' / h))
+        = q := by
+    simpa [centeredRamanujanPairBlockPeriod] using hRightDiv1
+  have hRightDiv2' :
+      ((X + 2 * Nat.lcm q q' - 1) / h + 1 - X ⌈/⌉ h)
+        / (q' / h)
+        = 2 * q := by
+    simpa [centeredRamanujanPairBlockPeriod] using hRightDiv2
+  have hRightMod1' :
+      ((X + 2 * Nat.lcm q q' - 1) / h + 1 - X ⌈/⌉ h)
+        % (2 * (q' / h))
+        = 0 := by
+    simpa [centeredRamanujanPairBlockPeriod] using hRightMod1
+  have hRightMod2' :
+      ((X + 2 * Nat.lcm q q' - 1) / h + 1 - X ⌈/⌉ h)
+        % (q' / h)
+        = 0 := by
+    simpa [centeredRamanujanPairBlockPeriod] using hRightMod2
+  have hqR : (q : ℝ) ≠ 0 := by exact_mod_cast (Nat.pos_iff_ne_zero.mp hq)
+  have hq'R : (q' : ℝ) ≠ 0 := by exact_mod_cast (Nat.pos_iff_ne_zero.mp hq')
+  unfold rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm
+  dsimp
+  rw [hPairDiv1', hPairDiv2', hPairMod1', hPairMod2',
+    hLeftDiv1', hLeftDiv2', hLeftMod1', hLeftMod2',
+    hRightDiv1', hRightDiv2', hRightMod1', hRightMod2']
+  simp
+  rw [hqq', hφ]
+  field_simp [hqR, hq'R]
+  ring
+
+theorem rawEvenRamanujanGcdClassPeriodicParityDensityDefectTerm_eq_explicitOddParityCorrection_of_coprime_odd_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Odd : Odd q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    rawEvenRamanujanGcdClassPeriodicParityDensityDefectTerm X q q' g h
+      =
+    rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm X q q' g h := by
+  have hPpos : 0 < centeredRamanujanPairBlockPeriod q q' := by
+    dsimp [centeredRamanujanPairBlockPeriod]
+    exact Nat.mul_pos (by norm_num) (Nat.lcm_pos hq hq')
+  have hgpos : 0 < g := divisor_pos_of_mem_divisors_of_pos hg hq
+  have hhpos : 0 < h := divisor_pos_of_mem_divisors_of_pos hh hq'
+  have hPairPos : 0 < ramanujanGcdClassJointModulus q q' g h := by
+    unfold ramanujanGcdClassJointModulus
+    exact Nat.mul_pos (quotient_pos_of_mem_divisors hq hg) (quotient_pos_of_mem_divisors hq' hh)
+  have hLeftPos : 0 < q / g := quotient_pos_of_mem_divisors hq hg
+  have hRightPos : 0 < q' / h := quotient_pos_of_mem_divisors hq' hh
+  have hLeftOdd : Odd (q / g) := odd_div_of_dvd_odd hqOdd (Nat.mem_divisors.mp hg).1
+  have hRightOdd : Odd (q' / h) := odd_div_of_dvd_odd hq'Odd (Nat.mem_divisors.mp hh).1
+  have hPairOdd : Odd (ramanujanGcdClassJointModulus q q' g h) := by
+    unfold ramanujanGcdClassJointModulus
+    exact hLeftOdd.mul hRightOdd
+  have hgh : Nat.Coprime g h := ramanujanGcdClassDivisors_coprime_of_coprime_moduli hcop hg hh
+  have hOddL : ¬ Goldbach.Windows.IsEven (Nat.lcm g h) := by
+    intro hEvenL
+    have hEvenMul : Goldbach.Windows.IsEven (g * h) := by
+      simpa [hgh.lcm_eq_mul] using hEvenL
+    have hEvenh : Goldbach.Windows.IsEven h :=
+      (isEven_mul_iff_of_not_isEven_left hgOdd).1 hEvenMul
+    exact hhOdd hEvenh
+  unfold rawEvenRamanujanGcdClassPeriodicParityDensityDefectTerm
+    rawEvenRamanujanGcdClassPeriodicProductDefect
+    rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm
+  rw [rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_odd_lcm_totient_main_add_remainder_of_odd_jointModulus
+    X q q' g h (Nat.lcm_pos hgpos hhpos) hPpos
+    (ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors hq hq' hcop hg hh)
+    hOddL hPairPos hPairOdd]
+  rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_odd_g_totient_main_add_remainder_of_odd_quotient
+    X q q' q g hgpos hPpos hgOdd hLeftPos hLeftOdd]
+  rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_odd_g_totient_main_add_remainder_of_odd_quotient
+    X q q' q' h hhpos hPpos hhOdd hRightPos hRightOdd]
+  unfold rawEvenRamanujanGcdClassPeriodicTotientComparison
+  rfl
+
+theorem centeredRamanujanGcdClassOddLcmDensityDefectTerm_eq_explicitOddParityCorrection_add_coefficientMismatch_add_densityMismatch
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Odd : Odd q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassOddLcmDensityDefectTerm X q q' g h
+      =
+    rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm X q q' g h
+      + rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+      + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h := by
+  unfold centeredRamanujanGcdClassOddLcmDensityDefectTerm
+  rw [rawEvenRamanujanGcdClassPeriodicParityDensityDefectTerm_eq_explicitOddParityCorrection_of_coprime_odd_moduli_divisors
+    hq hq' hcop hqOdd hq'Odd hg hh hgOdd hhOdd]
 
 theorem rawEvenRamanujanGcdClassBlockCount_eq_periodicCount
     {X q q' q0 g0 : ℕ} (hq0 : 1 ≤ q0) (hg0 : g0 ∈ q0.divisors)
@@ -9869,6 +13832,167 @@ theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_even_even_productDefect
   unfold rawEvenRamanujanGcdClassPeriodicProductDefect
   field_simp [hBne]
   ring_nf
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_periodicProductDefect_add_densityMismatch
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hcompat : ramanujanGcdClassJointCompatibility q q' g h) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    rawEvenRamanujanGcdClassPeriodicProductDefect X q q' g h
+      + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h := by
+  have hBne : evenRamanujanBlockCount X q q' ≠ 0 := by
+    exact ne_of_gt (evenRamanujanBlockCount_pos X q q' hq hq')
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_periodic_comparison hq hq' hg hh hcompat]
+  rw [rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_product_normalized_add_defect]
+  unfold centeredRamanujanGcdClassPeriodicDensityMismatchTerm
+  field_simp [hBne]
+  ring_nf
+
+theorem rawEvenRamanujanGcdClassPeriodicProductDefect_eq_zero_of_coprime_even_odd_moduli_odd_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : ¬ Goldbach.Windows.IsEven q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    rawEvenRamanujanGcdClassPeriodicProductDefect X q q' g h = 0 := by
+  unfold rawEvenRamanujanGcdClassPeriodicProductDefect
+  have hgh : Nat.Coprime g h :=
+    ramanujanGcdClassDivisors_coprime_of_coprime_moduli hcop hg hh
+  have hOddL : ¬ Goldbach.Windows.IsEven (Nat.lcm g h) := by
+    intro hEvenL
+    have hEvenMul : Goldbach.Windows.IsEven (g * h) := by
+      simpa [hgh.lcm_eq_mul] using hEvenL
+    have hEvenh : Goldbach.Windows.IsEven h :=
+      (isEven_mul_iff_of_not_isEven_left hgOdd).1 hEvenMul
+    exact hhOdd hEvenh
+  have hLeftEven : Goldbach.Windows.IsEven (q / g) :=
+    isEven_quotient_of_isEven_of_mem_divisors_of_not_isEven_divisor hqEven hg hgOdd
+  have hJointEven : Goldbach.Windows.IsEven (ramanujanGcdClassJointModulus q q' g h) := by
+    dsimp [ramanujanGcdClassJointModulus]
+    exact isEven_mul_of_isEven_left hLeftEven
+  have hPairZero :
+      rawEvenRamanujanGcdClassPairBlockPeriodicCount X q q' g h = 0 := by
+    exact rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_zero_of_not_isEven_lcm_of_isEven_jointModulus
+      X q q' g h hOddL hJointEven
+  have hLeftZero :
+      rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q g = 0 := by
+    exact rawEvenRamanujanGcdClassBlockPeriodicCount_eq_zero_of_not_isEven_g_of_isEven_quotient
+      X q q' q g hgOdd hLeftEven
+  rw [hPairZero, hLeftZero]
+  ring
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_densityMismatch_of_coprime_even_odd_moduli_odd_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : ¬ Goldbach.Windows.IsEven q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h := by
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_periodicProductDefect_add_densityMismatch
+    hq hq' hg hh (ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors hq hq' hcop hg hh)]
+  rw [rawEvenRamanujanGcdClassPeriodicProductDefect_eq_zero_of_coprime_even_odd_moduli_odd_divisors
+    hq hq' hcop hqEven hq'Odd hg hh hgOdd hhOdd]
+  ring
+
+theorem rawEvenRamanujanGcdClassPeriodicProductDefect_eq_zero_of_coprime_odd_even_moduli_odd_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : ¬ Goldbach.Windows.IsEven q) (hq'Even : Goldbach.Windows.IsEven q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    rawEvenRamanujanGcdClassPeriodicProductDefect X q q' g h = 0 := by
+  unfold rawEvenRamanujanGcdClassPeriodicProductDefect
+  have hgh : Nat.Coprime g h :=
+    ramanujanGcdClassDivisors_coprime_of_coprime_moduli hcop hg hh
+  have hOddL : ¬ Goldbach.Windows.IsEven (Nat.lcm g h) := by
+    intro hEvenL
+    have hEvenMul : Goldbach.Windows.IsEven (g * h) := by
+      simpa [hgh.lcm_eq_mul] using hEvenL
+    have hEveng : Goldbach.Windows.IsEven g :=
+      (isEven_mul_iff_of_not_isEven_left hhOdd).1 (by simpa [Nat.mul_comm] using hEvenMul)
+    exact hgOdd hEveng
+  have hRightEven : Goldbach.Windows.IsEven (q' / h) :=
+    isEven_quotient_of_isEven_of_mem_divisors_of_not_isEven_divisor hq'Even hh hhOdd
+  have hJointEven : Goldbach.Windows.IsEven (ramanujanGcdClassJointModulus q q' g h) := by
+    dsimp [ramanujanGcdClassJointModulus]
+    rw [Nat.mul_comm]
+    exact isEven_mul_of_isEven_left hRightEven
+  have hPairZero :
+      rawEvenRamanujanGcdClassPairBlockPeriodicCount X q q' g h = 0 := by
+    exact rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_zero_of_not_isEven_lcm_of_isEven_jointModulus
+      X q q' g h hOddL hJointEven
+  have hRightZero :
+      rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q' h = 0 := by
+    exact rawEvenRamanujanGcdClassBlockPeriodicCount_eq_zero_of_not_isEven_g_of_isEven_quotient
+      X q q' q' h hhOdd hRightEven
+  rw [hPairZero, hRightZero]
+  ring
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_densityMismatch_of_coprime_odd_even_moduli_odd_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : ¬ Goldbach.Windows.IsEven q) (hq'Even : Goldbach.Windows.IsEven q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h := by
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_periodicProductDefect_add_densityMismatch
+    hq hq' hg hh (ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors hq hq' hcop hg hh)]
+  rw [rawEvenRamanujanGcdClassPeriodicProductDefect_eq_zero_of_coprime_odd_even_moduli_odd_divisors
+    hq hq' hcop hqOdd hq'Even hg hh hgOdd hhOdd]
+  ring
+
+theorem centeredRamanujanGcdClassPeriodicDensityMismatchTerm_eq_neg_leftAverage_mul_rightCenteredBlock_of_coprime_even_odd_moduli_odd_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (_hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : ¬ Goldbach.Windows.IsEven q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (_hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+      =
+    -(ramanujanGcdClassWindowAverage X q g)
+      * (rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q' h
+          - evenRamanujanBlockCount X q q' * ramanujanGcdClassWindowAverage X q' h) := by
+  have hLeftEven : Goldbach.Windows.IsEven (q / g) :=
+    isEven_quotient_of_isEven_of_mem_divisors_of_not_isEven_divisor hqEven hg hgOdd
+  have hLeftZero :
+      rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q g = 0 := by
+    exact rawEvenRamanujanGcdClassBlockPeriodicCount_eq_zero_of_not_isEven_g_of_isEven_quotient
+      X q q' q g hgOdd hLeftEven
+  have hBne : evenRamanujanBlockCount X q q' ≠ 0 := by
+    exact ne_of_gt (evenRamanujanBlockCount_pos X q q' hq hq')
+  unfold centeredRamanujanGcdClassPeriodicDensityMismatchTerm
+  rw [hLeftZero]
+  field_simp [hBne]
+  ring
+
+theorem centeredRamanujanGcdClassPeriodicDensityMismatchTerm_eq_neg_leftCenteredBlock_mul_rightAverage_of_coprime_odd_even_moduli_odd_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (_hcop : Nat.Coprime q q')
+    (hqOdd : ¬ Goldbach.Windows.IsEven q) (hq'Even : Goldbach.Windows.IsEven q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (_hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+      =
+    -(rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q g
+        - evenRamanujanBlockCount X q q' * ramanujanGcdClassWindowAverage X q g)
+      * ramanujanGcdClassWindowAverage X q' h := by
+  have hRightEven : Goldbach.Windows.IsEven (q' / h) :=
+    isEven_quotient_of_isEven_of_mem_divisors_of_not_isEven_divisor hq'Even hh hhOdd
+  have hRightZero :
+      rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q' h = 0 := by
+    exact rawEvenRamanujanGcdClassBlockPeriodicCount_eq_zero_of_not_isEven_g_of_isEven_quotient
+      X q q' q' h hhOdd hRightEven
+  have hBne : evenRamanujanBlockCount X q q' ≠ 0 := by
+    exact ne_of_gt (evenRamanujanBlockCount_pos X q q' hq hq')
+  unfold centeredRamanujanGcdClassPeriodicDensityMismatchTerm
+  rw [hRightZero]
+  field_simp [hBne]
+  ring
 
 theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_card_filter_decomposition
     {X q q' g h : ℕ} (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
@@ -10019,6 +14143,3247 @@ noncomputable def centeredRamanujanPairPeriodicMainTerm
                   * rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q' h
               + ramanujanGcdClassWindowAverage X q g * ramanujanGcdClassWindowAverage X q' h
                   * evenRamanujanBlockCount X q q'))
+
+noncomputable def centeredRamanujanPairPeriodicMainParitySummand
+    (X q q' g h : ℕ) : ℝ :=
+  ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+    * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+        • centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h)
+
+noncomputable def centeredRamanujanPairPeriodicMainEvenOddSector
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+
+noncomputable def centeredRamanujanPairPeriodicMainOddEvenSector
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => Goldbach.Windows.IsEven h),
+      centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddSector
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_coprime_divisorParitySectors
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') (hcop : Nat.Coprime q q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    centeredRamanujanPairPeriodicMainEvenOddSector X q q'
+      + centeredRamanujanPairPeriodicMainOddEvenSector X q q'
+      + centeredRamanujanPairPeriodicMainOddOddSector X q q' := by
+  let f : ℕ → ℕ → ℝ := fun g h => centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+  have hmain :
+      centeredRamanujanPairPeriodicMainTerm X q q'
+        = ∑ g ∈ q.divisors, ∑ h ∈ q'.divisors, f g h := by
+    unfold centeredRamanujanPairPeriodicMainTerm
+    refine Finset.sum_congr rfl ?_
+    intro g hg
+    refine Finset.sum_congr rfl ?_
+    intro h hh
+    dsimp [f, centeredRamanujanPairPeriodicMainParitySummand]
+    rw [← centeredRamanujanGcdClassPairFullEvenBlockSum_eq_resolved_periodic_comparison hq hq' hg hh]
+  have hEvenOuter :
+      (∑ g ∈ q.divisors.filter (fun g => Goldbach.Windows.IsEven g), ∑ h ∈ q'.divisors, f g h)
+        =
+      centeredRamanujanPairPeriodicMainEvenOddSector X q q' := by
+    unfold centeredRamanujanPairPeriodicMainEvenOddSector
+    refine Finset.sum_congr rfl ?_
+    intro g hgEven
+    have hg : g ∈ q.divisors := (Finset.mem_filter.mp hgEven).1
+    have hgE : Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hgEven).2
+    calc
+      ∑ h ∈ q'.divisors, f g h
+          =
+      (∑ h ∈ q'.divisors.filter (fun h => Goldbach.Windows.IsEven h), f g h)
+        + ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h), f g h := by
+            simpa using
+              (Finset.sum_filter_add_sum_filter_not q'.divisors
+                (fun h => Goldbach.Windows.IsEven h) (fun h => f g h)).symm
+      _ = 0 + ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h), f g h := by
+            congr 1
+            refine Finset.sum_eq_zero ?_
+            intro h hhEven
+            have hh : h ∈ q'.divisors := (Finset.mem_filter.mp hhEven).1
+            have hhE : Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hhEven).2
+            exact False.elim
+              (ramanujanGcdClassDivisors_not_both_even_of_coprime_moduli hcop hg hh ⟨hgE, hhE⟩)
+      _ = ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h), f g h := by simp
+  have hOddOuter :
+      (∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g), ∑ h ∈ q'.divisors, f g h)
+        =
+      centeredRamanujanPairPeriodicMainOddEvenSector X q q'
+        + centeredRamanujanPairPeriodicMainOddOddSector X q q' := by
+    unfold centeredRamanujanPairPeriodicMainOddEvenSector centeredRamanujanPairPeriodicMainOddOddSector
+    calc
+      (∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g), ∑ h ∈ q'.divisors, f g h)
+          =
+      ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+        ((∑ h ∈ q'.divisors.filter (fun h => Goldbach.Windows.IsEven h), f g h)
+          + ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h), f g h) := by
+            refine Finset.sum_congr rfl ?_
+            intro g hgOdd
+            simpa using
+              (Finset.sum_filter_add_sum_filter_not q'.divisors
+                (fun h => Goldbach.Windows.IsEven h) (fun h => f g h)).symm
+      _ =
+      (∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+          ∑ h ∈ q'.divisors.filter (fun h => Goldbach.Windows.IsEven h), f g h)
+        +
+      ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+          ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h), f g h := by
+            rw [Finset.sum_add_distrib]
+  rw [hmain]
+  calc
+    ∑ g ∈ q.divisors, ∑ h ∈ q'.divisors, f g h
+        =
+      (∑ g ∈ q.divisors.filter (fun g => Goldbach.Windows.IsEven g), ∑ h ∈ q'.divisors, f g h)
+        + ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+            ∑ h ∈ q'.divisors, f g h := by
+              simpa using
+                (Finset.sum_filter_add_sum_filter_not q.divisors
+                  (fun g => Goldbach.Windows.IsEven g) (fun g => ∑ h ∈ q'.divisors, f g h)).symm
+    _ =
+      centeredRamanujanPairPeriodicMainEvenOddSector X q q'
+        + ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+            ∑ h ∈ q'.divisors, f g h := by
+              rw [hEvenOuter]
+    _ =
+      centeredRamanujanPairPeriodicMainEvenOddSector X q q'
+        + (centeredRamanujanPairPeriodicMainOddEvenSector X q q'
+          + centeredRamanujanPairPeriodicMainOddOddSector X q q') := by
+              rw [hOddOuter]
+    _ =
+      centeredRamanujanPairPeriodicMainEvenOddSector X q q'
+        + centeredRamanujanPairPeriodicMainOddEvenSector X q q'
+        + centeredRamanujanPairPeriodicMainOddOddSector X q q' := by
+              ring
+
+theorem centeredRamanujanPairPeriodicMainEvenOddSector_eq_zero_of_not_isEven
+    {X q q' : ℕ} (hqOdd : ¬ Goldbach.Windows.IsEven q) :
+    centeredRamanujanPairPeriodicMainEvenOddSector X q q' = 0 := by
+  unfold centeredRamanujanPairPeriodicMainEvenOddSector
+  refine Finset.sum_eq_zero ?_
+  intro g hg
+  have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+  have hgEven : Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+  exact False.elim ((not_isEven_divisor_of_not_isEven hqOdd hgDiv) hgEven)
+
+theorem centeredRamanujanPairPeriodicMainOddEvenSector_eq_zero_of_not_isEven
+    {X q q' : ℕ} (hq'Odd : ¬ Goldbach.Windows.IsEven q') :
+    centeredRamanujanPairPeriodicMainOddEvenSector X q q' = 0 := by
+  unfold centeredRamanujanPairPeriodicMainOddEvenSector
+  refine Finset.sum_eq_zero ?_
+  intro g hg
+  refine Finset.sum_eq_zero ?_
+  intro h hh
+  have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+  have hhEven : Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hh).2
+  exact False.elim ((not_isEven_divisor_of_not_isEven hq'Odd hhDiv) hhEven)
+
+private theorem not_isEven_right_of_isEven_left_of_coprime
+    {q q' : ℕ} (hcop : Nat.Coprime q q') (hqEven : Goldbach.Windows.IsEven q) :
+    ¬ Goldbach.Windows.IsEven q' := by
+  intro hq'Even
+  have h2q : 2 ∣ q := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hqEven)
+  have h2q' : 2 ∣ q' := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hq'Even)
+  have h2gcd : 2 ∣ Nat.gcd q q' := Nat.dvd_gcd h2q h2q'
+  have hnot : ¬ 2 ∣ (1 : ℕ) := by decide
+  exact hnot (by simpa [hcop.gcd_eq_one] using h2gcd)
+
+private theorem not_isEven_left_of_isEven_right_of_coprime
+    {q q' : ℕ} (hcop : Nat.Coprime q q') (hq'Even : Goldbach.Windows.IsEven q') :
+    ¬ Goldbach.Windows.IsEven q := by
+  intro hqEven
+  exact not_isEven_right_of_isEven_left_of_coprime hcop hqEven hq'Even
+
+theorem centeredRamanujanPairBlockPeriod_two_mul_left_of_odd
+    {n q' : ℕ} (hnOdd : Odd n) (hq'Odd : Odd q') :
+    centeredRamanujanPairBlockPeriod (2 * n) q'
+      =
+    2 * centeredRamanujanPairBlockPeriod n q' := by
+  have h2n : Nat.lcm 2 n = 2 * n := by
+    have hcop2n : Nat.Coprime 2 n := by
+      simpa [Nat.coprime_comm] using hnOdd.coprime_two_right
+    simpa [Nat.mul_comm] using hcop2n.lcm_eq_mul
+  have hlnOdd : Odd (Nat.lcm n q') := by
+    have hprodOdd : ¬ Goldbach.Windows.IsEven (n * q') := by
+      intro hEven
+      exact (Nat.not_even_iff_odd.mpr (hnOdd.mul hq'Odd)) (Goldbach.Windows.even_of_isEven hEven)
+    have hlcmMem : Nat.lcm n q' ∈ (n * q').divisors := by
+      refine Nat.mem_divisors.mpr ?_
+      refine ⟨Nat.lcm_dvd (dvd_mul_right n q') (dvd_mul_left q' n), ?_⟩
+      have hnpos : 0 < n := Nat.pos_of_ne_zero (by
+        intro hn
+        subst n
+        norm_num at hnOdd)
+      have hq'pos : 0 < q' := Nat.pos_of_ne_zero (by
+        intro hq'0
+        subst q'
+        norm_num at hq'Odd)
+      exact Nat.ne_of_gt (Nat.mul_pos hnpos hq'pos)
+    have hlcmNotEven : ¬ Goldbach.Windows.IsEven (Nat.lcm n q') :=
+      not_isEven_divisor_of_not_isEven hprodOdd hlcmMem
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hlcmEven
+    exact hlcmNotEven (Goldbach.Windows.isEven_of_even hlcmEven)
+  have h2l : Nat.lcm 2 (Nat.lcm n q') = 2 * Nat.lcm n q' := by
+    have hcop2l : Nat.Coprime 2 (Nat.lcm n q') := by
+      simpa [Nat.coprime_comm] using hlnOdd.coprime_two_right
+    simpa [Nat.mul_comm] using hcop2l.lcm_eq_mul
+  unfold centeredRamanujanPairBlockPeriod
+  calc
+    2 * Nat.lcm (2 * n) q'
+        = 2 * Nat.lcm (Nat.lcm 2 n) q' := by rw [h2n]
+    _ = 2 * Nat.lcm 2 (Nat.lcm n q') := by rw [Nat.lcm_assoc]
+    _ = 2 * (2 * Nat.lcm n q') := by rw [h2l]
+
+theorem centeredRamanujanPairBlockScalar_two_mul_left_of_odd
+    {n q' : ℕ} (hnOdd : Odd n) (hq'Odd : Odd q') :
+    ((H + 1) / centeredRamanujanPairBlockPeriod (2 * n) q' : ℕ)
+      =
+    ((H + 1) / (2 * centeredRamanujanPairBlockPeriod n q') : ℕ) := by
+  rw [centeredRamanujanPairBlockPeriod_two_mul_left_of_odd hnOdd hq'Odd]
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_coprime_modulusParityCases
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') (hcop : Nat.Coprime q q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    if Goldbach.Windows.IsEven q then
+      centeredRamanujanPairPeriodicMainEvenOddSector X q q'
+        + centeredRamanujanPairPeriodicMainOddOddSector X q q'
+    else if Goldbach.Windows.IsEven q' then
+      centeredRamanujanPairPeriodicMainOddEvenSector X q q'
+        + centeredRamanujanPairPeriodicMainOddOddSector X q q'
+    else
+      centeredRamanujanPairPeriodicMainOddOddSector X q q' := by
+  by_cases hqEven : Goldbach.Windows.IsEven q
+  · have hq'Odd : ¬ Goldbach.Windows.IsEven q' :=
+      not_isEven_right_of_isEven_left_of_coprime hcop hqEven
+    rw [if_pos hqEven, centeredRamanujanPairPeriodicMainTerm_eq_coprime_divisorParitySectors hq hq' hcop]
+    rw [centeredRamanujanPairPeriodicMainOddEvenSector_eq_zero_of_not_isEven hq'Odd]
+    ring
+  · by_cases hq'Even : Goldbach.Windows.IsEven q'
+    · rw [if_neg hqEven, if_pos hq'Even,
+        centeredRamanujanPairPeriodicMainTerm_eq_coprime_divisorParitySectors hq hq' hcop]
+      rw [centeredRamanujanPairPeriodicMainEvenOddSector_eq_zero_of_not_isEven hqEven]
+      ring
+    · rw [if_neg hqEven, if_neg hq'Even,
+        centeredRamanujanPairPeriodicMainTerm_eq_coprime_divisorParitySectors hq hq' hcop]
+      rw [centeredRamanujanPairPeriodicMainEvenOddSector_eq_zero_of_not_isEven hqEven]
+      rw [centeredRamanujanPairPeriodicMainOddEvenSector_eq_zero_of_not_isEven hq'Even]
+      ring
+
+theorem centeredRamanujanPairPeriodicMainParitySummand_eq_odd_lcm_periodic_comparison_of_odd_odd_of_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+      =
+    ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          •
+            (let Pair := by
+              let A := X ⌈/⌉ Nat.lcm g h
+              let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1) - A
+              let M := ramanujanGcdClassJointModulus q q' g h
+              exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+                  (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+                + (((Finset.range (L % (2 * M))).filter
+                    (fun t =>
+                      Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                        ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+             let Left := by
+              let A := X ⌈/⌉ g
+              let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - A
+              let M := q / g
+              exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+                  (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+                + (((Finset.range (L % (2 * M))).filter
+                    (fun t =>
+                      Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                        ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+             let Right := by
+              let A := X ⌈/⌉ h
+              let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - A
+              let M := q' / h
+              exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+                  (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+                + (((Finset.range (L % (2 * M))).filter
+                    (fun t =>
+                      Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                        ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+             Pair
+               - ramanujanGcdClassWindowAverage X q' h * Left
+               - ramanujanGcdClassWindowAverage X q g * Right
+               + ramanujanGcdClassWindowAverage X q g * ramanujanGcdClassWindowAverage X q' h
+                   * evenRamanujanBlockCount X q q')) := by
+  unfold centeredRamanujanPairPeriodicMainParitySummand
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_odd_lcm_periodic_comparison_of_odd_odd_of_coprime_moduli_divisors
+    hq hq' hcop hg hh hgOdd hhOdd]
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_oddLcmDensityDefect_add_remainder_of_odd_odd_coprime_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    centeredRamanujanGcdClassOddLcmDensityDefectTerm X q q' g h
+      + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h := by
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_periodicProductDefect_add_densityMismatch
+    hq hq' hg hh (ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors hq hq' hcop hg hh)]
+  rw [rawEvenRamanujanGcdClassPeriodicProductDefect_eq_parityDensityDefect_add_totientComparison]
+  rw [rawEvenRamanujanGcdClassPeriodicTotientComparison_eq_coprime_explicitCoefficientMismatch_add_remainder_of_coprime_moduli_divisors
+    hq hq' hcop hg hh]
+  rw [← rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm_eq_explicit_blockDensity]
+  unfold centeredRamanujanGcdClassOddLcmDensityDefectTerm
+  ring
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_explicitOddParityCorrection_add_mismatches_add_remainder_of_odd_odd_of_coprime_odd_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Odd : Odd q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm X q q' g h
+      + rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+      + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+      + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h := by
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_oddLcmDensityDefect_add_remainder_of_odd_odd_coprime_moduli_divisors
+    hq hq' hcop hg hh hgOdd hhOdd]
+  rw [centeredRamanujanGcdClassOddLcmDensityDefectTerm_eq_explicitOddParityCorrection_add_coefficientMismatch_add_densityMismatch
+    hq hq' hcop hqOdd hq'Odd hg hh hgOdd hhOdd]
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_eq_two_mul_totient_mul_add_mismatches_add_remainder_of_odd_odd_of_coprime_odd_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Odd : Odd q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    2 * (Nat.totient (q / g) : ℝ) * (Nat.totient (q' / h) : ℝ)
+      + rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+      + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+      + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h := by
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_explicitOddParityCorrection_add_mismatches_add_remainder_of_odd_odd_of_coprime_odd_moduli_divisors
+    hq hq' hcop hqOdd hq'Odd hg hh hgOdd hhOdd]
+  rw [rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm_eq_two_mul_totient_mul_of_coprime_moduli_divisors
+    hq hq' hcop hg hh]
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_coprime_odd_lcm_periodic_comparison
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q') :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+      ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+          * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+              •
+                (let Pair := by
+                  let A := X ⌈/⌉ Nat.lcm g h
+                  let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1) - A
+                  let M := ramanujanGcdClassJointModulus q q' g h
+                  exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+                      (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+                    + (((Finset.range (L % (2 * M))).filter
+                        (fun t =>
+                          Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                            ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+                 let Left := by
+                  let A := X ⌈/⌉ g
+                  let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g + 1) - A
+                  let M := q / g
+                  exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+                      (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+                    + (((Finset.range (L % (2 * M))).filter
+                        (fun t =>
+                          Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                            ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+                 let Right := by
+                  let A := X ⌈/⌉ h
+                  let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / h + 1) - A
+                  let M := q' / h
+                  exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+                      (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+                    + (((Finset.range (L % (2 * M))).filter
+                        (fun t =>
+                          Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                            ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+                 Pair
+                   - ramanujanGcdClassWindowAverage X q' h * Left
+                   - ramanujanGcdClassWindowAverage X q g * Right
+                   + ramanujanGcdClassWindowAverage X q g * ramanujanGcdClassWindowAverage X q' h
+                       * evenRamanujanBlockCount X q q')) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddSector
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+  have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+  have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+  have hhOdd : ¬ Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hh).2
+  exact centeredRamanujanPairPeriodicMainParitySummand_eq_odd_lcm_periodic_comparison_of_odd_odd_of_coprime_moduli_divisors
+    hq hq' hcop hgDiv hhDiv hgOdd hhOdd
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_coprime_odd_moduli_explicitOddParityCorrection_add_mismatches_add_remainder
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+      ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+          * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+              •
+                (rawEvenRamanujanGcdClassExplicitOddParityCorrectionTerm X q q' g h
+                  + rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+                  + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+                  + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h)) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddSector
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+  have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+  have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+  have hhOdd : ¬ Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hh).2
+  unfold centeredRamanujanPairPeriodicMainParitySummand
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_explicitOddParityCorrection_add_mismatches_add_remainder_of_odd_odd_of_coprime_odd_moduli_divisors
+    hq hq' hcop hqOdd hq'Odd hgDiv hhDiv hgOdd hhOdd]
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_coprime_odd_moduli_two_mul_totient_mul_add_mismatches_add_remainder
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+      ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+          * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+              •
+                (2 * (Nat.totient (q / g) : ℝ) * (Nat.totient (q' / h) : ℝ)
+                  + rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+                  + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+                  + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h)) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddSector
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+  have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+  have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+  have hhOdd : ¬ Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hh).2
+  unfold centeredRamanujanPairPeriodicMainParitySummand
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_two_mul_totient_mul_add_mismatches_add_remainder_of_odd_odd_of_coprime_odd_moduli_divisors
+    hq hq' hcop hqOdd hq'Odd hgDiv hhDiv hgOdd hhOdd]
+
+noncomputable def centeredRamanujanPairOddOddParityFactor
+    (q : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ramanujanGcdClassCoeff q g * (Nat.totient (q / g) : ℝ)
+
+private theorem divisors_filter_not_isEven_eq_self_of_odd
+    {q : ℕ} (hqOdd : Odd q) :
+    q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g) = q.divisors := by
+  have hqNotEven : ¬ Goldbach.Windows.IsEven q := by
+    intro hEven
+    exact (Nat.not_even_iff_odd.mpr hqOdd) (Goldbach.Windows.even_of_isEven hEven)
+  ext g
+  constructor
+  · intro hg
+    exact (Finset.mem_filter.mp hg).1
+  · intro hg
+    exact Finset.mem_filter.mpr ⟨hg, not_isEven_divisor_of_not_isEven hqNotEven hg⟩
+
+theorem centeredRamanujanPairOddOddParityFactor_eq_oddPartBaseSum_of_odd
+    {q : ℕ} (hqOdd : Odd q) :
+    centeredRamanujanPairOddOddParityFactor q
+      =
+    centeredRamanujanPairCleanPeriodicOddPartBaseSum q := by
+  have hq0 : q ≠ 0 := by
+    intro hqZero
+    subst q
+    norm_num at hqOdd
+  unfold centeredRamanujanPairOddOddParityFactor
+    centeredRamanujanPairCleanPeriodicOddPartBaseSum
+  rw [divisors_filter_not_isEven_eq_self_of_odd hqOdd]
+  refine Finset.sum_nbij'
+    (fun g => q / g) (fun a => q / a) ?_ ?_ ?_ ?_ ?_
+  · intro g hg
+    have hg_dvd_q : g ∣ q := (Nat.mem_divisors.mp hg).1
+    exact Nat.mem_divisors.mpr ⟨⟨g, (Nat.div_mul_cancel hg_dvd_q).symm⟩, hq0⟩
+  · intro a ha
+    have ha_dvd_q : a ∣ q := (Nat.mem_divisors.mp ha).1
+    exact Nat.mem_divisors.mpr ⟨⟨a, (Nat.div_mul_cancel ha_dvd_q).symm⟩, hq0⟩
+  · intro g hg
+    have hg_dvd_q : g ∣ q := (Nat.mem_divisors.mp hg).1
+    simpa using (Nat.div_div_self hg_dvd_q hq0)
+  · intro a ha
+    have ha_dvd_q : a ∣ q := (Nat.mem_divisors.mp ha).1
+    simpa using (Nat.div_div_self ha_dvd_q hq0)
+  · intro g hg
+    rw [ramanujanGcdClassCoeff]
+    have hg_dvd_q : g ∣ q := (Nat.mem_divisors.mp hg).1
+    rw [Nat.div_div_self hg_dvd_q hq0]
+    ring
+
+theorem centeredRamanujanPairOddOddParityFactor_eq_neg_self_of_two_mul_odd
+    {n : ℕ} (hnOdd : Odd n) :
+    centeredRamanujanPairOddOddParityFactor (2 * n)
+      =
+    -centeredRamanujanPairOddOddParityFactor n := by
+  unfold centeredRamanujanPairOddOddParityFactor
+  have hset :
+      (2 * n).divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g) = n.divisors := by
+    ext g
+    constructor
+    · intro hg
+      rcases Finset.mem_filter.mp hg with ⟨hgDiv, hgOdd⟩
+      rcases (mem_two_mul_odd_divisors_iff hnOdd).1 hgDiv with hgN | ⟨b, hb, hEq⟩
+      · exact hgN
+      · exfalso
+        rw [hEq] at hgOdd
+        have hEven : Goldbach.Windows.IsEven (2 * b) := by
+          exact Goldbach.Windows.isEven_of_even ((even_iff_two_dvd).2 ⟨b, by ring⟩)
+        exact hgOdd hEven
+    · intro hg
+      refine Finset.mem_filter.mpr ?_
+      constructor
+      · exact (mem_two_mul_odd_divisors_iff hnOdd).2 (Or.inl hg)
+      · have hgOddNat : Odd g := odd_of_mem_divisors_odd hnOdd hg
+        intro hgEven
+        exact (Nat.not_even_iff_odd.mpr hgOddNat) (Goldbach.Windows.even_of_isEven hgEven)
+  rw [hset, divisors_filter_not_isEven_eq_self_of_odd hnOdd]
+  have hodd :
+      centeredRamanujanPairOddOddParityFactor n
+        =
+      ∑ g ∈ n.divisors, ramanujanGcdClassCoeff n g * (Nat.totient (n / g) : ℝ) := by
+    unfold centeredRamanujanPairOddOddParityFactor
+    rw [divisors_filter_not_isEven_eq_self_of_odd hnOdd]
+  have hsum :
+      ∑ g ∈ n.divisors, ramanujanGcdClassCoeff (2 * n) g * (Nat.totient ((2 * n) / g) : ℝ)
+        =
+      -∑ g ∈ n.divisors, ramanujanGcdClassCoeff n g * (Nat.totient (n / g) : ℝ) := by
+    calc
+      ∑ g ∈ n.divisors, ramanujanGcdClassCoeff (2 * n) g * (Nat.totient ((2 * n) / g) : ℝ)
+        =
+      ∑ g ∈ n.divisors, -(ramanujanGcdClassCoeff n g * (Nat.totient (n / g) : ℝ)) := by
+          refine Finset.sum_congr rfl ?_
+          intro g hg
+          have hg_dvd_n : g ∣ n := (Nat.mem_divisors.mp hg).1
+          have hquotOdd : Odd (n / g) := odd_div_of_dvd_odd hnOdd hg_dvd_n
+          have hquot : (2 * n) / g = 2 * (n / g) := by
+            rw [Nat.mul_div_assoc 2 hg_dvd_n]
+          rw [ramanujanGcdClassCoeff, ramanujanGcdClassCoeff, hquot]
+          rw [moebius_two_mul_eq_neg_of_odd hquotOdd, totient_two_mul_eq_totient_of_odd hquotOdd]
+          push_cast
+          ring
+      _ = -∑ g ∈ n.divisors, ramanujanGcdClassCoeff n g * (Nat.totient (n / g) : ℝ) := by
+          rw [← Finset.sum_neg_distrib]
+  simpa [hodd] using hsum
+
+theorem centeredRamanujanPairOddOddParityFactor_eq_neg_oddPartBaseSum_of_two_mul_odd
+    {n : ℕ} (hnOdd : Odd n) :
+    centeredRamanujanPairOddOddParityFactor (2 * n)
+      =
+    -centeredRamanujanPairCleanPeriodicOddPartBaseSum n := by
+  rw [centeredRamanujanPairOddOddParityFactor_eq_neg_self_of_two_mul_odd hnOdd]
+  rw [centeredRamanujanPairOddOddParityFactor_eq_oddPartBaseSum_of_odd hnOdd]
+
+theorem centeredRamanujanPairCleanPeriodicOddPartBaseSum_one :
+    centeredRamanujanPairCleanPeriodicOddPartBaseSum 1 = 1 := by
+  simp [centeredRamanujanPairCleanPeriodicOddPartBaseSum]
+
+theorem centeredRamanujanPairOddOddParityFactor_eq_one_of_eq_one
+    {q : ℕ} (hq : q = 1) :
+    centeredRamanujanPairOddOddParityFactor q = 1 := by
+  subst hq
+  rw [centeredRamanujanPairOddOddParityFactor_eq_oddPartBaseSum_of_odd (by decide)]
+  exact centeredRamanujanPairCleanPeriodicOddPartBaseSum_one
+
+theorem centeredRamanujanPairOddOddParityFactor_eq_neg_one_of_eq_two
+    {q : ℕ} (hq : q = 2) :
+    centeredRamanujanPairOddOddParityFactor q = -1 := by
+  subst hq
+  rw [show (2 : ℕ) = 2 * 1 by norm_num]
+  rw [centeredRamanujanPairOddOddParityFactor_eq_neg_oddPartBaseSum_of_two_mul_odd (by decide)]
+  simp [centeredRamanujanPairCleanPeriodicOddPartBaseSum_one]
+
+theorem centeredRamanujanPairOddOddParityFactor_eq_zero_of_odd_squarefree_ne_one
+    {q : ℕ} (hqOdd : Odd q) (hsq : Squarefree q) (hqne : q ≠ 1) :
+    centeredRamanujanPairOddOddParityFactor q = 0 := by
+  rw [centeredRamanujanPairOddOddParityFactor_eq_oddPartBaseSum_of_odd hqOdd]
+  have hq0 : q ≠ 0 := by
+    intro hqZero
+    subst q
+    norm_num at hqOdd
+  have hfacLe : ∀ p, q.factorization p ≤ 1 :=
+    (Nat.squarefree_iff_factorization_le_one hq0).1 hsq
+  have hnonempty : q.primeFactors.Nonempty := by
+    by_contra hEmpty
+    rw [Finset.not_nonempty_iff_eq_empty] at hEmpty
+    rcases Nat.primeFactors_eq_empty.mp hEmpty with hqZero | hqOne
+    · exact hq0 hqZero
+    · exact hqne hqOne
+  rcases hnonempty with ⟨p, hp⟩
+  have hpPrime : Nat.Prime p := Nat.prime_of_mem_primeFactors hp
+  have hfacGe : 1 ≤ q.factorization p := by
+    exact (Nat.Prime.dvd_iff_one_le_factorization hpPrime hq0).1
+      ((Nat.mem_primeFactors.mp hp).2.1)
+  have hfacLe' : q.factorization p ≤ 1 := hfacLe p
+  have hfact : q.factorization p = 1 := by omega
+  exact centeredRamanujanPairCleanPeriodicOddPartBaseSum_eq_zero_of_factorization_eq_one
+    hq0 hpPrime hfact
+
+theorem centeredRamanujanPairOddOddParityFactor_eq_zero_of_squarefree_ne_one_ne_two
+    {q : ℕ} (hsq : Squarefree q) (hqne1 : q ≠ 1) (hqne2 : q ≠ 2) :
+    centeredRamanujanPairOddOddParityFactor q = 0 := by
+  by_cases hEven : Goldbach.Windows.IsEven q
+  · rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨n, hqEq⟩
+    have hnOdd : Odd n := by
+      refine Nat.not_even_iff_odd.mp ?_
+      intro hnEven
+      rcases (even_iff_two_dvd).1 hnEven with ⟨m, hm⟩
+      have h4dvdq : 4 ∣ q := by
+        refine ⟨m, ?_⟩
+        rw [hqEq, hm]
+        ring
+      have hsqPrime := Nat.squarefree_iff_prime_squarefree.mp hsq
+      exact hsqPrime 2 Nat.prime_two (by simpa using h4dvdq)
+    have hnSq : Squarefree n := by
+      refine hsq.squarefree_of_dvd ?_
+      exact ⟨2, by simpa [Nat.mul_comm] using hqEq⟩
+    have hnne : n ≠ 1 := by
+      intro hnEq
+      apply hqne2
+      simpa [hqEq, hnEq]
+    rw [hqEq, centeredRamanujanPairOddOddParityFactor_eq_neg_oddPartBaseSum_of_two_mul_odd hnOdd]
+    have hZeroN :
+        centeredRamanujanPairCleanPeriodicOddPartBaseSum n = 0 := by
+      have hZeroFactor :
+          centeredRamanujanPairOddOddParityFactor n = 0 :=
+        centeredRamanujanPairOddOddParityFactor_eq_zero_of_odd_squarefree_ne_one hnOdd hnSq hnne
+      simpa [centeredRamanujanPairOddOddParityFactor_eq_oddPartBaseSum_of_odd hnOdd] using hZeroFactor
+    simp [hZeroN]
+  · have hqOdd : Odd q := by
+      refine Nat.not_even_iff_odd.mp ?_
+      intro hqEvenNat
+      exact hEven (Goldbach.Windows.isEven_of_even hqEvenNat)
+    exact centeredRamanujanPairOddOddParityFactor_eq_zero_of_odd_squarefree_ne_one
+      hqOdd hsq hqne1
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore
+    (q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+        * (2 * (Nat.totient (q / g) : ℝ) * (Nat.totient (q' / h) : ℝ))
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_two_mul_factors
+    (q q' : ℕ) :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore q q'
+      =
+    2 * centeredRamanujanPairOddOddParityFactor q
+      * centeredRamanujanPairOddOddParityFactor q' := by
+  let G := q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g)
+  let H' := q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h)
+  let aq : ℕ → ℝ := fun g =>
+    ramanujanGcdClassCoeff q g * (Nat.totient (q / g) : ℝ)
+  let bq : ℕ → ℝ := fun h =>
+    ramanujanGcdClassCoeff q' h * (Nat.totient (q' / h) : ℝ)
+  have hprod :
+      (∑ g ∈ G, aq g) * (∑ h ∈ H', bq h)
+        =
+      ∑ g ∈ G, ∑ h ∈ H', aq g * bq h := by
+    rw [Finset.sum_mul]
+    refine Finset.sum_congr rfl ?_
+    intro g hg
+    rw [Finset.mul_sum]
+  unfold centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore
+    centeredRamanujanPairOddOddParityFactor
+  calc
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+        ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+          ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+            * (2 * (Nat.totient (q / g) : ℝ) * (Nat.totient (q' / h) : ℝ))
+      =
+    ∑ g ∈ G, ∑ h ∈ H', 2 * (aq g * bq h) := by
+        refine Finset.sum_congr rfl ?_
+        intro g hg
+        refine Finset.sum_congr rfl ?_
+        intro h hh
+        dsimp [aq, bq]
+        ring
+    _ = 2 * ∑ g ∈ G, ∑ h ∈ H', aq g * bq h := by
+        have houter :
+            2 * (∑ g ∈ G, ∑ h ∈ H', aq g * bq h)
+              =
+            ∑ g ∈ G, 2 * (∑ h ∈ H', aq g * bq h) := by
+          simpa using (Finset.mul_sum G (fun g => ∑ h ∈ H', aq g * bq h) 2)
+        have hinner :
+            ∀ g,
+              2 * (∑ h ∈ H', aq g * bq h)
+                =
+              ∑ h ∈ H', 2 * (aq g * bq h) := by
+          intro g
+          simpa using (Finset.mul_sum H' (fun h => aq g * bq h) 2)
+        rw [houter]
+        refine Finset.sum_congr rfl ?_
+        intro g hg
+        rw [hinner g]
+    _ = 2 * ((∑ g ∈ G, aq g) * (∑ h ∈ H', bq h)) := by rw [← hprod]
+    _ = 2 * (∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+          ramanujanGcdClassCoeff q g * (Nat.totient (q / g) : ℝ))
+        * (∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+          ramanujanGcdClassCoeff q' h * (Nat.totient (q' / h) : ℝ)) := by
+          ring
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_neg_two_of_eq_one_two
+    {q q' : ℕ} (hq : q = 1) (hq' : q' = 2) :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore q q' = -2 := by
+  rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_two_mul_factors]
+  rw [centeredRamanujanPairOddOddParityFactor_eq_one_of_eq_one hq]
+  rw [centeredRamanujanPairOddOddParityFactor_eq_neg_one_of_eq_two hq']
+  norm_num
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_neg_two_of_eq_two_one
+    {q q' : ℕ} (hq : q = 2) (hq' : q' = 1) :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore q q' = -2 := by
+  rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_two_mul_factors]
+  rw [centeredRamanujanPairOddOddParityFactor_eq_neg_one_of_eq_two hq]
+  rw [centeredRamanujanPairOddOddParityFactor_eq_one_of_eq_one hq']
+  norm_num
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_zero_of_squarefree_coprime_offDiagonal_not_exceptional
+    {q q' : ℕ} (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') (hneq : q ≠ q')
+    (hnot12 : ¬ (q = 1 ∧ q' = 2)) (hnot21 : ¬ (q = 2 ∧ q' = 1)) :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore q q' = 0 := by
+  rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_two_mul_factors]
+  by_cases hq1 : q = 1
+  · have hq'ne1 : q' ≠ 1 := by
+      intro hq'1
+      exact hneq (hq1.trans hq'1.symm)
+    have hq'ne2 : q' ≠ 2 := by
+      intro hq'2
+      exact hnot12 ⟨hq1, hq'2⟩
+    rw [centeredRamanujanPairOddOddParityFactor_eq_one_of_eq_one hq1]
+    rw [centeredRamanujanPairOddOddParityFactor_eq_zero_of_squarefree_ne_one_ne_two hsq' hq'ne1 hq'ne2]
+    ring
+  by_cases hq2 : q = 2
+  · have hq'ne2 : q' ≠ 2 := by
+      intro hq'2
+      exact hneq (hq2.trans hq'2.symm)
+    have hq'ne1 : q' ≠ 1 := by
+      intro hq'1
+      exact hnot21 ⟨hq2, hq'1⟩
+    rw [centeredRamanujanPairOddOddParityFactor_eq_neg_one_of_eq_two hq2]
+    rw [centeredRamanujanPairOddOddParityFactor_eq_zero_of_squarefree_ne_one_ne_two hsq' hq'ne1 hq'ne2]
+    ring
+  have hqne1 : q ≠ 1 := hq1
+  have hqne2 : q ≠ 2 := hq2
+  rw [centeredRamanujanPairOddOddParityFactor_eq_zero_of_squarefree_ne_one_ne_two hsq hqne1 hqne2]
+  ring
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution
+    (q q' : ℕ) : ℝ :=
+  ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+      • centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore q q')
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution_eq_two_mul_factors
+    (q q' : ℕ) :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution q q'
+      =
+    ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+      • (2 * centeredRamanujanPairOddOddParityFactor q
+          * centeredRamanujanPairOddOddParityFactor q')) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution
+  rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_two_mul_factors]
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution_eq_neg_two_nsmul_of_eq_one_two
+    {q q' : ℕ} (hq : q = 1) (hq' : q' = 2) :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution q q'
+      =
+    (((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ) • (-2 : ℝ) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution
+  rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_neg_two_of_eq_one_two hq hq']
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution_eq_neg_two_nsmul_of_eq_two_one
+    {q q' : ℕ} (hq : q = 2) (hq' : q' = 1) :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution q q'
+      =
+    (((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ) • (-2 : ℝ) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution
+  rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_neg_two_of_eq_two_one hq hq']
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution_eq_zero_of_squarefree_coprime_offDiagonal_not_exceptional
+    {q q' : ℕ} (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') (hneq : q ≠ q')
+    (hnot12 : ¬ (q = 1 ∧ q' = 2)) (hnot21 : ¬ (q = 2 ∧ q' = 1)) :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution q q' = 0 := by
+  unfold centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution
+  rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore_eq_zero_of_squarefree_coprime_offDiagonal_not_exceptional
+    hsq hsq' hcop hneq hnot12 hnot21]
+  simp
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddExplicitTotientSummand
+    (q q' g h : ℕ) : ℝ :=
+  ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+    * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+        • (2 * (Nat.totient (q / g) : ℝ) * (Nat.totient (q' / h) : ℝ)))
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddExplicitTotientPointwiseContribution
+    (q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      centeredRamanujanPairPeriodicMainOddOddExplicitTotientSummand q q' g h
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+        * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+            • (rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+                + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+                + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h))
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddCoefficientMismatchContribution
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+        * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+            • rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h)
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+        * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+            • centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h)
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddRemainderContribution
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+        * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+            • rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h)
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddAverageFactor
+    (X q : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ramanujanGcdClassCoeff q g * ramanujanGcdClassWindowAverage X q g
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddCenteredRightBlockFactor
+    (X q q' : ℕ) : ℝ :=
+  ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+    ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • (rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q' h
+              - evenRamanujanBlockCount X q q' * ramanujanGcdClassWindowAverage X q' h))
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddCenteredLeftBlockFactor
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ramanujanGcdClassCoeff q g
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • (rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q g
+              - evenRamanujanBlockCount X q q' * ramanujanGcdClassWindowAverage X q g))
+
+private theorem rawEvenRamanujanGcdClassBlockPeriodicCount_eq_evenRamanujanBlockCount_mul_windowAverage_of_eq_three_left
+    {X b g : ℕ} (hXEven : Goldbach.Windows.IsEven X)
+    (hb : 1 ≤ b) (hcop : Nat.Coprime 3 b)
+    (hg : g ∈ (3 : ℕ).divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g)) :
+    rawEvenRamanujanGcdClassBlockPeriodicCount X 3 b 3 g
+      =
+    evenRamanujanBlockCount X 3 b * ramanujanGcdClassWindowAverage X 3 g := by
+  have hq : 1 ≤ 3 := by norm_num
+  have hPpos : 0 < centeredRamanujanPairBlockPeriod 3 b := by
+    dsimp [centeredRamanujanPairBlockPeriod]
+    exact Nat.mul_pos (by norm_num) (Nat.lcm_pos hq hb)
+  have hgDiv : g ∈ (3 : ℕ).divisors := (Finset.mem_filter.mp hg).1
+  have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+  have hgpos : 0 < g := divisor_pos_of_mem_divisors_of_pos hgDiv hq
+  have hg_cases : g = 1 ∨ g = 3 := by
+    have hgle : g ≤ 3 := Nat.le_of_dvd (by norm_num) (Nat.mem_divisors.mp hgDiv).1
+    have hne2 : g ≠ 2 := by
+      intro hg2
+      have : Goldbach.Windows.IsEven 2 := by norm_num [Goldbach.Windows.IsEven]
+      exact hgOdd (by simpa [hg2] using this)
+    omega
+  rcases hg_cases with rfl | rfl
+  · rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_odd_g_totient_main_add_remainder_of_odd_quotient
+      X 3 b 3 1 (by norm_num) hPpos (by norm_num [Goldbach.Windows.IsEven]) (by norm_num) (by norm_num)]
+    dsimp
+    have hdiv :
+        ((((X + centeredRamanujanPairBlockPeriod 3 b - 1) / 1 + 1) - (X ⌈/⌉ 1))
+          / (2 * (3 / 1)))
+          = b :=
+      rawEvenRamanujanGcdClassPeriodicLeftLen_div_two_mul_quotient_eq_rightModulus_of_divisor
+        hq hb hcop (by norm_num : 1 ∈ (3 : ℕ).divisors)
+    have hmod :
+        ((((X + centeredRamanujanPairBlockPeriod 3 b - 1) / 1 + 1) - (X ⌈/⌉ 1))
+          % (2 * (3 / 1)))
+          = 0 :=
+      rawEvenRamanujanGcdClassPeriodicLeftLen_mod_two_mul_quotient_eq_zero_of_divisor
+        hq hb hcop (by norm_num : 1 ∈ (3 : ℕ).divisors)
+    rw [evenRamanujanBlockCount_eq_lcm, ramanujanGcdClassWindowAverage_three_one_eq_two_thirds_of_isEven hXEven]
+    rw [hcop.lcm_eq_mul]
+    simp [centeredRamanujanPairBlockPeriod, hcop.lcm_eq_mul] at hdiv hmod ⊢
+    rw [hdiv, hmod]
+    have hphi : Nat.totient 3 = 2 := by
+      simpa using Nat.totient_prime (by decide : Nat.Prime 3)
+    rw [hphi]
+    ring_nf
+    simp
+  · rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_odd_g_totient_main_add_remainder_of_odd_quotient
+      X 3 b 3 3 hgpos hPpos hgOdd (by norm_num) (by norm_num)]
+    dsimp
+    have hdiv :
+        ((((X + centeredRamanujanPairBlockPeriod 3 b - 1) / 3 + 1) - (X ⌈/⌉ 3))
+          / (2 * (3 / 3)))
+          = b :=
+      rawEvenRamanujanGcdClassPeriodicLeftLen_div_two_mul_quotient_eq_rightModulus_of_divisor
+        hq hb hcop (by norm_num : 3 ∈ (3 : ℕ).divisors)
+    have hmod :
+        ((((X + centeredRamanujanPairBlockPeriod 3 b - 1) / 3 + 1) - (X ⌈/⌉ 3))
+          % (2 * (3 / 3)))
+          = 0 :=
+      rawEvenRamanujanGcdClassPeriodicLeftLen_mod_two_mul_quotient_eq_zero_of_divisor
+        hq hb hcop (by norm_num : 3 ∈ (3 : ℕ).divisors)
+    rw [evenRamanujanBlockCount_eq_lcm, ramanujanGcdClassWindowAverage_three_three_eq_one_third_of_isEven hXEven]
+    rw [hcop.lcm_eq_mul]
+    simp [centeredRamanujanPairBlockPeriod, hcop.lcm_eq_mul] at hdiv hmod ⊢
+    rw [hdiv, hmod]
+    ring_nf
+    simp
+
+private theorem centeredRamanujanGcdClassPeriodicDensityMismatchTerm_eq_zero_of_isEven_eq_three_left
+    {X b g h : ℕ} (hXEven : Goldbach.Windows.IsEven X)
+    (hb : 1 ≤ b) (hcop : Nat.Coprime 3 b)
+    (hg : g ∈ (3 : ℕ).divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g)) :
+    centeredRamanujanGcdClassPeriodicDensityMismatchTerm X 3 b g h = 0 := by
+  have hcount :
+      rawEvenRamanujanGcdClassBlockPeriodicCount X 3 b 3 g
+        =
+      evenRamanujanBlockCount X 3 b * ramanujanGcdClassWindowAverage X 3 g :=
+    rawEvenRamanujanGcdClassBlockPeriodicCount_eq_evenRamanujanBlockCount_mul_windowAverage_of_eq_three_left
+      hXEven hb hcop hg
+  have hBne : evenRamanujanBlockCount X 3 b ≠ 0 := by
+    exact ne_of_gt (evenRamanujanBlockCount_pos X 3 b (by norm_num) hb)
+  unfold centeredRamanujanGcdClassPeriodicDensityMismatchTerm
+  rw [hcount]
+  field_simp [hBne]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution_eq_coefficientMismatch_add_densityMismatch_add_remainder
+    (X q q' : ℕ) :
+    centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddCoefficientMismatchContribution X q q'
+      + centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q'
+      + centeredRamanujanPairPeriodicMainOddOddRemainderContribution X q q' := by
+  let S := q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g)
+  let T := q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h)
+  let A : ℕ → ℕ → ℝ := fun g h =>
+    ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h)
+  let B : ℕ → ℕ → ℝ := fun g h =>
+    ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h)
+  let C : ℕ → ℕ → ℝ := fun g h =>
+    ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h)
+  unfold centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution
+    centeredRamanujanPairPeriodicMainOddOddCoefficientMismatchContribution
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution
+    centeredRamanujanPairPeriodicMainOddOddRemainderContribution
+  calc
+    ∑ g ∈ S, ∑ h ∈ T,
+          ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+            * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+                • (rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+                    + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+                    + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h))
+      =
+    ∑ g ∈ S, ∑ h ∈ T, (A g h + B g h + C g h) := by
+          refine Finset.sum_congr rfl ?_
+          intro g hg
+          refine Finset.sum_congr rfl ?_
+          intro h hh
+          dsimp [A, B, C]
+          rw [nsmul_add, nsmul_add, mul_add, mul_add]
+    _ =
+      ∑ g ∈ S, ((∑ h ∈ T, A g h) + (∑ h ∈ T, B g h) + (∑ h ∈ T, C g h)) := by
+        refine Finset.sum_congr rfl ?_
+        intro g hg
+        rw [Finset.sum_add_distrib, Finset.sum_add_distrib]
+    _ =
+      (∑ g ∈ S, ∑ h ∈ T, A g h) + ((∑ g ∈ S, ∑ h ∈ T, B g h) + (∑ g ∈ S, ∑ h ∈ T, C g h)) := by
+        rw [Finset.sum_add_distrib, Finset.sum_add_distrib]
+        simp [add_assoc]
+    _ =
+      centeredRamanujanPairPeriodicMainOddOddCoefficientMismatchContribution X q q'
+        + centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q'
+        + centeredRamanujanPairPeriodicMainOddOddRemainderContribution X q q' := by
+        simp [centeredRamanujanPairPeriodicMainOddOddCoefficientMismatchContribution,
+          centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution,
+          centeredRamanujanPairPeriodicMainOddOddRemainderContribution, S, T, A, B, C, add_assoc]
+
+theorem centeredRamanujanPairPeriodicMainOddOddAverageFactor_eq_sum_moebius_totient_windowAverage
+    (X q : ℕ) :
+    centeredRamanujanPairPeriodicMainOddOddAverageFactor X q
+      =
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+      ((((ArithmeticFunction.moebius : ArithmeticFunction ℤ) (q / g) : ℤ) : ℝ)
+        * (Nat.totient g : ℝ))
+        * ramanujanGcdClassWindowAverage X q g := by
+  unfold centeredRamanujanPairPeriodicMainOddOddAverageFactor ramanujanGcdClassCoeff
+  rfl
+
+theorem centeredRamanujanPairPeriodicMainOddOddAverageFactor_eq_zero_of_isEven
+    {X q : ℕ} (hqEven : Goldbach.Windows.IsEven q) :
+    centeredRamanujanPairPeriodicMainOddOddAverageFactor X q = 0 := by
+  unfold centeredRamanujanPairPeriodicMainOddOddAverageFactor
+  refine Finset.sum_eq_zero ?_
+  intro g hg
+  have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+  rw [ramanujanGcdClassWindowAverage_eq_zero_of_isEven_q_of_not_isEven_g hqEven hgOdd]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainOddOddAverageFactor_eq_ramanujanWindowAverage_of_odd
+    {X q : ℕ} (hq : 1 ≤ q) (hqOdd : Odd q) :
+    centeredRamanujanPairPeriodicMainOddOddAverageFactor X q = ramanujanWindowAverage X q := by
+  unfold centeredRamanujanPairPeriodicMainOddOddAverageFactor
+  rw [divisors_filter_not_isEven_eq_self_of_odd hqOdd]
+  rw [ramanujanWindowAverage_eq_sum_gcdClassAverages (X := X) (q := q) hq]
+
+theorem ramanujanGcdClassCoeff_two_mul_of_odd_divisor
+    {n g : ℕ} (hnOdd : Odd n) (hg : g ∈ n.divisors) :
+    ramanujanGcdClassCoeff (2 * n) (2 * g) = ramanujanGcdClassCoeff n g := by
+  have hgOdd : Odd g := odd_of_mem_divisors_odd hnOdd hg
+  have hquot : (2 * n) / (2 * g) = n / g := by
+    simpa using div_two_pow_mul_by_two_mul_of_dvd (k := 1) (n := n) (b := g) (by omega) hg
+  unfold ramanujanGcdClassCoeff
+  rw [hquot, totient_two_mul_eq_totient_of_odd hgOdd]
+
+theorem centeredRamanujanPairPeriodicMainEvenOddSector_eq_two_mul_odd_reindexed
+    {X n q' : ℕ} (hnOdd : Odd n) :
+    centeredRamanujanPairPeriodicMainEvenOddSector X (2 * n) q'
+      =
+    ∑ g ∈ n.divisors,
+      ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        centeredRamanujanPairPeriodicMainParitySummand X (2 * n) q' (2 * g) h := by
+  unfold centeredRamanujanPairPeriodicMainEvenOddSector
+  rw [sum_filter_isEven_two_mul_odd_divisors_eq_sum_divisors hnOdd]
+
+theorem centeredRamanujanPairPeriodicMainEvenOddSector_eq_two_mul_odd_reindexed_with_coeff
+    {X n q' : ℕ} (hnOdd : Odd n) :
+    centeredRamanujanPairPeriodicMainEvenOddSector X (2 * n) q'
+      =
+    ∑ g ∈ n.divisors,
+      ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        ramanujanGcdClassCoeff n g * ramanujanGcdClassCoeff q' h
+          * ((((H + 1) / centeredRamanujanPairBlockPeriod (2 * n) q') : ℕ)
+              • centeredRamanujanGcdClassPairFullEvenBlockSum X (2 * n) q' (2 * g) h) := by
+  rw [centeredRamanujanPairPeriodicMainEvenOddSector_eq_two_mul_odd_reindexed hnOdd]
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  unfold centeredRamanujanPairPeriodicMainParitySummand
+  rw [ramanujanGcdClassCoeff_two_mul_of_odd_divisor hnOdd hg]
+
+theorem centeredRamanujanPairPeriodicMainParitySummand_eq_even_lcm_periodic_comparison_of_two_mul_odd_left_divisor_of_coprime
+    {X n q' g h : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q')
+    (hg : g ∈ n.divisors) (hh : h ∈ q'.divisors) :
+    centeredRamanujanPairPeriodicMainParitySummand X (2 * n) q' (2 * g) h
+      =
+    ramanujanGcdClassCoeff n g * ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod (2 * n) q') : ℕ)
+          •
+            (let Pair := by
+              let A := X ⌈/⌉ Nat.lcm (2 * g) h
+              let L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / Nat.lcm (2 * g) h + 1) - A
+              let M := ramanujanGcdClassJointModulus (2 * n) q' (2 * g) h
+              exact (((L / M) * (((Finset.range M)).filter
+                  (fun t => Nat.Coprime M (A + t))).card
+                + (((Finset.range (L % M)).filter
+                    (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+             let Left := by
+              let A := X ⌈/⌉ (2 * g)
+              let L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / (2 * g) + 1) - A
+              let M := (2 * n) / (2 * g)
+              exact (((L / M) * (((Finset.range M)).filter
+                  (fun t => Nat.Coprime M (A + t))).card
+                + (((Finset.range (L % M)).filter
+                    (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+             let Right := by
+              let A := X ⌈/⌉ h
+              let L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / h + 1) - A
+              let M := q' / h
+              exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+                  (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+                + (((Finset.range (L % (2 * M))).filter
+                    (fun t =>
+                      Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                        ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+             Pair
+               - ramanujanGcdClassWindowAverage X q' h * Left
+               - ramanujanGcdClassWindowAverage X (2 * n) (2 * g) * Right
+               + ramanujanGcdClassWindowAverage X (2 * n) (2 * g) * ramanujanGcdClassWindowAverage X q' h
+                   * evenRamanujanBlockCount X (2 * n) q')) := by
+  have h2npos : 1 ≤ 2 * n := by
+    have hnpos : 0 < n := Nat.pos_of_ne_zero (by
+      intro hn
+      subst n
+      norm_num at hnOdd)
+    nlinarith
+  have h2gDiv : 2 * g ∈ (2 * n).divisors := by
+    exact (mem_two_mul_odd_divisors_iff hnOdd).2 (Or.inr ⟨g, hg, rfl⟩)
+  have h2gEven : Goldbach.Windows.IsEven (2 * g) := by
+    exact Goldbach.Windows.isEven_of_even ((even_iff_two_dvd).2 ⟨g, by ring⟩)
+  unfold centeredRamanujanPairPeriodicMainParitySummand
+  rw [ramanujanGcdClassCoeff_two_mul_of_odd_divisor hnOdd hg]
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_even_lcm_periodic_comparison_of_even_odd_of_coprime_moduli_divisors
+    h2npos hq' hcop h2gDiv hh h2gEven]
+
+def centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparisonSummand
+    (X n q' g h : ℕ) : ℝ :=
+  ramanujanGcdClassCoeff n g * ramanujanGcdClassCoeff q' h
+    * ((((H + 1) / centeredRamanujanPairBlockPeriod (2 * n) q') : ℕ)
+        •
+          (let Pair := by
+            let A := X ⌈/⌉ Nat.lcm (2 * g) h
+            let L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / Nat.lcm (2 * g) h + 1) - A
+            let M := ramanujanGcdClassJointModulus (2 * n) q' (2 * g) h
+            exact (((L / M) * (((Finset.range M)).filter
+                (fun t => Nat.Coprime M (A + t))).card
+              + (((Finset.range (L % M)).filter
+                  (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+           let Left := by
+            let A := X ⌈/⌉ (2 * g)
+            let L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / (2 * g) + 1) - A
+            let M := (2 * n) / (2 * g)
+            exact (((L / M) * (((Finset.range M)).filter
+                (fun t => Nat.Coprime M (A + t))).card
+              + (((Finset.range (L % M)).filter
+                  (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+           let Right := by
+            let A := X ⌈/⌉ h
+            let L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / h + 1) - A
+            let M := q' / h
+            exact (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+                (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+              + (((Finset.range (L % (2 * M))).filter
+                  (fun t =>
+                    Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                      ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+           Pair
+             - ramanujanGcdClassWindowAverage X q' h * Left
+             - ramanujanGcdClassWindowAverage X (2 * n) (2 * g) * Right
+             + ramanujanGcdClassWindowAverage X (2 * n) (2 * g) * ramanujanGcdClassWindowAverage X q' h
+                 * evenRamanujanBlockCount X (2 * n) q'))
+
+theorem centeredRamanujanPairPeriodicMainParitySummand_eq_evenOddReindexedPeriodicComparisonSummand_of_two_mul_odd_left_divisor_of_coprime
+    {X n q' g h : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q')
+    (hg : g ∈ n.divisors) (hh : h ∈ q'.divisors) :
+    centeredRamanujanPairPeriodicMainParitySummand X (2 * n) q' (2 * g) h
+      =
+    centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparisonSummand X n q' g h := by
+  exact
+    centeredRamanujanPairPeriodicMainParitySummand_eq_even_lcm_periodic_comparison_of_two_mul_odd_left_divisor_of_coprime
+      hnOdd hq' hcop hg hh
+
+theorem ramanujanGcdClassJointModulus_two_mul_left_of_odd_divisor
+    {n q' g h : ℕ} (hg : g ∈ n.divisors) :
+    ramanujanGcdClassJointModulus (2 * n) q' (2 * g) h
+      =
+    ramanujanGcdClassJointModulus n q' g h := by
+  have hquot : (2 * n) / (2 * g) = n / g := by
+    simpa using div_two_pow_mul_by_two_mul_of_dvd (k := 1) (n := n) (b := g) (by omega) hg
+  unfold ramanujanGcdClassJointModulus
+  rw [hquot]
+
+theorem rawEvenRamanujanGcdClassPeriodicPairLen_eq_two_mul_jointModulus_of_two_mul_odd_left_divisor_of_coprime
+    {X n q' g h : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q')
+    (hg : g ∈ n.divisors) (hh : h ∈ q'.divisors) :
+    (((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / Nat.lcm (2 * g) h + 1)
+        - (X ⌈/⌉ Nat.lcm (2 * g) h))
+      =
+    2 * ramanujanGcdClassJointModulus n q' g h := by
+  have h2npos : 1 ≤ 2 * n := by
+    have hnpos : 0 < n := Nat.pos_of_ne_zero (by
+      intro hn
+      subst n
+      norm_num at hnOdd)
+    omega
+  have h2gDiv : 2 * g ∈ (2 * n).divisors := by
+    exact (mem_two_mul_odd_divisors_iff hnOdd).2 (Or.inr ⟨g, hg, rfl⟩)
+  rw [rawEvenRamanujanGcdClassPeriodicPairLen_eq_two_mul_jointModulus_of_coprime_moduli_divisors
+    h2npos hq' hcop h2gDiv hh]
+  rw [ramanujanGcdClassJointModulus_two_mul_left_of_odd_divisor hg]
+
+theorem rawEvenRamanujanGcdClassPeriodicLeftLen_eq_two_mul_quotient_mul_of_two_mul_odd_left_divisor_of_coprime
+    {X n q' g : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q')
+    (hg : g ∈ n.divisors) :
+    (((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / (2 * g) + 1) - (X ⌈/⌉ (2 * g)))
+      =
+    2 * ((n / g) * q') := by
+  have h2npos : 1 ≤ 2 * n := by
+    have hnpos : 0 < n := Nat.pos_of_ne_zero (by
+      intro hn
+      subst n
+      norm_num at hnOdd)
+    omega
+  have h2gDiv : 2 * g ∈ (2 * n).divisors := by
+    exact (mem_two_mul_odd_divisors_iff hnOdd).2 (Or.inr ⟨g, hg, rfl⟩)
+  rw [rawEvenRamanujanGcdClassPeriodicLeftLen_eq_two_mul_quotient_mul_of_divisor
+    h2npos hq' hcop h2gDiv]
+  have hquot : (2 * n) / (2 * g) = n / g := by
+    simpa using div_two_pow_mul_by_two_mul_of_dvd (k := 1) (n := n) (b := g) (by omega) hg
+  rw [hquot]
+
+theorem rawEvenRamanujanGcdClassPeriodicRightLen_eq_four_mul_quotient_mul_of_two_mul_odd_left_divisor_of_coprime
+    {X n q' g h : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q')
+    (hh : h ∈ q'.divisors) :
+    (((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / h + 1) - (X ⌈/⌉ h))
+      =
+    4 * ((q' / h) * n) := by
+  have h2npos : 1 ≤ 2 * n := by
+    have hnpos : 0 < n := Nat.pos_of_ne_zero (by
+      intro hn
+      subst n
+      norm_num at hnOdd)
+    omega
+  rw [rawEvenRamanujanGcdClassPeriodicRightLen_eq_two_mul_quotient_mul_of_divisor
+    h2npos hq' hcop hh]
+  ring
+
+theorem rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_two_mul_of_two_mul_odd_left_divisor_of_coprime
+    {X n q' g h : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q')
+    (hg : g ∈ n.divisors) (hh : h ∈ q'.divisors) :
+    rawEvenRamanujanGcdClassPairBlockPeriodicCount X (2 * n) q' (2 * g) h
+      =
+    2 * rawEvenRamanujanGcdClassPairBlockPeriodicCount X n q' g h := by
+  have h2npos : 1 ≤ 2 * n := by
+    have hnpos : 0 < n := Nat.pos_of_ne_zero (by
+      intro hn
+      subst n
+      norm_num at hnOdd)
+    omega
+  have hqEven : Goldbach.Windows.IsEven (2 * n) := by
+    exact Goldbach.Windows.isEven_of_even ⟨n, by ring⟩
+  have hq'Odd : ¬ Goldbach.Windows.IsEven q' :=
+    not_isEven_right_of_isEven_left_of_coprime hcop hqEven
+  have hq'OddNat : Odd q' := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hq'EvenNat
+    exact hq'Odd (Goldbach.Windows.isEven_of_even hq'EvenNat)
+  have hgOddNat : Odd g := odd_of_mem_divisors_odd hnOdd hg
+  have hhOddNat : Odd h := odd_of_mem_divisors_odd hq'OddNat hh
+  have hgOdd : ¬ Goldbach.Windows.IsEven g := by
+    intro hgEven
+    exact (Nat.not_even_iff_odd.mpr hgOddNat) (Goldbach.Windows.even_of_isEven hgEven)
+  have hhOdd : ¬ Goldbach.Windows.IsEven h := by
+    intro hhEven
+    exact (Nat.not_even_iff_odd.mpr hhOddNat) (Goldbach.Windows.even_of_isEven hhEven)
+  have h2gEven : Goldbach.Windows.IsEven (2 * g) := by
+    exact Goldbach.Windows.isEven_of_even ⟨g, by ring⟩
+  have h2gDiv : 2 * g ∈ (2 * n).divisors := by
+    exact (mem_two_mul_odd_divisors_iff hnOdd).2 (Or.inr ⟨g, hg, rfl⟩)
+  have hcompatOdd : ramanujanGcdClassJointCompatibility n q' g h := by
+    have hcop_n : Nat.Coprime n q' := hcop.coprime_dvd_left (dvd_mul_left n 2)
+    exact ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors
+      (Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+        intro hn
+        subst n
+        norm_num at hnOdd)))
+      hq' hcop_n hg hh
+  have hMpos : 0 < ramanujanGcdClassJointModulus n q' g h := by
+    unfold ramanujanGcdClassJointModulus
+    exact Nat.mul_pos (quotient_pos_of_mem_divisors (Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+      intro hn
+      subst n
+      norm_num at hnOdd))) hg) (quotient_pos_of_mem_divisors hq' hh)
+  have hMOdd : Odd (ramanujanGcdClassJointModulus n q' g h) := by
+    unfold ramanujanGcdClassJointModulus
+    exact (odd_div_of_dvd_odd hnOdd (Nat.mem_divisors.mp hg).1).mul
+      (odd_div_of_dvd_odd hq'OddNat (Nat.mem_divisors.mp hh).1)
+  have hgh : Nat.Coprime g h := by
+    have hcop_n : Nat.Coprime n q' := hcop.coprime_dvd_left (dvd_mul_left n 2)
+    exact ramanujanGcdClassDivisors_coprime_of_coprime_moduli hcop_n hg hh
+  have hOddL : ¬ Goldbach.Windows.IsEven (Nat.lcm g h) := by
+    intro hEvenL
+    have hEvenMul : Goldbach.Windows.IsEven (g * h) := by
+      simpa [hgh.lcm_eq_mul] using hEvenL
+    have hEvenh : Goldbach.Windows.IsEven h :=
+      (isEven_mul_iff_of_not_isEven_left hgOdd).1 hEvenMul
+    exact hhOdd hEvenh
+  have hEvenSide :
+      rawEvenRamanujanGcdClassPairBlockPeriodicCount X (2 * n) q' (2 * g) h
+        =
+      (2 * (Nat.totient (ramanujanGcdClassJointModulus n q' g h) : ℝ)) := by
+    rw [rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_even_lcm_totient_main_add_remainder
+      X (2 * n) q' (2 * g) h (isEven_lcm_of_isEven_left h2gEven)]
+    · dsimp
+      rw [ramanujanGcdClassJointModulus_two_mul_left_of_odd_divisor hg]
+      have hPairDiv :
+          ((X + 2 * (2 * n).lcm q' - 1) / (2 * g).lcm h + 1 - X ⌈/⌉ (2 * g).lcm h)
+            / ramanujanGcdClassJointModulus n q' g h
+            = 2 := by
+        have hPairLen :
+            ((X + 2 * (2 * n).lcm q' - 1) / (2 * g).lcm h + 1 - X ⌈/⌉ (2 * g).lcm h)
+              =
+            2 * ramanujanGcdClassJointModulus n q' g h := by
+          simpa [centeredRamanujanPairBlockPeriod] using
+            rawEvenRamanujanGcdClassPeriodicPairLen_eq_two_mul_jointModulus_of_two_mul_odd_left_divisor_of_coprime
+              (X := X) hnOdd hq' hcop hg hh
+        rw [hPairLen]
+        simp [hMpos.ne']
+      have hPairMod :
+          ((X + 2 * (2 * n).lcm q' - 1) / (2 * g).lcm h + 1 - X ⌈/⌉ (2 * g).lcm h)
+            % ramanujanGcdClassJointModulus n q' g h
+            = 0 := by
+        have hPairLen :
+            ((X + 2 * (2 * n).lcm q' - 1) / (2 * g).lcm h + 1 - X ⌈/⌉ (2 * g).lcm h)
+              =
+            2 * ramanujanGcdClassJointModulus n q' g h := by
+          simpa [centeredRamanujanPairBlockPeriod] using
+            rawEvenRamanujanGcdClassPeriodicPairLen_eq_two_mul_jointModulus_of_two_mul_odd_left_divisor_of_coprime
+              (X := X) hnOdd hq' hcop hg hh
+        rw [hPairLen]
+        simp
+      rw [hPairDiv, hPairMod]
+      simp
+    · rw [ramanujanGcdClassJointModulus_two_mul_left_of_odd_divisor hg]
+      exact hMpos
+  have hOddSide :
+      rawEvenRamanujanGcdClassPairBlockPeriodicCount X n q' g h
+        =
+      (Nat.totient (ramanujanGcdClassJointModulus n q' g h) : ℝ) := by
+    rw [rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_odd_lcm_totient_main_add_remainder_of_odd_jointModulus
+      X n q' g h (Nat.lcm_pos (divisor_pos_of_mem_divisors_of_pos hg
+        (Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+          intro hn
+          subst n
+          norm_num at hnOdd)))) (divisor_pos_of_mem_divisors_of_pos hh hq'))
+      (by
+        dsimp [centeredRamanujanPairBlockPeriod]
+        exact Nat.mul_pos (by norm_num) (Nat.lcm_pos
+          (Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+            intro hn
+            subst n
+            norm_num at hnOdd))) hq'))
+      hcompatOdd hOddL hMpos hMOdd]
+    dsimp
+    have hPairDiv :
+        ((X + 2 * n.lcm q' - 1) / g.lcm h + 1 - X ⌈/⌉ g.lcm h)
+          / (2 * ramanujanGcdClassJointModulus n q' g h)
+          = 1 := by
+      simpa [centeredRamanujanPairBlockPeriod] using
+        rawEvenRamanujanGcdClassPeriodicPairLen_div_two_mul_jointModulus_eq_one_of_coprime_moduli_divisors
+          (X := X) (q := n) (q' := q') (g := g) (h := h)
+          (hq := Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+            intro hn
+            subst n
+            norm_num at hnOdd))) hq'
+          (hcop := hcop.coprime_dvd_left (dvd_mul_left n 2)) hg hh
+    have hPairMod :
+        ((X + 2 * n.lcm q' - 1) / g.lcm h + 1 - X ⌈/⌉ g.lcm h)
+          % (2 * ramanujanGcdClassJointModulus n q' g h)
+          = 0 := by
+      simpa [centeredRamanujanPairBlockPeriod] using
+        rawEvenRamanujanGcdClassPeriodicPairLen_mod_two_mul_jointModulus_eq_zero_of_coprime_moduli_divisors
+          (X := X) (q := n) (q' := q') (g := g) (h := h)
+          (hq := Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+            intro hn
+            subst n
+            norm_num at hnOdd))) hq'
+          (hcop := hcop.coprime_dvd_left (dvd_mul_left n 2)) hg hh
+    rw [hPairDiv, hPairMod]
+    simp
+  rw [hEvenSide, hOddSide]
+
+theorem rawEvenRamanujanGcdClassLeftBlockPeriodicCount_eq_two_mul_of_two_mul_odd_left_divisor_of_coprime
+    {X n q' g : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q')
+    (hg : g ∈ n.divisors) :
+    rawEvenRamanujanGcdClassBlockPeriodicCount X (2 * n) q' (2 * n) (2 * g)
+      =
+    2 * rawEvenRamanujanGcdClassBlockPeriodicCount X n q' n g := by
+  have h2npos : 1 ≤ 2 * n := by
+    have hnpos : 0 < n := Nat.pos_of_ne_zero (by
+      intro hn
+      subst n
+      norm_num at hnOdd)
+    omega
+  have hgOddNat : Odd g := odd_of_mem_divisors_odd hnOdd hg
+  have h2gEven : Goldbach.Windows.IsEven (2 * g) := by
+    exact Goldbach.Windows.isEven_of_even ⟨g, by ring⟩
+  have h2gDiv : 2 * g ∈ (2 * n).divisors := by
+    exact (mem_two_mul_odd_divisors_iff hnOdd).2 (Or.inr ⟨g, hg, rfl⟩)
+  have hMpos : 0 < n / g := quotient_pos_of_mem_divisors
+      (Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+        intro hn
+        subst n
+        norm_num at hnOdd))) hg
+  have hMOdd : Odd (n / g) := odd_div_of_dvd_odd hnOdd (Nat.mem_divisors.mp hg).1
+  have hEvenSide :
+      rawEvenRamanujanGcdClassBlockPeriodicCount X (2 * n) q' (2 * n) (2 * g)
+        =
+      (2 * (q' : ℝ) * (Nat.totient (n / g) : ℝ)) := by
+    rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_even_totient_main_add_remainder
+      X (2 * n) q' (2 * n) (2 * g) h2gEven]
+    · dsimp
+      rw [show (2 * n) / (2 * g) = n / g by
+        simpa using div_two_pow_mul_by_two_mul_of_dvd (k := 1) (n := n) (b := g) (by omega) hg]
+      have hLeftDiv :
+          ((X + 2 * (2 * n).lcm q' - 1) / (2 * g) + 1 - X ⌈/⌉ (2 * g))
+            / (n / g)
+            = 2 * q' := by
+        have hLeftLen :
+            ((X + 2 * (2 * n).lcm q' - 1) / (2 * g) + 1 - X ⌈/⌉ (2 * g))
+              =
+            2 * ((n / g) * q') := by
+          simpa [centeredRamanujanPairBlockPeriod] using
+            rawEvenRamanujanGcdClassPeriodicLeftLen_eq_two_mul_quotient_mul_of_two_mul_odd_left_divisor_of_coprime
+              (X := X) hnOdd hq' hcop hg
+        rw [hLeftLen]
+        simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+          (Nat.mul_div_right (2 * q') hMpos)
+      have hLeftMod :
+          ((X + 2 * (2 * n).lcm q' - 1) / (2 * g) + 1 - X ⌈/⌉ (2 * g))
+            % (n / g)
+            = 0 := by
+        have hLeftLen :
+            ((X + 2 * (2 * n).lcm q' - 1) / (2 * g) + 1 - X ⌈/⌉ (2 * g))
+              =
+            2 * ((n / g) * q') := by
+          simpa [centeredRamanujanPairBlockPeriod] using
+            rawEvenRamanujanGcdClassPeriodicLeftLen_eq_two_mul_quotient_mul_of_two_mul_odd_left_divisor_of_coprime
+              (X := X) hnOdd hq' hcop hg
+        rw [hLeftLen]
+        refine Nat.mod_eq_zero_of_dvd ?_
+        simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+          (dvd_mul_right (n / g) (2 * q'))
+      rw [hLeftDiv, hLeftMod]
+      simp
+    · rw [show (2 * n) / (2 * g) = n / g by
+        simpa using div_two_pow_mul_by_two_mul_of_dvd (k := 1) (n := n) (b := g) (by omega) hg]
+      exact hMpos
+  have hOddSide :
+      rawEvenRamanujanGcdClassBlockPeriodicCount X n q' n g
+        =
+      ((q' : ℝ) * (Nat.totient (n / g) : ℝ)) := by
+    rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_odd_g_totient_main_add_remainder_of_odd_quotient
+      X n q' n g
+      (divisor_pos_of_mem_divisors_of_pos hg
+        (Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+          intro hn
+          subst n
+          norm_num at hnOdd))))
+      (by
+        dsimp [centeredRamanujanPairBlockPeriod]
+        exact Nat.mul_pos (by norm_num) (Nat.lcm_pos
+          (Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+            intro hn
+            subst n
+            norm_num at hnOdd))) hq'))
+      (by
+        intro hgEven
+        exact (Nat.not_even_iff_odd.mpr hgOddNat) (Goldbach.Windows.even_of_isEven hgEven))
+      hMpos hMOdd]
+    dsimp
+    have hLeftDiv :
+        ((X + 2 * n.lcm q' - 1) / g + 1 - X ⌈/⌉ g) / (2 * (n / g)) = q' := by
+      simpa [centeredRamanujanPairBlockPeriod] using
+        rawEvenRamanujanGcdClassPeriodicLeftLen_div_two_mul_quotient_eq_rightModulus_of_divisor
+          (X := X) (q := n) (q' := q') (g := g)
+          (hq := Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+            intro hn
+            subst n
+            norm_num at hnOdd))) hq'
+          (hcop := hcop.coprime_dvd_left (dvd_mul_left n 2)) hg
+    have hLeftMod :
+        ((X + 2 * n.lcm q' - 1) / g + 1 - X ⌈/⌉ g) % (2 * (n / g)) = 0 := by
+      simpa [centeredRamanujanPairBlockPeriod] using
+        rawEvenRamanujanGcdClassPeriodicLeftLen_mod_two_mul_quotient_eq_zero_of_divisor
+          (X := X) (q := n) (q' := q') (g := g)
+          (hq := Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+            intro hn
+            subst n
+            norm_num at hnOdd))) hq'
+          (hcop := hcop.coprime_dvd_left (dvd_mul_left n 2)) hg
+    rw [hLeftDiv, hLeftMod]
+    simp
+  rw [hEvenSide, hOddSide]
+  ring
+
+theorem rawEvenRamanujanGcdClassRightBlockPeriodicCount_eq_two_mul_of_two_mul_odd_left_divisor_of_coprime
+    {X n q' h : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q')
+    (hh : h ∈ q'.divisors) :
+    rawEvenRamanujanGcdClassBlockPeriodicCount X (2 * n) q' q' h
+      =
+    2 * rawEvenRamanujanGcdClassBlockPeriodicCount X n q' q' h := by
+  have h2npos : 1 ≤ 2 * n := by
+    have hnpos : 0 < n := Nat.pos_of_ne_zero (by
+      intro hn
+      subst n
+      norm_num at hnOdd)
+    omega
+  have hqEven : Goldbach.Windows.IsEven (2 * n) := by
+    exact Goldbach.Windows.isEven_of_even ⟨n, by ring⟩
+  have hq'Odd : ¬ Goldbach.Windows.IsEven q' :=
+    not_isEven_right_of_isEven_left_of_coprime hcop hqEven
+  have hq'OddNat : Odd q' := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hq'EvenNat
+    exact hq'Odd (Goldbach.Windows.isEven_of_even hq'EvenNat)
+  have hhOddNat : Odd h := odd_of_mem_divisors_odd hq'OddNat hh
+  have hhOdd : ¬ Goldbach.Windows.IsEven h := by
+    intro hhEven
+    exact (Nat.not_even_iff_odd.mpr hhOddNat) (Goldbach.Windows.even_of_isEven hhEven)
+  have hMpos : 0 < q' / h := quotient_pos_of_mem_divisors hq' hh
+  have hMOdd : Odd (q' / h) := odd_div_of_dvd_odd hq'OddNat (Nat.mem_divisors.mp hh).1
+  have hEvenSide :
+      rawEvenRamanujanGcdClassBlockPeriodicCount X (2 * n) q' q' h
+        =
+      (2 * (n : ℝ) * (Nat.totient (q' / h) : ℝ)) := by
+    rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_odd_g_totient_main_add_remainder_of_odd_quotient
+      X (2 * n) q' q' h
+      (divisor_pos_of_mem_divisors_of_pos hh hq')
+      (by
+        dsimp [centeredRamanujanPairBlockPeriod]
+        exact Nat.mul_pos (by norm_num) (Nat.lcm_pos h2npos hq'))
+      hhOdd hMpos hMOdd]
+    dsimp
+    have hRightDiv :
+        ((X + 2 * (2 * n).lcm q' - 1) / h + 1 - X ⌈/⌉ h)
+          / (2 * (q' / h))
+          = 2 * n := by
+      have hRightLen :
+          ((X + 2 * (2 * n).lcm q' - 1) / h + 1 - X ⌈/⌉ h)
+            =
+          4 * ((q' / h) * n) := by
+        simpa [centeredRamanujanPairBlockPeriod] using
+          rawEvenRamanujanGcdClassPeriodicRightLen_eq_four_mul_quotient_mul_of_two_mul_odd_left_divisor_of_coprime
+            (X := X) (g := 1) hnOdd hq' hcop hh
+      rw [hRightLen]
+      have hpos : 0 < 2 * (q' / h) := Nat.mul_pos (by norm_num) hMpos
+      simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+        (Nat.mul_div_right (2 * n) hpos)
+    have hRightMod :
+        ((X + 2 * (2 * n).lcm q' - 1) / h + 1 - X ⌈/⌉ h)
+          % (2 * (q' / h))
+          = 0 := by
+      have hRightLen :
+          ((X + 2 * (2 * n).lcm q' - 1) / h + 1 - X ⌈/⌉ h)
+            =
+          4 * ((q' / h) * n) := by
+        simpa [centeredRamanujanPairBlockPeriod] using
+          rawEvenRamanujanGcdClassPeriodicRightLen_eq_four_mul_quotient_mul_of_two_mul_odd_left_divisor_of_coprime
+            (X := X) (g := 1) hnOdd hq' hcop hh
+      rw [hRightLen]
+      refine Nat.mod_eq_zero_of_dvd ?_
+      simpa [Nat.mul_assoc, Nat.mul_left_comm, Nat.mul_comm] using
+        (dvd_mul_right (2 * (q' / h)) (2 * n))
+    rw [hRightDiv, hRightMod]
+    simp
+  have hOddSide :
+      rawEvenRamanujanGcdClassBlockPeriodicCount X n q' q' h
+        =
+      ((n : ℝ) * (Nat.totient (q' / h) : ℝ)) := by
+    rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_odd_g_totient_main_add_remainder_of_odd_quotient
+      X n q' q' h
+      (divisor_pos_of_mem_divisors_of_pos hh hq')
+      (by
+        dsimp [centeredRamanujanPairBlockPeriod]
+        exact Nat.mul_pos (by norm_num) (Nat.lcm_pos
+          (Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+            intro hn
+            subst n
+            norm_num at hnOdd))) hq'))
+      hhOdd hMpos hMOdd]
+    dsimp
+    have hRightDiv :
+        ((X + 2 * n.lcm q' - 1) / h + 1 - X ⌈/⌉ h) / (2 * (q' / h)) = n := by
+      simpa [centeredRamanujanPairBlockPeriod] using
+        rawEvenRamanujanGcdClassPeriodicRightLen_div_two_mul_quotient_eq_leftModulus_of_divisor
+          (X := X) (q := n) (q' := q') (h := h)
+          (hq := Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+            intro hn
+            subst n
+            norm_num at hnOdd))) hq'
+          (hcop := hcop.coprime_dvd_left (dvd_mul_left n 2)) hh
+    have hRightMod :
+        ((X + 2 * n.lcm q' - 1) / h + 1 - X ⌈/⌉ h) % (2 * (q' / h)) = 0 := by
+      simpa [centeredRamanujanPairBlockPeriod] using
+        rawEvenRamanujanGcdClassPeriodicRightLen_mod_two_mul_quotient_eq_zero_of_divisor
+          (X := X) (q := n) (q' := q') (h := h)
+          (hq := Nat.succ_le_of_lt (Nat.pos_of_ne_zero (by
+            intro hn
+            subst n
+            norm_num at hnOdd))) hq'
+          (hcop := hcop.coprime_dvd_left (dvd_mul_left n 2)) hh
+    rw [hRightDiv, hRightMod]
+    simp
+  rw [hEvenSide, hOddSide]
+  ring
+
+private theorem Nat_lcm_two_mul_left_of_odd
+    {n q' : ℕ} (hnOdd : Odd n) (hq'Odd : Odd q') :
+    Nat.lcm (2 * n) q' = 2 * Nat.lcm n q' := by
+  have hper := centeredRamanujanPairBlockPeriod_two_mul_left_of_odd hnOdd hq'Odd
+  unfold centeredRamanujanPairBlockPeriod at hper
+  omega
+
+theorem evenRamanujanBlockCount_two_mul_left_of_odd
+    {X n q' : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q') (hq'Odd : Odd q') :
+    evenRamanujanBlockCount X (2 * n) q'
+      =
+    2 * evenRamanujanBlockCount X n q' := by
+  have hnpos : 1 ≤ n := Nat.succ_le_of_lt <| Nat.pos_of_ne_zero (by
+    intro hn
+    subst n
+    norm_num at hnOdd)
+  rw [evenRamanujanBlockCount_eq_lcm X (2 * n) q']
+  rw [evenRamanujanBlockCount_eq_lcm X n q']
+  rw [Nat_lcm_two_mul_left_of_odd hnOdd hq'Odd]
+  norm_num
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore
+    (X q q' g h : ℕ) : ℝ :=
+  rawEvenRamanujanGcdClassPairBlockPeriodicCount X q q' g h
+    - ramanujanGcdClassWindowAverage X q' h
+        * rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q g
+    - ramanujanGcdClassWindowAverage X q g
+        * rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q' h
+    + ramanujanGcdClassWindowAverage X q g * ramanujanGcdClassWindowAverage X q' h
+        * evenRamanujanBlockCount X q q'
+
+theorem centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparisonSummand_eq_two_nsmul_oddOddRawPeriodicComparisonCore_of_coprime
+    {X n q' g h : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q')
+    (hg : g ∈ n.divisors) (hh : h ∈ q'.divisors) :
+    centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparisonSummand X n q' g h
+      =
+    ramanujanGcdClassCoeff n g * ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / (2 * centeredRamanujanPairBlockPeriod n q') : ℕ))
+          • (2 * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X n q' g h)) := by
+  have hqEven : Goldbach.Windows.IsEven (2 * n) := by
+    exact Goldbach.Windows.isEven_of_even ⟨n, by ring⟩
+  have hq'Odd : ¬ Goldbach.Windows.IsEven q' :=
+    not_isEven_right_of_isEven_left_of_coprime hcop hqEven
+  have hq'OddNat : Odd q' := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hq'EvenNat
+    exact hq'Odd (Goldbach.Windows.isEven_of_even hq'EvenNat)
+  have hhOddNat : Odd h := odd_of_mem_divisors_odd hq'OddNat hh
+  have hhOdd : ¬ Goldbach.Windows.IsEven h := by
+    intro hhEven
+    exact (Nat.not_even_iff_odd.mpr hhOddNat) (Goldbach.Windows.even_of_isEven hhEven)
+  have h2gEven : Goldbach.Windows.IsEven (2 * g) := by
+    exact Goldbach.Windows.isEven_of_even ⟨g, by ring⟩
+  unfold centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparisonSummand
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore
+  rw [centeredRamanujanPairBlockScalar_two_mul_left_of_odd hnOdd hq'OddNat]
+  rw [ramanujanGcdClassWindowAverage_two_mul_eq_of_odd_divisor hnOdd hg]
+  congr 1
+  congr 1
+  have hbody :
+      (have Pair :=
+        have A := X ⌈/⌉ Nat.lcm (2 * g) h
+        have L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / Nat.lcm (2 * g) h + 1) - A
+        have M := ramanujanGcdClassJointModulus (2 * n) q' (2 * g) h
+        (((L / M) * (((Finset.range M)).filter
+            (fun t => Nat.Coprime M (A + t))).card
+          + (((Finset.range (L % M)).filter
+              (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+       have Left :=
+        have A := X ⌈/⌉ (2 * g)
+        have L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / (2 * g) + 1) - A
+        have M := (2 * n) / (2 * g)
+        (((L / M) * (((Finset.range M)).filter
+            (fun t => Nat.Coprime M (A + t))).card
+          + (((Finset.range (L % M)).filter
+              (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+       have Right :=
+        have A := X ⌈/⌉ h
+        have L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / h + 1) - A
+        have M := q' / h
+        (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+            (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+          + (((Finset.range (L % (2 * M))).filter
+              (fun t =>
+                Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                  ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+       Pair
+         - ramanujanGcdClassWindowAverage X q' h * Left
+         - ramanujanGcdClassWindowAverage X n g * Right
+         + ramanujanGcdClassWindowAverage X n g * ramanujanGcdClassWindowAverage X q' h
+             * evenRamanujanBlockCount X (2 * n) q')
+        =
+      rawEvenRamanujanGcdClassPairBlockPeriodicCount X (2 * n) q' (2 * g) h
+        - ramanujanGcdClassWindowAverage X q' h
+            * rawEvenRamanujanGcdClassBlockPeriodicCount X (2 * n) q' (2 * n) (2 * g)
+        - ramanujanGcdClassWindowAverage X n g
+            * rawEvenRamanujanGcdClassBlockPeriodicCount X (2 * n) q' q' h
+        + ramanujanGcdClassWindowAverage X n g * ramanujanGcdClassWindowAverage X q' h
+            * evenRamanujanBlockCount X (2 * n) q' := by
+      simp [rawEvenRamanujanGcdClassPairBlockPeriodicCount,
+        rawEvenRamanujanGcdClassBlockPeriodicCount, h2gEven, hhOdd,
+        isEven_lcm_of_isEven_left h2gEven]
+  calc
+    (have Pair :=
+      have A := X ⌈/⌉ Nat.lcm (2 * g) h
+      have L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / Nat.lcm (2 * g) h + 1) - A
+      have M := ramanujanGcdClassJointModulus (2 * n) q' (2 * g) h
+      (((L / M) * (((Finset.range M)).filter
+          (fun t => Nat.Coprime M (A + t))).card
+        + (((Finset.range (L % M)).filter
+            (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+     have Left :=
+      have A := X ⌈/⌉ (2 * g)
+      have L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / (2 * g) + 1) - A
+      have M := (2 * n) / (2 * g)
+      (((L / M) * (((Finset.range M)).filter
+          (fun t => Nat.Coprime M (A + t))).card
+        + (((Finset.range (L % M)).filter
+            (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℝ)
+     have Right :=
+      have A := X ⌈/⌉ h
+      have L := ((X + centeredRamanujanPairBlockPeriod (2 * n) q' - 1) / h + 1) - A
+      have M := q' / h
+      (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+          (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+        + (((Finset.range (L % (2 * M))).filter
+            (fun t =>
+              Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+                ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℝ)
+     Pair
+       - ramanujanGcdClassWindowAverage X q' h * Left
+       - ramanujanGcdClassWindowAverage X n g * Right
+       + ramanujanGcdClassWindowAverage X n g * ramanujanGcdClassWindowAverage X q' h
+           * evenRamanujanBlockCount X (2 * n) q')
+      =
+    rawEvenRamanujanGcdClassPairBlockPeriodicCount X (2 * n) q' (2 * g) h
+      - ramanujanGcdClassWindowAverage X q' h
+          * rawEvenRamanujanGcdClassBlockPeriodicCount X (2 * n) q' (2 * n) (2 * g)
+      - ramanujanGcdClassWindowAverage X n g
+          * rawEvenRamanujanGcdClassBlockPeriodicCount X (2 * n) q' q' h
+      + ramanujanGcdClassWindowAverage X n g * ramanujanGcdClassWindowAverage X q' h
+          * evenRamanujanBlockCount X (2 * n) q' := hbody
+    _ = 2 *
+        (rawEvenRamanujanGcdClassPairBlockPeriodicCount X n q' g h
+          - ramanujanGcdClassWindowAverage X q' h
+              * rawEvenRamanujanGcdClassBlockPeriodicCount X n q' n g
+          - ramanujanGcdClassWindowAverage X n g
+              * rawEvenRamanujanGcdClassBlockPeriodicCount X n q' q' h
+          + ramanujanGcdClassWindowAverage X n g * ramanujanGcdClassWindowAverage X q' h
+              * evenRamanujanBlockCount X n q') := by
+      rw [rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_two_mul_of_two_mul_odd_left_divisor_of_coprime
+        (X := X) hnOdd hq' hcop hg hh]
+      rw [rawEvenRamanujanGcdClassLeftBlockPeriodicCount_eq_two_mul_of_two_mul_odd_left_divisor_of_coprime
+        (X := X) hnOdd hq' hcop hg]
+      rw [rawEvenRamanujanGcdClassRightBlockPeriodicCount_eq_two_mul_of_two_mul_odd_left_divisor_of_coprime
+        (X := X) hnOdd hq' hcop hh]
+      rw [evenRamanujanBlockCount_two_mul_left_of_odd (X := X) hnOdd hq' hq'OddNat]
+      ring
+
+def centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparison
+    (X n q' : ℕ) : ℝ :=
+  ∑ g ∈ n.divisors,
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparisonSummand X n q' g h
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors,
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+        * ((((H + 1) / (2 * centeredRamanujanPairBlockPeriod q q') : ℕ))
+            • centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h)
+
+def centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy
+    (q q' : ℕ) : ℕ :=
+  (H + 1) / centeredRamanujanPairBlockPeriod q q'
+    - 2 * ((H + 1) / (2 * centeredRamanujanPairBlockPeriod q q'))
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+        * ((centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy q q' : ℕ)
+            • centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h)
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant
+    (X q q' : ℕ) : ℝ :=
+  ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+    ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+      |ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+          * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h|
+
+theorem centeredRamanujanPairBlockPeriod_comm
+    (q q' : ℕ) :
+    centeredRamanujanPairBlockPeriod q q'
+      =
+    centeredRamanujanPairBlockPeriod q' q := by
+  simp [centeredRamanujanPairBlockPeriod, Nat.lcm_comm]
+
+theorem evenRamanujanBlockCount_comm
+    (X q q' : ℕ) :
+    evenRamanujanBlockCount X q q'
+      =
+    evenRamanujanBlockCount X q' q := by
+  rw [evenRamanujanBlockCount_eq_lcm X q q',
+    evenRamanujanBlockCount_eq_lcm X q' q, Nat.lcm_comm]
+
+theorem rawEvenRamanujanGcdClassBlockPeriodicCount_comm
+    (X q q' q0 g0 : ℕ) :
+    rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q0 g0
+      =
+    rawEvenRamanujanGcdClassBlockPeriodicCount X q' q q0 g0 := by
+  by_cases hgEven : Goldbach.Windows.IsEven g0
+  · simpa [rawEvenRamanujanGcdClassBlockPeriodicCount, hgEven,
+      centeredRamanujanPairBlockPeriod, Nat.lcm_comm]
+  · simpa [rawEvenRamanujanGcdClassBlockPeriodicCount, hgEven,
+      centeredRamanujanPairBlockPeriod, Nat.lcm_comm]
+
+theorem rawEvenRamanujanGcdClassPairBlockPeriodicCount_comm
+    (X q q' g h : ℕ) :
+    rawEvenRamanujanGcdClassPairBlockPeriodicCount X q q' g h
+      =
+    rawEvenRamanujanGcdClassPairBlockPeriodicCount X q' q h g := by
+  by_cases hEvenL : Goldbach.Windows.IsEven (Nat.lcm g h)
+  · simp [rawEvenRamanujanGcdClassPairBlockPeriodicCount, hEvenL,
+      centeredRamanujanPairBlockPeriod_comm, ramanujanGcdClassJointModulus,
+      Nat.lcm_comm, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc]
+  · have hEvenL' : ¬ Goldbach.Windows.IsEven (Nat.lcm h g) := by
+      simpa [Nat.lcm_comm] using hEvenL
+    simp [rawEvenRamanujanGcdClassPairBlockPeriodicCount, hEvenL, hEvenL',
+      centeredRamanujanPairBlockPeriod_comm, ramanujanGcdClassJointModulus,
+      Nat.lcm_comm, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc]
+
+theorem rawEvenRamanujanGcdClassBlockCount_comm
+    (X q q' q0 g0 : ℕ) :
+    rawEvenRamanujanGcdClassBlockCount X q q' q0 g0
+      =
+    rawEvenRamanujanGcdClassBlockCount X q' q q0 g0 := by
+  rw [rawEvenRamanujanGcdClassBlockCount_eq_card_filter,
+    rawEvenRamanujanGcdClassBlockCount_eq_card_filter]
+  simp [centeredRamanujanPairBlockPeriod, Nat.lcm_comm]
+
+theorem rawEvenRamanujanGcdClassPairBlockCount_comm
+    (X q q' g h : ℕ) :
+    rawEvenRamanujanGcdClassPairBlockCount X q q' g h
+      =
+    rawEvenRamanujanGcdClassPairBlockCount X q' q h g := by
+  rw [rawEvenRamanujanGcdClassPairBlockCount_eq_card_filter,
+    rawEvenRamanujanGcdClassPairBlockCount_eq_card_filter]
+  rw [centeredRamanujanPairBlockPeriod_comm]
+  refine congrArg (fun t : ℕ => (t : ℝ)) ?_
+  refine congrArg Finset.card <| Finset.filter_congr (by
+    intro k hk
+    simp [rawEvenRamanujanGcdClassPairBlockHit, and_left_comm, and_assoc, and_comm])
+
+theorem centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore_comm
+    (X q q' g h : ℕ) :
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h
+      =
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q' q h g := by
+  unfold centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore
+  rw [rawEvenRamanujanGcdClassPairBlockPeriodicCount_comm]
+  rw [rawEvenRamanujanGcdClassBlockPeriodicCount_comm X q q' q g]
+  rw [rawEvenRamanujanGcdClassBlockPeriodicCount_comm X q q' q' h]
+  rw [evenRamanujanBlockCount_comm]
+  ring
+
+theorem centeredRamanujanGcdClassPairFullEvenBlockSum_comm
+    {X q q' g h : ℕ} (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q q' g h
+      =
+    centeredRamanujanGcdClassPairFullEvenBlockSum X q' q h g := by
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_count_decomposition hg hh]
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_count_decomposition hh hg]
+  rw [rawEvenRamanujanGcdClassPairBlockCount_comm]
+  rw [rawEvenRamanujanGcdClassBlockCount_comm X q q' q g]
+  rw [rawEvenRamanujanGcdClassBlockCount_comm X q q' q' h]
+  rw [evenRamanujanBlockCount_comm]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainParitySummand_comm
+    {X q q' g h : ℕ} (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors) :
+    centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+      =
+    centeredRamanujanPairPeriodicMainParitySummand X q' q h g := by
+  unfold centeredRamanujanPairPeriodicMainParitySummand
+  rw [centeredRamanujanPairBlockPeriod_comm]
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_comm hg hh]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution_comm_of_odd
+    {X q q' : ℕ} (hqOdd : Odd q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution X q' q := by
+  unfold centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution
+  rw [divisors_filter_not_isEven_eq_self_of_odd hqOdd,
+    divisors_filter_not_isEven_eq_self_of_odd hq'Odd]
+  rw [centeredRamanujanPairBlockPeriod_comm]
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  rw [centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore_comm]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainOddEvenSector_eq_evenOddSector_swap
+    (X q q' : ℕ) :
+    centeredRamanujanPairPeriodicMainOddEvenSector X q q'
+      =
+    centeredRamanujanPairPeriodicMainEvenOddSector X q' q := by
+  unfold centeredRamanujanPairPeriodicMainOddEvenSector
+    centeredRamanujanPairPeriodicMainEvenOddSector
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  exact centeredRamanujanPairPeriodicMainParitySummand_comm
+    ((Finset.mem_filter.mp hg).1) ((Finset.mem_filter.mp hh).1)
+
+theorem centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution_eq_coprime_odd_rawPeriodicComparisonCore
+    {X q q' : ℕ} (hqOdd : Odd q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution X q q'
+      =
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+      ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+          * ((((H + 1) / (2 * centeredRamanujanPairBlockPeriod q q') : ℕ))
+              • centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution
+  simpa [divisors_filter_not_isEven_eq_self_of_odd hqOdd,
+    divisors_filter_not_isEven_eq_self_of_odd hq'Odd]
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_coprime_odd_rawPeriodicComparisonCore
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q') :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+      ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+          * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+              • centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddSector
+    centeredRamanujanPairPeriodicMainParitySummand
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+  have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_periodic_comparison
+    hq hq' hgDiv hhDiv
+    (ramanujanGcdClassJointCompatibility_of_coprime_moduli_divisors hq hq' hcop hgDiv hhDiv)]
+
+theorem centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy_eq_mod_two_of_pos
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') :
+    centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy q q'
+      =
+    ((H + 1) / centeredRamanujanPairBlockPeriod q q') % 2 := by
+  have hP : 0 < centeredRamanujanPairBlockPeriod q q' := by
+    dsimp [centeredRamanujanPairBlockPeriod]
+    exact Nat.mul_pos (by omega) (Nat.lcm_pos hq hq')
+  unfold centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy
+  exact nat_div_sub_two_mul_div_two_mul_eq_mod_two_of_pos (n := H + 1) hP
+
+theorem centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy_le_one
+    {q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') :
+    centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy q q' ≤ 1 := by
+  have hP : 0 < centeredRamanujanPairBlockPeriod q q' := by
+    dsimp [centeredRamanujanPairBlockPeriod]
+    exact Nat.mul_pos (by omega) (Nat.lcm_pos hq hq')
+  unfold centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy
+  exact nat_div_sub_two_mul_div_two_mul_le_one_of_pos (n := H + 1) hP
+
+private theorem abs_mul_nsmul_le_of_nat_le_one
+    {a x : ℝ} {n : ℕ} (hn : n ≤ 1) :
+    |a * (n • x)| ≤ |a * x| := by
+  calc
+    |a * (n • x)| = |((n : ℝ) * (a * x))| := by
+      rw [nsmul_eq_mul]
+      ring_nf
+    _ = (n : ℝ) * |a * x| := by
+      rw [abs_mul]
+      simp
+    _ ≤ 1 * |a * x| := by
+      exact mul_le_mul_of_nonneg_right (by exact_mod_cast hn) (abs_nonneg (a * x))
+    _ = |a * x| := by ring
+
+theorem abs_centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection_le_rawPeriodicComparisonAbsMajorant
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') :
+    |centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q q'|
+      ≤
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant X q q' := by
+  unfold centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant
+  calc
+    |∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+        ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+          ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+            * ((centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy q q' : ℕ)
+                • centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h)|
+      ≤
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+      |∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+          ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+            * ((centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy q q' : ℕ)
+                • centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h)| := by
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun g =>
+              ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+                ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+                  * ((centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy q q' : ℕ)
+                      • centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h))
+            (q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g)))
+    _ ≤
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+      ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        |ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+            * ((centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy q q' : ℕ)
+                • centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h)| := by
+        refine Finset.sum_le_sum ?_
+        intro g hg
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun h =>
+              ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+                * ((centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy q q' : ℕ)
+                    • centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h))
+            (q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h)))
+    _ ≤
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+      ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        |ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+            * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h| := by
+        refine Finset.sum_le_sum ?_
+        intro g hg
+        refine Finset.sum_le_sum ?_
+        intro h hh
+        exact abs_mul_nsmul_le_of_nat_le_one
+          (a := ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h)
+          (x := centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonCore X q q' g h)
+          (centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy_le_one hq hq')
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_two_mul_rawPeriodicComparisonContribution_add_oneBlockCorrection_of_coprime_odd
+    {X q q' : ℕ} (hqOdd : Odd q) (hq'Odd : Odd q') (hcop : Nat.Coprime q q') :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    2 * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution X q q'
+      + centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q q' := by
+  have hq : 1 ≤ q := Nat.succ_le_of_lt hqOdd.pos
+  have hq' : 1 ≤ q' := Nat.succ_le_of_lt hq'Odd.pos
+  rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_coprime_odd_rawPeriodicComparisonCore hq hq' hcop]
+  rw [centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution_eq_coprime_odd_rawPeriodicComparisonCore
+    hqOdd hq'Odd]
+  unfold centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection
+    centeredRamanujanPairPeriodicMainOddOddScalarDiscrepancy
+  simp_rw [Finset.mul_sum]
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  have hP : 0 < centeredRamanujanPairBlockPeriod q q' := by
+    dsimp [centeredRamanujanPairBlockPeriod]
+    exact Nat.mul_pos (by omega) (Nat.lcm_pos hq hq')
+  have hscalar :
+      (H + 1) / centeredRamanujanPairBlockPeriod q q'
+        =
+      2 * ((H + 1) / (2 * centeredRamanujanPairBlockPeriod q q'))
+        + ((H + 1) / centeredRamanujanPairBlockPeriod q q'
+            - 2 * ((H + 1) / (2 * centeredRamanujanPairBlockPeriod q q'))) := by
+    rw [nat_div_sub_two_mul_div_two_mul_eq_mod_two_of_pos (n := H + 1) (P := centeredRamanujanPairBlockPeriod q q') hP]
+    exact nat_div_eq_two_mul_div_two_mul_add_mod_two_of_pos (n := H + 1) hP
+  have hscalarR :
+      (((H + 1) / centeredRamanujanPairBlockPeriod q q' : ℕ) : ℝ)
+        =
+      2 * ((((H + 1) / (2 * centeredRamanujanPairBlockPeriod q q') : ℕ) : ℝ))
+        + ((((H + 1) / centeredRamanujanPairBlockPeriod q q'
+            - 2 * ((H + 1) / (2 * centeredRamanujanPairBlockPeriod q q')) : ℕ) : ℝ)) := by
+    exact_mod_cast hscalar
+  rw [nsmul_eq_mul, nsmul_eq_mul, nsmul_eq_mul, hscalarR]
+  ring_nf
+
+theorem centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparison_eq_two_mul_oddOddRawPeriodicComparisonContribution_of_coprime
+    {X n q' : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q') :
+    centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparison X n q'
+      =
+    2 * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution X n q' := by
+  unfold centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparison
+    centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  rw [centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparisonSummand_eq_two_nsmul_oddOddRawPeriodicComparisonCore_of_coprime
+    (X := X) hnOdd hq' hcop hg (by
+      exact (Finset.mem_filter.mp hh).1)]
+  rw [nsmul_eq_mul]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainEvenOddSector_eq_two_mul_oddOddRawPeriodicComparisonContribution_of_two_mul_odd_left_of_coprime
+    {X n q' : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q') :
+    centeredRamanujanPairPeriodicMainEvenOddSector X (2 * n) q'
+      =
+    2 * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution X n q' := by
+  rw [centeredRamanujanPairPeriodicMainEvenOddSector_eq_two_mul_odd_reindexed hnOdd]
+  unfold centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  rw [centeredRamanujanPairPeriodicMainParitySummand_eq_evenOddReindexedPeriodicComparisonSummand_of_two_mul_odd_left_divisor_of_coprime
+    (X := X) hnOdd hq' hcop hg (by
+      exact (Finset.mem_filter.mp hh).1)]
+  rw [centeredRamanujanPairPeriodicMainEvenOddReindexedPeriodicComparisonSummand_eq_two_nsmul_oddOddRawPeriodicComparisonCore_of_coprime
+    (X := X) hnOdd hq' hcop hg (by
+      exact (Finset.mem_filter.mp hh).1)]
+  rw [nsmul_eq_mul]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainOddEvenSector_eq_two_mul_oddOddRawPeriodicComparisonContribution_of_two_mul_odd_right_of_coprime
+    {X q n' : ℕ} (hn'Odd : Odd n') (hq : 1 ≤ q)
+    (hcop : Nat.Coprime q (2 * n')) :
+    centeredRamanujanPairPeriodicMainOddEvenSector X q (2 * n')
+      =
+    2 * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution X q n' := by
+  have hn' : 1 ≤ n' := Nat.succ_le_of_lt <| Nat.pos_of_ne_zero (by
+    intro hn'0
+    subst n'
+    norm_num at hn'Odd)
+  have h2n'Even : Goldbach.Windows.IsEven (2 * n') := by
+    exact Goldbach.Windows.isEven_of_even ⟨n', by ring⟩
+  have hqOdd : Odd q := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hqEven
+    exact not_isEven_left_of_isEven_right_of_coprime hcop h2n'Even
+      (Goldbach.Windows.isEven_of_even hqEven)
+  rw [centeredRamanujanPairPeriodicMainOddEvenSector_eq_evenOddSector_swap]
+  rw [centeredRamanujanPairPeriodicMainEvenOddSector_eq_two_mul_oddOddRawPeriodicComparisonContribution_of_two_mul_odd_left_of_coprime
+    (X := X) hn'Odd hq]
+  · rw [centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonContribution_comm_of_odd
+      (X := X) hn'Odd hqOdd]
+  · simpa [Nat.coprime_comm, Nat.mul_comm] using hcop
+
+theorem centeredRamanujanPairPeriodicMainEvenOddSector_add_oneBlockCorrection_eq_oddOddSector_of_two_mul_odd_left_of_coprime
+    {X n q' : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q') :
+    centeredRamanujanPairPeriodicMainEvenOddSector X (2 * n) q'
+      + centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X n q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddSector X n q' := by
+  have hn : 1 ≤ n := Nat.succ_le_of_lt hnOdd.pos
+  have hcop' : Nat.Coprime n q' := by
+    apply hcop.of_dvd_left
+    exact ⟨2, by ring⟩
+  have hq'Odd : Odd q' := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hq'Even
+    have h2nEven : Goldbach.Windows.IsEven (2 * n) := Goldbach.Windows.isEven_of_even ⟨n, by ring⟩
+    exact not_isEven_right_of_isEven_left_of_coprime hcop h2nEven
+      (Goldbach.Windows.isEven_of_even hq'Even)
+  rw [centeredRamanujanPairPeriodicMainEvenOddSector_eq_two_mul_oddOddRawPeriodicComparisonContribution_of_two_mul_odd_left_of_coprime
+    (X := X) hnOdd hq' hcop]
+  rw [add_comm]
+  symm
+  rw [add_comm]
+  exact centeredRamanujanPairPeriodicMainOddOddSector_eq_two_mul_rawPeriodicComparisonContribution_add_oneBlockCorrection_of_coprime_odd
+    (X := X) hnOdd hq'Odd hcop'
+
+theorem centeredRamanujanPairPeriodicMainOddEvenSector_add_oneBlockCorrection_eq_oddOddSector_of_two_mul_odd_right_of_coprime
+    {X q n' : ℕ} (hn'Odd : Odd n') (hq : 1 ≤ q)
+    (hcop : Nat.Coprime q (2 * n')) :
+    centeredRamanujanPairPeriodicMainOddEvenSector X q (2 * n')
+      + centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q n'
+      =
+    centeredRamanujanPairPeriodicMainOddOddSector X q n' := by
+  have hn' : 1 ≤ n' := Nat.succ_le_of_lt hn'Odd.pos
+  have hcop' : Nat.Coprime q n' := by
+    apply hcop.of_dvd_right
+    exact ⟨2, by ring⟩
+  have hqOdd : Odd q := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hqEven
+    have h2n'Even : Goldbach.Windows.IsEven (2 * n') := Goldbach.Windows.isEven_of_even ⟨n', by ring⟩
+    exact not_isEven_left_of_isEven_right_of_coprime hcop h2n'Even
+      (Goldbach.Windows.isEven_of_even hqEven)
+  rw [centeredRamanujanPairPeriodicMainOddEvenSector_eq_two_mul_oddOddRawPeriodicComparisonContribution_of_two_mul_odd_right_of_coprime
+    (X := X) hn'Odd hq hcop]
+  rw [add_comm]
+  symm
+  rw [add_comm]
+  exact centeredRamanujanPairPeriodicMainOddOddSector_eq_two_mul_rawPeriodicComparisonContribution_add_oneBlockCorrection_of_coprime_odd
+    (X := X) hqOdd hn'Odd hcop'
+
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientPointwiseContribution_eq_explicitTotientContribution
+    (q q' : ℕ) :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientPointwiseContribution q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution q q' := by
+  unfold centeredRamanujanPairPeriodicMainOddOddExplicitTotientPointwiseContribution
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientSummand
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientCore
+  rw [nsmul_eq_mul, Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  ring
+
+theorem centeredRamanujanPairPeriodicMainParitySummand_eq_oddOddExplicitTotientSummand_add_mismatchRemainderSummand
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Odd : Odd q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+      =
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientSummand q q' g h
+      + ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+          * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+              • (rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+                  + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+                  + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h)) := by
+  unfold centeredRamanujanPairPeriodicMainParitySummand
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientSummand
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_two_mul_totient_mul_add_mismatches_add_remainder_of_odd_odd_of_coprime_odd_moduli_divisors
+    hq hq' hcop hqOdd hq'Odd hg hh hgOdd hhOdd]
+  have hsplit :
+      2 * (Nat.totient (q / g) : ℝ) * (Nat.totient (q' / h) : ℝ)
+        + rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+        + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+        + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h
+      =
+      (2 * (Nat.totient (q / g) : ℝ) * (Nat.totient (q' / h) : ℝ))
+        + (rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+            + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+            + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h) := by
+    ring
+  rw [hsplit, nsmul_add]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainParitySummand_eq_densityMismatchSummand_of_coprime_even_odd_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : Odd q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+      =
+    ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h) := by
+  unfold centeredRamanujanPairPeriodicMainParitySummand
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_densityMismatch_of_coprime_even_odd_moduli_odd_divisors
+    hq hq' hcop hqEven
+    (by
+      intro hEven
+      exact (Nat.not_even_iff_odd.mpr hq'Odd) (Goldbach.Windows.even_of_isEven hEven))
+    hg hh hgOdd hhOdd]
+
+theorem centeredRamanujanPairPeriodicMainParitySummand_eq_densityMismatchSummand_of_coprime_odd_even_moduli_divisors
+    {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Even : Goldbach.Windows.IsEven q')
+    (hg : g ∈ q.divisors) (hh : h ∈ q'.divisors)
+    (hgOdd : ¬ Goldbach.Windows.IsEven g) (hhOdd : ¬ Goldbach.Windows.IsEven h) :
+    centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+      =
+    ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h) := by
+  unfold centeredRamanujanPairPeriodicMainParitySummand
+  rw [centeredRamanujanGcdClassPairFullEvenBlockSum_eq_densityMismatch_of_coprime_odd_even_moduli_odd_divisors
+    hq hq' hcop
+    (by
+      intro hEven
+      exact (Nat.not_even_iff_odd.mpr hqOdd) (Goldbach.Windows.even_of_isEven hEven))
+    hq'Even hg hh hgOdd hhOdd]
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_explicitTotientContribution_add_mismatchRemainder
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution q q'
+      + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q' := by
+  rw [← centeredRamanujanPairPeriodicMainOddOddExplicitTotientPointwiseContribution_eq_explicitTotientContribution]
+  unfold centeredRamanujanPairPeriodicMainOddOddExplicitTotientPointwiseContribution
+    centeredRamanujanPairPeriodicMainOddOddSector
+    centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution
+  calc
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+        ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+          centeredRamanujanPairPeriodicMainParitySummand X q q' g h
+      =
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+        ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+          (centeredRamanujanPairPeriodicMainOddOddExplicitTotientSummand q q' g h
+            + ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+                * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+                    • (rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+                        + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+                        + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h))) := by
+          refine Finset.sum_congr rfl ?_
+          intro g hg
+          refine Finset.sum_congr rfl ?_
+          intro h hh
+          have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+          have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+          have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+          have hhOdd : ¬ Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hh).2
+          simpa using centeredRamanujanPairPeriodicMainParitySummand_eq_oddOddExplicitTotientSummand_add_mismatchRemainderSummand
+            (X := X) hq hq' hcop hqOdd hq'Odd hgDiv hhDiv hgOdd hhOdd
+    _ =
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+        ((∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+            centeredRamanujanPairPeriodicMainOddOddExplicitTotientSummand q q' g h)
+          +
+         (∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+            ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+              * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+                  • (rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+                      + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+                      + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h)))) := by
+          refine Finset.sum_congr rfl ?_
+          intro g hg
+          rw [Finset.sum_add_distrib]
+    _ =
+      (∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+          ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+            centeredRamanujanPairPeriodicMainOddOddExplicitTotientSummand q q' g h)
+      +
+      (∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+          ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+            ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+              * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+                  • (rawEvenRamanujanGcdClassPeriodicCoefficientMismatchTerm X q q' g h
+                  + centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h
+                      + rawEvenRamanujanGcdClassPeriodicRemainderTerm X q q' g h))) := by
+          rw [Finset.sum_add_distrib]
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_densityMismatchContribution_of_coprime_even_odd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q' := by
+  unfold centeredRamanujanPairPeriodicMainOddOddSector
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+  have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+  have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+  have hhOdd : ¬ Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hh).2
+  simpa using
+    centeredRamanujanPairPeriodicMainParitySummand_eq_densityMismatchSummand_of_coprime_even_odd_moduli_divisors
+      (X := X) hq hq' hcop hqEven hq'Odd hgDiv hhDiv hgOdd hhOdd
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_densityMismatchContribution_of_coprime_odd_even
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Even : Goldbach.Windows.IsEven q') :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q' := by
+  unfold centeredRamanujanPairPeriodicMainOddOddSector
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+  have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+  have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+  have hhOdd : ¬ Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hh).2
+  simpa using
+    centeredRamanujanPairPeriodicMainParitySummand_eq_densityMismatchSummand_of_coprime_odd_even_moduli_divisors
+      (X := X) hq hq' hcop hqOdd hq'Even hgDiv hhDiv hgOdd hhOdd
+
+theorem centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_neg_averageFactor_mul_centeredRightBlockFactor_of_coprime_even_odd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q'
+      =
+    -centeredRamanujanPairPeriodicMainOddOddAverageFactor X q
+      * centeredRamanujanPairPeriodicMainOddOddCenteredRightBlockFactor X q q' := by
+  let G := q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g)
+  let H' := q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h)
+  let aq : ℕ → ℝ := fun g =>
+    ramanujanGcdClassCoeff q g * ramanujanGcdClassWindowAverage X q g
+  let bq : ℕ → ℝ := fun h =>
+    ramanujanGcdClassCoeff q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • (rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q' h
+              - evenRamanujanBlockCount X q q' * ramanujanGcdClassWindowAverage X q' h))
+  have hprod :
+      (∑ g ∈ G, aq g) * (∑ h ∈ H', bq h)
+        =
+      ∑ g ∈ G, ∑ h ∈ H', aq g * bq h := by
+    rw [Finset.sum_mul]
+    refine Finset.sum_congr rfl ?_
+    intro g hg
+    rw [Finset.mul_sum]
+  unfold centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution
+    centeredRamanujanPairPeriodicMainOddOddAverageFactor
+    centeredRamanujanPairPeriodicMainOddOddCenteredRightBlockFactor
+  calc
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+        ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+          ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+            * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+                • centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h)
+      =
+    ∑ g ∈ G, ∑ h ∈ H', -(aq g * bq h) := by
+        refine Finset.sum_congr rfl ?_
+        intro g hg
+        refine Finset.sum_congr rfl ?_
+        intro h hh
+        have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+        have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+        have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+        have hhOdd : ¬ Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hh).2
+        have hq'NotEven : ¬ Goldbach.Windows.IsEven q' := by
+          intro hEven
+          exact (Nat.not_even_iff_odd.mpr hq'Odd) (Goldbach.Windows.even_of_isEven hEven)
+        rw [centeredRamanujanGcdClassPeriodicDensityMismatchTerm_eq_neg_leftAverage_mul_rightCenteredBlock_of_coprime_even_odd_moduli_odd_divisors
+          hq hq' hcop hqEven hq'NotEven hgDiv hhDiv hgOdd hhOdd]
+        dsimp [aq, bq]
+        ring
+    _ = -(∑ g ∈ G, ∑ h ∈ H', aq g * bq h) := by
+        have houter :
+            -(∑ g ∈ G, ∑ h ∈ H', aq g * bq h)
+              =
+            ∑ g ∈ G, -(∑ h ∈ H', aq g * bq h) := by
+          simpa using (Finset.neg_sum (s := G) (f := fun g => ∑ h ∈ H', aq g * bq h)).symm
+        have hinner :
+            ∀ g, -(∑ h ∈ H', aq g * bq h)
+              =
+            ∑ h ∈ H', -(aq g * bq h) := by
+          intro g
+          simpa using (Finset.neg_sum (s := H') (f := fun h => aq g * bq h)).symm
+        rw [houter]
+        refine Finset.sum_congr rfl ?_
+        intro g hg
+        rw [hinner g]
+    _ = -((∑ g ∈ G, aq g) * (∑ h ∈ H', bq h)) := by rw [← hprod]
+    _ =
+      -centeredRamanujanPairPeriodicMainOddOddAverageFactor X q
+        * centeredRamanujanPairPeriodicMainOddOddCenteredRightBlockFactor X q q' := by
+      unfold centeredRamanujanPairPeriodicMainOddOddAverageFactor
+        centeredRamanujanPairPeriodicMainOddOddCenteredRightBlockFactor
+      simp [G, H', aq, bq]
+
+theorem centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_zero_of_coprime_even_odd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q' = 0 := by
+  rw [centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_neg_averageFactor_mul_centeredRightBlockFactor_of_coprime_even_odd
+    hq hq' hcop hqEven hq'Odd]
+  rw [centeredRamanujanPairPeriodicMainOddOddAverageFactor_eq_zero_of_isEven hqEven]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_neg_centeredLeftBlockFactor_mul_averageFactor_of_coprime_odd_even
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Even : Goldbach.Windows.IsEven q') :
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q'
+      =
+    -centeredRamanujanPairPeriodicMainOddOddCenteredLeftBlockFactor X q q'
+      * centeredRamanujanPairPeriodicMainOddOddAverageFactor X q' := by
+  let G := q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g)
+  let H' := q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h)
+  let aq : ℕ → ℝ := fun g =>
+    ramanujanGcdClassCoeff q g
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • (rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q g
+              - evenRamanujanBlockCount X q q' * ramanujanGcdClassWindowAverage X q g))
+  let bq : ℕ → ℝ := fun h =>
+    ramanujanGcdClassCoeff q' h * ramanujanGcdClassWindowAverage X q' h
+  have hprod :
+      (∑ g ∈ G, aq g) * (∑ h ∈ H', bq h)
+        =
+      ∑ g ∈ G, ∑ h ∈ H', aq g * bq h := by
+    rw [Finset.sum_mul]
+    refine Finset.sum_congr rfl ?_
+    intro g hg
+    rw [Finset.mul_sum]
+  unfold centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution
+    centeredRamanujanPairPeriodicMainOddOddCenteredLeftBlockFactor
+    centeredRamanujanPairPeriodicMainOddOddAverageFactor
+  calc
+    ∑ g ∈ q.divisors.filter (fun g => ¬ Goldbach.Windows.IsEven g),
+        ∑ h ∈ q'.divisors.filter (fun h => ¬ Goldbach.Windows.IsEven h),
+          ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff q' h
+            * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+                • centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q q' g h)
+      =
+    ∑ g ∈ G, ∑ h ∈ H', -(aq g * bq h) := by
+        refine Finset.sum_congr rfl ?_
+        intro g hg
+        refine Finset.sum_congr rfl ?_
+        intro h hh
+        have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+        have hhDiv : h ∈ q'.divisors := (Finset.mem_filter.mp hh).1
+        have hgOdd : ¬ Goldbach.Windows.IsEven g := (Finset.mem_filter.mp hg).2
+        have hhOdd : ¬ Goldbach.Windows.IsEven h := (Finset.mem_filter.mp hh).2
+        have hqNotEven : ¬ Goldbach.Windows.IsEven q := by
+          intro hEven
+          exact (Nat.not_even_iff_odd.mpr hqOdd) (Goldbach.Windows.even_of_isEven hEven)
+        rw [centeredRamanujanGcdClassPeriodicDensityMismatchTerm_eq_neg_leftCenteredBlock_mul_rightAverage_of_coprime_odd_even_moduli_odd_divisors
+          hq hq' hcop hqNotEven hq'Even hgDiv hhDiv hgOdd hhOdd]
+        dsimp [aq, bq]
+        ring
+    _ = -(∑ g ∈ G, ∑ h ∈ H', aq g * bq h) := by
+        have houter :
+            -(∑ g ∈ G, ∑ h ∈ H', aq g * bq h)
+              =
+            ∑ g ∈ G, -(∑ h ∈ H', aq g * bq h) := by
+          simpa using (Finset.neg_sum (s := G) (f := fun g => ∑ h ∈ H', aq g * bq h)).symm
+        have hinner :
+            ∀ g, -(∑ h ∈ H', aq g * bq h)
+              =
+            ∑ h ∈ H', -(aq g * bq h) := by
+          intro g
+          simpa using (Finset.neg_sum (s := H') (f := fun h => aq g * bq h)).symm
+        rw [houter]
+        refine Finset.sum_congr rfl ?_
+        intro g hg
+        rw [hinner g]
+    _ = -((∑ g ∈ G, aq g) * (∑ h ∈ H', bq h)) := by rw [← hprod]
+    _ =
+      -centeredRamanujanPairPeriodicMainOddOddCenteredLeftBlockFactor X q q'
+        * centeredRamanujanPairPeriodicMainOddOddAverageFactor X q' := by
+      unfold centeredRamanujanPairPeriodicMainOddOddCenteredLeftBlockFactor
+        centeredRamanujanPairPeriodicMainOddOddAverageFactor
+      simp [G, H', aq, bq]
+
+theorem centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_zero_of_coprime_odd_even
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Even : Goldbach.Windows.IsEven q') :
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q' = 0 := by
+  rw [centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_neg_centeredLeftBlockFactor_mul_averageFactor_of_coprime_odd_even
+    hq hq' hcop hqOdd hq'Even]
+  rw [centeredRamanujanPairPeriodicMainOddOddAverageFactor_eq_zero_of_isEven hq'Even]
+  ring
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddExceptionalContribution
+    (q q' : ℕ) : ℝ :=
+  if h12 : q = 1 ∧ q' = 2 then
+    (((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ) • (-2 : ℝ)
+  else if h21 : q = 2 ∧ q' = 1 then
+    (((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ) • (-2 : ℝ)
+  else
+    0
+
+theorem centeredRamanujanPairPeriodicMainOddOddExceptionalContribution_eq_of_eq_one_two
+    {q q' : ℕ} (hq : q = 1) (hq' : q' = 2) :
+    centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+      =
+    (((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ) • (-2 : ℝ) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddExceptionalContribution
+  rw [dif_pos ⟨hq, hq'⟩]
+
+theorem centeredRamanujanPairPeriodicMainOddOddExceptionalContribution_eq_of_eq_two_one
+    {q q' : ℕ} (hq : q = 2) (hq' : q' = 1) :
+    centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+      =
+    (((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ) • (-2 : ℝ) := by
+  unfold centeredRamanujanPairPeriodicMainOddOddExceptionalContribution
+  rw [dif_neg]
+  · rw [dif_pos ⟨hq, hq'⟩]
+  · intro h12
+    have h12' : (1 : ℕ) ≠ 2 := by decide
+    exact h12' (hq'.symm.trans h12.2)
+
+theorem centeredRamanujanPairPeriodicMainOddOddExceptionalContribution_eq_zero_of_not_exceptional
+    {q q' : ℕ} (hnot12 : ¬ (q = 1 ∧ q' = 2)) (hnot21 : ¬ (q = 2 ∧ q' = 1)) :
+    centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q' = 0 := by
+  unfold centeredRamanujanPairPeriodicMainOddOddExceptionalContribution
+  rw [dif_neg hnot12, dif_neg hnot21]
+
+theorem centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution_eq_exceptional_of_squarefree_coprime_offDiagonal
+    {q q' : ℕ} (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') (hneq : q ≠ q') :
+    centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q' := by
+  by_cases h12 : q = 1 ∧ q' = 2
+  · rcases h12 with ⟨hq, hq'⟩
+    rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution_eq_neg_two_nsmul_of_eq_one_two hq hq']
+    rw [centeredRamanujanPairPeriodicMainOddOddExceptionalContribution_eq_of_eq_one_two hq hq']
+  by_cases h21 : q = 2 ∧ q' = 1
+  · rcases h21 with ⟨hq, hq'⟩
+    rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution_eq_neg_two_nsmul_of_eq_two_one hq hq']
+    rw [centeredRamanujanPairPeriodicMainOddOddExceptionalContribution_eq_of_eq_two_one hq hq']
+  · rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution_eq_zero_of_squarefree_coprime_offDiagonal_not_exceptional
+      hsq hsq' hcop hneq h12 h21]
+    rw [centeredRamanujanPairPeriodicMainOddOddExceptionalContribution_eq_zero_of_not_exceptional h12 h21]
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') (hneq : q ≠ q')
+    (hqOdd : Odd q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+      + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q' := by
+  rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_explicitTotientContribution_add_mismatchRemainder
+    hq hq' hcop hqOdd hq'Odd]
+  rw [centeredRamanujanPairPeriodicMainOddOddExplicitTotientContribution_eq_exceptional_of_squarefree_coprime_offDiagonal
+    hsq hsq' hcop hneq]
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddResidualAfterExceptionalContribution
+    (X q q' : ℕ) : ℝ :=
+  centeredRamanujanPairPeriodicMainOddOddSector X q q'
+    - centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_residualAfterExceptional
+    {X q q' : ℕ} :
+    centeredRamanujanPairPeriodicMainOddOddSector X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+      + centeredRamanujanPairPeriodicMainOddOddResidualAfterExceptionalContribution X q q' := by
+  unfold centeredRamanujanPairPeriodicMainOddOddResidualAfterExceptionalContribution
+  ring
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal_odd_odd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') (hneq : q ≠ q')
+    (hqOdd : Odd q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+      + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q' := by
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_coprime_modulusParityCases hq hq' hcop]
+  have hqNotEven : ¬ Goldbach.Windows.IsEven q := by
+    intro hEven
+    exact (Nat.not_even_iff_odd.mpr hqOdd) (Goldbach.Windows.even_of_isEven hEven)
+  have hq'NotEven : ¬ Goldbach.Windows.IsEven q' := by
+    intro hEven
+    exact (Nat.not_even_iff_odd.mpr hq'Odd) (Goldbach.Windows.even_of_isEven hEven)
+  rw [if_neg hqNotEven, if_neg hq'NotEven]
+  exact
+    centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal
+      hq hq' hsq hsq' hcop hneq hqOdd hq'Odd
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_evenOdd_add_exceptionalContribution_add_residualAfterExceptional_of_coprime_even_odd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    centeredRamanujanPairPeriodicMainEvenOddSector X q q'
+      + centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+      + centeredRamanujanPairPeriodicMainOddOddResidualAfterExceptionalContribution X q q' := by
+  have hq'NotEven : ¬ Goldbach.Windows.IsEven q' := by
+    intro hEven
+    exact (Nat.not_even_iff_odd.mpr hq'Odd) (Goldbach.Windows.even_of_isEven hEven)
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_coprime_modulusParityCases hq hq' hcop]
+  rw [if_pos hqEven]
+  rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_residualAfterExceptional]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_oddEven_add_exceptionalContribution_add_residualAfterExceptional_of_coprime_odd_even
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Even : Goldbach.Windows.IsEven q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddEvenSector X q q'
+      + centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+      + centeredRamanujanPairPeriodicMainOddOddResidualAfterExceptionalContribution X q q' := by
+  have hqNotEven : ¬ Goldbach.Windows.IsEven q := by
+    intro hEven
+    exact (Nat.not_even_iff_odd.mpr hqOdd) (Goldbach.Windows.even_of_isEven hEven)
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_coprime_modulusParityCases hq hq' hcop]
+  rw [if_neg hqNotEven, if_pos hq'Even]
+  rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_residualAfterExceptional]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_evenOdd_add_densityMismatchContribution_of_coprime_even_odd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    centeredRamanujanPairPeriodicMainEvenOddSector X q q'
+      + centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q' := by
+  have hq'NotEven : ¬ Goldbach.Windows.IsEven q' := by
+    intro hEven
+    exact (Nat.not_even_iff_odd.mpr hq'Odd) (Goldbach.Windows.even_of_isEven hEven)
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_coprime_modulusParityCases hq hq' hcop]
+  rw [if_pos hqEven]
+  rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_densityMismatchContribution_of_coprime_even_odd
+    hq hq' hcop hqEven hq'Odd]
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_oddEven_add_densityMismatchContribution_of_coprime_odd_even
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Even : Goldbach.Windows.IsEven q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddEvenSector X q q'
+      + centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q q' := by
+  have hqNotEven : ¬ Goldbach.Windows.IsEven q := by
+    intro hEven
+    exact (Nat.not_even_iff_odd.mpr hqOdd) (Goldbach.Windows.even_of_isEven hEven)
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_coprime_modulusParityCases hq hq' hcop]
+  rw [if_neg hqNotEven, if_pos hq'Even]
+  rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_densityMismatchContribution_of_coprime_odd_even
+    hq hq' hcop hqOdd hq'Even]
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_evenOdd_of_coprime_even_odd
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqEven : Goldbach.Windows.IsEven q) (hq'Odd : Odd q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    centeredRamanujanPairPeriodicMainEvenOddSector X q q' := by
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_evenOdd_add_densityMismatchContribution_of_coprime_even_odd
+    hq hq' hcop hqEven hq'Odd]
+  rw [centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_zero_of_coprime_even_odd
+    hq hq' hcop hqEven hq'Odd]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_oddEven_of_coprime_odd_even
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime q q')
+    (hqOdd : Odd q) (hq'Even : Goldbach.Windows.IsEven q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    centeredRamanujanPairPeriodicMainOddEvenSector X q q' := by
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_oddEven_add_densityMismatchContribution_of_coprime_odd_even
+    hq hq' hcop hqOdd hq'Even]
+  rw [centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_zero_of_coprime_odd_even
+    hq hq' hcop hqOdd hq'Even]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_oddOddSector_sub_oneBlockCorrection_of_two_mul_odd_left_of_coprime
+    {X n q' : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hcop : Nat.Coprime (2 * n) q') :
+    centeredRamanujanPairPeriodicMainTerm X (2 * n) q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddSector X n q'
+      - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X n q' := by
+  have hn : 1 ≤ n := Nat.succ_le_of_lt hnOdd.pos
+  have h2n : 1 ≤ 2 * n := by omega
+  have h2nEven : Goldbach.Windows.IsEven (2 * n) := by
+    exact Goldbach.Windows.isEven_of_even ⟨n, by ring⟩
+  have hq'Odd : Odd q' := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hq'Even
+    exact not_isEven_right_of_isEven_left_of_coprime hcop h2nEven
+      (Goldbach.Windows.isEven_of_even hq'Even)
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_evenOdd_of_coprime_even_odd
+    (X := X) h2n hq' hcop h2nEven hq'Odd]
+  have hcorr :=
+    centeredRamanujanPairPeriodicMainEvenOddSector_add_oneBlockCorrection_eq_oddOddSector_of_two_mul_odd_left_of_coprime
+      (X := X) hnOdd hq' hcop
+  exact eq_sub_of_add_eq (by simpa [add_comm] using hcorr)
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_oddOddSector_sub_oneBlockCorrection_of_two_mul_odd_right_of_coprime
+    {X q n' : ℕ} (hn'Odd : Odd n') (hq : 1 ≤ q)
+    (hcop : Nat.Coprime q (2 * n')) :
+    centeredRamanujanPairPeriodicMainTerm X q (2 * n')
+      =
+    centeredRamanujanPairPeriodicMainOddOddSector X q n'
+      - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q n' := by
+  have hn' : 1 ≤ n' := Nat.succ_le_of_lt hn'Odd.pos
+  have h2n' : 1 ≤ 2 * n' := by omega
+  have h2n'Even : Goldbach.Windows.IsEven (2 * n') := by
+    exact Goldbach.Windows.isEven_of_even ⟨n', by ring⟩
+  have hqOdd : Odd q := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hqEven
+    exact not_isEven_left_of_isEven_right_of_coprime hcop h2n'Even
+      (Goldbach.Windows.isEven_of_even hqEven)
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_oddEven_of_coprime_odd_even
+    (X := X) hq h2n' hcop hqOdd h2n'Even]
+  have hcorr :=
+    centeredRamanujanPairPeriodicMainOddEvenSector_add_oneBlockCorrection_eq_oddOddSector_of_two_mul_odd_right_of_coprime
+      (X := X) hn'Odd hq hcop
+  exact eq_sub_of_add_eq (by simpa [add_comm] using hcorr)
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_exceptionalContribution_add_mismatchRemainder_sub_oneBlockCorrection_of_squarefree_coprime_two_mul_odd_left
+    {X n q' : ℕ} (hnOdd : Odd n) (hq' : 1 ≤ q')
+    (hsq : Squarefree n) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime (2 * n) q') (hneq : n ≠ q') :
+    centeredRamanujanPairPeriodicMainTerm X (2 * n) q'
+      =
+    centeredRamanujanPairPeriodicMainOddOddExceptionalContribution n q'
+      + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X n q'
+      - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X n q' := by
+  have hn : 1 ≤ n := Nat.succ_le_of_lt hnOdd.pos
+  have hcop' : Nat.Coprime n q' := by
+    apply hcop.of_dvd_left
+    exact ⟨2, by ring⟩
+  have hq'Odd : Odd q' := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hq'Even
+    have h2nEven : Goldbach.Windows.IsEven (2 * n) := by
+      exact Goldbach.Windows.isEven_of_even ⟨n, by ring⟩
+    exact not_isEven_right_of_isEven_left_of_coprime hcop h2nEven
+      (Goldbach.Windows.isEven_of_even hq'Even)
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_oddOddSector_sub_oneBlockCorrection_of_two_mul_odd_left_of_coprime
+    (X := X) hnOdd hq' hcop]
+  rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal
+    (X := X) hn hq' hsq hsq' hcop' hneq hnOdd hq'Odd]
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_exceptionalContribution_add_mismatchRemainder_sub_oneBlockCorrection_of_squarefree_coprime_two_mul_odd_right
+    {X q n' : ℕ} (hn'Odd : Odd n') (hq : 1 ≤ q)
+    (hsq : Squarefree q) (hsq' : Squarefree n')
+    (hcop : Nat.Coprime q (2 * n')) (hneq : q ≠ n') :
+    centeredRamanujanPairPeriodicMainTerm X q (2 * n')
+      =
+    centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q n'
+      + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q n'
+      - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q n' := by
+  have hn' : 1 ≤ n' := Nat.succ_le_of_lt hn'Odd.pos
+  have hcop' : Nat.Coprime q n' := by
+    apply hcop.of_dvd_right
+    exact ⟨2, by ring⟩
+  have hqOdd : Odd q := by
+    refine Nat.not_even_iff_odd.mp ?_
+    intro hqEven
+    have h2n'Even : Goldbach.Windows.IsEven (2 * n') := by
+      exact Goldbach.Windows.isEven_of_even ⟨n', by ring⟩
+    exact not_isEven_left_of_isEven_right_of_coprime hcop h2n'Even
+      (Goldbach.Windows.isEven_of_even hqEven)
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_oddOddSector_sub_oneBlockCorrection_of_two_mul_odd_right_of_coprime
+    (X := X) hn'Odd hq hcop]
+  rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal
+    (X := X) hq hn' hsq hsq' hcop' hneq hqOdd hn'Odd]
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_branchwise_of_squarefree_coprime_offDiagonal
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') (hneq : q ≠ q')
+    (hhalfLeft : Goldbach.Windows.IsEven q → q / 2 ≠ q')
+    (hhalfRight : Goldbach.Windows.IsEven q' → q ≠ q' / 2) :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    if Goldbach.Windows.IsEven q then
+      centeredRamanujanPairPeriodicMainOddOddExceptionalContribution (q / 2) q'
+        + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X (q / 2) q'
+        - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+    else if Goldbach.Windows.IsEven q' then
+      centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q (q' / 2)
+        + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q (q' / 2)
+        - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+    else
+      centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+        + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q' := by
+  by_cases hqEven : Goldbach.Windows.IsEven q
+  · rw [if_pos hqEven]
+    have hqEvenNat : Even q := Goldbach.Windows.even_of_isEven hqEven
+    have h2dvdq : 2 ∣ q := (even_iff_two_dvd).1 hqEvenNat
+    have hqEq : q = 2 * (q / 2) := by
+      exact (Nat.two_mul_div_two_of_even hqEvenNat).symm
+    have hqHalfNeZero : q / 2 ≠ 0 := by
+      intro h0
+      have : q = 0 := by simpa [h0] using hqEq
+      omega
+    have hqHalf : 1 ≤ q / 2 := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hqHalfNeZero)
+    have hnot4q : ¬ 4 ∣ q := by
+      intro h4
+      have hsqPrime := Nat.squarefree_iff_prime_squarefree.mp hsq
+      exact hsqPrime 2 Nat.prime_two (by simpa using h4)
+    have hqHalfNotEven : ¬ Goldbach.Windows.IsEven (q / 2) :=
+      not_isEven_half_of_two_dvd_not_four_dvd h2dvdq hnot4q
+    have hqHalfOdd : Odd (q / 2) := by
+      refine Nat.not_even_iff_odd.mp ?_
+      intro hEvenNat
+      exact hqHalfNotEven (Goldbach.Windows.isEven_of_even hEvenNat)
+    have hcopHalf : Nat.Coprime (2 * (q / 2)) q' := by
+      have hcop0 := hcop
+      rw [hqEq] at hcop0
+      simpa using hcop0
+    have hsqHalf : Squarefree (q / 2) := by
+      refine hsq.squarefree_of_dvd ?_
+      refine ⟨2, ?_⟩
+      calc
+        q = 2 * (q / 2) := hqEq
+        _ = (q / 2) * 2 := by ring
+    have hq'Odd : Odd q' := by
+      refine Nat.not_even_iff_odd.mp ?_
+      intro hq'EvenNat
+      exact not_isEven_right_of_isEven_left_of_coprime hcop hqEven
+        (Goldbach.Windows.isEven_of_even hq'EvenNat)
+    rw [hqEq]
+    rw [centeredRamanujanPairPeriodicMainTerm_eq_exceptionalContribution_add_mismatchRemainder_sub_oneBlockCorrection_of_squarefree_coprime_two_mul_odd_left
+      (X := X) (n := q / 2) (q' := q') hqHalfOdd hq' hsqHalf hsq' hcopHalf (hhalfLeft hqEven)]
+    have hdiv2 : (2 * (q / 2)) / 2 = q / 2 := by
+      simpa [Nat.mul_comm] using (Nat.mul_div_right (q / 2) 2)
+    rw [hdiv2]
+  · rw [if_neg hqEven]
+    by_cases hq'Even : Goldbach.Windows.IsEven q'
+    · rw [if_pos hq'Even]
+      have hq'EvenNat : Even q' := Goldbach.Windows.even_of_isEven hq'Even
+      have h2dvdq' : 2 ∣ q' := (even_iff_two_dvd).1 hq'EvenNat
+      have hq'Eq : q' = 2 * (q' / 2) := by
+        exact (Nat.two_mul_div_two_of_even hq'EvenNat).symm
+      have hq'HalfNeZero : q' / 2 ≠ 0 := by
+        intro h0
+        have : q' = 0 := by simpa [h0] using hq'Eq
+        omega
+      have hq'Half : 1 ≤ q' / 2 := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hq'HalfNeZero)
+      have hnot4q' : ¬ 4 ∣ q' := by
+        intro h4
+        have hsqPrime := Nat.squarefree_iff_prime_squarefree.mp hsq'
+        exact hsqPrime 2 Nat.prime_two (by simpa using h4)
+      have hq'HalfNotEven : ¬ Goldbach.Windows.IsEven (q' / 2) :=
+        not_isEven_half_of_two_dvd_not_four_dvd h2dvdq' hnot4q'
+      have hq'HalfOdd : Odd (q' / 2) := by
+        refine Nat.not_even_iff_odd.mp ?_
+        intro hEvenNat
+        exact hq'HalfNotEven (Goldbach.Windows.isEven_of_even hEvenNat)
+      have hcopHalf : Nat.Coprime q (2 * (q' / 2)) := by
+        have hcop0 := hcop
+        rw [hq'Eq] at hcop0
+        simpa using hcop0
+      have hsq'Half : Squarefree (q' / 2) := by
+        refine hsq'.squarefree_of_dvd ?_
+        refine ⟨2, ?_⟩
+        calc
+          q' = 2 * (q' / 2) := hq'Eq
+          _ = (q' / 2) * 2 := by ring
+      have hqOdd : Odd q := by
+        refine Nat.not_even_iff_odd.mp ?_
+        intro hqEvenNat
+        exact hqEven (Goldbach.Windows.isEven_of_even hqEvenNat)
+      rw [hq'Eq]
+      rw [centeredRamanujanPairPeriodicMainTerm_eq_exceptionalContribution_add_mismatchRemainder_sub_oneBlockCorrection_of_squarefree_coprime_two_mul_odd_right
+        (X := X) (q := q) (n' := q' / 2) hq'HalfOdd hq hsq hsq'Half hcopHalf (hhalfRight hq'Even)]
+      have hdiv2' : (2 * (q' / 2)) / 2 = q' / 2 := by
+        simpa [Nat.mul_comm] using (Nat.mul_div_right (q' / 2) 2)
+      rw [hdiv2']
+    · rw [if_neg hq'Even]
+      have hqOdd : Odd q := by
+        refine Nat.not_even_iff_odd.mp ?_
+        intro hqEvenNat
+        exact hqEven (Goldbach.Windows.isEven_of_even hqEvenNat)
+      have hq'Odd : Odd q' := by
+        refine Nat.not_even_iff_odd.mp ?_
+        intro hq'EvenNat
+        exact hq'Even (Goldbach.Windows.isEven_of_even hq'EvenNat)
+      exact centeredRamanujanPairPeriodicMainTerm_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal_odd_odd
+        (X := X) hq hq' hsq hsq' hcop hneq hqOdd hq'Odd
+
+noncomputable def centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection
+    (X n : ℕ) : ℝ :=
+  centeredRamanujanPairPeriodicMainOddOddSector X n n
+    - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X n n
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_left_halvedDiagonalCorrection
+    {X n : ℕ} (hnOdd : Odd n)
+    (hcop : Nat.Coprime (2 * n) n) :
+    centeredRamanujanPairPeriodicMainTerm X (2 * n) n
+      =
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X n := by
+  have hn : 1 ≤ n := Nat.succ_le_of_lt hnOdd.pos
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_oddOddSector_sub_oneBlockCorrection_of_two_mul_odd_left_of_coprime
+    (X := X) hnOdd hn hcop]
+  rfl
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_right_halvedDiagonalCorrection
+    {X n : ℕ} (hnOdd : Odd n)
+    (hcop : Nat.Coprime n (2 * n)) :
+    centeredRamanujanPairPeriodicMainTerm X n (2 * n)
+      =
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X n := by
+  have hn : 1 ≤ n := Nat.succ_le_of_lt hnOdd.pos
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_oddOddSector_sub_oneBlockCorrection_of_two_mul_odd_right_of_coprime
+    (X := X) hnOdd hn hcop]
+  rfl
+
+theorem eq_one_of_coprime_two_mul_self
+    {n : ℕ} (hcop : Nat.Coprime (2 * n) n) : n = 1 := by
+  have hgcd : Nat.gcd (2 * n) n = 1 := hcop.gcd_eq_one
+  have hdvd : n ∣ Nat.gcd (2 * n) n := by
+    refine Nat.dvd_gcd ?_ (dvd_refl n)
+    simpa [Nat.mul_comm] using (dvd_mul_right n 2)
+  exact Nat.dvd_one.mp (hgcd ▸ hdvd)
+
+theorem eq_one_of_coprime_self_two_mul
+    {n : ℕ} (hcop : Nat.Coprime n (2 * n)) : n = 1 := by
+  have hgcd : Nat.gcd n (2 * n) = 1 := hcop.gcd_eq_one
+  have hdvd : n ∣ Nat.gcd n (2 * n) := by
+    refine Nat.dvd_gcd (dvd_refl n) ?_
+    simpa [Nat.mul_comm] using (dvd_mul_right n 2)
+  exact Nat.dvd_one.mp (hgcd ▸ hdvd)
+
+theorem centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection_eq_one_of_coprime_two_mul_self
+    {X n : ℕ} (hcop : Nat.Coprime (2 * n) n) :
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X n
+      =
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1 := by
+  rw [eq_one_of_coprime_two_mul_self hcop]
+
+theorem centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection_eq_one_of_coprime_self_two_mul
+    {X n : ℕ} (hcop : Nat.Coprime n (2 * n)) :
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X n
+      =
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1 := by
+  rw [eq_one_of_coprime_self_two_mul hcop]
+
+theorem centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection_eq_periodicMain_two_one
+    {X : ℕ} :
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+      =
+    centeredRamanujanPairPeriodicMainTerm X 2 1 := by
+  symm
+  simpa using
+    (centeredRamanujanPairPeriodicMainTerm_eq_left_halvedDiagonalCorrection
+      (X := X) (n := 1) (by decide : Odd 1) (by decide : Nat.Coprime (2 * 1) 1))
+
+theorem centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection_eq_periodicMain_one_two
+    {X : ℕ} :
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+      =
+    centeredRamanujanPairPeriodicMainTerm X 1 2 := by
+  symm
+  simpa using
+    (centeredRamanujanPairPeriodicMainTerm_eq_right_halvedDiagonalCorrection
+      (X := X) (n := 1) (by decide : Odd 1) (by decide : Nat.Coprime 1 (2 * 1)))
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_left_halvedDiagonalCorrection_one_of_coprime
+    {X n : ℕ} (hnOdd : Odd n) (hcop : Nat.Coprime (2 * n) n) :
+    centeredRamanujanPairPeriodicMainTerm X (2 * n) n
+      =
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1 := by
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_left_halvedDiagonalCorrection (X := X) hnOdd hcop]
+  rw [centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection_eq_one_of_coprime_two_mul_self hcop]
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_right_halvedDiagonalCorrection_one_of_coprime
+    {X n : ℕ} (hnOdd : Odd n) (hcop : Nat.Coprime n (2 * n)) :
+    centeredRamanujanPairPeriodicMainTerm X n (2 * n)
+      =
+    centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1 := by
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_right_halvedDiagonalCorrection (X := X) hnOdd hcop]
+  rw [centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection_eq_one_of_coprime_self_two_mul hcop]
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_fiveWay_of_squarefree_coprime_offDiagonal
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') (hneq : q ≠ q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    if Goldbach.Windows.IsEven q then
+      if q / 2 = q' then
+        centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X q'
+      else
+        centeredRamanujanPairPeriodicMainOddOddExceptionalContribution (q / 2) q'
+          + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X (q / 2) q'
+          - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+    else if Goldbach.Windows.IsEven q' then
+      if q = q' / 2 then
+        centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X q
+      else
+        centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q (q' / 2)
+          + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q (q' / 2)
+          - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+    else
+      centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+        + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q' := by
+  by_cases hqEven : Goldbach.Windows.IsEven q
+  · rw [if_pos hqEven]
+    by_cases hhalfLeft : q / 2 = q'
+    · rw [if_pos hhalfLeft]
+      have hqEvenNat : Even q := Goldbach.Windows.even_of_isEven hqEven
+      have hqEq : q = 2 * (q / 2) := by
+        exact (Nat.two_mul_div_two_of_even hqEvenNat).symm
+      have hq'Odd : Odd q' := by
+        refine Nat.not_even_iff_odd.mp ?_
+        intro hq'EvenNat
+        exact not_isEven_right_of_isEven_left_of_coprime hcop hqEven
+          (Goldbach.Windows.isEven_of_even hq'EvenNat)
+      have hcopDiag : Nat.Coprime (2 * q') q' := by
+        have hcop0 := hcop
+        rw [hqEq, hhalfLeft] at hcop0
+        simpa using hcop0
+      rw [hqEq, hhalfLeft]
+      exact centeredRamanujanPairPeriodicMainTerm_eq_left_halvedDiagonalCorrection
+        (X := X) hq'Odd hcopDiag
+    · rw [if_neg hhalfLeft]
+      have hbranch :=
+        centeredRamanujanPairPeriodicMainTerm_eq_branchwise_of_squarefree_coprime_offDiagonal
+          (X := X) hq hq' hsq hsq' hcop hneq
+          (fun _ => hhalfLeft)
+          (fun hq'Even =>
+            False.elim <|
+              not_isEven_right_of_isEven_left_of_coprime hcop hqEven hq'Even)
+      rw [if_pos hqEven] at hbranch
+      exact hbranch
+  · rw [if_neg hqEven]
+    by_cases hq'Even : Goldbach.Windows.IsEven q'
+    · rw [if_pos hq'Even]
+      by_cases hhalfRight : q = q' / 2
+      · rw [if_pos hhalfRight]
+        have hq'EvenNat : Even q' := Goldbach.Windows.even_of_isEven hq'Even
+        have hq'Eq : q' = 2 * (q' / 2) := by
+          exact (Nat.two_mul_div_two_of_even hq'EvenNat).symm
+        have hqOdd : Odd q := by
+          refine Nat.not_even_iff_odd.mp ?_
+          intro hqEvenNat
+          exact hqEven (Goldbach.Windows.isEven_of_even hqEvenNat)
+        have hqHalfOdd : Odd (q' / 2) := by
+          simpa [hhalfRight] using hqOdd
+        have hcopDiag : Nat.Coprime (q' / 2) (2 * (q' / 2)) := by
+          have hcop0 := hcop
+          rw [hhalfRight, hq'Eq] at hcop0
+          simpa using hcop0
+        rw [hhalfRight, hq'Eq]
+        have hdiv2' : (2 * (q' / 2)) / 2 = q' / 2 := by
+          simpa [Nat.mul_comm] using (Nat.mul_div_right (q' / 2) 2)
+        rw [hdiv2']
+        exact centeredRamanujanPairPeriodicMainTerm_eq_right_halvedDiagonalCorrection
+          (X := X) hqHalfOdd hcopDiag
+      · rw [if_neg hhalfRight]
+        have hbranch :=
+          centeredRamanujanPairPeriodicMainTerm_eq_branchwise_of_squarefree_coprime_offDiagonal
+            (X := X) hq hq' hsq hsq' hcop hneq
+            (fun hqEven' =>
+              False.elim <|
+                hqEven hqEven')
+            (fun _ => hhalfRight)
+        rw [if_neg hqEven, if_pos hq'Even] at hbranch
+        exact hbranch
+    · rw [if_neg hq'Even]
+      have hqOdd : Odd q := by
+        refine Nat.not_even_iff_odd.mp ?_
+        intro hqEvenNat
+        exact hqEven (Goldbach.Windows.isEven_of_even hqEvenNat)
+      have hq'Odd : Odd q' := by
+        refine Nat.not_even_iff_odd.mp ?_
+        intro hq'EvenNat
+        exact hq'Even (Goldbach.Windows.isEven_of_even hq'EvenNat)
+      exact
+        centeredRamanujanPairPeriodicMainTerm_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal_odd_odd
+          (X := X) hq hq' hsq hsq' hcop hneq hqOdd hq'Odd
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_coprime_squarefree_reducedParityAPI
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') (hneq : q ≠ q') :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      =
+    if h12 : q = 1 ∧ q' = 2 then
+      centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+    else if h21 : q = 2 ∧ q' = 1 then
+      centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+    else if Goldbach.Windows.IsEven q then
+      centeredRamanujanPairPeriodicMainOddOddExceptionalContribution (q / 2) q'
+        + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X (q / 2) q'
+        - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+    else if Goldbach.Windows.IsEven q' then
+      centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q (q' / 2)
+        + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q (q' / 2)
+        - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+    else
+      centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+        + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q' := by
+  by_cases h12 : q = 1 ∧ q' = 2
+  · simp [h12]
+    exact (centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection_eq_periodicMain_one_two (X := X)).symm
+  · simp [h12]
+    by_cases h21 : q = 2 ∧ q' = 1
+    · simp [h21]
+      exact (centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection_eq_periodicMain_two_one (X := X)).symm
+    · simp [h21]
+      have hhalfLeft : Goldbach.Windows.IsEven q → q / 2 ≠ q' := by
+        intro hqEven hqHalf
+        have hqEvenNat : Even q := Goldbach.Windows.even_of_isEven hqEven
+        have hqEq : q = 2 * (q / 2) := by
+          exact (Nat.two_mul_div_two_of_even hqEvenNat).symm
+        have hcopDiag : Nat.Coprime (2 * q') q' := by
+          have hcop0 := hcop
+          rw [hqEq, hqHalf] at hcop0
+          simpa using hcop0
+        have hq'1 : q' = 1 := eq_one_of_coprime_two_mul_self hcopDiag
+        have hq2 : q = 2 := by
+          rw [hqEq, hqHalf, hq'1]
+        exact h21 ⟨hq2, hq'1⟩
+      have hhalfRight : Goldbach.Windows.IsEven q' → q ≠ q' / 2 := by
+        intro hq'Even hqHalf
+        have hq'EvenNat : Even q' := Goldbach.Windows.even_of_isEven hq'Even
+        have hq'Eq : q' = 2 * (q' / 2) := by
+          exact (Nat.two_mul_div_two_of_even hq'EvenNat).symm
+        have hcopDiag : Nat.Coprime (q' / 2) (2 * (q' / 2)) := by
+          have hcop0 := hcop
+          rw [hqHalf, hq'Eq] at hcop0
+          simpa using hcop0
+        have hhalf1 : q' / 2 = 1 := eq_one_of_coprime_self_two_mul hcopDiag
+        have hq1 : q = 1 := by simpa [hhalf1] using hqHalf
+        have hq'2 : q' = 2 := by
+          rw [hq'Eq, hhalf1]
+        exact h12 ⟨hq1, hq'2⟩
+      exact centeredRamanujanPairPeriodicMainTerm_eq_branchwise_of_squarefree_coprime_offDiagonal
+        (X := X) hq hq' hsq hsq' hcop hneq hhalfLeft hhalfRight
 
 noncomputable def centeredRamanujanPairPeriodicBoundaryTerm
     (X q q' : ℕ) : ℝ :=
@@ -10286,18 +17651,8 @@ theorem centeredNormalizedSigmaTruncSummand_re_eq_coeff_mul_centeredRamanujan
 private theorem normalizedSigmaTruncSummandWindowAverage_im_eq_zero'
     (X q : ℕ) :
     (normalizedSigmaTruncSummandWindowAverage ramanujanSeriesOnWindow X q).im = 0 := by
-  have hterm_im :
-      ∀ N : ℕ, (normalizedSigmaTruncSummand ramanujanSeriesOnWindow q N).im = 0 := by
-    intro N
-    rw [normalizedSigmaTruncSummand, Complex.ofReal_im]
-  unfold normalizedSigmaTruncSummandWindowAverage
-  rw [Finset.mul_sum]
-  have hscalar_im : (((↑(EvenIn X H).card : ℂ)⁻¹).im = 0) := by
-    rw [← Complex.ofReal_natCast, ← Complex.ofReal_inv, Complex.ofReal_im]
-  refine Finset.induction_on (EvenIn X H) ?_ ?_
-  · simp
-  · intro N s hNhs ih
-    simp [Finset.sum_insert, hNhs, Complex.mul_im, hterm_im]
+  simpa using
+    normalizedSigmaTruncSummandWindowAverage_im_eq_zero ramanujanSeriesOnWindow X q
 
 private theorem centeredNormalizedSigmaTruncSummand_norm_sq_eq_re_sq
     (X q N : ℕ) :
@@ -10305,14 +17660,15 @@ private theorem centeredNormalizedSigmaTruncSummand_norm_sq_eq_re_sq
       =
     (centeredNormalizedSigmaTruncSummand ramanujanSeriesOnWindow X q N).re ^ 2 := by
   have him :
-      (centeredNormalizedSigmaTruncSummand ramanujanSeriesOnWindow X q N).im = 0 := by
-    have hterm_im :
-        (normalizedSigmaTruncSummand ramanujanSeriesOnWindow q N).im = 0 := by
-      rw [normalizedSigmaTruncSummand, Complex.ofReal_im]
-    unfold centeredNormalizedSigmaTruncSummand
-    rw [Complex.sub_im]
-    rw [hterm_im, normalizedSigmaTruncSummandWindowAverage_im_eq_zero' X q]
-    norm_num
+      (centeredNormalizedSigmaTruncSummand ramanujanSeriesOnWindow X q N).im = 0 :=
+    by
+      have hterm_im :
+          (normalizedSigmaTruncSummand ramanujanSeriesOnWindow q N).im = 0 := by
+        rw [normalizedSigmaTruncSummand, Complex.ofReal_im]
+      unfold centeredNormalizedSigmaTruncSummand
+      rw [Complex.sub_im]
+      rw [hterm_im, normalizedSigmaTruncSummandWindowAverage_im_eq_zero' X q]
+      norm_num
   have hz :
       centeredNormalizedSigmaTruncSummand ramanujanSeriesOnWindow X q N
         =
@@ -10345,6 +17701,59 @@ theorem centeredNormalizedSigmaTruncDiagonalEnergy_eq_sum_summandEnergies
   intro N hN
   rw [← centeredNormalizedSigmaTruncSummand_norm_sq_eq_re_sq]
 
+theorem normalizedSigmaTruncSummandWindowAverage_eq_zero_of_coeff_zero
+    {X q : ℕ}
+    (hcoeff : normalizedSigmaTruncSummandRealCoeff q = 0) :
+    normalizedSigmaTruncSummandWindowAverage ramanujanSeriesOnWindow X q = 0 := by
+  unfold normalizedSigmaTruncSummandWindowAverage
+  have hsum :
+      ∑ N ∈ EvenIn X H, normalizedSigmaTruncSummand ramanujanSeriesOnWindow q N = 0 := by
+    refine Finset.sum_eq_zero ?_
+    intro N hN
+    exact normalizedSigmaTruncSummand_eq_zero_of_coeff_zero (q := q) (N := N) hcoeff
+  rw [hsum, mul_zero]
+
+theorem centeredNormalizedSigmaTruncSummand_eq_zero_of_coeff_zero
+    {X q N : ℕ}
+    (hcoeff : normalizedSigmaTruncSummandRealCoeff q = 0) :
+    centeredNormalizedSigmaTruncSummand ramanujanSeriesOnWindow X q N = 0 := by
+  unfold centeredNormalizedSigmaTruncSummand
+  rw [normalizedSigmaTruncSummand_eq_zero_of_coeff_zero (q := q) (N := N) hcoeff]
+  rw [normalizedSigmaTruncSummandWindowAverage_eq_zero_of_coeff_zero (X := X) (q := q) hcoeff]
+  simp
+
+theorem centeredNormalizedSigmaTruncSummandWindowEnergy_eq_zero_of_coeff_zero
+    {X q : ℕ}
+    (hcoeff : normalizedSigmaTruncSummandRealCoeff q = 0) :
+    centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X q = 0 := by
+  unfold centeredNormalizedSigmaTruncSummandWindowEnergy
+  refine Finset.sum_eq_zero ?_
+  intro N hN
+  rw [centeredNormalizedSigmaTruncSummand_eq_zero_of_coeff_zero (X := X) (q := q) (N := N) hcoeff]
+  norm_num
+
+/-- Exact support-sum form of the diagonal truncation energy. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X q
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergy_eq_directMajorant
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncDiagonalEnergy X
+      =
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant X := by
+  rw [centeredNormalizedSigmaTruncDiagonalEnergy_eq_sum_summandEnergies]
+  unfold centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant
+  unfold normalizedSigmaTruncSummandCoeffSupportUpToQ0
+  rw [Finset.sum_filter]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  by_cases hcoeff : normalizedSigmaTruncSummandRealCoeff q ≠ 0
+  · simp [hcoeff]
+  · have hcoeff0 : normalizedSigmaTruncSummandRealCoeff q = 0 := by simpa using hcoeff
+    simp [hcoeff, centeredNormalizedSigmaTruncSummandWindowEnergy_eq_zero_of_coeff_zero (X := X) (q := q) hcoeff0]
+
 /-- Per-pair centered truncation correlation on the canonical even window. -/
 noncomputable def centeredNormalizedSigmaTruncPairCorrelation
     (X q q' : ℕ) : ℝ :=
@@ -10361,6 +17770,48 @@ theorem centeredNormalizedSigmaTruncPairCorrelation_symm
   refine Finset.sum_congr rfl ?_
   intro N hN
   ring
+
+theorem centeredNormalizedSigmaTruncOffDiagonalCorrelation_eq_sum_pairCorrelations
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncOffDiagonalCorrelation X
+      =
+    ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        if q = q' then 0 else centeredNormalizedSigmaTruncPairCorrelation X q q' := by
+  unfold centeredNormalizedSigmaTruncOffDiagonalCorrelation
+    centeredNormalizedSigmaTruncPairCorrelation
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rw [Finset.sum_comm]
+  refine Finset.sum_congr rfl ?_
+  intro q' hq'
+  by_cases hqq' : q = q'
+  · simp [hqq']
+  · simp [hqq', Finset.mul_sum]
+
+theorem centeredNormalizedSigmaTruncWindowEnergy_eq_diagonal_add_sum_pairCorrelations
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncWindowEnergy X
+      =
+    centeredNormalizedSigmaTruncDiagonalEnergy X
+      +
+    ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        if q = q' then 0 else centeredNormalizedSigmaTruncPairCorrelation X q q' := by
+  calc
+    centeredNormalizedSigmaTruncWindowEnergy X
+      =
+    centeredNormalizedSigmaTruncDiagonalEnergy X
+      + centeredNormalizedSigmaTruncOffDiagonalCorrelation X := by
+        exact centeredNormalizedSigmaTruncWindowEnergy_eq_diagonal_add_offDiagonal X
+    _ =
+    centeredNormalizedSigmaTruncDiagonalEnergy X
+      +
+      ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          if q = q' then 0 else centeredNormalizedSigmaTruncPairCorrelation X q q' := by
+            rw [centeredNormalizedSigmaTruncOffDiagonalCorrelation_eq_sum_pairCorrelations]
 
 theorem centeredNormalizedSigmaTruncPairCorrelation_eq_coeffs_mul_centeredRamanujanPairCorrelation
     (X q q' : ℕ) :
@@ -10428,11 +17879,34 @@ noncomputable def centeredNormalizedSigmaTruncPeriodicMainTerm
     * normalizedSigmaTruncSummandRealCoeff q'
     * centeredRamanujanPairPeriodicMainTerm X q q'
 
+theorem centeredNormalizedSigmaTruncPeriodicMainTerm_eq_coeff_mul_coeff_mul_ramanujan
+    (X q q' : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
+      =
+    normalizedSigmaTruncSummandRealCoeff q
+      * normalizedSigmaTruncSummandRealCoeff q'
+      * centeredRamanujanPairPeriodicMainTerm X q q' := by
+  rfl
+
 noncomputable def centeredNormalizedSigmaTruncPeriodicBoundaryTerm
     (X q q' : ℕ) : ℝ :=
   normalizedSigmaTruncSummandRealCoeff q
     * normalizedSigmaTruncSummandRealCoeff q'
     * centeredRamanujanPairPeriodicBoundaryTerm X q q'
+
+theorem centeredNormalizedSigmaTruncPeriodicMainTerm_eq_zero_of_coeff_left
+    {X q q' : ℕ}
+    (hcoeff : normalizedSigmaTruncSummandRealCoeff q = 0) :
+    centeredNormalizedSigmaTruncPeriodicMainTerm X q q' = 0 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainTerm
+  simp [hcoeff]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainTerm_eq_zero_of_coeff_right
+    {X q q' : ℕ}
+    (hcoeff : normalizedSigmaTruncSummandRealCoeff q' = 0) :
+    centeredNormalizedSigmaTruncPeriodicMainTerm X q q' = 0 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainTerm
+  simp [hcoeff]
 
 theorem centeredNormalizedSigmaTruncPairCorrelation_eq_periodicMain_add_boundary
     {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') :
@@ -10444,6 +17918,4778 @@ theorem centeredNormalizedSigmaTruncPairCorrelation_eq_periodicMain_add_boundary
   rw [centeredNormalizedSigmaTruncPairCorrelation_eq_coeffs_mul_centeredRamanujanPairCorrelation]
   rw [centeredRamanujanPairCorrelation_eq_periodicMain_add_boundary hq hq']
   ring
+
+noncomputable def centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+    ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      if q = q' then 0 else centeredNormalizedSigmaTruncPairCorrelation X q q'
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+    ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+    ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicBoundaryTerm X q q'
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+    - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X
+
+/-- The periodic-main clean supported non-coprime branch, named on the truncation side. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X
+
+/-- The periodic-main mass outside the clean supported non-coprime branch. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+    - centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0 X
+
+/-- The supported non-coprime periodic-main mass before subtracting the clean defect model. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q'))
+      (fun q' => centeredNormalizedSigmaTruncPeriodicMainTerm X q q'))
+
+/-- The residual of the supported non-coprime periodic-main branch after removing the clean defect. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimePairSumUpToQ0 X
+    - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X
+
+/-- The supported coprime periodic-main branch on the exact supported modulus surface. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainSupportedCoprimePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+    Finset.sum
+      (centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (Nat.Coprime q))
+      (fun q' => centeredNormalizedSigmaTruncPeriodicMainTerm X q q'))
+
+/-- The periodic-main mass with at least one modulus outside the clean one-variable support. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainOutsideSupportPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+    - centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimePairSumUpToQ0 X
+    - centeredNormalizedSigmaTruncPeriodicMainSupportedCoprimePairSumUpToQ0 X
+
+/-- The supported diagonal contribution inside the periodic-main term. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainSupportedDiagonalPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+    centeredNormalizedSigmaTruncPeriodicMainTerm X q q
+
+/-- The supported off-diagonal contribution inside the periodic-main term. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+    ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+      if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
+
+/-- The periodic-main off-diagonal mass with at least one modulus outside the clean
+one-variable support. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+    - centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0 X
+
+/-- The exact periodic-main off-diagonal mass that survives the normalized coefficient support. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedOffDiagonalPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
+
+/-- The coefficient-supported coprime off-diagonal branch. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeSummand
+    (X q q' : ℕ) : ℝ :=
+  if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoSummand
+    (X q q' : ℕ) : ℝ :=
+  if q = q' then 0 else
+  if q = 1 ∧ q' = 2 then
+    normalizedSigmaTruncSummandRealCoeff q
+      * normalizedSigmaTruncSummandRealCoeff q'
+      * centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOneSummand
+    (X q q' : ℕ) : ℝ :=
+  if q = q' then 0 else
+  if q = 2 ∧ q' = 1 then
+    normalizedSigmaTruncSummandRealCoeff q
+      * normalizedSigmaTruncSummandRealCoeff q'
+      * centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddSummand
+    (X q q' : ℕ) : ℝ :=
+  if q = q' then 0 else
+  if Odd q ∧ Odd q' then
+    normalizedSigmaTruncSummandRealCoeff q
+      * normalizedSigmaTruncSummandRealCoeff q'
+      * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+          + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q')
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalSummand
+    (X q q' : ℕ) : ℝ :=
+  if q = q' then 0 else
+  if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+    normalizedSigmaTruncSummandRealCoeff q
+      * normalizedSigmaTruncSummandRealCoeff q'
+      * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution (q / 2) q'
+          + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X (q / 2) q'
+          - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q')
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalSummand
+    (X q q' : ℕ) : ℝ :=
+  if q = q' then 0 else
+  if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+    normalizedSigmaTruncSummandRealCoeff q
+      * normalizedSigmaTruncSummandRealCoeff q'
+      * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q (q' / 2)
+          + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q (q' / 2)
+          - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2))
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if q = 1 ∧ q' = 2 then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOnePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if q = 2 ∧ q' = 1 then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Odd q ∧ Odd q' then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+              + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q')
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Odd q ∧ Odd q' then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q'
+      else 0
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddPairSumUpToQ0_eq_mismatchRemainder
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0
+  refine Finset.sum_congr rfl ?_
+  intro q hqmem
+  refine Finset.sum_congr rfl ?_
+  intro q' hq'mem
+  by_cases hqq' : q = q'
+  · simp [hqq']
+  · by_cases hodd : Odd q ∧ Odd q'
+    · have hqne2 : q ≠ 2 := by
+        intro hq2
+        have hnot : ¬ Odd 2 := by decide
+        exact hnot (hq2 ▸ hodd.1)
+      have hq'ne2 : q' ≠ 2 := by
+        intro hq'2
+        have hnot : ¬ Odd 2 := by decide
+        exact hnot (hq'2 ▸ hodd.2)
+      have hexc :
+          centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q' = 0 := by
+        refine centeredRamanujanPairPeriodicMainOddOddExceptionalContribution_eq_zero_of_not_exceptional ?_ ?_
+        · intro h12
+          exact hq'ne2 h12.2
+        · intro h21
+          exact hqne2 h21.1
+      simp [hqq', hodd, hexc]
+    · simp [hqq', hodd]
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution (q / 2) q'
+              + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X (q / 2) q'
+              - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q')
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q (q' / 2)
+              + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q (q' / 2)
+              - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2))
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicMainOddOddSector X (q / 2) q'
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+        |normalizedSigmaTruncSummandRealCoeff q
+            * normalizedSigmaTruncSummandRealCoeff q'|
+          * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant X (q / 2) q'
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+      if q = q' then 0 else
+      if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+        |normalizedSigmaTruncSummandRealCoeff q
+            * normalizedSigmaTruncSummandRealCoeff q'|
+          * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant X q (q' / 2)
+      else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLivePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0 X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+
+/-- The common odd-modulus kernel that remains after the coprime squarefree reductions. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel
+    (X a b : ℕ) : ℝ :=
+  centeredRamanujanPairPeriodicMainOddOddSector X a b
+
+/-- The effective normalized coefficient on the common odd-modulus pair surface. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight
+    (a b : ℕ) : ℝ :=
+  normalizedSigmaTruncSummandRealCoeff a * normalizedSigmaTruncSummandRealCoeff b
+    + (if 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 then
+        normalizedSigmaTruncSummandRealCoeff (2 * a)
+          * normalizedSigmaTruncSummandRealCoeff b
+      else 0)
+    + (if 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 then
+        normalizedSigmaTruncSummandRealCoeff a
+          * normalizedSigmaTruncSummandRealCoeff (2 * b)
+      else 0)
+
+/-- The odd-surface multiplicity carried by the three coprime parity branches. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity
+    (a b : ℕ) : ℝ :=
+  1
+    + (if 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 then (1 : ℝ) else 0)
+    + (if 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 then (1 : ℝ) else 0)
+
+theorem two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_of_mem_odd_support_of_active_left
+    {a b : ℕ}
+    (ha : a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hactive : 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b) :
+    2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 := by
+  rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp ha with ⟨haSupp, haOdd⟩
+  rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hb with ⟨hbSupp, _hbOdd⟩
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp haSupp with ⟨haIcc, hsqa⟩
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hbSupp with ⟨hbIcc, _hsqb⟩
+  have ha1 : 1 ≤ a := (Finset.mem_Icc.mp haIcc).1
+  have hb1 : 1 ≤ b := (Finset.mem_Icc.mp hbIcc).1
+  have hPpos : 0 < centeredRamanujanPairBlockPeriod a b := by
+    dsimp [centeredRamanujanPairBlockPeriod]
+    exact Nat.mul_pos (by norm_num) (Nat.lcm_pos ha1 hb1)
+  have hP_le : centeredRamanujanPairBlockPeriod a b ≤ H + 1 := by
+    by_contra hPgt
+    have hzero : (H + 1) / centeredRamanujanPairBlockPeriod a b = 0 := by
+      exact Nat.div_eq_of_lt (lt_of_not_ge hPgt)
+    omega
+  have h2a_le_h1 : 2 * a ≤ H + 1 := by
+    calc
+      2 * a ≤ 2 * Nat.lcm a b := by
+        gcongr
+        exact Nat.le_lcm_left a hb1
+      _ = centeredRamanujanPairBlockPeriod a b := by
+        simp [centeredRamanujanPairBlockPeriod]
+      _ ≤ H + 1 := hP_le
+  have hHleQ0 : H + 1 ≤ Goldbach.AO_OffDiag.TailBlock.Q0 := by
+    norm_num [Goldbach.BankParams.H, Goldbach.AO_OffDiag.TailBlock.Q0]
+  have h2aIcc : 2 * a ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 := by
+    refine Finset.mem_Icc.mpr ?_
+    constructor
+    · omega
+    · exact le_trans h2a_le_h1 hHleQ0
+  have hcop : Nat.Coprime 2 a := by
+    simpa using haOdd.coprime_two_left
+  have hsq2a : Squarefree (2 * a) := by
+    exact (Nat.squarefree_mul hcop).2 ⟨Nat.squarefree_two, hsqa⟩
+  exact mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mpr ⟨h2aIcc, hsq2a⟩
+
+theorem two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_of_mem_odd_support_of_active_right
+    {a b : ℕ}
+    (ha : a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hactive : 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b) :
+    2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 := by
+  rw [centeredRamanujanPairBlockPeriod_comm] at hactive
+  simpa [Nat.coprime_comm] using
+    two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_of_mem_odd_support_of_active_left
+      (a := b) (b := a) hb ha hactive
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity_eq_three_of_active
+    {a b : ℕ}
+    (ha : a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hactive : 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity a b = 3 := by
+  have h2a :
+      2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 :=
+    two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_of_mem_odd_support_of_active_left
+      ha hb hactive
+  have h2b :
+      2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 :=
+    two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_of_mem_odd_support_of_active_right
+      ha hb hactive
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity
+  norm_num [h2a, h2b]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_three_mul_of_active
+    {a b : ℕ}
+    (ha : a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hactive : 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight a b
+      =
+    3 * (normalizedSigmaTruncSummandRealCoeff a * normalizedSigmaTruncSummandRealCoeff b) := by
+  rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp ha with ⟨_, haOdd⟩
+  rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hb with ⟨_, hbOdd⟩
+  have h2a :
+      2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 :=
+    two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_of_mem_odd_support_of_active_left
+      ha hb hactive
+  have h2b :
+      2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 :=
+    two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_of_mem_odd_support_of_active_right
+      ha hb hactive
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight
+  rw [if_pos h2a, if_pos h2b]
+  rw [normalizedSigmaTruncSummandRealCoeff_two_mul_eq_of_mem_support haOdd h2a]
+  rw [normalizedSigmaTruncSummandRealCoeff_two_mul_eq_of_mem_support hbOdd h2b]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_three_mul
+    {a b : ℕ} (haOdd : Odd a) (hbOdd : Odd b)
+    (h2a : 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0)
+    (h2b : 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight a b
+      =
+    3 * (normalizedSigmaTruncSummandRealCoeff a * normalizedSigmaTruncSummandRealCoeff b) := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight
+  rw [if_pos h2a, if_pos h2b]
+  rw [normalizedSigmaTruncSummandRealCoeff_two_mul_eq_of_mem_support haOdd h2a]
+  rw [normalizedSigmaTruncSummandRealCoeff_two_mul_eq_of_mem_support hbOdd h2b]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_two_mul_left
+    {a b : ℕ} (haOdd : Odd a)
+    (h2a : 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0)
+    (h2b : 2 * b ∉ normalizedSigmaTruncSummandCoeffSupportUpToQ0) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight a b
+      =
+    2 * (normalizedSigmaTruncSummandRealCoeff a * normalizedSigmaTruncSummandRealCoeff b) := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight
+  rw [if_pos h2a, if_neg h2b]
+  rw [normalizedSigmaTruncSummandRealCoeff_two_mul_eq_of_mem_support haOdd h2a]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_two_mul_right
+    {a b : ℕ} (hbOdd : Odd b)
+    (h2a : 2 * a ∉ normalizedSigmaTruncSummandCoeffSupportUpToQ0)
+    (h2b : 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight a b
+      =
+    2 * (normalizedSigmaTruncSummandRealCoeff a * normalizedSigmaTruncSummandRealCoeff b) := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight
+  rw [if_neg h2a, if_pos h2b]
+  rw [normalizedSigmaTruncSummandRealCoeff_two_mul_eq_of_mem_support hbOdd h2b]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_base
+    {a b : ℕ}
+    (h2a : 2 * a ∉ normalizedSigmaTruncSummandCoeffSupportUpToQ0)
+    (h2b : 2 * b ∉ normalizedSigmaTruncSummandCoeffSupportUpToQ0) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight a b
+      =
+    normalizedSigmaTruncSummandRealCoeff a * normalizedSigmaTruncSummandRealCoeff b := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight
+  rw [if_neg h2a, if_neg h2b]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_multiplicity_mul
+    {a b : ℕ} (haOdd : Odd a) (hbOdd : Odd b) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight a b
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity a b
+      * (normalizedSigmaTruncSummandRealCoeff a * normalizedSigmaTruncSummandRealCoeff b) := by
+  by_cases h2a : 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0
+  · by_cases h2b : 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0
+    · rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_three_mul
+        haOdd hbOdd h2a h2b]
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity
+      simp [h2a, h2b]
+      norm_num
+    · rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_two_mul_left
+        haOdd h2a h2b]
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity
+      simp [h2a, h2b]
+      norm_num
+  · by_cases h2b : 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0
+    · rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_two_mul_right
+        hbOdd h2a h2b]
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity
+      simp [h2a, h2b]
+      norm_num
+    · rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_base
+        h2a h2b]
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity
+      simp [h2a, h2b]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity_nonneg
+    (a b : ℕ) :
+    0 ≤ centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity a b := by
+  by_cases h2a : 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 <;>
+    by_cases h2b : 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 <;>
+    unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity <;>
+    simp [h2a, h2b] <;> norm_num
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity_le_three
+    (a b : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity a b ≤ 3 := by
+  by_cases h2a : 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 <;>
+    by_cases h2b : 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 <;>
+    unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity <;>
+    simp [h2a, h2b] <;> norm_num
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_le_three_mul_abs_base
+    {a b : ℕ} (haOdd : Odd a) (hbOdd : Odd b) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight a b|
+      ≤
+    3 * |normalizedSigmaTruncSummandRealCoeff a * normalizedSigmaTruncSummandRealCoeff b| := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_multiplicity_mul
+    haOdd hbOdd]
+  rw [abs_mul, abs_of_nonneg
+    (centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity_nonneg a b)]
+  exact mul_le_mul_of_nonneg_right
+    (centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusMultiplicity_le_three a b)
+    (abs_nonneg _)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddOddSurfacePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+      if a = b then 0 else
+        normalizedSigmaTruncSummandRealCoeff a
+          * normalizedSigmaTruncSummandRealCoeff b
+          * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel X a b
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftHalvedOddOddSurfacePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter
+      (fun a => 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0),
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+      if a = b then 0 else
+        normalizedSigmaTruncSummandRealCoeff (2 * a)
+          * normalizedSigmaTruncSummandRealCoeff b
+          * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel X a b
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightHalvedOddOddSurfacePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+    ∑ b ∈ (normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a)).filter
+        (fun b => 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0),
+      if a = b then 0 else
+        normalizedSigmaTruncSummandRealCoeff a
+          * normalizedSigmaTruncSummandRealCoeff (2 * b)
+          * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel X a b
+
+/-- The odd-modulus live branch rewritten on a common odd pair surface. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+      if a = b then 0 else
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight a b
+          * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel X a b
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand
+    (X a b : ℕ) : ℝ :=
+  if a = b then 0 else
+  if 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b then
+    normalizedSigmaTruncSummandRealCoeff a
+      * normalizedSigmaTruncSummandRealCoeff b
+      * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel X a b
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand X a b
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand
+    (X a b : ℕ) : ℝ :=
+  if a = b then 0 else
+  if 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b then
+    normalizedSigmaTruncSummandRealCoeff a
+      * normalizedSigmaTruncSummandRealCoeff b
+      * centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X a b
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand X a b
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSummand
+    (X a b : ℕ) : ℝ :=
+  if a = b then 0 else
+  if 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b then
+    normalizedSigmaTruncSummandRealCoeff a
+      * normalizedSigmaTruncSummandRealCoeff b
+      * centeredRamanujanPairPeriodicMainOddOddCoefficientMismatchContribution X a b
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSummand X a b
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand
+    (X a b : ℕ) : ℝ :=
+  if a = b then 0 else
+  if 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b then
+    normalizedSigmaTruncSummandRealCoeff a
+      * normalizedSigmaTruncSummandRealCoeff b
+      * centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X a b
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand X a b
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand
+    (X a b : ℕ) : ℝ :=
+  if a = b then 0 else
+  if 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b then
+    normalizedSigmaTruncSummandRealCoeff b
+      * centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X a b
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum
+    (X a : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X a b
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution
+    (X a : ℕ) : ℝ :=
+  normalizedSigmaTruncSummandRealCoeff a
+    * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum X a
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowFiveMod15Class
+    (X r : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5),
+    if b % 15 = r then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution
+    (X r : ℕ) : ℝ :=
+  normalizedSigmaTruncSummandRealCoeff 5
+    * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowFiveMod15Class X r
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 7
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 9
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 4
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 11
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 13
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 2
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution_eq_mod15Class
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 7 := by
+  rfl
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution_eq_mod15Class
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 9 := by
+  rfl
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution_eq_mod15Class
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 4 := by
+  rfl
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution_eq_mod15Class
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 11 := by
+  rfl
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution_eq_mod15Class
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 13 := by
+  rfl
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution_eq_mod15Class
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 2 := by
+  rfl
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant
+    (X r : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5),
+    if b % 15 = r then
+      |normalizedSigmaTruncSummandRealCoeff 5
+        * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b|
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 7
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 9
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 4
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 11
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 13
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 2
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant
+    (X r : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X r := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowFiveMod15Class
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant
+  calc
+    |normalizedSigmaTruncSummandRealCoeff 5
+        * ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5),
+            if b % 15 = r then
+              centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+            else (0 : ℝ)|
+      =
+    |∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5),
+        if b % 15 = r then
+          normalizedSigmaTruncSummandRealCoeff 5
+            * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+        else (0 : ℝ)| := by
+        congr 1
+        rw [Finset.mul_sum]
+        refine Finset.sum_congr rfl ?_
+        intro b hb
+        split_ifs <;> simp [mul_assoc]
+    _ ≤
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5),
+      |if b % 15 = r then
+          normalizedSigmaTruncSummandRealCoeff 5
+            * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+        else (0 : ℝ)| := by
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun b =>
+              if b % 15 = r then
+                normalizedSigmaTruncSummandRealCoeff 5
+                  * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+              else (0 : ℝ))
+            (normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5)))
+    _ =
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5),
+      if b % 15 = r then
+        |normalizedSigmaTruncSummandRealCoeff 5
+          * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b|
+      else (0 : ℝ) := by
+        refine Finset.sum_congr rfl ?_
+        intro b hb
+        split_ifs <;> simp
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenAbsMajorant X := by
+  simpa [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution_eq_mod15Class,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenAbsMajorant] using
+    abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 7
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineAbsMajorant X := by
+  simpa [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution_eq_mod15Class,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineAbsMajorant] using
+    abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 9
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourAbsMajorant X := by
+  simpa [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution_eq_mod15Class,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourAbsMajorant] using
+    abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 4
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenAbsMajorant X := by
+  simpa [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution_eq_mod15Class,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenAbsMajorant] using
+    abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 11
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenAbsMajorant X := by
+  simpa [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution_eq_mod15Class,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenAbsMajorant] using
+    abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 13
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoAbsMajorant X := by
+  simpa [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution_eq_mod15Class,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoAbsMajorant] using
+    abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 2
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 15,
+    if r = 7 ∨ r = 9 ∨ r = 4 ∨ r = 11 ∨ r = 13 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveUsefulClassAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenAbsMajorant X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineAbsMajorant X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourAbsMajorant X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenAbsMajorant X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenAbsMajorant X
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveNearZeroAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 14
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 6
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 3
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveOtherResidualAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 1
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 8
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassAbsMajorant X 12
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveUsefulClassAbsMajorant X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoAbsMajorant X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveNearZeroAbsMajorant X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveOtherResidualAbsMajorant X
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ResidualContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 15,
+    if ¬ (r = 7 ∨ r = 9 ∨ r = 4 ∨ r = 11 ∨ r = 13) then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NegativeContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 15,
+    if r = 7 ∨ r = 9 ∨ r = 2 ∨ r = 4 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15PositiveContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 15,
+    if r = 11 ∨ r = 13 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 15,
+    if r = 14 ∨ r = 6 ∨ r = 3 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 15,
+    if r = 1 ∨ r = 8 ∨ r = 12 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 15,
+    if ¬ (r = 7 ∨ r = 9 ∨ r = 2 ∨ r = 4)
+        ∧ ¬ (r = 11 ∨ r = 13)
+        ∧ ¬ (r = 14 ∨ r = 6 ∨ r = 3) then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+    else (0 : ℝ)
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand_eq_coeff_mul_rowSummand
+    (X a b : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand X a b
+      =
+    normalizedSigmaTruncSummandRealCoeff a
+      * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X a b := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand
+  split_ifs <;> simp [mul_assoc]
+
+theorem centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_zero_of_isEven_eq_three_left
+    {X b : ℕ} (hXEven : Goldbach.Windows.IsEven X)
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hcop : Nat.Coprime 3 b) :
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X 3 b = 0 := by
+  rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hb with ⟨hbSupp, _hbOdd⟩
+  have hbpos : 1 ≤ b := (Finset.mem_Icc.mp (mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hbSupp).1).1
+  unfold centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution
+  refine Finset.sum_eq_zero ?_
+  intro g hg
+  refine Finset.sum_eq_zero ?_
+  intro h hh
+  have hzero :
+      centeredRamanujanGcdClassPeriodicDensityMismatchTerm X 3 b g h = 0 :=
+    centeredRamanujanGcdClassPeriodicDensityMismatchTerm_eq_zero_of_isEven_eq_three_left
+      hXEven hbpos hcop hg
+  simp [hzero]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand_eq_zero_of_isEven_eq_three
+    {X b : ℕ} (hXEven : Goldbach.Windows.IsEven X)
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 3)) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 3 b = 0 := by
+  rcases Finset.mem_filter.mp hb with ⟨hbmem, hcop⟩
+  by_cases h3b : 3 = b
+  · simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand, h3b]
+  · have hzero :
+        centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X 3 b = 0 :=
+      centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_zero_of_isEven_eq_three_left
+        hXEven hbmem hcop
+    simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand,
+      h3b, hzero]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum_eq_zero_of_isEven_eq_three
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum X 3 = 0 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum
+  refine Finset.sum_eq_zero ?_
+  intro b hb
+  exact centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand_eq_zero_of_isEven_eq_three
+    hXEven hb
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_zero_of_isEven_eq_three
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X 3 = 0 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution
+  simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum_eq_zero_of_isEven_eq_three hXEven]
+
+private theorem ramanujanGcdClassWindowAverage_one_one
+    (X : ℕ) :
+    ramanujanGcdClassWindowAverage X 1 1 = 1 := by
+  unfold ramanujanGcdClassWindowAverage
+  have hcard_nat : (EvenIn X H).card ≠ 0 := even_window_card_ne_zero_unconditional X
+  have hcard : ((EvenIn X H).card : ℝ) ≠ 0 := by
+    exact_mod_cast hcard_nat
+  have hind : ∀ N : ℕ, ramanujanGcdClassIndicator 1 1 N = (1 : ℝ) := by
+    intro N
+    simp [ramanujanGcdClassIndicator]
+  have hsum :
+      ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator 1 1 N
+        =
+      ((EvenIn X H).card : ℝ) := by
+    calc
+      ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator 1 1 N
+        =
+      ∑ _N ∈ EvenIn X H, (1 : ℝ) := by
+          refine Finset.sum_congr rfl ?_
+          intro N hN
+          exact hind N
+      _ = ((EvenIn X H).card : ℝ) := by
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+  calc
+    (((EvenIn X H).card : ℝ)⁻¹)
+        * ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator 1 1 N
+      =
+    (((EvenIn X H).card : ℝ)⁻¹) * ((EvenIn X H).card : ℝ) := by
+        rw [hsum]
+    _ = 1 := by
+        rw [inv_mul_cancel₀ hcard]
+
+private theorem rawEvenRamanujanGcdClassBlockPeriodicCount_eq_evenRamanujanBlockCount_of_eq_one_right
+    {X q : ℕ} (hq : 1 ≤ q) :
+    rawEvenRamanujanGcdClassBlockPeriodicCount X q 1 1 1
+      =
+    evenRamanujanBlockCount X q 1 := by
+  have hPpos : 0 < centeredRamanujanPairBlockPeriod q 1 := by
+    dsimp [centeredRamanujanPairBlockPeriod]
+    exact Nat.mul_pos (by norm_num) (Nat.lcm_pos hq (by norm_num))
+  have hh : 1 ∈ (1 : ℕ).divisors := by
+    simpa using (Nat.one_mem_divisors.mpr (show (1 : ℕ) ≠ 0 by norm_num))
+  rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_odd_g_totient_main_add_remainder_of_odd_quotient
+    X q 1 1 1 (by norm_num) hPpos (by norm_num [Goldbach.Windows.IsEven]) (by norm_num) (by norm_num)]
+  rw [evenRamanujanBlockCount_eq_lcm]
+  have hdiv :
+      ((((X + centeredRamanujanPairBlockPeriod q 1 - 1) / 1 + 1) - (X ⌈/⌉ 1))
+        / (2 * (1 / 1)))
+        = q :=
+    rawEvenRamanujanGcdClassPeriodicRightLen_div_two_mul_quotient_eq_leftModulus_of_divisor
+      (X := X) (q := q) (q' := 1) hq (by norm_num) (Nat.coprime_one_right q) hh
+  have hmod :
+      ((((X + centeredRamanujanPairBlockPeriod q 1 - 1) / 1 + 1) - (X ⌈/⌉ 1))
+        % (2 * (1 / 1)))
+        = 0 :=
+    rawEvenRamanujanGcdClassPeriodicRightLen_mod_two_mul_quotient_eq_zero_of_divisor
+      (X := X) (q := q) (q' := 1) hq (by norm_num) (Nat.coprime_one_right q) hh
+  simp [centeredRamanujanPairBlockPeriod] at hdiv hmod ⊢
+  rw [hdiv, hmod]
+  norm_num
+
+private theorem centeredRamanujanGcdClassPeriodicDensityMismatchTerm_eq_zero_of_eq_one_right
+    {X q g : ℕ} (hq : 1 ≤ q) (hg : g ∈ q.divisors) :
+    centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q 1 g 1 = 0 := by
+  have hBne : evenRamanujanBlockCount X q 1 ≠ 0 := by
+    exact ne_of_gt (evenRamanujanBlockCount_pos X q 1 hq (by norm_num))
+  unfold centeredRamanujanGcdClassPeriodicDensityMismatchTerm
+  rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_evenRamanujanBlockCount_of_eq_one_right hq,
+    ramanujanGcdClassWindowAverage_one_one]
+  field_simp [hBne]
+  ring
+
+theorem centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_zero_of_eq_one_right
+    {X q : ℕ} (hq : 1 ≤ q) :
+    centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution X q 1 = 0 := by
+  unfold centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution
+  rw [Nat.divisors_one]
+  refine Finset.sum_eq_zero ?_
+  intro g hg
+  have hgDiv : g ∈ q.divisors := (Finset.mem_filter.mp hg).1
+  have h1odd : ¬ Goldbach.Windows.IsEven 1 := by
+    norm_num [Goldbach.Windows.IsEven]
+  have hinner :
+      ∑ h ∈ ({1} : Finset ℕ).filter (fun h => ¬ Goldbach.Windows.IsEven h),
+        ramanujanGcdClassCoeff q g * ramanujanGcdClassCoeff 1 h
+          * ((((H + 1) / centeredRamanujanPairBlockPeriod q 1 : ℕ) : ℕ)
+              • centeredRamanujanGcdClassPeriodicDensityMismatchTerm X q 1 g h)
+        = 0 := by
+    rw [show ({1} : Finset ℕ).filter (fun h => ¬ Goldbach.Windows.IsEven h) = {1} by
+      simp [h1odd]]
+    rw [Finset.sum_singleton]
+    simp [ramanujanGcdClassCoeff, Nat.totient_one,
+      centeredRamanujanGcdClassPeriodicDensityMismatchTerm_eq_zero_of_eq_one_right hq hgDiv]
+  exact hinner
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand_eq_zero_of_eq_one_right
+    {X a : ℕ} (ha : 1 ≤ a) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X a 1 = 0 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand
+  by_cases hdiag : a = 1
+  · simp [hdiag]
+  · simp [hdiag, centeredRamanujanPairPeriodicMainOddOddDensityMismatchContribution_eq_zero_of_eq_one_right, ha]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum_eq_sum_mod15_classes_of_eq_five
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum X 5
+      =
+    ∑ r ∈ Finset.range 15,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowFiveMod15Class X r := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowFiveMod15Class
+  calc
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5),
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+      =
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5),
+      ∑ r ∈ Finset.range 15,
+        if b % 15 = r then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+        else (0 : ℝ) := by
+          refine Finset.sum_congr rfl ?_
+          intro b hb
+          have hlt : b % 15 < 15 := Nat.mod_lt _ (by norm_num)
+          have hmem : b % 15 ∈ Finset.range 15 := Finset.mem_range.mpr hlt
+          have hone :
+              (∑ r ∈ Finset.range 15,
+                if b % 15 = r then
+                  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+                else (0 : ℝ))
+                =
+              centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b := by
+            calc
+              (∑ r ∈ Finset.range 15,
+                if b % 15 = r then
+                  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+                else (0 : ℝ))
+                  =
+                if b % 15 ∈ Finset.range 15 then
+                  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+                else (0 : ℝ) := by
+                    simpa using
+                      (Finset.sum_ite_eq (Finset.range 15) (b % 15)
+                        (fun _ : ℕ =>
+                          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b))
+              _ = centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b := by
+                    simp [hmem]
+          exact hone.symm
+    _ =
+    ∑ r ∈ Finset.range 15,
+      ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 5),
+        if b % 15 = r then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 5 b
+        else (0 : ℝ) := by
+          rw [Finset.sum_comm]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_sum_mod15_weightedClasses_of_eq_five
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X 5
+      =
+    ∑ r ∈ Finset.range 15,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum_eq_sum_mod15_classes_of_eq_five]
+  rw [Finset.mul_sum]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_neg_pos_nearZero_other_of_eq_five
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X 5
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NegativeContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15PositiveContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherContribution X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_sum_mod15_weightedClasses_of_eq_five]
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NegativeContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15PositiveContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherContribution
+  rw [← Finset.sum_add_distrib, ← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro r hr
+  have hrlt : r < 15 := Finset.mem_range.mp hr
+  interval_cases r <;> simp
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_useful_residual_of_eq_five
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X 5
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ResidualContribution X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_sum_mod15_weightedClasses_of_eq_five]
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ResidualContribution
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro r hr
+  have hrlt : r < 15 := Finset.mem_range.mp hr
+  interval_cases r <;> simp
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ResidualContribution_eq_two_nearZero_otherResidual
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ResidualContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X := by
+  have htwo :
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X
+        =
+      ∑ r ∈ Finset.range 15,
+        if r = 2 then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+        else (0 : ℝ) := by
+    have hsum :=
+      Finset.sum_ite_eq (Finset.range 15) 2
+        (fun r =>
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r)
+    simpa [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution_eq_mod15Class] using hsum.symm
+  have hclass_zero_of_five_dvd {r : ℕ} (hr : r = 0 ∨ r = 5 ∨ r = 10) :
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r = 0 := by
+    have hrow :
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowFiveMod15Class X r = 0 := by
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowFiveMod15Class
+      refine Finset.sum_eq_zero ?_
+      intro b hb
+      rcases Finset.mem_filter.mp hb with ⟨_hb, hcop⟩
+      split_ifs with hmod
+      · exfalso
+        have hbmod5 : b % 5 = 0 := by
+          rcases hr with rfl | rfl | rfl <;> omega
+        have h5dvd : 5 ∣ b := by
+          rwa [Nat.dvd_iff_mod_eq_zero]
+        have hprime5 : Nat.Prime 5 := by decide
+        exact (hprime5.coprime_iff_not_dvd.mp hcop) h5dvd
+      · simp
+    unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution
+    simp [hrow]
+  have hzero0 :
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 0 = 0 :=
+    hclass_zero_of_five_dvd (Or.inl rfl)
+  have hzero5 :
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 5 = 0 :=
+    hclass_zero_of_five_dvd (Or.inr (Or.inl rfl))
+  have hzero10 :
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 10 = 0 :=
+    hclass_zero_of_five_dvd (Or.inr (Or.inr rfl))
+  rw [htwo]
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ResidualContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution
+  rw [← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro r hr
+  have hrlt : r < 15 := Finset.mem_range.mp hr
+  interval_cases r <;> simp [hzero0, hzero5, hzero10]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution_eq_namedClasses
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution
+  let p : ℕ → Prop := fun r => r = 7 ∨ r = 9 ∨ r = 4 ∨ r = 11 ∨ r = 13
+  let usefulResidues : Finset ℕ := ({4, 7, 9, 11, 13} : Finset ℕ)
+  have hfilter :
+      (Finset.range 15).filter p = usefulResidues := by
+    native_decide
+  calc
+    Finset.sum (Finset.range 15) (fun r =>
+      if p r then
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+      else (0 : ℝ))
+      =
+    Finset.sum ((Finset.range 15).filter p)
+      (fun r => centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r) := by
+        simpa [Finset.sum_filter]
+    _ =
+    Finset.sum usefulResidues
+      (fun r => centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r) := by
+        rw [hfilter]
+    _ =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X := by
+        simp [usefulResidues,
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution_eq_mod15Class,
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution_eq_mod15Class,
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution_eq_mod15Class,
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution_eq_mod15Class,
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution_eq_mod15Class,
+          add_assoc, add_comm, add_left_comm]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution_eq_namedClasses
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 14
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 6
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 3 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution
+  let p : ℕ → Prop := fun r => r = 14 ∨ r = 6 ∨ r = 3
+  let residues : Finset ℕ := ({3, 6, 14} : Finset ℕ)
+  have hfilter : (Finset.range 15).filter p = residues := by
+    native_decide
+  calc
+    Finset.sum (Finset.range 15) (fun r =>
+      if p r then
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+      else (0 : ℝ))
+      =
+    Finset.sum ((Finset.range 15).filter p)
+      (fun r => centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r) := by
+        simpa [Finset.sum_filter]
+    _ =
+    Finset.sum residues
+      (fun r => centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r) := by
+        rw [hfilter]
+    _ =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 14
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 6
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 3 := by
+        simp [residues, add_assoc, add_comm, add_left_comm]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution_eq_namedClasses
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 1
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 8
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 12 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution
+  let p : ℕ → Prop := fun r => r = 1 ∨ r = 8 ∨ r = 12
+  let residues : Finset ℕ := ({1, 8, 12} : Finset ℕ)
+  have hfilter : (Finset.range 15).filter p = residues := by
+    native_decide
+  calc
+    Finset.sum (Finset.range 15) (fun r =>
+      if p r then
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r
+      else (0 : ℝ))
+      =
+    Finset.sum ((Finset.range 15).filter p)
+      (fun r => centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r) := by
+        simpa [Finset.sum_filter]
+    _ =
+    Finset.sum residues
+      (fun r => centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X r) := by
+        rw [hfilter]
+    _ =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 1
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 8
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 12 := by
+        simp [residues, add_assoc, add_comm, add_left_comm]
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveUsefulClassAbsMajorant X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution_eq_namedClasses]
+  calc
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X|
+      ≤
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X| := by
+        calc
+          |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X|
+            ≤
+          |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X| := by
+              exact abs_add_le _ _
+          _ ≤
+          (|centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X|)
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X| := by
+              gcongr
+              exact abs_add_le _ _
+          _ ≤
+          ((|centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X
+                + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X|)
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X|)
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X| := by
+              gcongr
+              exact abs_add_le _ _
+          _ ≤
+          (((|centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X|
+                + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X|)
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X|)
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X|)
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X| := by
+              gcongr
+              exact abs_add_le _ _
+          _ = |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution X|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution X|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution X|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution X|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution X| := by
+                ring
+    _ ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveUsefulClassAbsMajorant X := by
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveUsefulClassAbsMajorant
+      gcongr
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassSevenContribution_le_absMajorant X
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassNineContribution_le_absMajorant X
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassFourContribution_le_absMajorant X
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassElevenContribution_le_absMajorant X
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassThirteenContribution_le_absMajorant X
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveNearZeroAbsMajorant X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution_eq_namedClasses]
+  calc
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 14
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 6
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 3|
+      ≤
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 14|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 6|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 3| := by
+        calc
+          |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 14
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 6
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 3|
+            ≤
+          |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 14
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 6|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 3| := by
+              exact abs_add_le _ _
+          _ ≤
+          (|centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 14|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 6|)
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 3| := by
+              gcongr
+              exact abs_add_le _ _
+          _ = |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 14|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 6|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 3| := by
+                ring
+    _ ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveNearZeroAbsMajorant X := by
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveNearZeroAbsMajorant
+      gcongr
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 14
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 6
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 3
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveOtherResidualAbsMajorant X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution_eq_namedClasses]
+  calc
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 1
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 8
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 12|
+      ≤
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 1|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 8|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 12| := by
+        calc
+          |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 1
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 8
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 12|
+            ≤
+          |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 1
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 8|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 12| := by
+              exact abs_add_le _ _
+          _ ≤
+          (|centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 1|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 8|)
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 12| := by
+              gcongr
+              exact abs_add_le _ _
+          _ = |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 1|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 8|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution X 12| := by
+                ring
+    _ ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveOtherResidualAbsMajorant X := by
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveOtherResidualAbsMajorant
+      gcongr
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 1
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 8
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ClassContribution_le_absMajorant X 12
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_useful_two_nearZero_otherResidual_of_eq_five
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X 5
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_useful_residual_of_eq_five,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15ResidualContribution_eq_two_nearZero_otherResidual]
+  ring
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_five_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X 5|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveAbsMajorant X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_useful_two_nearZero_otherResidual_of_eq_five]
+  calc
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X|
+      ≤
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X| := by
+        calc
+          |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X|
+            ≤
+          |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X
+              + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X| := by
+              exact abs_add_le _ _
+          _ ≤
+          (|centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X
+                + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X|
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X|)
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X| := by
+              gcongr
+              exact abs_add_le _ _
+          _ ≤
+          ((|centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X|
+                + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X|)
+              + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X|)
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X| := by
+              gcongr
+              exact abs_add_le _ _
+          _ =
+          |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution X|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution X|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution X|
+            + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution X| := by
+              ring
+    _ ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveAbsMajorant X := by
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveAbsMajorant
+      gcongr
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15UsefulContribution_le_absMajorant X
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveClassTwoContribution_le_absMajorant X
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15NearZeroContribution_le_absMajorant X
+      · exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowFiveMod15OtherResidualContribution_le_absMajorant X
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMod21Class
+    (X r : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b % 21 = r then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ClassContribution
+    (X r : ℕ) : ℝ :=
+  normalizedSigmaTruncSummandRealCoeff 7
+    * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMod21Class X r
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21NegativeContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 21,
+    if r = 5 ∨ r = 11 ∨ r = 13 ∨ r = 12 ∨ r = 1 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ClassContribution X r
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21PositiveContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 21,
+    if r = 15 ∨ r = 18 ∨ r = 6 ∨ r = 19 ∨ r = 20 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ClassContribution X r
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ResidualContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 21,
+    if (r = 5 ∨ r = 11 ∨ r = 13 ∨ r = 12 ∨ r = 1)
+        ∨ (r = 15 ∨ r = 18 ∨ r = 6 ∨ r = 19 ∨ r = 20) then
+      (0 : ℝ)
+    else centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ClassContribution X r
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21MainContribution
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21NegativeContribution X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21PositiveContribution X
+
+private def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue
+    (r : ℕ) : Prop :=
+  r = 5 ∨ r = 11 ∨ r = 13 ∨ r = 12 ∨ r = 1
+    ∨ r = 15 ∨ r = 18 ∨ r = 6 ∨ r = 19 ∨ r = 20
+
+private instance centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue_decidable :
+    DecidablePred centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue := by
+  intro r
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue
+  infer_instance
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand
+    (X b : ℕ) : ℝ :=
+  if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue (b % 21) then
+    normalizedSigmaTruncSummandRealCoeff 7
+      * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+  else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 1 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneMod21ClassContribution
+    (X r : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 1 ∧ b % 21 = r then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneNegativeContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 21,
+    if r = 1 ∨ r = 5 ∨ r = 11 ∨ r = 13 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneMod21ClassContribution X r
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOnePositiveContribution
+    (X : ℕ) : ℝ :=
+  ∑ r ∈ Finset.range 21,
+    if r = 19 ∨ r = 20 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneMod21ClassContribution X r
+    else (0 : ℝ)
+
+private def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue
+    (r : ℕ) : Prop :=
+  r = 1 ∨ r = 5 ∨ r = 11 ∨ r = 13 ∨ r = 19 ∨ r = 20
+
+private instance centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue_decidable :
+    DecidablePred centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue := by
+  intro r
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue
+  infer_instance
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 ∧ 3 ∣ b then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeNotDvdContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 ∧ ¬ 3 ∣ b then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveDvdContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ 5 ∣ b then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveOneContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 1 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveTwoContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 2 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveThreeContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 3 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveFourContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 4 then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveAbsMajorant
+    (X r : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = r then
+      |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b|
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveTwoAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveAbsMajorant X 2
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveOneAbsMajorant
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveAbsMajorant X 1
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveThreeOrFourContribution
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveThreeContribution X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveFourContribution X
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaGeThreeContribution
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if 3 ≤ b.primeFactors.card then
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+    else (0 : ℝ)
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaGeThreeAbsMajorant
+    (X : ℕ) : ℝ :=
+  ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+    if 3 ≤ b.primeFactors.card then
+      |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b|
+    else (0 : ℝ)
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainContribution_eq_sum_mainSummands
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21MainContribution X
+      =
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b := by
+  let S := normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7)
+  have hmain :
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21MainContribution X
+        =
+      ∑ r ∈ Finset.range 21,
+        if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue r then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ClassContribution X r
+        else (0 : ℝ) := by
+    unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21MainContribution
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21NegativeContribution
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21PositiveContribution
+    rw [← Finset.sum_add_distrib]
+    refine Finset.sum_congr rfl ?_
+    intro r hr
+    have hrlt : r < 21 := Finset.mem_range.mp hr
+    interval_cases h : r <;>
+      simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue]
+  rw [hmain]
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ClassContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMod21Class
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand
+  calc
+    (∑ r ∈ Finset.range 21,
+      if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue r then
+        normalizedSigmaTruncSummandRealCoeff 7
+          * ∑ b ∈ S,
+              if b % 21 = r then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+              else (0 : ℝ)
+      else (0 : ℝ))
+      =
+    ∑ r ∈ Finset.range 21,
+      ∑ b ∈ S,
+        if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue r then
+          normalizedSigmaTruncSummandRealCoeff 7
+            * (if b % 21 = r then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+              else (0 : ℝ))
+        else (0 : ℝ) := by
+          refine Finset.sum_congr rfl ?_
+          intro r hr
+          by_cases hrMain :
+              centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue r
+          · simp [hrMain, S, Finset.mul_sum, mul_ite, ite_mul, zero_mul, mul_zero]
+          · simp [hrMain, S]
+    _ =
+    ∑ b ∈ S,
+      ∑ r ∈ Finset.range 21,
+        if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue r then
+          normalizedSigmaTruncSummandRealCoeff 7
+            * (if b % 21 = r then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+              else (0 : ℝ))
+        else (0 : ℝ) := by
+          rw [Finset.sum_comm]
+    _ =
+    ∑ b ∈ S,
+      if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue (b % 21) then
+        normalizedSigmaTruncSummandRealCoeff 7
+          * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+      else (0 : ℝ) := by
+          refine Finset.sum_congr rfl ?_
+          intro b hb
+          have hmem : b % 21 ∈ Finset.range 21 := Finset.mem_range.mpr (Nat.mod_lt _ (by norm_num))
+          rw [Finset.sum_eq_single (b % 21)]
+          · have hlt : b % 21 < 21 := Nat.mod_lt _ (by norm_num)
+            interval_cases h : b % 21 <;>
+              simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue]
+          · intro r hr hne
+            have hne' : b % 21 ≠ r := by simpa [eq_comm] using hne
+            simp [hne']
+          · intro hnotmem
+            exact False.elim (hnotmem hmem)
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainContribution_eq_omegaOne_add_omegaTwo_add_omegaGeThree
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21MainContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaGeThreeContribution X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainContribution_eq_sum_mainSummands]
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaGeThreeContribution
+  rw [← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  have hbOdd : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0 :=
+    (Finset.mem_filter.mp hb).1
+  rcases (mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff).mp hbOdd with ⟨hbSupp, _⟩
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hbSupp with ⟨hbIcc, hbSq⟩
+  have hbPos : 1 ≤ b := (Finset.mem_Icc.mp hbIcc).1
+  let s :=
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+  by_cases h1 : b.primeFactors.card = 1
+  · simp [s, h1]
+  by_cases h2 : b.primeFactors.card = 2
+  · simp [s, h1, h2]
+  by_cases h3 : 3 ≤ b.primeFactors.card
+  · simp [s, h1, h2, h3]
+  have hle2 : b.primeFactors.card ≤ 2 := Nat.lt_succ_iff.mp (lt_of_not_ge h3)
+  have hcard0 : b.primeFactors.card = 0 := by
+    omega
+  have hEmpty : b.primeFactors = ∅ := Finset.card_eq_zero.mp hcard0
+  have hbNeZero : b ≠ 0 := by
+    omega
+  have hbEqOne : b = 1 := by
+    rcases Nat.primeFactors_eq_empty.mp hEmpty with hbZero | hbOne
+    · exact False.elim (hbNeZero hbZero)
+    · exact hbOne
+  have hs0 : s = 0 := by
+    subst hbEqOne
+    unfold s centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand
+    simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand_eq_zero_of_eq_one_right (X := X) (a := 7) (by norm_num)]
+  simp [s, h1, h2, h3, hs0]
+
+private theorem eq_three_of_mem_rowSeven_main_omegaOne_three_dvd
+    {b : ℕ}
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7))
+    (hω1 : b.primeFactors.card = 1) (h3 : 3 ∣ b) :
+    b = 3 := by
+  have hbmem : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0 := (Finset.mem_filter.mp hb).1
+  rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hbmem with ⟨hbSupp, _⟩
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hbSupp with ⟨hbIcc, hsqb⟩
+  have hb0 : b ≠ 0 := by
+    exact ne_of_gt ((Finset.mem_Icc.mp hbIcc).1)
+  have hb1 : b ≠ 1 := by
+    intro hbEq1
+    subst hbEq1
+    simp at hω1
+  rcases Finset.card_eq_one.mp hω1 with ⟨p, hpEq⟩
+  have h3mem : 3 ∈ b.primeFactors := by
+    exact (Nat.mem_primeFactors).2 ⟨by norm_num, h3, hb0⟩
+  have hp3 : p = 3 := by
+    simpa [hpEq, eq_comm] using h3mem
+  have hprod : ∏ q ∈ b.primeFactors, q = b := by
+    simpa using (Nat.prod_primeFactors_of_squarefree hsqb)
+  have hpEqb : p = b := by
+    simpa [hpEq] using hprod
+  omega
+
+private theorem not_rowSeven_main_nonprimeResidues_of_omegaOne
+    {b : ℕ}
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7))
+    (hω1 : b.primeFactors.card = 1) :
+    ¬ (b % 21 = 6 ∨ b % 21 = 12 ∨ b % 21 = 15 ∨ b % 21 = 18) := by
+  intro hbad
+  have h3 : 3 ∣ b := by
+    rcases hbad with h6 | h12 | h15 | h18 <;> omega
+  have hbEq3 : b = 3 := eq_three_of_mem_rowSeven_main_omegaOne_three_dvd hb hω1 h3
+  rcases hbad with h6 | h12 | h15 | h18 <;> omega
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneContribution_eq_negative_add_positive
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneNegativeContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOnePositiveContribution X := by
+  let S := normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7)
+  have hsplit :
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneContribution X
+        =
+      ∑ r ∈ Finset.range 21,
+        if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue r then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneMod21ClassContribution X r
+        else (0 : ℝ) := by
+    unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneContribution
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneMod21ClassContribution
+    have hstep1 :
+        (∑ b ∈ S,
+          if b.primeFactors.card = 1 then
+            centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+          else (0 : ℝ))
+          =
+        ∑ b ∈ S,
+          ∑ r ∈ Finset.range 21,
+            if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue r then
+              if b.primeFactors.card = 1 ∧ b % 21 = r then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+              else (0 : ℝ)
+            else (0 : ℝ) := by
+      refine Finset.sum_congr rfl ?_
+      intro b hb
+      by_cases hω1 : b.primeFactors.card = 1
+      · have hmem : b % 21 ∈ Finset.range 21 := Finset.mem_range.mpr (Nat.mod_lt _ (by norm_num))
+        rw [Finset.sum_eq_single (b % 21)]
+        · by_cases hact :
+              centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue (b % 21)
+          · simp [hω1, hact]
+          · have hnotmain :
+                ¬ centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue (b % 21) := by
+              intro hmain
+              have hlt : b % 21 < 21 := Nat.mod_lt _ (by norm_num)
+              interval_cases h : b % 21 <;>
+                simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue,
+                  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue] at hact hmain ⊢
+              · have hres : b % 21 = 6 := by omega
+                exact (not_rowSeven_main_nonprimeResidues_of_omegaOne hb hω1) (Or.inl hres)
+              · have hres : b % 21 = 12 := by omega
+                exact (not_rowSeven_main_nonprimeResidues_of_omegaOne hb hω1) (Or.inr <| Or.inl hres)
+              · have hres : b % 21 = 15 := by omega
+                exact (not_rowSeven_main_nonprimeResidues_of_omegaOne hb hω1) (Or.inr <| Or.inr <| Or.inl hres)
+              · have hres : b % 21 = 18 := by omega
+                exact (not_rowSeven_main_nonprimeResidues_of_omegaOne hb hω1) (Or.inr <| Or.inr <| Or.inr hres)
+            have hsummand0 :
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b = 0 := by
+              unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand
+              simp [hnotmain]
+            simpa [hω1, hact] using hsummand0
+        · intro r hr hne
+          have hne' : b % 21 ≠ r := by simpa [eq_comm] using hne
+          by_cases hact :
+              centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue r
+          · simp [hact, hω1, hne']
+          · simp [hact]
+        · intro hnotmem
+          exact False.elim (hnotmem hmem)
+      · simp [hω1]
+    have hstep2 :
+        (∑ b ∈ S,
+          ∑ r ∈ Finset.range 21,
+            if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue r then
+              if b.primeFactors.card = 1 ∧ b % 21 = r then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+              else (0 : ℝ)
+            else (0 : ℝ))
+          =
+        ∑ r ∈ Finset.range 21,
+          ∑ b ∈ S,
+            if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue r then
+              if b.primeFactors.card = 1 ∧ b % 21 = r then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+              else (0 : ℝ)
+            else (0 : ℝ) := by
+      rw [Finset.sum_comm]
+    have hstep3 :
+        (∑ r ∈ Finset.range 21,
+          ∑ b ∈ S,
+            if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue r then
+              if b.primeFactors.card = 1 ∧ b % 21 = r then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+              else (0 : ℝ)
+            else (0 : ℝ))
+          =
+        ∑ r ∈ Finset.range 21,
+          if centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue r then
+            centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneMod21ClassContribution X r
+          else (0 : ℝ) := by
+      refine Finset.sum_congr rfl ?_
+      intro r hr
+      by_cases hact :
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue r
+      · simp [S, centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneMod21ClassContribution, hact]
+      · simp [hact]
+    exact hstep1.trans (hstep2.trans hstep3)
+  rw [hsplit]
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneNegativeContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOnePositiveContribution
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro r hr
+  have hrlt : r < 21 := Finset.mem_range.mp hr
+  interval_cases h : r <;>
+    simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaOneActiveResidue]
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaGeThreeContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaGeThreeContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaGeThreeAbsMajorant X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaGeThreeContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaGeThreeAbsMajorant
+  calc
+    |∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+        if 3 ≤ b.primeFactors.card then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+        else (0 : ℝ)|
+      ≤
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+      |if 3 ≤ b.primeFactors.card then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+        else (0 : ℝ)| := by
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun b =>
+              if 3 ≤ b.primeFactors.card then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+              else (0 : ℝ))
+            (normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7)))
+    _ =
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+      if 3 ≤ b.primeFactors.card then
+        |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b|
+      else (0 : ℝ) := by
+        refine Finset.sum_congr rfl ?_
+        intro b hb
+        split_ifs <;> simp
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoContribution_eq_threeDvd_add_threeNotDvd
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeNotDvdContribution X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeNotDvdContribution
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  by_cases hω2 : b.primeFactors.card = 2
+  · by_cases h3dvd : 3 ∣ b
+    · simp [hω2, h3dvd]
+    · simp [hω2, h3dvd]
+  · simp [hω2]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdContribution_eq_fiveDvd_add_fiveNotDvd
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveDvdContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdContribution X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveDvdContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdContribution
+  rw [← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  by_cases hω2 : b.primeFactors.card = 2
+  · by_cases h3dvd : 3 ∣ b
+    · by_cases h5dvd : 5 ∣ b
+      · simp [hω2, h3dvd, h5dvd]
+      · simp [hω2, h3dvd, h5dvd]
+    · simp [hω2, h3dvd]
+  · simp [hω2]
+
+private theorem eq_fifteen_of_mem_rowSeven_main_omegaTwo_three_dvd_five_dvd
+    {b : ℕ}
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7))
+    (hω2 : b.primeFactors.card = 2) (h3 : 3 ∣ b) (h5 : 5 ∣ b) :
+    b = 15 := by
+  have hbmem : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0 := (Finset.mem_filter.mp hb).1
+  rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hbmem with ⟨hbSupp, _hbOdd⟩
+  rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hbSupp with ⟨hbIcc, hsqb⟩
+  have hb0 : b ≠ 0 := by
+    exact ne_of_gt ((Finset.mem_Icc.mp hbIcc).1)
+  have h15dvd : 15 ∣ b := by
+    have hcop35 : Nat.Coprime 3 5 := by norm_num
+    simpa [Nat.mul_comm] using hcop35.mul_dvd_of_dvd_of_dvd h3 h5
+  have hsubset : (15 : ℕ).primeFactors ⊆ b.primeFactors := Nat.primeFactors_mono h15dvd hb0
+  have hcard15 : (15 : ℕ).primeFactors.card = 2 := by native_decide
+  have hpf_eq : (15 : ℕ).primeFactors = b.primeFactors := by
+    refine Finset.eq_of_subset_of_card_le hsubset ?_
+    simpa [hcard15, hω2]
+  have hprod15 : ∏ p ∈ (15 : ℕ).primeFactors, p = 15 := by
+    simpa using (Nat.prod_primeFactors_of_squarefree (by native_decide : Squarefree 15))
+  have hprodb : ∏ p ∈ b.primeFactors, p = b := by
+    simpa using (Nat.prod_primeFactors_of_squarefree hsqb)
+  calc
+    b = ∏ p ∈ b.primeFactors, p := by symm; exact hprodb
+    _ = ∏ p ∈ (15 : ℕ).primeFactors, p := by rw [← hpf_eq]
+    _ = 15 := hprod15
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveDvdContribution_eq_singleton_fifteen
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveDvdContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X 15 := by
+  let S := normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7)
+  have h15odd : 15 ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0 := by
+    refine (mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff).2 ?_
+    refine ⟨(mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff).2 ?_, by norm_num⟩
+    refine ⟨by simp [Goldbach.AO_OffDiag.TailBlock.Q0], by native_decide⟩
+  have h15mem : 15 ∈ S := Finset.mem_filter.mpr ⟨h15odd, by norm_num⟩
+  have h15card : (15 : ℕ).primeFactors.card = 2 := by native_decide
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveDvdContribution
+  rw [Finset.sum_eq_single 15]
+  · simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMainResidue,
+      h15card]
+  · intro b hb hne
+    by_cases hcond : b.primeFactors.card = 2 ∧ 3 ∣ b ∧ 5 ∣ b
+    · rcases hcond with ⟨hω2, h3, h5⟩
+      have hbEq : b = 15 :=
+        eq_fifteen_of_mem_rowSeven_main_omegaTwo_three_dvd_five_dvd hb hω2 h3 h5
+      exact (hne hbEq).elim
+    · simp [hcond]
+  · intro hnotmem
+    exact False.elim (hnotmem h15mem)
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdContribution_eq_primeModFiveOne_add_two_add_three_add_four
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdContribution X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveOneContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveTwoContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveThreeContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveFourContribution X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveOneContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveTwoContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveThreeContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveFourContribution
+  rw [← Finset.sum_add_distrib, ← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  by_cases hcond : b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b
+  · rcases hcond with ⟨hω2, h3dvd, h5notdvd⟩
+    have hdiv_eq : 3 * (b / 3) = b := Nat.mul_div_cancel' h3dvd
+    have hmod_ne_zero : (b / 3) % 5 ≠ 0 := by
+      intro hmod0
+      have hdiv5 : 5 ∣ b / 3 := Nat.dvd_of_mod_eq_zero hmod0
+      have hb5 : 5 ∣ b := by
+        have : 5 ∣ 3 * (b / 3) := dvd_mul_of_dvd_right hdiv5 3
+        simpa [hdiv_eq] using this
+      exact h5notdvd hb5
+    have hlt : (b / 3) % 5 < 5 := Nat.mod_lt _ (by norm_num)
+    have hpos : 0 < (b / 3) % 5 := Nat.pos_of_ne_zero hmod_ne_zero
+    have hrem :
+        (b / 3) % 5 = 1 ∨ (b / 3) % 5 = 2 ∨ (b / 3) % 5 = 3 ∨ (b / 3) % 5 = 4 := by
+      omega
+    rcases hrem with h1 | h2 | h3 | h4
+    · simp [hω2, h3dvd, h5notdvd, h1]
+    · simp [hω2, h3dvd, h5notdvd, h2]
+    · simp [hω2, h3dvd, h5notdvd, h3]
+    · simp [hω2, h3dvd, h5notdvd, h4]
+  · have h1 : ¬ (b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 1) := by
+      intro h
+      exact hcond ⟨h.1, h.2.1, h.2.2.1⟩
+    have h2 : ¬ (b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 2) := by
+      intro h
+      exact hcond ⟨h.1, h.2.1, h.2.2.1⟩
+    have h3 : ¬ (b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 3) := by
+      intro h
+      exact hcond ⟨h.1, h.2.1, h.2.2.1⟩
+    have h4 : ¬ (b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 4) := by
+      intro h
+      exact hcond ⟨h.1, h.2.1, h.2.2.1⟩
+    simp [hcond, h1, h2, h3, h4]
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveTwoContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveTwoContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveTwoAbsMajorant X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveTwoContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveTwoAbsMajorant
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveAbsMajorant
+  calc
+    |∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+        if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 2 then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+        else (0 : ℝ)|
+      ≤
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+      |if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 2 then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+        else (0 : ℝ)| := by
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun b =>
+              if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 2 then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+              else (0 : ℝ))
+            (normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7)))
+    _ =
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+      if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 2 then
+        |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b|
+      else (0 : ℝ) := by
+        refine Finset.sum_congr rfl ?_
+        intro b hb
+        split_ifs <;> simp
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveOneContribution_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveOneContribution X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveOneAbsMajorant X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveOneContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveOneAbsMajorant
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainOmegaTwoThreeDvdFiveNotDvdPrimeModFiveAbsMajorant
+  calc
+    |∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+        if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 1 then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+        else (0 : ℝ)|
+      ≤
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+      |if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 1 then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+        else (0 : ℝ)| := by
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun b =>
+              if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 1 then
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b
+              else (0 : ℝ))
+            (normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7)))
+    _ =
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+      if b.primeFactors.card = 2 ∧ 3 ∣ b ∧ ¬ 5 ∣ b ∧ (b / 3) % 5 = 1 then
+        |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMainSummand X b|
+      else (0 : ℝ) := by
+        refine Finset.sum_congr rfl ?_
+        intro b hb
+        split_ifs <;> simp
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum_eq_sum_mod21_classes_of_eq_seven
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum X 7
+      =
+    ∑ r ∈ Finset.range 21,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMod21Class X r := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSevenMod21Class
+  calc
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+      =
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+      ∑ r ∈ Finset.range 21,
+        if b % 21 = r then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+        else (0 : ℝ) := by
+          refine Finset.sum_congr rfl ?_
+          intro b hb
+          have hlt : b % 21 < 21 := Nat.mod_lt _ (by norm_num)
+          have hmem : b % 21 ∈ Finset.range 21 := Finset.mem_range.mpr hlt
+          have hone :
+              (∑ r ∈ Finset.range 21,
+                if b % 21 = r then
+                  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+                else (0 : ℝ))
+                =
+              centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b := by
+            calc
+              (∑ r ∈ Finset.range 21,
+                if b % 21 = r then
+                  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+                else (0 : ℝ))
+                  =
+                if b % 21 ∈ Finset.range 21 then
+                  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+                else (0 : ℝ) := by
+                    simpa using
+                      (Finset.sum_ite_eq (Finset.range 21) (b % 21)
+                        (fun _ : ℕ =>
+                          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b))
+              _ = centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b := by
+                    simp [hmem]
+          exact hone.symm
+    _ =
+    ∑ r ∈ Finset.range 21,
+      ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime 7),
+        if b % 21 = r then
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSummand X 7 b
+        else (0 : ℝ) := by
+          rw [Finset.sum_comm]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_sum_mod21_weightedClasses_of_eq_seven
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X 7
+      =
+    ∑ r ∈ Finset.range 21,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ClassContribution X r := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ClassContribution
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum_eq_sum_mod21_classes_of_eq_seven]
+  rw [Finset.mul_sum]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_neg_pos_residual_of_eq_seven
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X 7
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21NegativeContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21PositiveContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ResidualContribution X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_sum_mod21_weightedClasses_of_eq_seven]
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21NegativeContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21PositiveContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ResidualContribution
+  rw [← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
+  refine Finset.sum_congr rfl ?_
+  intro r hr
+  have hrlt : r < 21 := Finset.mem_range.mp hr
+  interval_cases r <;> simp
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_main_residual_of_eq_seven
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X 7
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21MainContribution X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21ResidualContribution X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution_eq_neg_pos_residual_of_eq_seven]
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowSevenMod21MainContribution
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSumUpToQ0_eq_rowSum
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSumUpToQ0 X
+      =
+    ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution X a := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchWeightedRowContribution
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchRowSum
+  refine Finset.sum_congr rfl ?_
+  intro a ha
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand_eq_coeff_mul_rowSummand]
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSummand
+    (X a b : ℕ) : ℝ :=
+  if a = b then 0 else
+  if 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b then
+    normalizedSigmaTruncSummandRealCoeff a
+      * normalizedSigmaTruncSummandRealCoeff b
+      * centeredRamanujanPairPeriodicMainOddOddRemainderContribution X a b
+  else 0
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+    ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSummand X a b
+
+theorem centeredRamanujanPairPeriodicMainOddOddSector_eq_zero_of_blockScalar_zero
+    {X a b : ℕ} (hzero : (H + 1) / centeredRamanujanPairBlockPeriod a b = 0) :
+    centeredRamanujanPairPeriodicMainOddOddSector X a b = 0 := by
+  unfold centeredRamanujanPairPeriodicMainOddOddSector centeredRamanujanPairPeriodicMainParitySummand
+  refine Finset.sum_eq_zero ?_
+  intro g hg
+  refine Finset.sum_eq_zero ?_
+  intro h hh
+  rw [hzero]
+  simp
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0_eq_three_mul_signedKernelSum
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0 X
+      =
+    3 * centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro a ha
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  show
+      (if a = b then 0 else
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight a b *
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel X a b)
+        =
+      3 *
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand X a b
+  by_cases hab : a = b
+  · simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand, hab]
+  · by_cases hactive : 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b
+    · rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp ha with ⟨_, haOdd⟩
+      have hbmem : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0 :=
+        (Finset.mem_filter.mp hb).1
+      rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hbmem with ⟨_, hbOdd⟩
+      rw [if_neg hab]
+      rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight_eq_three_mul_of_active
+        ha hbmem hactive]
+      rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand,
+        if_neg hab, if_pos hactive]
+      ring_nf
+    · have hzero : (H + 1) / centeredRamanujanPairBlockPeriod a b = 0 := Nat.eq_zero_of_not_pos hactive
+      have hkernelzero :
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel X a b = 0 := by
+        unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel
+        exact centeredRamanujanPairPeriodicMainOddOddSector_eq_zero_of_blockScalar_zero hzero
+      rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand,
+        if_neg hab, if_neg hactive]
+      simp [hkernelzero]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand_eq_signedMismatchRemainderSummand
+    {X a b : ℕ}
+    (ha : a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a)) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand X a b
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand X a b := by
+  by_cases hab : a = b
+  · simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand, hab]
+  · have hbmem : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0 := (Finset.mem_filter.mp hb).1
+    have hcop : Nat.Coprime a b := (Finset.mem_filter.mp hb).2
+    rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp ha with ⟨haSupp, haOdd⟩
+    rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hbmem with ⟨hbSupp, hbOdd⟩
+    rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp haSupp with ⟨haIcc, hsq⟩
+    rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hbSupp with ⟨hbIcc, hsq'⟩
+    have ha1 : 1 ≤ a := (Finset.mem_Icc.mp haIcc).1
+    have hb1 : 1 ≤ b := (Finset.mem_Icc.mp hbIcc).1
+    by_cases hactive : 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b
+    · have hexc : centeredRamanujanPairPeriodicMainOddOddExceptionalContribution a b = 0 := by
+        refine centeredRamanujanPairPeriodicMainOddOddExceptionalContribution_eq_zero_of_not_exceptional ?_ ?_
+        · intro h12
+          have hodd2 : Odd 2 := by simpa [h12.2] using hbOdd
+          norm_num at hodd2
+        · intro h21
+          have hodd2 : Odd 2 := by simpa [h21.1] using haOdd
+          norm_num at hodd2
+      have hsector :
+          centeredRamanujanPairPeriodicMainOddOddSector X a b
+            =
+          centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X a b := by
+        rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal
+          (X := X) ha1 hb1 hsq hsq' hcop hab haOdd hbOdd]
+        simp [hexc]
+      rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand,
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand,
+        if_neg hab, if_pos hactive, if_neg hab, if_pos hactive]
+      simpa [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel] using
+        congrArg
+          (fun t =>
+            normalizedSigmaTruncSummandRealCoeff a
+              * normalizedSigmaTruncSummandRealCoeff b * t)
+          hsector
+    ·
+      rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand,
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand,
+        if_neg hab, if_neg hactive, if_neg hab, if_neg hactive]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0_eq_signedMismatchRemainderSum
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSumUpToQ0
+  refine Finset.sum_congr rfl ?_
+  intro a ha
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  exact centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSummand_eq_signedMismatchRemainderSummand
+    ha hb
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand_eq_sumPieces
+    {X a b : ℕ}
+    (ha : a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0)
+    (hb : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a)) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand X a b
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSummand X a b
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand X a b
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSummand X a b := by
+  have hbmem : b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0 := (Finset.mem_filter.mp hb).1
+  rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp ha with ⟨haSupp, _haOdd⟩
+  rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hbmem with ⟨hbSupp, _hbOdd⟩
+  by_cases hab : a = b
+  · simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSummand, hab]
+  · by_cases hactive : 0 < (H + 1) / centeredRamanujanPairBlockPeriod a b
+    · rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand,
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSummand,
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand,
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSummand,
+        if_neg hab, if_pos hactive, if_neg hab, if_pos hactive, if_neg hab, if_pos hactive,
+        if_neg hab, if_pos hactive]
+      rw [centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution_eq_coefficientMismatch_add_densityMismatch_add_remainder]
+      ring
+    ·
+      rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand,
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSummand,
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand,
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSummand,
+        if_neg hab, if_neg hactive, if_neg hab, if_neg hactive, if_neg hab, if_neg hactive,
+        if_neg hab, if_neg hactive]
+      ring_nf
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSumUpToQ0_eq_sumPieces
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSumUpToQ0 X := by
+  let A : ℕ → ℕ → ℝ :=
+    fun a b =>
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSummand X a b
+  let B : ℕ → ℕ → ℝ :=
+    fun a b =>
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSummand X a b
+  let C : ℕ → ℕ → ℝ :=
+    fun a b =>
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSummand X a b
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSumUpToQ0
+  calc
+    ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+        ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+          centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand X a b
+      =
+    ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+        ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+          ((A a b + B a b) + C a b) := by
+        refine Finset.sum_congr rfl ?_
+        intro a ha
+        refine Finset.sum_congr rfl ?_
+        intro b hb
+        simpa [A, B, C, add_assoc] using
+          (centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSummand_eq_sumPieces
+          ha hb
+          )
+    _ =
+      ((∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+          ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a), A a b)
+        +
+       (∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+          ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a), B a b))
+        +
+      (∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+          ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a), C a b) := by
+        have hsplit1 :
+            ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+              ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+                ((A a b + B a b) + C a b)
+              =
+            ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+              ((∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+                  (A a b + B a b))
+                +
+               (∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+                  C a b)) := by
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          rw [Finset.sum_add_distrib]
+        have hsplit2 :
+            ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+              ((∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+                  (A a b + B a b))
+                +
+               (∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+                  C a b))
+              =
+            ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+              (((∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+                    A a b)
+                 +
+                (∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+                    B a b))
+                +
+               (∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+                  C a b)) := by
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          rw [Finset.sum_add_distrib]
+        rw [hsplit1, hsplit2, Finset.sum_add_distrib, Finset.sum_add_distrib]
+    _ = centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSumUpToQ0 X
+          + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSumUpToQ0 X
+          + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSumUpToQ0 X := by
+        rfl
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0_eq_sumPieces
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSumUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0_eq_signedMismatchRemainderSum,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedMismatchRemainderSumUpToQ0_eq_sumPieces]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0_eq_three_mul_sumPieces
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0 X
+      =
+    3 *
+      (centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedCoefficientMismatchSumUpToQ0 X
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedDensityMismatchSumUpToQ0 X
+        + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedRemainderSumUpToQ0 X) := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0_eq_three_mul_signedKernelSum,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusSignedKernelSumUpToQ0_eq_sumPieces]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0_eq_oddSurface
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddOddSurfacePairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddOddSurfacePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel
+    normalizedSigmaTruncSummandOddCoeffSupportUpToQ0
+  calc
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        if q = q' then 0 else
+        if Odd q ∧ Odd q' then
+          normalizedSigmaTruncSummandRealCoeff q
+            * normalizedSigmaTruncSummandRealCoeff q'
+            * centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q'
+        else 0)
+      =
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Odd,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Odd |>.filter (Nat.Coprime q),
+        if q = q' then 0 else
+          normalizedSigmaTruncSummandRealCoeff q
+            * normalizedSigmaTruncSummandRealCoeff q'
+            * centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q' := by
+      rw [Finset.sum_filter]
+      refine Finset.sum_congr rfl ?_
+      intro q hq
+      by_cases hqOdd : Odd q
+      · have hfilter :
+          (normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q)).filter Odd
+            =
+          normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (fun x => Odd x ∧ Nat.Coprime q x) := by
+            ext x
+            simp [and_assoc, and_comm, and_left_comm]
+        have hrewrite :
+            (∑ x ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+              if q = x then 0 else
+                if Odd x then
+                  normalizedSigmaTruncSummandRealCoeff q * normalizedSigmaTruncSummandRealCoeff x *
+                    centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q x
+                else 0)
+              =
+            ∑ x ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+              if Odd x then
+                if q = x then 0 else
+                  normalizedSigmaTruncSummandRealCoeff q * normalizedSigmaTruncSummandRealCoeff x *
+                    centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q x
+              else 0 := by
+          refine Finset.sum_congr rfl ?_
+          intro x hx
+          by_cases hqx : q = x <;> by_cases hxOdd : Odd x <;> simp [hqx, hxOdd]
+        simp [hqOdd]
+        rw [hrewrite]
+        rw [← Finset.sum_filter]
+        rw [hfilter]
+        have hfilter' :
+            normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (fun x => Odd x ∧ Nat.Coprime q x)
+              =
+            (normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Odd).filter (Nat.Coprime q) := by
+          ext x
+          simp [and_assoc, and_comm, and_left_comm]
+        rw [hfilter']
+      · simp [hqOdd]
+    _ =
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Odd,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Odd |>.filter (Nat.Coprime q),
+        if q = q' then 0 else
+          normalizedSigmaTruncSummandRealCoeff q
+            * normalizedSigmaTruncSummandRealCoeff q'
+            * centeredRamanujanPairPeriodicMainOddOddSector X q q' := by
+      refine Finset.sum_congr rfl ?_
+      intro q hqmem
+      refine Finset.sum_congr rfl ?_
+      intro q' hq'mem
+      by_cases hqq' : q = q'
+      · simp [hqq']
+      · rcases Finset.mem_filter.mp hqmem with ⟨hqmem0, hqOdd⟩
+        rcases Finset.mem_filter.mp hq'mem with ⟨hq'mem0, hcop⟩
+        rcases Finset.mem_filter.mp hq'mem0 with ⟨hq'mem1, hq'Odd⟩
+        rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hqmem0 with ⟨hqIcc, hsq⟩
+        rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hq'mem1 with ⟨hq'Icc, hsq'⟩
+        have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+        have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+        have hqne2 : q ≠ 2 := by
+          intro hq2
+          have hnot : ¬ Odd 2 := by decide
+          exact hnot (hq2 ▸ hqOdd)
+        have hq'ne2 : q' ≠ 2 := by
+          intro hq'2
+          have hnot : ¬ Odd 2 := by decide
+          exact hnot (hq'2 ▸ hq'Odd)
+        have hexc :
+            centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q' = 0 := by
+          refine centeredRamanujanPairPeriodicMainOddOddExceptionalContribution_eq_zero_of_not_exceptional ?_ ?_
+          · intro h12
+            exact hq'ne2 h12.2
+          · intro h21
+            exact hqne2 h21.1
+        have hsector :
+            centeredRamanujanPairPeriodicMainOddOddSector X q q'
+              =
+            centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q' := by
+          rw [centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal
+            (X := X) hq hq' hsq hsq' hcop hqq' hqOdd hq'Odd]
+          simp [hexc]
+        simp [hqq', hsector]
+    _ =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddOddSurfacePairSumUpToQ0 X := by
+      unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddOddSurfacePairSumUpToQ0
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel
+        normalizedSigmaTruncSummandOddCoeffSupportUpToQ0
+      simp
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0_eq_oddSurface
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftHalvedOddOddSurfacePairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftHalvedOddOddSurfacePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel
+    normalizedSigmaTruncSummandOddCoeffSupportUpToQ0
+  have hreduce :
+      (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+        ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+          if q = q' then 0 else
+          if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddSector X (q / 2) q'
+          else 0)
+        =
+      ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Goldbach.Windows.IsEven,
+        ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+          if q = q' then 0 else
+          if q / 2 ≠ q' then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddSector X (q / 2) q'
+          else 0 := by
+    rw [Finset.sum_filter]
+    refine Finset.sum_congr rfl ?_
+    intro q hq
+    by_cases hqEven : Goldbach.Windows.IsEven q
+    · simp [hqEven]
+    · simp [hqEven]
+  rw [hreduce]
+  symm
+  refine Finset.sum_bij
+    (s := normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter
+      (fun a => 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0))
+    (t := normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Goldbach.Windows.IsEven)
+    (f := fun a =>
+      ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+        if a = b then 0 else
+          normalizedSigmaTruncSummandRealCoeff (2 * a)
+            * normalizedSigmaTruncSummandRealCoeff b
+            * centeredRamanujanPairPeriodicMainOddOddSector X a b)
+    (g := fun q =>
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        if q = q' then 0 else
+        if q / 2 ≠ q' then
+          normalizedSigmaTruncSummandRealCoeff q
+            * normalizedSigmaTruncSummandRealCoeff q'
+            * centeredRamanujanPairPeriodicMainOddOddSector X (q / 2) q'
+        else 0)
+    (i := fun a _ => 2 * a)
+    ?_ ?_ ?_ ?_
+  · intro a ha
+    rcases Finset.mem_filter.mp ha with ⟨haOddMem, h2a⟩
+    exact two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven haOddMem h2a
+  · intro a₁ ha₁ a₂ ha₂ hEq
+    have hEq' : 2 * a₁ = 2 * a₂ := by simpa using hEq
+    omega
+  · intro q hq
+    refine ⟨q / 2, ?_, ?_⟩
+    · refine Finset.mem_filter.mpr ?_
+      refine ⟨half_mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_of_mem_even_support hq, ?_⟩
+      rcases Finset.mem_filter.mp hq with ⟨hqmem, _⟩
+      simpa [two_mul_half_eq_of_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven hq] using hqmem
+    · exact two_mul_half_eq_of_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven hq
+  · intro a ha
+    rcases Finset.mem_filter.mp ha with ⟨haOddMem, h2a⟩
+    rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp haOddMem with ⟨_, haOdd⟩
+    dsimp
+    change
+      (∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+        if a = b then 0 else
+          normalizedSigmaTruncSummandRealCoeff (2 * a)
+            * normalizedSigmaTruncSummandRealCoeff b
+            * centeredRamanujanPairPeriodicMainOddOddSector X a b)
+        =
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime (2 * a)),
+        if 2 * a = q' then 0 else
+        if (2 * a) / 2 ≠ q' then
+          normalizedSigmaTruncSummandRealCoeff (2 * a)
+            * normalizedSigmaTruncSummandRealCoeff q'
+            * centeredRamanujanPairPeriodicMainOddOddSector X ((2 * a) / 2) q'
+        else 0
+    rw [normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_coprime_two_mul_eq haOdd]
+    refine Finset.sum_congr rfl ?_
+    intro b hb
+    rcases Finset.mem_filter.mp hb with ⟨hbmem, hbCop⟩
+    rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hbmem with ⟨_, hbOdd⟩
+    have hneq : 2 * a ≠ b := by
+      intro hEq
+      have hEvenb : Even b := by
+        exact hEq ▸ ⟨a, by ring⟩
+      have hbNotEven : ¬ Even b := Nat.not_even_iff_odd.mpr hbOdd
+      exact hbNotEven hEvenb
+    by_cases hab : a = b
+    · simp [hneq, hab]
+    · simp [hneq, hab]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0_eq_oddSurface
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightHalvedOddOddSurfacePairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightHalvedOddOddSurfacePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel
+    normalizedSigmaTruncSummandOddCoeffSupportUpToQ0
+  have hreduce :
+      (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+        ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+          if q = q' then 0 else
+          if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+          else 0)
+        =
+      ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter Odd,
+        ∑ q' ∈ (normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q)).filter
+            Goldbach.Windows.IsEven,
+          if q = q' then 0 else
+          if q ≠ q' / 2 then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+          else 0 := by
+    rw [Finset.sum_filter]
+    refine Finset.sum_congr rfl ?_
+    intro q hq
+    by_cases hqOdd : Odd q
+    · have hrewrite :
+          (∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+            if q = q' then 0 else
+              if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'
+                  * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+              else 0)
+            =
+          ∑ q' ∈ (normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q)).filter
+              Goldbach.Windows.IsEven,
+            if q = q' then 0 else
+            if q ≠ q' / 2 then
+              normalizedSigmaTruncSummandRealCoeff q
+                * normalizedSigmaTruncSummandRealCoeff q'
+                * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+            else 0 := by
+        have hrewrite0 :
+            (∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+              if q = q' then 0 else
+                if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                  normalizedSigmaTruncSummandRealCoeff q
+                    * normalizedSigmaTruncSummandRealCoeff q'
+                    * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+                else 0)
+              =
+            ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+              if Goldbach.Windows.IsEven q' then
+                if q = q' then 0 else
+                  if q ≠ q' / 2 then
+                    normalizedSigmaTruncSummandRealCoeff q
+                      * normalizedSigmaTruncSummandRealCoeff q'
+                      * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+                  else 0
+              else 0 := by
+          refine Finset.sum_congr rfl ?_
+          intro q' hq'mem
+          by_cases hqq' : q = q'
+          · simp [hqq']
+          · by_cases hq'Even : Goldbach.Windows.IsEven q'
+            · simp [hqq', hq'Even]
+            · simp [hqq', hq'Even]
+        rw [hrewrite0]
+        rw [← Finset.sum_filter]
+      simp [hqOdd, hrewrite]
+    · have hqEvenNat : Even q := Nat.not_odd_iff_even.mp hqOdd
+      have hqEven : Goldbach.Windows.IsEven q := Goldbach.Windows.isEven_of_even hqEvenNat
+      simp [hqOdd]
+      refine Finset.sum_eq_zero ?_
+      intro q' hq'mem
+      by_cases hqq' : q = q'
+      · simp [hqq']
+      · by_cases hright : Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2
+        · rcases Finset.mem_filter.mp hq'mem with ⟨_, hcop⟩
+          have hnot : ¬ Goldbach.Windows.IsEven q' :=
+            not_isEven_right_of_isEven_left_of_coprime hcop hqEven
+          exact (hnot hright.1).elim
+        · simp [hqq', hright]
+  rw [hreduce]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rcases Finset.mem_filter.mp hq with ⟨hqmem, hqOdd⟩
+  symm
+  refine Finset.sum_bij
+    (s := (normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime q)).filter
+      (fun b => 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0))
+    (t := (normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q)).filter
+      Goldbach.Windows.IsEven)
+    (f := fun b =>
+      if q = b then 0 else
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff (2 * b)
+          * centeredRamanujanPairPeriodicMainOddOddSector X q b)
+    (g := fun q' =>
+      if q = q' then 0 else
+      if q ≠ q' / 2 then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+      else 0)
+    (i := fun b _ => 2 * b)
+    ?_ ?_ ?_ ?_
+  · intro b hb
+    rcases Finset.mem_filter.mp hb with ⟨hbmem0, h2b⟩
+    rcases Finset.mem_filter.mp hbmem0 with ⟨hbmem, hcop⟩
+    have hcop2b : Nat.Coprime q (2 * b) := by
+      have h : Nat.Coprime (2 * b) q := by
+        rw [Nat.coprime_mul_iff_left]
+        exact ⟨by simpa using hqOdd.coprime_two_left, by simpa [Nat.coprime_comm] using hcop⟩
+      simpa [Nat.coprime_comm] using h
+    have hEven2b : Goldbach.Windows.IsEven (2 * b) := by
+      exact (Finset.mem_filter.mp
+        (two_mul_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven hbmem h2b)).2
+    refine Finset.mem_filter.mpr ?_
+    refine ⟨?_, hEven2b⟩
+    exact Finset.mem_filter.mpr ⟨h2b, hcop2b⟩
+  · intro b₁ hb₁ b₂ hb₂ hEq
+    have hEq' : 2 * b₁ = 2 * b₂ := by simpa using hEq
+    omega
+  · intro q' hq'mem
+    rcases Finset.mem_filter.mp hq'mem with ⟨hq'mem0, hq'Even⟩
+    rcases Finset.mem_filter.mp hq'mem0 with ⟨hq'supp, hcop⟩
+    refine ⟨q' / 2, ?_, ?_⟩
+    · refine Finset.mem_filter.mpr ?_
+      refine ⟨?_, ?_⟩
+      · refine Finset.mem_filter.mpr ?_
+        refine ⟨?_, hcop.of_dvd_right ⟨2, by
+          simpa [Nat.mul_comm] using
+            (two_mul_half_eq_of_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven
+              (Finset.mem_filter.mpr ⟨hq'supp, hq'Even⟩)).symm⟩⟩
+        exact half_mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_of_mem_even_support
+          (Finset.mem_filter.mpr ⟨hq'supp, hq'Even⟩)
+      · simpa [two_mul_half_eq_of_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven
+          (Finset.mem_filter.mpr ⟨hq'supp, hq'Even⟩)] using hq'supp
+    · exact two_mul_half_eq_of_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_filter_isEven
+        (Finset.mem_filter.mpr ⟨hq'supp, hq'Even⟩)
+  · intro b hb
+    rcases Finset.mem_filter.mp hb with ⟨hbmem0, h2b⟩
+    rcases Finset.mem_filter.mp hbmem0 with ⟨hbmem, hcop⟩
+    rcases mem_normalizedSigmaTruncSummandOddCoeffSupportUpToQ0_iff.mp hbmem with ⟨_, hbOdd⟩
+    dsimp
+    change
+      (if q = b then 0 else
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff (2 * b)
+          * centeredRamanujanPairPeriodicMainOddOddSector X q b)
+        =
+      if q = 2 * b then 0 else
+      if q ≠ (2 * b) / 2 then
+        normalizedSigmaTruncSummandRealCoeff q
+          * normalizedSigmaTruncSummandRealCoeff (2 * b)
+          * centeredRamanujanPairPeriodicMainOddOddSector X q ((2 * b) / 2)
+      else 0
+    have hneq : q ≠ 2 * b := by
+      intro hEq
+      have hEvenq : Even q := by
+        exact hEq ▸ ⟨b, by ring⟩
+      have hqNotEven : ¬ Even q := Nat.not_even_iff_odd.mpr hqOdd
+      exact hqNotEven hEvenq
+    by_cases hqb : q = b
+    · simp [hqb, hneq]
+    · simp [hqb, hneq]
+
+theorem Finset.sum_add_add_distrib_nested
+    {α β : Type*} (s : Finset α) (t : α → Finset β)
+    (f g h : α → β → ℝ) :
+    (∑ a ∈ s, ∑ b ∈ t a, f a b)
+      + (∑ a ∈ s, ∑ b ∈ t a, g a b)
+      + (∑ a ∈ s, ∑ b ∈ t a, h a b)
+      =
+    ∑ a ∈ s, ∑ b ∈ t a, (f a b + g a b + h a b) := by
+  calc
+    ((∑ a ∈ s, ∑ b ∈ t a, f a b) + (∑ a ∈ s, ∑ b ∈ t a, g a b))
+        + (∑ a ∈ s, ∑ b ∈ t a, h a b)
+        =
+      (∑ a ∈ s, ((∑ b ∈ t a, f a b) + (∑ b ∈ t a, g a b)))
+        + (∑ a ∈ s, ∑ b ∈ t a, h a b) := by
+          rw [← Finset.sum_add_distrib]
+    _ =
+      ∑ a ∈ s,
+        (((∑ b ∈ t a, f a b) + (∑ b ∈ t a, g a b)) + (∑ b ∈ t a, h a b)) := by
+          rw [← Finset.sum_add_distrib]
+    _ =
+      ∑ a ∈ s, ∑ b ∈ t a, (f a b + g a b + h a b) := by
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          rw [← Finset.sum_add_distrib, ← Finset.sum_add_distrib]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLivePairSumUpToQ0_eq_unifiedOddSurface
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLivePairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLivePairSumUpToQ0
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0_eq_oddSurface]
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0_eq_oddSurface]
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0_eq_oddSurface]
+  unfold
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddOddSurfacePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftHalvedOddOddSurfacePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightHalvedOddOddSurfacePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusEffectiveWeight
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLiveKernel
+  have hleft :
+      (∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter
+          (fun a => 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0),
+        ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+          if a = b then 0
+          else
+            normalizedSigmaTruncSummandRealCoeff (2 * a) *
+              normalizedSigmaTruncSummandRealCoeff b *
+              centeredRamanujanPairPeriodicMainOddOddSector X a b)
+        =
+      ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+        ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+          if a = b then 0
+          else
+            (if 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 then
+              normalizedSigmaTruncSummandRealCoeff (2 * a) *
+                normalizedSigmaTruncSummandRealCoeff b *
+                centeredRamanujanPairPeriodicMainOddOddSector X a b
+            else 0) := by
+    rw [Finset.sum_filter]
+    refine Finset.sum_congr rfl ?_
+    intro a ha
+    by_cases h2a : 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0
+    · simp [h2a]
+    · simp [h2a]
+  have hright :
+      (∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+        ∑ b ∈ (normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a)).filter
+            (fun b => 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0),
+          if a = b then 0
+          else
+            normalizedSigmaTruncSummandRealCoeff a *
+              normalizedSigmaTruncSummandRealCoeff (2 * b) *
+              centeredRamanujanPairPeriodicMainOddOddSector X a b)
+        =
+      ∑ a ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0,
+        ∑ b ∈ normalizedSigmaTruncSummandOddCoeffSupportUpToQ0.filter (Nat.Coprime a),
+          if a = b then 0
+          else
+            (if 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 then
+              normalizedSigmaTruncSummandRealCoeff a *
+                normalizedSigmaTruncSummandRealCoeff (2 * b) *
+                centeredRamanujanPairPeriodicMainOddOddSector X a b
+            else 0) := by
+    refine Finset.sum_congr rfl ?_
+    intro a ha
+    rw [Finset.sum_filter]
+    refine Finset.sum_congr rfl ?_
+    intro b hb
+    by_cases h2b : 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0
+    · simp [h2b]
+    · simp [h2b]
+  rw [hleft, hright]
+  rw [Finset.sum_add_add_distrib_nested]
+  refine Finset.sum_congr rfl ?_
+  intro a ha
+  refine Finset.sum_congr rfl ?_
+  intro b hb
+  by_cases hab : a = b
+  · simp [hab]
+  · simp [hab]
+    by_cases h2a : 2 * a ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0
+    · by_cases h2b : 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0
+      · simp [h2a, h2b]
+        ring_nf
+      · simp [h2a, h2b]
+        ring
+    · by_cases h2b : 2 * b ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0
+      · simp [h2a, h2b]
+        ring_nf
+      · simp [h2a, h2b]
+
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOneBlockAbsMajorantPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0 X
+    + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0 X
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalPairSumUpToQ0_eq_halvedOddOddSector_sub_oneBlockCorrection
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+      - centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0
+  calc
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        if q = q' then 0 else
+        if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+          normalizedSigmaTruncSummandRealCoeff q
+            * normalizedSigmaTruncSummandRealCoeff q'
+            * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution (q / 2) q'
+                + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X (q / 2) q'
+                - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q')
+        else 0)
+        =
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        ((if q = q' then 0 else
+          if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddSector X (q / 2) q'
+          else 0)
+          -
+         (if q = q' then 0 else
+          if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+          else 0)) := by
+      refine Finset.sum_congr rfl ?_
+      intro q hqmem
+      refine Finset.sum_congr rfl ?_
+      intro q' hq'mem
+      by_cases hqq' : q = q'
+      · simp [hqq']
+      · by_cases hleft : Goldbach.Windows.IsEven q ∧ q / 2 ≠ q'
+        · rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hqmem with ⟨hqIcc, hsq⟩
+          rcases Finset.mem_filter.mp hq'mem with ⟨hq'mem', hcop⟩
+          rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hq'mem' with ⟨hq'Icc, hsq'⟩
+          have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+          have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+          have hqEven : Goldbach.Windows.IsEven q := hleft.1
+          have hqEvenNat : Even q := Goldbach.Windows.even_of_isEven hqEven
+          have h2dvdq : 2 ∣ q := (even_iff_two_dvd).1 hqEvenNat
+          have hqEq : q = 2 * (q / 2) := (Nat.two_mul_div_two_of_even hqEvenNat).symm
+          have hqHalfNeZero : q / 2 ≠ 0 := by
+            intro h0
+            have : q = 0 := by simpa [h0] using hqEq
+            omega
+          have hqHalf : 1 ≤ q / 2 := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hqHalfNeZero)
+          have hnot4q : ¬ 4 ∣ q := by
+            intro h4
+            have hsqPrime := Nat.squarefree_iff_prime_squarefree.mp hsq
+            exact hsqPrime 2 Nat.prime_two (by simpa using h4)
+          have hqHalfNotEven : ¬ Goldbach.Windows.IsEven (q / 2) :=
+            not_isEven_half_of_two_dvd_not_four_dvd h2dvdq hnot4q
+          have hqHalfOdd : Odd (q / 2) := by
+            refine Nat.not_even_iff_odd.mp ?_
+            intro hEvenNat
+            exact hqHalfNotEven (Goldbach.Windows.isEven_of_even hEvenNat)
+          have hq'Odd : Odd q' := by
+            refine Nat.not_even_iff_odd.mp ?_
+            intro hq'EvenNat
+            exact not_isEven_right_of_isEven_left_of_coprime hcop hqEven
+              (Goldbach.Windows.isEven_of_even hq'EvenNat)
+          have hcopHalf : Nat.Coprime (q / 2) q' := by
+            apply hcop.of_dvd_left
+            exact ⟨2, by simpa [Nat.mul_comm] using hqEq⟩
+          have hsqHalf : Squarefree (q / 2) := by
+            refine hsq.squarefree_of_dvd ?_
+            exact ⟨2, by simpa [Nat.mul_comm] using hqEq⟩
+          have hsector :
+              centeredRamanujanPairPeriodicMainOddOddSector X (q / 2) q'
+                =
+              centeredRamanujanPairPeriodicMainOddOddExceptionalContribution (q / 2) q'
+                + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X (q / 2) q' := by
+            exact centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal
+              (X := X) hqHalf hq' hsqHalf hsq' hcopHalf hleft.2 hqHalfOdd hq'Odd
+          simp [hqq', hleft, hsector]
+          ring
+        · simp [hqq', hleft]
+    _ = centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+          - centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X := by
+      calc
+        (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+          ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+            ((if q = q' then 0
+              else
+                if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+                  normalizedSigmaTruncSummandRealCoeff q
+                    * normalizedSigmaTruncSummandRealCoeff q'
+                    * centeredRamanujanPairPeriodicMainOddOddSector X (q / 2) q'
+                else 0)
+              -
+             (if q = q' then 0
+              else
+                if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+                  normalizedSigmaTruncSummandRealCoeff q
+                    * normalizedSigmaTruncSummandRealCoeff q'
+                    * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+                else 0)))
+            =
+        ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+          ((∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+              if q = q' then 0 else
+              if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+                normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'
+                  * centeredRamanujanPairPeriodicMainOddOddSector X (q / 2) q'
+              else 0)
+            -
+            (∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+              if q = q' then 0 else
+              if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+                normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'
+                  * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+              else 0)) := by
+              refine Finset.sum_congr rfl ?_
+              intro q hqmem
+              rw [Finset.sum_sub_distrib]
+        _ = centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+              - centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X := by
+              simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0,
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalPairSumUpToQ0_eq_halvedOddOddSector_sub_oneBlockCorrection
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+      - centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0
+  calc
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        if q = q' then 0 else
+        if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+          normalizedSigmaTruncSummandRealCoeff q
+            * normalizedSigmaTruncSummandRealCoeff q'
+            * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q (q' / 2)
+                + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q (q' / 2)
+                - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2))
+        else 0)
+        =
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        ((if q = q' then 0 else
+          if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+          else 0)
+          -
+         (if q = q' then 0 else
+          if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+          else 0)) := by
+      refine Finset.sum_congr rfl ?_
+      intro q hqmem
+      refine Finset.sum_congr rfl ?_
+      intro q' hq'mem
+      by_cases hqq' : q = q'
+      · simp [hqq']
+      · by_cases hright : Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2
+        · rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hqmem with ⟨hqIcc, hsq⟩
+          rcases Finset.mem_filter.mp hq'mem with ⟨hq'mem', hcop⟩
+          rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hq'mem' with ⟨hq'Icc, hsq'⟩
+          have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+          have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+          have hq'Even : Goldbach.Windows.IsEven q' := hright.1
+          have hq'EvenNat : Even q' := Goldbach.Windows.even_of_isEven hq'Even
+          have h2dvdq' : 2 ∣ q' := (even_iff_two_dvd).1 hq'EvenNat
+          have hq'Eq : q' = 2 * (q' / 2) := (Nat.two_mul_div_two_of_even hq'EvenNat).symm
+          have hq'HalfNeZero : q' / 2 ≠ 0 := by
+            intro h0
+            have : q' = 0 := by simpa [h0] using hq'Eq
+            omega
+          have hq'Half : 1 ≤ q' / 2 := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hq'HalfNeZero)
+          have hnot4q' : ¬ 4 ∣ q' := by
+            intro h4
+            have hsqPrime := Nat.squarefree_iff_prime_squarefree.mp hsq'
+            exact hsqPrime 2 Nat.prime_two (by simpa using h4)
+          have hq'HalfNotEven : ¬ Goldbach.Windows.IsEven (q' / 2) :=
+            not_isEven_half_of_two_dvd_not_four_dvd h2dvdq' hnot4q'
+          have hq'HalfOdd : Odd (q' / 2) := by
+            refine Nat.not_even_iff_odd.mp ?_
+            intro hEvenNat
+            exact hq'HalfNotEven (Goldbach.Windows.isEven_of_even hEvenNat)
+          have hqOdd : Odd q := by
+            refine Nat.not_even_iff_odd.mp ?_
+            intro hqEvenNat
+            exact not_isEven_left_of_isEven_right_of_coprime hcop hq'Even
+              (Goldbach.Windows.isEven_of_even hqEvenNat)
+          have hcopHalf : Nat.Coprime q (q' / 2) := by
+            apply hcop.of_dvd_right
+            exact ⟨2, by simpa [Nat.mul_comm] using hq'Eq⟩
+          have hsq'Half : Squarefree (q' / 2) := by
+            refine hsq'.squarefree_of_dvd ?_
+            exact ⟨2, by simpa [Nat.mul_comm] using hq'Eq⟩
+          have hsector :
+              centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+                =
+              centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q (q' / 2)
+                + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q (q' / 2) := by
+            exact centeredRamanujanPairPeriodicMainOddOddSector_eq_exceptionalContribution_add_mismatchRemainder_of_squarefree_coprime_offDiagonal
+              (X := X) hq hq'Half hsq hsq'Half hcopHalf hright.2 hqOdd hq'HalfOdd
+          simp [hqq', hright, hsector]
+          ring
+        · simp [hqq', hright]
+    _ = centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+          - centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X := by
+      calc
+        (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+          ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+            ((if q = q' then 0
+              else
+                if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                  normalizedSigmaTruncSummandRealCoeff q
+                    * normalizedSigmaTruncSummandRealCoeff q'
+                    * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+                else 0)
+              -
+             (if q = q' then 0
+              else
+                if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                  normalizedSigmaTruncSummandRealCoeff q
+                    * normalizedSigmaTruncSummandRealCoeff q'
+                    * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+                else 0)))
+            =
+        ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+          ((∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+              if q = q' then 0 else
+              if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'
+                  * centeredRamanujanPairPeriodicMainOddOddSector X q (q' / 2)
+              else 0)
+            -
+            (∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+              if q = q' then 0 else
+              if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'
+                  * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+              else 0)) := by
+              refine Finset.sum_congr rfl ?_
+              intro q hqmem
+              rw [Finset.sum_sub_distrib]
+        _ = centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+              - centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X := by
+              simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0,
+                centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0]
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0
+  calc
+    |∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+        ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+          if q = q' then 0 else
+          if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+          else 0|
+      ≤
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      |∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+          if q = q' then 0 else
+          if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+          else 0| := by
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun q =>
+              ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+                if q = q' then 0 else
+                if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+                  normalizedSigmaTruncSummandRealCoeff q
+                    * normalizedSigmaTruncSummandRealCoeff q'
+                    * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+                else 0)
+            normalizedSigmaTruncSummandCoeffSupportUpToQ0)
+    _ ≤
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        |if q = q' then 0 else
+          if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+          else 0| := by
+        refine Finset.sum_le_sum ?_
+        intro q hqmem
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun q' =>
+              if q = q' then 0 else
+              if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+                normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'
+                  * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+              else 0)
+            (normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q)))
+    _ ≤
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        if q = q' then 0 else
+        if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+          |normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'|
+            * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant X (q / 2) q'
+        else 0 := by
+        refine Finset.sum_le_sum ?_
+        intro q hqmem
+        refine Finset.sum_le_sum ?_
+        intro q' hq'mem
+        by_cases hqq' : q = q'
+        · simp [hqq']
+        · by_cases hleft : Goldbach.Windows.IsEven q ∧ q / 2 ≠ q'
+          · rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hqmem with ⟨hqIcc, hsq⟩
+            rcases Finset.mem_filter.mp hq'mem with ⟨hq'mem', hcop⟩
+            rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hq'mem' with ⟨hq'Icc, hsq'⟩
+            have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+            have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+            have hqEvenNat : Even q := Goldbach.Windows.even_of_isEven hleft.1
+            have hqEq : q = 2 * (q / 2) := (Nat.two_mul_div_two_of_even hqEvenNat).symm
+            have hqHalfNeZero : q / 2 ≠ 0 := by
+              intro h0
+              have : q = 0 := by simpa [h0] using hqEq
+              omega
+            have hqHalf : 1 ≤ q / 2 := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hqHalfNeZero)
+            calc
+              |if q = q' then 0 else
+                if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+                  normalizedSigmaTruncSummandRealCoeff q
+                    * normalizedSigmaTruncSummandRealCoeff q'
+                    * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'
+                else 0|
+                  =
+              |normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'
+                  * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'| := by
+                    simp [hqq', hleft]
+              _ =
+              |normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'|
+                * |centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q'| := by
+                    rw [abs_mul]
+              _ ≤
+              |normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'|
+                * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant X (q / 2) q' := by
+                    exact mul_le_mul_of_nonneg_left
+                      (abs_centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection_le_rawPeriodicComparisonAbsMajorant
+                        (X := X) hqHalf hq')
+                      (abs_nonneg _)
+              _ =
+              (if q = q' then 0 else
+                if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+                  |normalizedSigmaTruncSummandRealCoeff q
+                      * normalizedSigmaTruncSummandRealCoeff q'|
+                    * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant X (q / 2) q'
+                else 0) := by
+                    simp [hqq', hleft]
+          · simp [hqq', hleft]
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0_le_absMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X|
+      ≤
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0
+  calc
+    |∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+        ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+          if q = q' then 0 else
+          if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+          else 0|
+      ≤
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      |∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+          if q = q' then 0 else
+          if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+          else 0| := by
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun q =>
+              ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+                if q = q' then 0 else
+                if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                  normalizedSigmaTruncSummandRealCoeff q
+                    * normalizedSigmaTruncSummandRealCoeff q'
+                    * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+                else 0)
+            normalizedSigmaTruncSummandCoeffSupportUpToQ0)
+    _ ≤
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        |if q = q' then 0 else
+          if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+            normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'
+              * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+          else 0| := by
+        refine Finset.sum_le_sum ?_
+        intro q hqmem
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun q' =>
+              if q = q' then 0 else
+              if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'
+                  * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+              else 0)
+            (normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q)))
+    _ ≤
+    ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        if q = q' then 0 else
+        if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+          |normalizedSigmaTruncSummandRealCoeff q
+              * normalizedSigmaTruncSummandRealCoeff q'|
+            * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant X q (q' / 2)
+        else 0 := by
+        refine Finset.sum_le_sum ?_
+        intro q hqmem
+        refine Finset.sum_le_sum ?_
+        intro q' hq'mem
+        by_cases hqq' : q = q'
+        · simp [hqq']
+        · by_cases hright : Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2
+          · rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hqmem with ⟨hqIcc, hsq⟩
+            rcases Finset.mem_filter.mp hq'mem with ⟨hq'mem', hcop⟩
+            rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hq'mem' with ⟨hq'Icc, hsq'⟩
+            have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+            have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+            have hq'EvenNat : Even q' := Goldbach.Windows.even_of_isEven hright.1
+            have hq'Eq : q' = 2 * (q' / 2) := (Nat.two_mul_div_two_of_even hq'EvenNat).symm
+            have hq'HalfNeZero : q' / 2 ≠ 0 := by
+              intro h0
+              have : q' = 0 := by simpa [h0] using hq'Eq
+              omega
+            have hq'Half : 1 ≤ q' / 2 := Nat.succ_le_of_lt (Nat.pos_of_ne_zero hq'HalfNeZero)
+            calc
+              |if q = q' then 0 else
+                if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                  normalizedSigmaTruncSummandRealCoeff q
+                    * normalizedSigmaTruncSummandRealCoeff q'
+                    * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)
+                else 0|
+                  =
+              |normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'
+                  * centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)| := by
+                    simp [hqq', hright]
+              _ =
+              |normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'|
+                * |centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2)| := by
+                    rw [abs_mul]
+              _ ≤
+              |normalizedSigmaTruncSummandRealCoeff q
+                  * normalizedSigmaTruncSummandRealCoeff q'|
+                * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant X q (q' / 2) := by
+                    exact mul_le_mul_of_nonneg_left
+                      (abs_centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection_le_rawPeriodicComparisonAbsMajorant
+                        (X := X) hq hq'Half)
+                      (abs_nonneg _)
+              _ =
+              (if q = q' then 0 else
+                if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+                  |normalizedSigmaTruncSummandRealCoeff q
+                      * normalizedSigmaTruncSummandRealCoeff q'|
+                    * centeredRamanujanPairPeriodicMainOddOddRawPeriodicComparisonAbsMajorant X q (q' / 2)
+                else 0) := by
+                    simp [hqq', hright]
+          · simp [hqq', hright]
+
+theorem Finset.sum_sum_eq_sum_sum_five_of_eq
+    {α β : Type*} (s : Finset α) (t : α → Finset β)
+    (f b₁ b₂ b₃ b₄ b₅ : α → β → ℝ)
+    (h : ∀ a ∈ s, ∀ b ∈ t a,
+      f a b = b₁ a b + b₂ a b + b₃ a b + b₄ a b + b₅ a b) :
+    (∑ a ∈ s, ∑ b ∈ t a, f a b)
+      =
+    (∑ a ∈ s, ∑ b ∈ t a, b₁ a b)
+      + (∑ a ∈ s, ∑ b ∈ t a, b₂ a b)
+      + (∑ a ∈ s, ∑ b ∈ t a, b₃ a b)
+      + (∑ a ∈ s, ∑ b ∈ t a, b₄ a b)
+      + (∑ a ∈ s, ∑ b ∈ t a, b₅ a b) := by
+  calc
+    (∑ a ∈ s, ∑ b ∈ t a, f a b)
+        =
+      ∑ a ∈ s, ∑ b ∈ t a, (b₁ a b + b₂ a b + b₃ a b + b₄ a b + b₅ a b) := by
+          refine Finset.sum_congr rfl ?_
+          intro a ha
+          refine Finset.sum_congr rfl ?_
+          intro b hb
+          exact h a ha b hb
+    _ =
+      ∑ a ∈ s,
+        ((∑ b ∈ t a, b₁ a b)
+          + (∑ b ∈ t a, b₂ a b)
+          + (∑ b ∈ t a, b₃ a b)
+          + (∑ b ∈ t a, b₄ a b)
+          + (∑ b ∈ t a, b₅ a b)) := by
+            refine Finset.sum_congr rfl ?_
+            intro a ha
+            rw [Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+              Finset.sum_add_distrib]
+    _ =
+      (∑ a ∈ s, ∑ b ∈ t a, b₁ a b)
+        + (∑ a ∈ s, ∑ b ∈ t a, b₂ a b)
+        + (∑ a ∈ s, ∑ b ∈ t a, b₃ a b)
+        + (∑ a ∈ s, ∑ b ∈ t a, b₄ a b)
+        + (∑ a ∈ s, ∑ b ∈ t a, b₅ a b) := by
+          rw [Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+            Finset.sum_add_distrib]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainTerm_eq_coprime_squarefree_reducedParityBranches
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') (hneq : q ≠ q') :
+    centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
+      =
+    (if q = 1 ∧ q' = 2 then
+      normalizedSigmaTruncSummandRealCoeff q
+        * normalizedSigmaTruncSummandRealCoeff q'
+        * centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+    else 0)
+      +
+    (if q = 2 ∧ q' = 1 then
+      normalizedSigmaTruncSummandRealCoeff q
+        * normalizedSigmaTruncSummandRealCoeff q'
+        * centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1
+    else 0)
+      +
+    (if Odd q ∧ Odd q' then
+      normalizedSigmaTruncSummandRealCoeff q
+        * normalizedSigmaTruncSummandRealCoeff q'
+        * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q q'
+            + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q q')
+    else 0)
+      +
+    (if Goldbach.Windows.IsEven q ∧ q / 2 ≠ q' then
+      normalizedSigmaTruncSummandRealCoeff q
+        * normalizedSigmaTruncSummandRealCoeff q'
+        * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution (q / 2) q'
+            + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X (q / 2) q'
+            - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X (q / 2) q')
+    else 0)
+      +
+    (if Goldbach.Windows.IsEven q' ∧ q ≠ q' / 2 then
+      normalizedSigmaTruncSummandRealCoeff q
+        * normalizedSigmaTruncSummandRealCoeff q'
+        * (centeredRamanujanPairPeriodicMainOddOddExceptionalContribution q (q' / 2)
+            + centeredRamanujanPairPeriodicMainOddOddMismatchRemainderContribution X q (q' / 2)
+            - centeredRamanujanPairPeriodicMainOddOddOneBlockCorrection X q (q' / 2))
+    else 0) := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainTerm_eq_coeff_mul_coeff_mul_ramanujan]
+  rw [centeredRamanujanPairPeriodicMainTerm_eq_coprime_squarefree_reducedParityAPI
+    hq hq' hsq hsq' hcop hneq]
+  by_cases h12 : q = 1 ∧ q' = 2
+  · rcases h12 with ⟨rfl, rfl⟩
+    have hOdd2 : ¬ Odd 2 := by decide
+    have hEven1 : ¬ Goldbach.Windows.IsEven 1 := by decide
+    have hEven2Nonexc : ¬ (Goldbach.Windows.IsEven 2 ∧ 1 ≠ 2 / 2) := by decide
+    simp [hOdd2, hEven1, hEven2Nonexc]
+  ·
+    by_cases h21 : q = 2 ∧ q' = 1
+    · rcases h21 with ⟨rfl, rfl⟩
+      have hOdd2 : ¬ Odd 2 := by decide
+      have hEven1 : ¬ Goldbach.Windows.IsEven 1 := by decide
+      have hEven2Nonexc : ¬ (Goldbach.Windows.IsEven 2 ∧ 2 / 2 ≠ 1) := by decide
+      simp [hOdd2, hEven1, hEven2Nonexc]
+    ·
+      by_cases hqEven : Goldbach.Windows.IsEven q
+      · have hq'NotEven : ¬ Goldbach.Windows.IsEven q' :=
+          not_isEven_right_of_isEven_left_of_coprime hcop hqEven
+        have hqNotOdd : ¬ Odd q := by
+          intro hqOdd
+          exact (Nat.not_even_iff_odd.mpr hqOdd) (Goldbach.Windows.even_of_isEven hqEven)
+        have hhalfLeft : q / 2 ≠ q' := by
+          intro hqHalf
+          have hqEvenNat : Even q := Goldbach.Windows.even_of_isEven hqEven
+          have hqEq : q = 2 * (q / 2) := by
+            exact (Nat.two_mul_div_two_of_even hqEvenNat).symm
+          have hcopDiag : Nat.Coprime (2 * q') q' := by
+            have hcop0 := hcop
+            rw [hqEq, hqHalf] at hcop0
+            simpa using hcop0
+          have hq'1 : q' = 1 := eq_one_of_coprime_two_mul_self hcopDiag
+          have hq2 : q = 2 := by
+            rw [hqEq, hqHalf, hq'1]
+          exact h21 ⟨hq2, hq'1⟩
+        simp [h12, h21, hqEven, hq'NotEven, hqNotOdd, hhalfLeft]
+      ·
+        by_cases hq'Even : Goldbach.Windows.IsEven q'
+        · have hqNotEven : ¬ Goldbach.Windows.IsEven q :=
+              not_isEven_left_of_isEven_right_of_coprime hcop hq'Even
+          have hq'NotOdd : ¬ Odd q' := by
+            intro hq'Odd
+            exact (Nat.not_even_iff_odd.mpr hq'Odd) (Goldbach.Windows.even_of_isEven hq'Even)
+          have hhalfRight : q ≠ q' / 2 := by
+            intro hqHalf
+            have hq'EvenNat : Even q' := Goldbach.Windows.even_of_isEven hq'Even
+            have hq'Eq : q' = 2 * (q' / 2) := by
+              exact (Nat.two_mul_div_two_of_even hq'EvenNat).symm
+            have hcopDiag : Nat.Coprime (q' / 2) (2 * (q' / 2)) := by
+              have hcop0 := hcop
+              rw [hqHalf, hq'Eq] at hcop0
+              simpa using hcop0
+            have hhalf1 : q' / 2 = 1 := eq_one_of_coprime_self_two_mul hcopDiag
+            have hq1 : q = 1 := by
+              simpa [hhalf1] using hqHalf
+            have hq'2 : q' = 2 := by
+              rw [hq'Eq, hhalf1]
+            exact h12 ⟨hq1, hq'2⟩
+          simp [h12, h21, hqEven, hq'Even, hqNotEven, hq'NotOdd, hhalfRight]
+        · have hqOdd : Odd q := by
+            refine Nat.not_even_iff_odd.mp ?_
+            intro hqEvenNat
+            exact hqEven (Goldbach.Windows.isEven_of_even hqEvenNat)
+          have hq'Odd : Odd q' := by
+            refine Nat.not_even_iff_odd.mp ?_
+            intro hq'EvenNat
+            exact hq'Even (Goldbach.Windows.isEven_of_even hq'EvenNat)
+          simp [h12, h21, hqEven, hq'Even, hqOdd, hq'Odd]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeSummand_eq_reducedParityBranches
+    {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : Squarefree q) (hsq' : Squarefree q')
+    (hcop : Nat.Coprime q q') :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeSummand X q q'
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoSummand X q q'
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOneSummand X q q'
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddSummand X q q'
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalSummand X q q'
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalSummand X q q' := by
+  by_cases hqq : q = q'
+  · simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOneSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalSummand, hqq]
+  · simp [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOneSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalSummand,
+      centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalSummand, hqq,
+      centeredNormalizedSigmaTruncPeriodicMainTerm_eq_coprime_squarefree_reducedParityBranches
+        hq hq' hsq hsq' hcop hqq,
+      add_assoc, add_left_comm, add_comm]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0_eq_reducedParityBranches
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOnePairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalPairSumUpToQ0 X := by
+  change
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeSummand X q q')
+      =
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoSummand X q q')
+      +
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOneSummand X q q')
+      +
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddSummand X q q')
+      +
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalSummand X q q')
+      +
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalSummand X q q')
+  have hmain :=
+    Finset.sum_sum_eq_sum_sum_five_of_eq
+      normalizedSigmaTruncSummandCoeffSupportUpToQ0
+      (fun q => normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q))
+      (fun q q' => centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeSummand X q q')
+      (fun q q' =>
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoSummand X q q')
+      (fun q q' =>
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOneSummand X q q')
+      (fun q q' =>
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddSummand X q q')
+      (fun q q' =>
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalSummand X q q')
+      (fun q q' =>
+        centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalSummand X q q')
+      (by
+        intro q hqmem q' hq'mem
+        rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hqmem with ⟨hqIcc, hsq⟩
+        rcases Finset.mem_filter.mp hq'mem with ⟨hq'mem', hcop⟩
+        rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hq'mem' with ⟨hq'Icc, hsq'⟩
+        exact centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeSummand_eq_reducedParityBranches
+          (Finset.mem_Icc.mp hqIcc).1 (Finset.mem_Icc.mp hq'Icc).1 hsq hsq' hcop)
+  exact hmain
+
+lemma one_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0 :
+    1 ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 := by
+  refine (mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff).2 ?_
+  constructor
+  · simp [Goldbach.AO_OffDiag.TailBlock.Q0]
+  · simpa using (squarefree_one : Squarefree (1 : ℕ))
+
+lemma two_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0 :
+    2 ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 := by
+  refine (mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff).2 ?_
+  constructor
+  · simp [Goldbach.AO_OffDiag.TailBlock.Q0]
+  · simpa using (Nat.squarefree_two : Squarefree (2 : ℕ))
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoPairSumUpToQ0_eq
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoPairSumUpToQ0 X
+      =
+    normalizedSigmaTruncSummandRealCoeff 1
+      * normalizedSigmaTruncSummandRealCoeff 2
+      * centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoPairSumUpToQ0
+  rw [Finset.sum_eq_single_of_mem 1 one_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0]
+  · have h2mem :
+      2 ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime 1) := by
+        refine Finset.mem_filter.mpr ?_
+        exact ⟨two_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0, by decide⟩
+    rw [Finset.sum_eq_single_of_mem 2 h2mem]
+    · simp
+    · intro q' hq'mem hq'ne
+      have hq'ne2 : q' ≠ 2 := by exact hq'ne
+      simp [hq'ne2]
+  · intro q hqmem hqne1
+    refine Finset.sum_eq_zero ?_
+    intro q' hq'mem
+    by_cases hqq' : q = q'
+    · simp [hqq']
+    · have hqne1' : q ≠ 1 := by exact hqne1
+      simp [hqq', hqne1']
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOnePairSumUpToQ0_eq
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOnePairSumUpToQ0 X
+      =
+    normalizedSigmaTruncSummandRealCoeff 2
+      * normalizedSigmaTruncSummandRealCoeff 1
+      * centeredRamanujanPairPeriodicMainOddOddHalvedDiagonalCorrection X 1 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOnePairSumUpToQ0
+  rw [Finset.sum_eq_single_of_mem 2 two_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0]
+  · have h1mem :
+      1 ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime 2) := by
+        refine Finset.mem_filter.mpr ?_
+        exact ⟨one_mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0, by decide⟩
+    rw [Finset.sum_eq_single_of_mem 1 h1mem]
+    · simp
+    · intro q' hq'mem hq'ne
+      have hq'ne1 : q' ≠ 1 := by exact hq'ne
+      simp [hq'ne1]
+  · intro q hqmem hqne2
+    refine Finset.sum_eq_zero ?_
+    intro q' hq'mem
+    by_cases hqq' : q = q'
+    · simp [hqq']
+    · have hqne2' : q ≠ 2 := by exact hqne2
+      simp [hqq', hqne2']
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0_eq_endpointBranches_add_bothOddMismatchRemainder_add_halvedOddOddBranches_sub_oneBlockCorrections
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOnePairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0 X
+      + (centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+          - centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X)
+      + (centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+          - centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X) := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0_eq_reducedParityBranches]
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddPairSumUpToQ0_eq_mismatchRemainder]
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalPairSumUpToQ0_eq_halvedOddOddSector_sub_oneBlockCorrection]
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalPairSumUpToQ0_eq_halvedOddOddSector_sub_oneBlockCorrection]
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0_le_endpointAbs_add_oddModulusLiveAbs_add_oneBlockMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0 X|
+      ≤
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoPairSumUpToQ0 X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOnePairSumUpToQ0 X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLivePairSumUpToQ0 X|
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOneBlockAbsMajorantPairSumUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0_eq_endpointBranches_add_bothOddMismatchRemainder_add_halvedOddOddBranches_sub_oneBlockCorrections]
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLivePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOneBlockAbsMajorantPairSumUpToQ0
+  let E12 := centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoPairSumUpToQ0 X
+  let E21 := centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOnePairSumUpToQ0 X
+  let Boo := centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeBothOddMismatchRemainderPairSumUpToQ0 X
+  let Lh := centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+  let Rh := centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalHalvedOddOddSectorPairSumUpToQ0 X
+  let Lb := centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X
+  let Rb := centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0 X
+  let ML := centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0 X
+  let MR := centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionAbsMajorantPairSumUpToQ0 X
+  let A := E12 + E21 + (Boo + Lh + Rh)
+  let B := Lb + Rb
+  have hmain :
+      |E12 + E21 + Boo + (Lh - Lb) + (Rh - Rb)|
+        ≤
+      |E12| + |E21| + |Boo + Lh + Rh| + (ML + MR) := by
+    have hsub :
+        E12 + E21 + Boo + (Lh - Lb) + (Rh - Rb)
+          = A - B := by
+      ring
+    have hA :
+        |E12 + E21 + (Boo + Lh + Rh)| ≤ |E12| + |E21| + |Boo + Lh + Rh| := by
+      calc
+        |E12 + E21 + (Boo + Lh + Rh)| ≤ |E12 + E21| + |Boo + Lh + Rh| := by
+          simpa [add_assoc] using abs_add_le (E12 + E21) (Boo + Lh + Rh)
+        _ ≤ (|E12| + |E21|) + |Boo + Lh + Rh| := by
+          gcongr
+          exact abs_add_le E12 E21
+        _ = |E12| + |E21| + |Boo + Lh + Rh| := by ring
+    have hB :
+        |Lb + Rb| ≤ ML + MR := by
+      refine le_trans (abs_add_le Lb Rb) ?_
+      calc
+        |Lb| + |Rb| ≤ ML + |Rb| := by
+          gcongr
+          exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeLeftEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0_le_absMajorant X
+        _ ≤ ML + MR := by
+          gcongr
+          exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeRightEvenNonExceptionalOneBlockCorrectionPairSumUpToQ0_le_absMajorant X
+    have hsubabs :
+        |A - B|
+          ≤
+        |A| + |B| := by
+      have habsneg : |-B| = |B| := by
+        exact abs_neg B
+      calc
+        |A - B| = |A + (-B)| := by
+              rw [sub_eq_add_neg]
+        _ ≤ |A| + |-B| := by
+              exact abs_add_le _ _
+        _ = |A| + |B| := by
+              rw [habsneg]
+    calc
+      |E12 + E21 + Boo + (Lh - Lb) + (Rh - Rb)| = |A - B| := by rw [hsub]
+      _ ≤ |A| + |B| := hsubabs
+      _ ≤ (|E12| + |E21| + |Boo + Lh + Rh|) + (ML + MR) := by
+        exact add_le_add hA hB
+      _ = |E12| + |E21| + |Boo + Lh + Rh| + (ML + MR) := by ring
+  simpa [E12, E21, Boo, Lh, Rh, Lb, Rb, ML, MR, A, B, add_assoc, add_left_comm, add_comm] using hmain
+
+theorem abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0_le_endpointAbs_add_unifiedOddSurfaceAbs_add_oneBlockMajorant
+    (X : ℕ) :
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0 X|
+      ≤
+    |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalOneTwoPairSumUpToQ0 X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeExceptionalTwoOnePairSumUpToQ0 X|
+      + |centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusUnifiedPairSumUpToQ0 X|
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOneBlockAbsMajorantPairSumUpToQ0 X := by
+  rw [← centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimeOddModulusLivePairSumUpToQ0_eq_unifiedOddSurface]
+  exact abs_centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0_le_endpointAbs_add_oddModulusLiveAbs_add_oneBlockMajorant X
+
+/-- The coefficient-supported shared-divisor off-diagonal branch. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedNonCoprimePairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (fun q' => ¬ Nat.Coprime q q'),
+      if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
+
+/-- The unsupported periodic-main residue killed by vanishing normalized coefficients. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainCoeffKilledResidualPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0 X
+    - centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedOffDiagonalPairSumUpToQ0 X
+
+theorem centeredNormalizedSigmaTruncPeriodicMainTerm_eq_zero_of_supported_offDiagonal
+    {X q q' : ℕ}
+    (hq : 1 ≤ q) (hq' : 1 ≤ q')
+    (hsq : centeredRamanujanPairCleanPeriodicOneVariableSupport q)
+    (hsq' : centeredRamanujanPairCleanPeriodicOneVariableSupport q')
+    (hqq' : q ≠ q') :
+    centeredNormalizedSigmaTruncPeriodicMainTerm X q q' = 0 := by
+  by_cases hq2 : q = 2
+  · have hq'ne : q' ≠ 2 := by
+      intro hq'2
+      exact hqq' (hq2.trans hq'2.symm)
+    have hcoeff' :
+        normalizedSigmaTruncSummandRealCoeff q' = 0 :=
+      normalizedSigmaTruncSummandRealCoeff_eq_zero_of_support_ne_two hq' hsq' hq'ne
+    unfold centeredNormalizedSigmaTruncPeriodicMainTerm
+    simp [hcoeff']
+  · have hcoeff :
+      normalizedSigmaTruncSummandRealCoeff q = 0 :=
+      normalizedSigmaTruncSummandRealCoeff_eq_zero_of_support_ne_two hq hsq hq2
+    unfold centeredNormalizedSigmaTruncPeriodicMainTerm
+    simp [hcoeff]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0_eq_zero
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0 X = 0 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0
+  refine Finset.sum_eq_zero ?_
+  intro q hqmem
+  refine Finset.sum_eq_zero ?_
+  intro q' hq'mem
+  by_cases hqq' : q = q'
+  · simp [hqq']
+  · have hqIcc : q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 :=
+      (Finset.mem_filter.mp hqmem).1
+    have hq'Icc : q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 :=
+      (Finset.mem_filter.mp hq'mem).1
+    have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+    have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+    have hsq : centeredRamanujanPairCleanPeriodicOneVariableSupport q :=
+      (Finset.mem_filter.mp hqmem).2
+    have hsq' : centeredRamanujanPairCleanPeriodicOneVariableSupport q' :=
+      (Finset.mem_filter.mp hq'mem).2
+    simp [hqq', centeredNormalizedSigmaTruncPeriodicMainTerm_eq_zero_of_supported_offDiagonal
+      hq hq' hsq hsq' hqq']
+
+private theorem centeredNormalizedSigmaTruncPeriodicMainRow_eq_zero_of_coeff_zero
+    {X q : ℕ}
+    (hcoeff : normalizedSigmaTruncSummandRealCoeff q = 0) :
+    (∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q') = 0 := by
+  refine Finset.sum_eq_zero ?_
+  intro q' hq'mem
+  by_cases hqq' : q = q'
+  · simp [hqq']
+  · simp [hqq', centeredNormalizedSigmaTruncPeriodicMainTerm_eq_zero_of_coeff_left hcoeff]
+
+private theorem centeredNormalizedSigmaTruncPeriodicMainRow_eq_coeffSupported
+    (X q : ℕ) :
+    (∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+      =
+    ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+      if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q' := by
+  unfold normalizedSigmaTruncSummandCoeffSupportUpToQ0
+  rw [Finset.sum_filter]
+  refine Finset.sum_congr rfl ?_
+  intro q' hq'mem
+  by_cases hcoeff' : normalizedSigmaTruncSummandRealCoeff q' ≠ 0
+  · simp [hcoeff']
+  · push_neg at hcoeff'
+    by_cases hqq' : q = q'
+    · simp [hcoeff', hqq']
+    · simp [hcoeff', hqq', centeredNormalizedSigmaTruncPeriodicMainTerm_eq_zero_of_coeff_right hcoeff']
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_coeffSupportedOffDiagonal
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedOffDiagonalPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedOffDiagonalPairSumUpToQ0
+  unfold normalizedSigmaTruncSummandCoeffSupportUpToQ0
+  rw [Finset.sum_filter]
+  refine Finset.sum_congr rfl ?_
+  intro q hqmem
+  by_cases hcoeff : normalizedSigmaTruncSummandRealCoeff q ≠ 0
+  · simp [hcoeff]
+    exact centeredNormalizedSigmaTruncPeriodicMainRow_eq_coeffSupported X q
+  · push_neg at hcoeff
+    simp [hcoeff]
+    exact centeredNormalizedSigmaTruncPeriodicMainRow_eq_zero_of_coeff_zero hcoeff
+
+private theorem centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0_filter_not_coprime_eq_self
+    {q : ℕ} (hqmem : q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0) :
+    centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+        (fun q' => ¬ Nat.Coprime q q')
+      =
+    centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 := by
+  apply Finset.ext
+  intro q'
+  constructor
+  · intro hq'mem
+    exact (Finset.mem_filter.mp hq'mem).1
+  · intro hq'mem
+    refine Finset.mem_filter.mpr ?_
+    constructor
+    · exact hq'mem
+    · have hqIcc : q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 :=
+        (Finset.mem_filter.mp hqmem).1
+      have hq'Icc : q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 :=
+        (Finset.mem_filter.mp hq'mem).1
+      have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+      have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+      have hsq : centeredRamanujanPairCleanPeriodicOneVariableSupport q :=
+        (Finset.mem_filter.mp hqmem).2
+      have hsq' : centeredRamanujanPairCleanPeriodicOneVariableSupport q' :=
+        (Finset.mem_filter.mp hq'mem).2
+      exact centeredRamanujanPairCleanPeriodicOneVariableSupport_not_coprime hq hq' hsq hsq'
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedCoprimePairSumUpToQ0_eq_zero
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedCoprimePairSumUpToQ0 X = 0 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainSupportedCoprimePairSumUpToQ0
+  refine Finset.sum_eq_zero ?_
+  intro q hqmem
+  have hqIcc : q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 :=
+    (Finset.mem_filter.mp hqmem).1
+  have hq : 1 ≤ q := (Finset.mem_Icc.mp hqIcc).1
+  have hsq : centeredRamanujanPairCleanPeriodicOneVariableSupport q :=
+    (Finset.mem_filter.mp hqmem).2
+  have hempty :
+      centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter (Nat.Coprime q) = ∅ := by
+    apply Finset.eq_empty_iff_forall_notMem.mpr
+    intro q' hq'mem
+    have hq'mem0 : q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 :=
+      (Finset.mem_filter.mp hq'mem).1
+    have hq'Icc : q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 :=
+      (Finset.mem_filter.mp hq'mem0).1
+    have hq' : 1 ≤ q' := (Finset.mem_Icc.mp hq'Icc).1
+    have hsq' : centeredRamanujanPairCleanPeriodicOneVariableSupport q' :=
+      (Finset.mem_filter.mp hq'mem0).2
+    exact centeredRamanujanPairCleanPeriodicOneVariableSupport_not_coprime hq hq' hsq hsq'
+      ((Finset.mem_filter.mp hq'mem).2)
+  simp [hempty]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimePairSumUpToQ0_eq_supportedDiagonal_add_supportedOffDiagonal
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimePairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedDiagonalPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainSupportedDiagonalPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0
+  calc
+    ∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+        ∑ q' ∈
+          centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+            (fun q' => ¬Nat.Coprime q q'),
+          centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
+      =
+    ∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+        ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+          centeredNormalizedSigmaTruncPeriodicMainTerm X q q' := by
+            refine Finset.sum_congr rfl ?_
+            intro q hqmem
+            simp [centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0_filter_not_coprime_eq_self hqmem]
+  _ =
+    ∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+        ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+          ((if q = q' then centeredNormalizedSigmaTruncPeriodicMainTerm X q q' else 0)
+            + (if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')) := by
+              refine Finset.sum_congr rfl ?_
+              intro q hqmem
+              refine Finset.sum_congr rfl ?_
+              intro q' hq'mem
+              by_cases hqq : q = q'
+              · simp [hqq]
+              · simp [hqq]
+  _ =
+    (∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+        ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+          (if q = q' then centeredNormalizedSigmaTruncPeriodicMainTerm X q q' else 0))
+      +
+    (∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+        ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+          (if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')) := by
+            simpa using
+              (show
+                ∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+                    ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+                      ((if q = q' then centeredNormalizedSigmaTruncPeriodicMainTerm X q q' else 0)
+                        + (if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'))
+                  =
+                (∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+                    ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+                      (if q = q' then centeredNormalizedSigmaTruncPeriodicMainTerm X q q' else 0))
+                  +
+                (∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+                    ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+                      (if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'))
+                by
+                  simp_rw [Finset.sum_add_distrib])
+  _ =
+    (∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+        centeredNormalizedSigmaTruncPeriodicMainTerm X q q)
+      +
+    (∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+        ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+          (if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')) := by
+            refine congrArg (fun z =>
+              z +
+              ∑ q ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+                ∑ q' ∈ centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0,
+                  (if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')) ?_
+            refine Finset.sum_congr rfl ?_
+            intro q hqmem
+            simp [Finset.sum_ite_eq, hqmem]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_supportedOffDiagonal_add_unsupportedOffDiagonal
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_unsupportedOffDiagonal
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_supportedOffDiagonal_add_unsupportedOffDiagonal,
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0_eq_zero]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0_eq_coeffSupportedOffDiagonal
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedOffDiagonalPairSumUpToQ0 X := by
+  rw [← centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_unsupportedOffDiagonal,
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_coeffSupportedOffDiagonal]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffKilledResidualPairSumUpToQ0_eq_zero
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffKilledResidualPairSumUpToQ0 X = 0 := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffKilledResidualPairSumUpToQ0
+  rw [centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0_eq_coeffSupportedOffDiagonal]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedOffDiagonalPairSumUpToQ0_eq_coprime_add_nonCoprime
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedOffDiagonalPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedNonCoprimePairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedOffDiagonalPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedNonCoprimePairSumUpToQ0
+  have hrow :
+      ∀ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+        (∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+            if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+          =
+        (∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+            if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+          +
+        (∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (fun q' => ¬ Nat.Coprime q q'),
+            if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q') := by
+    intro q hqmem
+    simpa using
+      (Finset.sum_filter_add_sum_filter_not
+        normalizedSigmaTruncSummandCoeffSupportUpToQ0
+        (Nat.Coprime q)
+        (fun q' => if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')).symm
+  calc
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+        ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+          if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+      =
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+        ((∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+            if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+          +
+         (∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (fun q' => ¬ Nat.Coprime q q'),
+            if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'))) := by
+          refine Finset.sum_congr rfl ?_
+          intro q hqmem
+          exact hrow q hqmem
+    _ =
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+        ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (Nat.Coprime q),
+          if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+      +
+    (∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
+        ∑ q' ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter (fun q' => ¬ Nat.Coprime q q'),
+          if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q') := by
+          rw [Finset.sum_add_distrib]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0_eq_coprime_add_nonCoprime
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedCoprimePairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedNonCoprimePairSumUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0_eq_coeffSupportedOffDiagonal,
+    centeredNormalizedSigmaTruncPeriodicMainCoeffSupportedOffDiagonalPairSumUpToQ0_eq_coprime_add_nonCoprime]
+
+theorem centeredNormalizedSigmaTruncPeriodicMainOutsideSupportPairSumUpToQ0_eq_unsupportedOffDiagonal_sub_supportedDiagonal
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainOutsideSupportPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0 X
+      - centeredNormalizedSigmaTruncPeriodicMainSupportedDiagonalPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainOutsideSupportPairSumUpToQ0
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedCoprimePairSumUpToQ0_eq_zero]
+  rw [sub_eq_add_neg]
+  rw [centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_supportedOffDiagonal_add_unsupportedOffDiagonal]
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimePairSumUpToQ0_eq_supportedDiagonal_add_supportedOffDiagonal]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0_eq_supportedMain_sub_commonPrime_add_gcdPreferred_add_remainder
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimePairSumUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0
+  rw [centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_eq_commonPrime_add_gcdCorrection_add_remainder]
+  rw [centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionUpToQ0_eq_preferredBranchwise]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0_eq_supportedDiagonal_add_supportedOffDiagonal_sub_commonPrime_add_gcdPreferred_add_remainder
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedDiagonalPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0_eq_supportedMain_sub_commonPrime_add_gcdPreferred_add_remainder]
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimePairSumUpToQ0_eq_supportedDiagonal_add_supportedOffDiagonal]
+
+/-- The supported off-diagonal mismatch between the normalized periodic-main branch and the
+preferred clean shared-divisor model. -/
+noncomputable def centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0 X
+    - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+    - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X
+    - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0_eq_supportedDiagonal_add_offDiagonalModelResidual
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedDiagonalPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0_eq_supportedDiagonal_add_supportedOffDiagonal_sub_commonPrime_add_gcdPreferred_add_remainder]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0_eq_supportedOffDiagonal_sub_commonPrime_add_gcdPreferred_add_remainder
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X := by
+  rfl
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0_eq_residual_sub_supportedDiagonal
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0 X
+      - centeredNormalizedSigmaTruncPeriodicMainSupportedDiagonalPairSumUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0_eq_supportedDiagonal_add_offDiagonalModelResidual]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0_eq_commonPrime_add_gcdPreferred_add_remainder_add_modelResidual
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0 X
+      =
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X
+      + centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0_eq_supportedOffDiagonal_sub_commonPrime_add_gcdPreferred_add_remainder]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0_eq_neg_commonPrime_sub_gcdPreferred_sub_remainder
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0 X
+      =
+    - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0_eq_supportedOffDiagonal_sub_commonPrime_add_gcdPreferred_add_remainder,
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalPairSumUpToQ0_eq_zero]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0_eq_supportedDiagonal_sub_commonPrime_add_gcdPreferred_add_remainder
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedDiagonalPairSumUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeCommonPrimeUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X
+      - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0_eq_supportedDiagonal_add_offDiagonalModelResidual,
+    centeredNormalizedSigmaTruncPeriodicMainSupportedOffDiagonalModelResidualPairSumUpToQ0_eq_neg_commonPrime_sub_gcdPreferred_sub_remainder]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0_eq
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0 X
+      =
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X := by
+  rfl
+
+theorem centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0_eq_outsideCleanSupportedNonCoprime
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0
+  rfl
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_cleanSupportedNonCoprime_add_outside
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0_eq_supportedNonCoprimeResidual_add_supportedCoprime_add_outsideSupport
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainSupportedCoprimePairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainOutsideSupportPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainOutsideSupportPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0_eq_supportedNonCoprimeResidual_add_outsideSupport
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainOutsideSupportPairSumUpToQ0 X := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0_eq_supportedNonCoprimeResidual_add_supportedCoprime_add_outsideSupport]
+  rw [centeredNormalizedSigmaTruncPeriodicMainSupportedCoprimePairSumUpToQ0_eq_zero]
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0_le_supportedNonCoprimeResidual_add_supportedCoprime_add_outsideSupport
+    {Cresidual Ccoprime Coutside : ℝ} (X : ℕ)
+    (hresidual :
+      centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0 X ≤ Cresidual)
+    (hcoprime :
+      centeredNormalizedSigmaTruncPeriodicMainSupportedCoprimePairSumUpToQ0 X ≤ Ccoprime)
+    (houtside :
+      centeredNormalizedSigmaTruncPeriodicMainOutsideSupportPairSumUpToQ0 X ≤ Coutside) :
+    centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0 X
+      ≤ Cresidual + Ccoprime + Coutside := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0_eq_supportedNonCoprimeResidual_add_supportedCoprime_add_outsideSupport]
+  linarith
+
+theorem centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0_le_supportedNonCoprimeResidual_add_outsideSupport
+    {Cresidual Coutside : ℝ} (X : ℕ)
+    (hresidual :
+      centeredNormalizedSigmaTruncPeriodicMainSupportedNonCoprimeResidualPairSumUpToQ0 X ≤ Cresidual)
+    (houtside :
+      centeredNormalizedSigmaTruncPeriodicMainOutsideSupportPairSumUpToQ0 X ≤ Coutside) :
+    centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0 X
+      ≤ Cresidual + Coutside := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0_eq_supportedNonCoprimeResidual_add_outsideSupport]
+  linarith
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_cleanSupportedNonCoprime_add_remaining
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      =
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0
+  ring
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_le_abs_cleanSupportedNonCoprime_add_remaining
+    {Cmixed : ℝ} (X : ℕ)
+    (hremaining :
+      centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0 X ≤ Cmixed) :
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      ≤
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X| + Cmixed := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_cleanSupportedNonCoprime_add_remaining]
+  have habs :
+      centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X
+        ≤
+      |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X| := le_abs_self _
+  linarith
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_le_refinedCleanSupportedNonCoprime_add_remaining
+    {Cmixed : ℝ} (X : ℕ)
+    (hremaining :
+      centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0 X ≤ Cmixed) :
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      ≤
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0 X + Cmixed := by
+  have hmain :=
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_le_abs_cleanSupportedNonCoprime_add_remaining
+      (X := X) hremaining
+  have hrefined :=
+    abs_centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_le_refinedAbsMajorantUpToQ0
+      X
+  linarith
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_le_abs_cleanSupportedNonCoprime_add_outside
+    {Cmixed : ℝ} (X : ℕ)
+    (houtside :
+      centeredNormalizedSigmaTruncPeriodicMainOutsideCleanSupportedNonCoprimePairSumUpToQ0 X ≤ Cmixed) :
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      ≤
+    |centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0 X| + Cmixed := by
+  rw [centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_cleanSupportedNonCoprime_add_outside]
+  have habs :
+      centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0 X
+        ≤
+      |centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0 X| := le_abs_self _
+  linarith
+
+theorem centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_eq_periodicMain_add_boundary
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0 X
+      =
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      + centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0
+  have hsplit :
+      (∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          if q = q' then 0 else centeredNormalizedSigmaTruncPairCorrelation X q q')
+        =
+      ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          ((if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+            + (if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicBoundaryTerm X q q')) := by
+        refine Finset.sum_congr rfl ?_
+        intro q hq
+        refine Finset.sum_congr rfl ?_
+        intro q' hq'
+        by_cases hqq : q = q'
+        · simp [hqq]
+        · have hq1 : 1 ≤ q := (Finset.mem_Icc.mp hq).1
+          have hq'1 : 1 ≤ q' := (Finset.mem_Icc.mp hq').1
+          simp [hqq, centeredNormalizedSigmaTruncPairCorrelation_eq_periodicMain_add_boundary
+            (X := X) hq1 hq'1]
+  rw [hsplit]
+  calc
+    ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        ((if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+          + (if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicBoundaryTerm X q q'))
+      =
+    ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      ((∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+        +
+       (∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicBoundaryTerm X q q')) := by
+            refine Finset.sum_congr rfl ?_
+            intro q hq
+            rw [Finset.sum_add_distrib]
+    _ =
+    (∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q')
+      +
+    (∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+        if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicBoundaryTerm X q q') := by
+          rw [Finset.sum_add_distrib]
+
+theorem centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_le_cleanSupportedNonCoprime_add_mixed_add_boundary
+    {Cmixed Cboundary : ℝ} (X : ℕ)
+    (hmain :
+      centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+        ≤
+      |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X| + Cmixed)
+    (hboundary :
+      centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X ≤ Cboundary) :
+    centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0 X
+      ≤
+    |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X|
+      + Cmixed + Cboundary := by
+  rw [centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_eq_periodicMain_add_boundary]
+  linarith
+
+theorem centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_le_refinedCleanSupportedNonCoprime_add_mixed_add_boundary
+    {Cmixed Cboundary : ℝ} (X : ℕ)
+    (hmain :
+      centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+        ≤
+      centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0 X + Cmixed)
+    (hboundary :
+      centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X ≤ Cboundary) :
+    centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0 X
+      ≤
+    centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0 X
+      + Cmixed + Cboundary := by
+  rw [centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_eq_periodicMain_add_boundary]
+  linarith
+
+theorem centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_le_unsupportedPeriodicMain_add_boundary
+    {Cunsupported Cboundary : ℝ} (X : ℕ)
+    (hunsupported :
+      centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0 X ≤ Cunsupported)
+    (hboundary :
+      centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X ≤ Cboundary) :
+    centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0 X
+      ≤ Cunsupported + Cboundary := by
+  rw [centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_eq_periodicMain_add_boundary,
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_unsupportedOffDiagonal]
+  linarith
+
+theorem centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_le_abs_periodicMain_add_abs_boundary
+    {Cmain Cboundary : ℝ} (X : ℕ)
+    (hmain :
+      |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X| ≤ Cmain)
+    (hboundary :
+      |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X| ≤ Cboundary) :
+    centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0 X
+      ≤ Cmain + Cboundary := by
+  rw [centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_eq_periodicMain_add_boundary]
+  have hmain' :
+      centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+        ≤
+      |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X| := by
+        exact le_abs_self _
+  have hboundary' :
+      centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X
+        ≤
+      |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X| := by
+        exact le_abs_self _
+  linarith
 
 theorem centeredNormalizedSigmaTruncPairCorrelation_sq_le
     (X q q' : ℕ) :
@@ -10549,6 +22795,317 @@ structure CenteredTrueSigmaWindowEnergyTarget (Cσ : ℝ) : Prop where
 structure CenteredNormalizedSigmaTruncWindowEnergyTarget (Cτ : ℝ) : Prop where
   Cτ_nonneg : 0 ≤ Cτ
   bound : ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncWindowEnergy X ≤ Cτ
+
+/-- Direct target for the diagonal truncation energy term. -/
+structure CenteredNormalizedSigmaTruncDiagonalEnergyDirectTarget (Cdiag : ℝ) : Prop where
+  Cdiag_nonneg : 0 ≤ Cdiag
+  bound : ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag
+
+/--
+Direct absolute target for the full periodic-main pair sum, after preserving all available
+internal cancellation.
+-/
+structure CenteredNormalizedSigmaTruncPeriodicMainDirectTarget (Cmain : ℝ) : Prop where
+  Cmain_nonneg : 0 ≤ Cmain
+  bound : ∀ {X : ℕ}, X0 ≤ X →
+    |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X| ≤ Cmain
+
+/-- Direct absolute target for the periodic boundary pair sum. -/
+structure CenteredNormalizedSigmaTruncPeriodicBoundaryDirectTarget (Cboundary : ℝ) : Prop where
+  Cboundary_nonneg : 0 ≤ Cboundary
+  bound : ∀ {X : ℕ}, X0 ≤ X →
+    |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X| ≤ Cboundary
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectTarget_of_majorant
+    {Cdiag : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant X ≤ Cdiag) :
+    CenteredNormalizedSigmaTruncDiagonalEnergyDirectTarget Cdiag := by
+  refine ⟨hdiag_nonneg, ?_⟩
+  intro X hX
+  rw [centeredNormalizedSigmaTruncDiagonalEnergy_eq_directMajorant]
+  exact hdiag hX
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_and_offDiagonal
+    {Cdiag Coff : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hoff_nonneg : 0 ≤ Coff)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag)
+    (hoff :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncOffDiagonalCorrelation X ≤ Coff) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Coff) := by
+  refine ⟨add_nonneg hdiag_nonneg hoff_nonneg, ?_⟩
+  intro X hX
+  rw [centeredNormalizedSigmaTruncWindowEnergy_eq_diagonal_add_offDiagonal]
+  linarith [hdiag hX, hoff hX]
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_and_pairCorrelationBounds
+    {Cdiag Cpair : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hpair_nonneg : 0 ≤ Cpair)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag)
+    (hpair :
+      ∀ {X : ℕ}, X0 ≤ X →
+        (∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+            if q = q' then 0 else centeredNormalizedSigmaTruncPairCorrelation X q q')
+          ≤ Cpair) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Cpair) := by
+  refine ⟨add_nonneg hdiag_nonneg hpair_nonneg, ?_⟩
+  intro X hX
+  rw [centeredNormalizedSigmaTruncWindowEnergy_eq_diagonal_add_sum_pairCorrelations]
+  linarith [hdiag hX, hpair hX]
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_cleanBranch_and_remainingPairBounds
+    {Cdiag Cclean Cmixed Cboundary : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hclean_nonneg : 0 ≤ Cclean)
+    (hmixed_nonneg : 0 ≤ Cmixed)
+    (hboundary_nonneg : 0 ≤ Cboundary)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag)
+    (hclean :
+      ∀ {X : ℕ}, X0 ≤ X →
+        (Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+          Finset.sum
+            (centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+              (fun q' => ¬ Nat.Coprime q q'))
+            (fun q' =>
+              ∑ d ∈ (Nat.gcd q q').divisors.filter (fun d => d ≠ 1),
+                ∑ a1 ∈ (q / d).divisors.filter (fun a1 => Goldbach.Windows.IsEven ((q / d) / a1)),
+                  ∑ b1 ∈ (q' / d).divisors.filter (fun b1 => Goldbach.Windows.IsEven ((q' / d) / b1)),
+                    if Nat.Coprime a1 b1 then
+                      centeredRamanujanPairCleanPeriodicCommonPrimeReducedMajorant X q q' (d * a1) (d * b1)
+                    else 0)))
+          +
+        |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X|
+          +
+        |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X| ≤ Cclean)
+    (hremaining :
+      ∀ {X : ℕ}, X0 ≤ X →
+        (∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+          ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+            if q = q' then 0 else centeredNormalizedSigmaTruncPairCorrelation X q q')
+          ≤
+        |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X|
+          + Cmixed + Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Cclean + Cmixed + Cboundary) := by
+  have htotal_nonneg : 0 ≤ Cdiag + Cclean + Cmixed + Cboundary := by
+    nlinarith
+  refine ⟨htotal_nonneg, ?_⟩
+  intro X hX
+  rw [centeredNormalizedSigmaTruncWindowEnergy_eq_diagonal_add_sum_pairCorrelations]
+  have hdiagX := hdiag hX
+  have hrem := hremaining hX
+  have hcleanAbs :=
+    abs_centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0_le_commonPrime_coprimeReindexed_add_abs_gcdCorrection_preferredBranchwise_add_abs_remainder X
+  have hcleanBound := hclean hX
+  linarith
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_periodicMain_and_boundaryBounds
+    {Cdiag Cclean Cmixed Cboundary : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hclean_nonneg : 0 ≤ Cclean)
+    (hmixed_nonneg : 0 ≤ Cmixed)
+    (hboundary_nonneg : 0 ≤ Cboundary)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag)
+    (hclean :
+      ∀ {X : ℕ}, X0 ≤ X →
+        (Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+          Finset.sum
+            (centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+              (fun q' => ¬ Nat.Coprime q q'))
+            (fun q' =>
+              ∑ d ∈ (Nat.gcd q q').divisors.filter (fun d => d ≠ 1),
+                ∑ a1 ∈ (q / d).divisors.filter (fun a1 => Goldbach.Windows.IsEven ((q / d) / a1)),
+                  ∑ b1 ∈ (q' / d).divisors.filter (fun b1 => Goldbach.Windows.IsEven ((q' / d) / b1)),
+                    if Nat.Coprime a1 b1 then
+                      centeredRamanujanPairCleanPeriodicCommonPrimeReducedMajorant X q q' (d * a1) (d * b1)
+                    else 0)))
+          +
+        |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X|
+          +
+        |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X| ≤ Cclean)
+    (hmain :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+          ≤
+        |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X| + Cmixed)
+    (hboundary :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X ≤ Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Cclean + Cmixed + Cboundary) := by
+  refine centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_cleanBranch_and_remainingPairBounds
+    hdiag_nonneg hclean_nonneg hmixed_nonneg hboundary_nonneg hdiag hclean ?_
+  intro X hX
+  exact centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_le_cleanSupportedNonCoprime_add_mixed_add_boundary
+    X (hmain hX) (hboundary hX)
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_periodicMainRemaining_and_boundaryBounds
+    {Cdiag Cclean Cmixed Cboundary : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hclean_nonneg : 0 ≤ Cclean)
+    (hmixed_nonneg : 0 ≤ Cmixed)
+    (hboundary_nonneg : 0 ≤ Cboundary)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag)
+    (hclean :
+      ∀ {X : ℕ}, X0 ≤ X →
+        (Finset.sum centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0 (fun q =>
+          Finset.sum
+            (centeredRamanujanPairCleanPeriodicOneVariableSupportUpToQ0.filter
+              (fun q' => ¬ Nat.Coprime q q'))
+            (fun q' =>
+              ∑ d ∈ (Nat.gcd q q').divisors.filter (fun d => d ≠ 1),
+                ∑ a1 ∈ (q / d).divisors.filter (fun a1 => Goldbach.Windows.IsEven ((q / d) / a1)),
+                  ∑ b1 ∈ (q' / d).divisors.filter (fun b1 => Goldbach.Windows.IsEven ((q' / d) / b1)),
+                    if Nat.Coprime a1 b1 then
+                      centeredRamanujanPairCleanPeriodicCommonPrimeReducedMajorant X q q' (d * a1) (d * b1)
+                    else 0)))
+          +
+        |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeGcdCorrectionPreferredBranchwiseUpToQ0 X|
+          +
+        |centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRemainderUpToQ0 X| ≤ Cclean)
+    (hremaining :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0 X ≤ Cmixed)
+    (hboundary :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X ≤ Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Cclean + Cmixed + Cboundary) := by
+  refine centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_periodicMain_and_boundaryBounds
+    hdiag_nonneg hclean_nonneg hmixed_nonneg hboundary_nonneg hdiag hclean ?_ hboundary
+  intro X hX
+  exact centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_le_abs_cleanSupportedNonCoprime_add_remaining
+    X (hremaining hX)
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_refinedPeriodicMain_and_boundaryBounds
+    {Cdiag Cclean Cmixed Cboundary : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hclean_nonneg : 0 ≤ Cclean)
+    (hmixed_nonneg : 0 ≤ Cmixed)
+    (hboundary_nonneg : 0 ≤ Cboundary)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag)
+    (hrefined :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0 X ≤ Cclean)
+    (hmain :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+          ≤
+        centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0 X + Cmixed)
+    (hboundary :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X ≤ Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Cclean + Cmixed + Cboundary) := by
+  have hpair_nonneg : 0 ≤ Cclean + Cmixed + Cboundary := by
+    nlinarith
+  have htarget :
+      CenteredNormalizedSigmaTruncWindowEnergyTarget
+        (Cdiag + (Cclean + Cmixed + Cboundary)) := by
+    refine centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_and_pairCorrelationBounds
+      hdiag_nonneg hpair_nonneg hdiag ?_
+    intro X hX
+    have hpair :=
+      centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_le_refinedCleanSupportedNonCoprime_add_mixed_add_boundary
+        X (hmain hX) (hboundary hX)
+    have hcleanX := hrefined hX
+    calc
+      centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0 X
+        ≤ centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0 X
+            + Cmixed + Cboundary := hpair
+      _ ≤ Cclean + Cmixed + Cboundary := by
+        linarith
+  simpa [add_assoc] using htarget
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_refinedPeriodicMainRemaining_and_boundaryBounds
+    {Cdiag Cclean Cmixed Cboundary : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hclean_nonneg : 0 ≤ Cclean)
+    (hmixed_nonneg : 0 ≤ Cmixed)
+    (hboundary_nonneg : 0 ≤ Cboundary)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag)
+    (hrefined :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredRamanujanPairCleanPeriodicSupportedNonCoprimeRefinedAbsMajorantUpToQ0 X ≤ Cclean)
+    (hremaining :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0 X ≤ Cmixed)
+    (hboundary :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X ≤ Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Cclean + Cmixed + Cboundary) := by
+  refine centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_refinedPeriodicMain_and_boundaryBounds
+    hdiag_nonneg hclean_nonneg hmixed_nonneg hboundary_nonneg hdiag hrefined ?_ hboundary
+  intro X hX
+  exact centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_le_refinedCleanSupportedNonCoprime_add_remaining
+    X (hremaining hX)
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_unsupportedPeriodicMain_and_boundaryBounds
+    {Cdiag Cunsupported Cboundary : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hunsupported_nonneg : 0 ≤ Cunsupported)
+    (hboundary_nonneg : 0 ≤ Cboundary)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag)
+    (hunsupported :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicMainUnsupportedOffDiagonalPairSumUpToQ0 X ≤ Cunsupported)
+    (hboundary :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X ≤ Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Cunsupported + Cboundary) := by
+  have hpair_nonneg : 0 ≤ Cunsupported + Cboundary := add_nonneg hunsupported_nonneg hboundary_nonneg
+  have htarget :
+      CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + (Cunsupported + Cboundary)) := by
+    refine centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_and_pairCorrelationBounds
+      hdiag_nonneg hpair_nonneg hdiag ?_
+    intro X hX
+    exact centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_le_unsupportedPeriodicMain_add_boundary
+      X (hunsupported hX) (hboundary hX)
+  simpa [add_assoc] using htarget
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_periodicMainDirectAbs_and_boundaryAbsBounds
+    {Cdiag Cmain Cboundary : ℝ}
+    (hdiag_nonneg : 0 ≤ Cdiag)
+    (hmain_nonneg : 0 ≤ Cmain)
+    (hboundary_nonneg : 0 ≤ Cboundary)
+    (hdiag :
+      ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag)
+    (hmain :
+      ∀ {X : ℕ}, X0 ≤ X →
+        |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X| ≤ Cmain)
+    (hboundary :
+      ∀ {X : ℕ}, X0 ≤ X →
+        |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X| ≤ Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Cmain + Cboundary) := by
+  have hpair_nonneg : 0 ≤ Cmain + Cboundary := add_nonneg hmain_nonneg hboundary_nonneg
+  have htarget :
+      CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + (Cmain + Cboundary)) := by
+    refine centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_and_pairCorrelationBounds
+      hdiag_nonneg hpair_nonneg hdiag ?_
+    intro X hX
+    exact centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_le_abs_periodicMain_add_abs_boundary
+      X (hmain hX) (hboundary hX)
+  simpa [add_assoc] using htarget
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_directTargets
+    {Cdiag Cmain Cboundary : ℝ}
+    (hdiag : CenteredNormalizedSigmaTruncDiagonalEnergyDirectTarget Cdiag)
+    (hmain : CenteredNormalizedSigmaTruncPeriodicMainDirectTarget Cmain)
+    (hboundary : CenteredNormalizedSigmaTruncPeriodicBoundaryDirectTarget Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTarget (Cdiag + Cmain + Cboundary) := by
+  refine
+    centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_periodicMainDirectAbs_and_boundaryAbsBounds
+      hdiag.Cdiag_nonneg hmain.Cmain_nonneg hboundary.Cboundary_nonneg
+      hdiag.bound hmain.bound hboundary.bound
 
 private lemma normalizedSigmaTruncSummand_norm_le_inv_two_mul_C2
     {q N : ℕ}
