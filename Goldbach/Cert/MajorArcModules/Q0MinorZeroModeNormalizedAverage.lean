@@ -3,6 +3,9 @@ import Goldbach.Cert.MajorArcModules.Q0MinorHalfMassTrueTail
 import Goldbach.Cert.MajorArcModules.Q0MinorHalfMassArithmeticModelMeanTargets
 import Goldbach.Cert.MajorArcModules.Q0MajorWindowBounds
 import Goldbach.Cert.MajorArcModules.Q0MinorRouteAMeanVarianceTargets
+import Goldbach.Cert.MajorArcModules.Q0MinorTrueSigmaBridge
+import Goldbach.Cert.MajorArcCertChecker
+import Goldbach.Analytic.NumericSigma
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
 
@@ -1454,6 +1457,51 @@ noncomputable def normalizedSigmaTruncSummandRealCoeff (q : ℕ) : ℝ :=
   ((Goldbach.AO_OffDiag.TailBlock.muSq q) * (1 / ((Nat.totient q : ℝ) ^ 2)))
     / ((2 : ℝ) * ramanujanSeriesOnWindow.C.C2)
 
+/-- Surrogate fixed real `q`-amplitude using the working normalization `C2_numeric = 1/10`. -/
+noncomputable def surrogateNormalizedSigmaTruncSummandRealCoeff (q : ℕ) : ℝ :=
+  ((Goldbach.AO_OffDiag.TailBlock.muSq q) * (1 / ((Nat.totient q : ℝ) ^ 2)))
+    / ((1 : ℝ) / 5)
+
+/-- Rational shadow of the surrogate fixed real `q`-amplitude. -/
+noncomputable def surrogateNormalizedSigmaTruncSummandCoeffRat (q : ℕ) : ℚ :=
+  if Squarefree q then (5 : ℚ) / ((Nat.totient q : ℚ) ^ 2) else 0
+
+theorem surrogateNormalizedSigmaTruncSummandRealCoeff_eq_ratCast
+    (q : ℕ) :
+    surrogateNormalizedSigmaTruncSummandRealCoeff q
+      = (surrogateNormalizedSigmaTruncSummandCoeffRat q : ℝ) := by
+  by_cases hsq : Squarefree q
+  · unfold surrogateNormalizedSigmaTruncSummandRealCoeff
+      surrogateNormalizedSigmaTruncSummandCoeffRat
+      Goldbach.AO_OffDiag.TailBlock.muSq
+    simp [hsq, Rat.cast_div]
+    ring
+  · unfold surrogateNormalizedSigmaTruncSummandRealCoeff
+      surrogateNormalizedSigmaTruncSummandCoeffRat
+      Goldbach.AO_OffDiag.TailBlock.muSq
+    simp [hsq]
+
+/-- Quadratic true/surrogate scale factor coming from the normalization change. -/
+noncomputable def trueSeriesPointwiseQuadraticScale : ℝ :=
+  (1 / ((10 : ℝ) * ramanujanSeriesOnWindow.C.C2)) ^ 2
+
+private theorem trueSeriesPointwiseQuadraticScale_nonneg :
+    0 ≤ trueSeriesPointwiseQuadraticScale := by
+  unfold trueSeriesPointwiseQuadraticScale
+  positivity
+
+private theorem normalizedSigmaTruncSummandRealCoeff_eq_trueScaleLinear_mul_surrogate
+    (q : ℕ) :
+    normalizedSigmaTruncSummandRealCoeff q
+      =
+    (1 / ((10 : ℝ) * ramanujanSeriesOnWindow.C.C2))
+      * surrogateNormalizedSigmaTruncSummandRealCoeff q := by
+  unfold normalizedSigmaTruncSummandRealCoeff surrogateNormalizedSigmaTruncSummandRealCoeff
+  have hC2_ne : (ramanujanSeriesOnWindow.C.C2 : ℝ) ≠ 0 := by
+    linarith [ramanujanSeriesOnWindow.C.pos]
+  field_simp [hC2_ne]
+  ring
+
 /-- True one-variable support for the normalized truncation coefficients up to `Q0`. -/
 def normalizedSigmaTruncSummandCoeffSupportUpToQ0 : Finset ℕ :=
   (Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0).filter
@@ -1704,6 +1752,17 @@ noncomputable def ramanujanGcdClassCoeff (q g : ℕ) : ℝ :=
   (((ArithmeticFunction.moebius : ArithmeticFunction ℤ) (q / g) : ℤ) : ℝ)
     * (Nat.totient g : ℝ)
 
+/-- Rational shadow of the gcd-class coefficient. -/
+noncomputable def ramanujanGcdClassCoeffRat (q g : ℕ) : ℚ :=
+  (((ArithmeticFunction.moebius : ArithmeticFunction ℤ) (q / g) : ℤ) : ℚ)
+    * (Nat.totient g : ℚ)
+
+theorem ramanujanGcdClassCoeff_eq_ratCast
+    (q g : ℕ) :
+    ramanujanGcdClassCoeff q g = (ramanujanGcdClassCoeffRat q g : ℝ) := by
+  unfold ramanujanGcdClassCoeff ramanujanGcdClassCoeffRat
+  simp
+
 /-- Indicator that `N` lands in the gcd-class `g` for modulus `q`. -/
 noncomputable def ramanujanGcdClassIndicator (q g N : ℕ) : ℝ :=
   if Nat.gcd q N = g then (1 : ℝ) else 0
@@ -1716,6 +1775,32 @@ noncomputable def ramanujanGcdClassCoprimeIndicator (q g N : ℕ) : ℝ :=
 noncomputable def ramanujanGcdClassWindowAverage (X q g : ℕ) : ℝ :=
   (((EvenIn X H).card : ℝ)⁻¹)
     * ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator q g N
+
+/-- Rational shadow of the gcd-class indicator. -/
+noncomputable def ramanujanGcdClassIndicatorRat (q g N : ℕ) : ℚ :=
+  if Nat.gcd q N = g then 1 else 0
+
+/-- Rational shadow of the gcd-class window average on the canonical even window. -/
+noncomputable def ramanujanGcdClassWindowAverageRat (X q g : ℕ) : ℚ :=
+  ((((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℚ)
+    / (((EvenIn X H).card : ℚ)))
+
+/-- Rational shadow of the centered gcd-class observable. -/
+noncomputable def centeredRamanujanGcdClassObservableRat (X q g N : ℕ) : ℚ :=
+  ramanujanGcdClassIndicatorRat q g N - ramanujanGcdClassWindowAverageRat X q g
+
+/-- Rational shadow of the pointwise centered gcd-class covariance kernel. -/
+noncomputable def centeredRamanujanGcdClassPairKernelRat
+    (X q q' g h N : ℕ) : ℚ :=
+  centeredRamanujanGcdClassObservableRat X q g N
+    * centeredRamanujanGcdClassObservableRat X q' h N
+
+/-- Rational shadow of the even-offset gcd-class covariance kernel. -/
+noncomputable def centeredEvenRamanujanGcdClassPairOffsetRat
+    (X q q' g h k : ℕ) : ℚ :=
+  if Goldbach.Windows.IsEven (X + k) then
+    centeredRamanujanGcdClassPairKernelRat X q q' g h (X + k)
+  else 0
 
 /-- Centered gcd-class observable on the canonical even window. -/
 noncomputable def centeredRamanujanGcdClassObservable (X q g N : ℕ) : ℝ :=
@@ -1767,6 +1852,62 @@ theorem ramanujanGcdClassWindowAverage_eq_zero_of_isEven_q_of_not_isEven_g
       hqEven hgOdd hN
   rw [hsum]
   ring
+
+theorem ramanujanGcdClassIndicator_eq_ratCast
+    (q g N : ℕ) :
+    ramanujanGcdClassIndicator q g N = (ramanujanGcdClassIndicatorRat q g N : ℝ) := by
+  unfold ramanujanGcdClassIndicator ramanujanGcdClassIndicatorRat
+  by_cases h : Nat.gcd q N = g <;> simp [h]
+
+theorem ramanujanGcdClassWindowAverage_eq_ratCast
+    (X q g : ℕ) :
+    ramanujanGcdClassWindowAverage X q g = (ramanujanGcdClassWindowAverageRat X q g : ℝ) := by
+  classical
+  unfold ramanujanGcdClassWindowAverage ramanujanGcdClassWindowAverageRat
+  have hsum :
+      ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator q g N
+        =
+      (((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℝ) := by
+    calc
+      ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator q g N
+          = ∑ N ∈ EvenIn X H, (if Nat.gcd q N = g then (1 : ℝ) else 0) := by
+            rfl
+      _ = Finset.sum ((EvenIn X H).filter (fun N => Nat.gcd q N = g)) (fun _ => (1 : ℝ)) := by
+            rw [Finset.sum_filter]
+      _ = (((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℝ) := by
+            rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+  rw [hsum]
+  have hcast :
+      ((((((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℚ)
+          / (((EvenIn X H).card : ℚ))) : ℚ) : ℝ)
+        =
+      (((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℝ)
+        / ((EvenIn X H).card : ℝ) := by
+          exact
+            (Rat.cast_div
+              ((((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℚ))
+              ((((EvenIn X H).card : ℚ)))
+              : ((((((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℚ)
+                    / (((EvenIn X H).card : ℚ))) : ℚ) : ℝ)
+                  =
+                (((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℝ)
+                  / ((EvenIn X H).card : ℝ))
+  have hcard_real_ne : ((EvenIn X H).card : ℝ) ≠ 0 := by
+    exact_mod_cast even_window_card_ne_zero_unconditional X
+  rw [show (((EvenIn X H).card : ℝ)⁻¹ * (((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℝ))
+        = (((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℝ)
+            / ((EvenIn X H).card : ℝ) by
+        field_simp [hcard_real_ne]]
+  rw [hcast]
+
+theorem centeredRamanujanGcdClassObservable_eq_ratCast
+    (X q g N : ℕ) :
+    centeredRamanujanGcdClassObservable X q g N
+      = (centeredRamanujanGcdClassObservableRat X q g N : ℝ) := by
+  unfold centeredRamanujanGcdClassObservable centeredRamanujanGcdClassObservableRat
+  rw [ramanujanGcdClassIndicator_eq_ratCast, ramanujanGcdClassWindowAverage_eq_ratCast]
+  simpa using (Rat.cast_sub (ramanujanGcdClassIndicatorRat q g N)
+    (ramanujanGcdClassWindowAverageRat X q g)).symm
 
 private lemma gcd_eq_dvd_and_coprime_div_iff_of_mem_divisors
     {q g N : ℕ} (hg : g ∈ q.divisors) :
@@ -14019,6 +14160,44 @@ noncomputable def centeredRamanujanGcdClassPairBoundaryRemainder
   let r := (H + 1) % P
   ∑ k ∈ Finset.range r, centeredEvenRamanujanGcdClassPairOffset X q q' g h (m * P + k)
 
+/-- Rational shadow of the gcd-class boundary remainder. -/
+noncomputable def centeredRamanujanGcdClassPairBoundaryRemainderRat
+    (X q q' g h : ℕ) : ℚ :=
+  let P := centeredRamanujanPairBlockPeriod q q'
+  let m := (H + 1) / P
+  let r := (H + 1) % P
+  ∑ k ∈ Finset.range r, centeredEvenRamanujanGcdClassPairOffsetRat X q q' g h (m * P + k)
+
+theorem centeredRamanujanGcdClassPairKernel_eq_ratCast
+    (X q q' g h N : ℕ) :
+    centeredRamanujanGcdClassPairKernel X q q' g h N
+      = (centeredRamanujanGcdClassPairKernelRat X q q' g h N : ℝ) := by
+  unfold centeredRamanujanGcdClassPairKernel centeredRamanujanGcdClassPairKernelRat
+  rw [centeredRamanujanGcdClassObservable_eq_ratCast,
+    centeredRamanujanGcdClassObservable_eq_ratCast]
+  simp
+
+theorem centeredEvenRamanujanGcdClassPairOffset_eq_ratCast
+    (X q q' g h k : ℕ) :
+    centeredEvenRamanujanGcdClassPairOffset X q q' g h k
+      = (centeredEvenRamanujanGcdClassPairOffsetRat X q q' g h k : ℝ) := by
+  unfold centeredEvenRamanujanGcdClassPairOffset centeredEvenRamanujanGcdClassPairOffsetRat
+  by_cases hEven : Goldbach.Windows.IsEven (X + k)
+  · simp [hEven, centeredRamanujanGcdClassPairKernel_eq_ratCast]
+  · simp [hEven]
+
+theorem centeredRamanujanGcdClassPairBoundaryRemainder_eq_ratCast
+    (X q q' g h : ℕ) :
+    centeredRamanujanGcdClassPairBoundaryRemainder X q q' g h
+      =
+    (centeredRamanujanGcdClassPairBoundaryRemainderRat X q q' g h : ℝ) := by
+  unfold centeredRamanujanGcdClassPairBoundaryRemainder
+    centeredRamanujanGcdClassPairBoundaryRemainderRat
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro k hk
+  rw [centeredEvenRamanujanGcdClassPairOffset_eq_ratCast]
+
 theorem centeredRamanujanGcdClassPairCorrelation_eq_fullBlocks_add_boundary
     {X q q' g h : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') :
     centeredRamanujanGcdClassPairCorrelation X q q' g h
@@ -17701,6 +17880,55 @@ theorem centeredNormalizedSigmaTruncDiagonalEnergy_eq_sum_summandEnergies
   intro N hN
   rw [← centeredNormalizedSigmaTruncSummand_norm_sq_eq_re_sq]
 
+theorem centeredNormalizedSigmaTruncSummandWindowEnergy_eq_coeff_sq_mul_centeredRamanujanWindowEnergy
+    (X q : ℕ) :
+    centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X q
+      =
+    (normalizedSigmaTruncSummandRealCoeff q) ^ 2
+      * centeredRamanujanWindowEnergy X q := by
+  unfold centeredNormalizedSigmaTruncSummandWindowEnergy centeredRamanujanWindowEnergy
+  calc
+    ∑ N ∈ EvenIn X H, ‖centeredNormalizedSigmaTruncSummand ramanujanSeriesOnWindow X q N‖ ^ 2
+        =
+      ∑ N ∈ EvenIn X H,
+        ((normalizedSigmaTruncSummandRealCoeff q) * centeredRamanujanObservable X q N) ^ 2 := by
+          refine Finset.sum_congr rfl ?_
+          intro N hN
+          rw [centeredNormalizedSigmaTruncSummand_norm_sq_eq_re_sq]
+          rw [centeredNormalizedSigmaTruncSummand_re_eq_coeff_mul_centeredRamanujan]
+    _ =
+      ∑ N ∈ EvenIn X H,
+        (normalizedSigmaTruncSummandRealCoeff q) ^ 2
+          * (centeredRamanujanObservable X q N) ^ 2 := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            ring
+    _ =
+      (normalizedSigmaTruncSummandRealCoeff q) ^ 2
+        * ∑ N ∈ EvenIn X H, (centeredRamanujanObservable X q N) ^ 2 := by
+          rw [Finset.mul_sum]
+    _ =
+      (normalizedSigmaTruncSummandRealCoeff q) ^ 2
+        * centeredRamanujanWindowEnergy X q := by
+          rw [centeredRamanujanWindowEnergy]
+
+/-- Surrogate per-`q` diagonal window energy using the working normalization. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy
+    (X q : ℕ) : ℝ :=
+  (surrogateNormalizedSigmaTruncSummandRealCoeff q) ^ 2
+    * centeredRamanujanWindowEnergy X q
+
+theorem centeredNormalizedSigmaTruncSummandWindowEnergy_eq_trueScale_mul_surrogate
+    (X q : ℕ) :
+    centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X q
+      =
+    trueSeriesPointwiseQuadraticScale
+      * surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X q := by
+  rw [centeredNormalizedSigmaTruncSummandWindowEnergy_eq_coeff_sq_mul_centeredRamanujanWindowEnergy]
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy trueSeriesPointwiseQuadraticScale
+  rw [normalizedSigmaTruncSummandRealCoeff_eq_trueScaleLinear_mul_surrogate]
+  ring
+
 theorem normalizedSigmaTruncSummandWindowAverage_eq_zero_of_coeff_zero
     {X q : ℕ}
     (hcoeff : normalizedSigmaTruncSummandRealCoeff q = 0) :
@@ -17738,6 +17966,182 @@ noncomputable def centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant
   ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0,
     centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X q
 
+/-- Dominant low-`q` diagonal support extracted from the exact per-`q` audit. -/
+def centeredNormalizedSigmaTruncDiagonalMainLowQSupport : Finset ℕ :=
+  ([3, 5, 6, 7, 10, 14] : List ℕ).toFinset
+
+/-- Named diagonal main-bucket term at `q = 3`. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalMainTerm3
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X 3
+
+/-- Named diagonal main-bucket term at `q = 5`. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalMainTerm5
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X 5
+
+/-- Named diagonal main-bucket term at `q = 6`. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalMainTerm6
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X 6
+
+/-- Named diagonal main-bucket term at `q = 7`. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalMainTerm7
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X 7
+
+/-- Named diagonal main-bucket term at `q = 10`. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalMainTerm10
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X 10
+
+/-- Named diagonal main-bucket term at `q = 14`. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalMainTerm14
+    (X : ℕ) : ℝ :=
+  centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X 14
+
+/-- Finite dominant low-`q` diagonal mass. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+      (fun q => q ∈ centeredNormalizedSigmaTruncDiagonalMainLowQSupport),
+    centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X q
+
+/-- Surrogate finite dominant low-`q` diagonal mass. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+      (fun q => q ∈ centeredNormalizedSigmaTruncDiagonalMainLowQSupport),
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X q
+
+private lemma centeredNormalizedSigmaTruncDiagonalMainLowQSupport_subset_coeffSupport
+    {q : ℕ}
+    (hq : q ∈ centeredNormalizedSigmaTruncDiagonalMainLowQSupport) :
+    q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 := by
+  rw [mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff]
+  simp [centeredNormalizedSigmaTruncDiagonalMainLowQSupport] at hq
+  rcases hq with rfl | rfl | rfl | rfl | rfl | rfl
+  all_goals
+    constructor
+    · norm_num [Goldbach.AO_OffDiag.TailBlock.Q0]
+    · native_decide
+
+private lemma filter_coeffSupport_mem_mainLowQ_eq_mainLowQSupport :
+    normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+        (fun q => q ∈ centeredNormalizedSigmaTruncDiagonalMainLowQSupport)
+      =
+    centeredNormalizedSigmaTruncDiagonalMainLowQSupport := by
+  ext q
+  constructor
+  · intro hq
+    exact (Finset.mem_filter.mp hq).2
+  · intro hq
+    exact Finset.mem_filter.mpr
+      ⟨centeredNormalizedSigmaTruncDiagonalMainLowQSupport_subset_coeffSupport hq, hq⟩
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_eq_sixTerms
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X
+      =
+    centeredNormalizedSigmaTruncDiagonalMainTerm3 X
+      + centeredNormalizedSigmaTruncDiagonalMainTerm5 X
+      + centeredNormalizedSigmaTruncDiagonalMainTerm6 X
+      + centeredNormalizedSigmaTruncDiagonalMainTerm7 X
+      + centeredNormalizedSigmaTruncDiagonalMainTerm10 X
+      + centeredNormalizedSigmaTruncDiagonalMainTerm14 X := by
+  unfold centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ
+    centeredNormalizedSigmaTruncDiagonalMainTerm3
+    centeredNormalizedSigmaTruncDiagonalMainTerm5
+    centeredNormalizedSigmaTruncDiagonalMainTerm6
+    centeredNormalizedSigmaTruncDiagonalMainTerm7
+    centeredNormalizedSigmaTruncDiagonalMainTerm10
+    centeredNormalizedSigmaTruncDiagonalMainTerm14
+  rw [filter_coeffSupport_mem_mainLowQ_eq_mainLowQSupport]
+  simp [centeredNormalizedSigmaTruncDiagonalMainLowQSupport, add_assoc, add_comm, add_left_comm]
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_le_of_termwise_bounds
+    {X : ℕ} {C3 C5 C6 C7 C10 C14 : ℝ}
+    (h3 : centeredNormalizedSigmaTruncDiagonalMainTerm3 X ≤ C3)
+    (h5 : centeredNormalizedSigmaTruncDiagonalMainTerm5 X ≤ C5)
+    (h6 : centeredNormalizedSigmaTruncDiagonalMainTerm6 X ≤ C6)
+    (h7 : centeredNormalizedSigmaTruncDiagonalMainTerm7 X ≤ C7)
+    (h10 : centeredNormalizedSigmaTruncDiagonalMainTerm10 X ≤ C10)
+    (h14 : centeredNormalizedSigmaTruncDiagonalMainTerm14 X ≤ C14) :
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X
+      ≤ C3 + C5 + C6 + C7 + C10 + C14 := by
+  rw [centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_eq_sixTerms]
+  linarith
+
+/-- Remaining supported diagonal mass at `q ≤ 50` outside the dominant low-`q` bucket. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+      (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ q ≤ 50),
+    centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X q
+
+/-- Surrogate remaining supported diagonal mass at `q ≤ 50` outside the dominant low-`q` bucket. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+      (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ q ≤ 50),
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X q
+
+/-- Supported diagonal tail beyond `q = 50`, disjoint from the finite low-`q` bucket. -/
+noncomputable def centeredNormalizedSigmaTruncDiagonalEnergyDirectTail
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+      (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ 50 < q),
+    centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X q
+
+/-- Surrogate supported diagonal tail beyond `q = 50`, disjoint from the finite low-`q` bucket. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+      (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ 50 < q),
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X q
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_eq_trueScale_mul_surrogate
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X
+      =
+    trueSeriesPointwiseQuadraticScale
+      * surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X := by
+  unfold centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ
+  symm
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rw [centeredNormalizedSigmaTruncSummandWindowEnergy_eq_trueScale_mul_surrogate]
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest_eq_trueScale_mul_surrogate
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X
+      =
+    trueSeriesPointwiseQuadraticScale
+      * surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X := by
+  unfold centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest
+  symm
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rw [centeredNormalizedSigmaTruncSummandWindowEnergy_eq_trueScale_mul_surrogate]
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectTail_eq_trueScale_mul_surrogate
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X
+      =
+    trueSeriesPointwiseQuadraticScale
+      * surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X := by
+  unfold centeredNormalizedSigmaTruncDiagonalEnergyDirectTail
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail
+  symm
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rw [centeredNormalizedSigmaTruncSummandWindowEnergy_eq_trueScale_mul_surrogate]
+
 theorem centeredNormalizedSigmaTruncDiagonalEnergy_eq_directMajorant
     (X : ℕ) :
     centeredNormalizedSigmaTruncDiagonalEnergy X
@@ -17753,6 +18157,74 @@ theorem centeredNormalizedSigmaTruncDiagonalEnergy_eq_directMajorant
   · simp [hcoeff]
   · have hcoeff0 : normalizedSigmaTruncSummandRealCoeff q = 0 := by simpa using hcoeff
     simp [hcoeff, centeredNormalizedSigmaTruncSummandWindowEnergy_eq_zero_of_coeff_zero (X := X) (q := q) hcoeff0]
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant_eq_mainLowQ_add_smallRest_add_tail
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant X
+      =
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X
+      + (centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X
+      + centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X) := by
+  let support := normalizedSigmaTruncSummandCoeffSupportUpToQ0
+  let E := fun q : ℕ =>
+    centeredNormalizedSigmaTruncSummandWindowEnergy ramanujanSeriesOnWindow X q
+  calc
+    ∑ q ∈ support, E q
+      =
+    ∑ q ∈ support.filter
+        (fun q => q ∈ centeredNormalizedSigmaTruncDiagonalMainLowQSupport), E q
+      +
+    ∑ q ∈ support.filter
+        (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport), E q := by
+          symm
+          exact Finset.sum_filter_add_sum_filter_not
+            (s := support)
+            (p := fun q => q ∈ centeredNormalizedSigmaTruncDiagonalMainLowQSupport)
+            (f := E)
+    _ =
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X
+      +
+    ∑ q ∈ support.filter
+        (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport), E q := by
+          simp [centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ, support, E]
+    _ =
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X
+      +
+      ((∑ q ∈
+        (support.filter
+          (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport)).filter
+          (fun q => q ≤ 50), E q)
+      +
+      ∑ q ∈
+        (support.filter
+          (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport)).filter
+          (fun q => ¬ q ≤ 50), E q) := by
+            congr 1
+            symm
+            exact Finset.sum_filter_add_sum_filter_not
+              (s := support.filter
+                (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport))
+              (p := fun q => q ≤ 50)
+              (f := E)
+    _ =
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X
+      +
+      (centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X
+      + centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X) := by
+          simp [centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest,
+            centeredNormalizedSigmaTruncDiagonalEnergyDirectTail,
+            support, E, Finset.filter_filter, and_assoc, and_left_comm, and_comm]
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergy_eq_mainLowQ_add_smallRest_add_tail
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncDiagonalEnergy X
+      =
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X
+      + centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X
+      + centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X := by
+  rw [centeredNormalizedSigmaTruncDiagonalEnergy_eq_directMajorant]
+  simpa [add_assoc] using
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant_eq_mainLowQ_add_smallRest_add_tail X
 
 /-- Per-pair centered truncation correlation on the canonical even window. -/
 noncomputable def centeredNormalizedSigmaTruncPairCorrelation
@@ -17931,16 +18403,336 @@ noncomputable def centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0
     ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
       if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicMainTerm X q q'
 
+/-- Surrogate periodic-main pair sum using the working normalization `C2_numeric = 1/10`. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+    ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      if q = q' then 0
+      else
+        surrogateNormalizedSigmaTruncSummandRealCoeff q
+          * surrogateNormalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicMainTerm X q q'
+
 noncomputable def centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0
     (X : ℕ) : ℝ :=
   ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
     ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
       if q = q' then 0 else centeredNormalizedSigmaTruncPeriodicBoundaryTerm X q q'
 
+/-- Surrogate periodic-boundary pair sum using the working normalization `C2_numeric = 1/10`. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0
+    (X : ℕ) : ℝ :=
+  ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+    ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      if q = q' then 0
+      else
+        surrogateNormalizedSigmaTruncSummandRealCoeff q
+          * surrogateNormalizedSigmaTruncSummandRealCoeff q'
+          * centeredRamanujanPairPeriodicBoundaryTerm X q q'
+
+/-- Pair-level surrogate periodic-boundary term. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm
+    (X q q' : ℕ) : ℝ :=
+  surrogateNormalizedSigmaTruncSummandRealCoeff q
+    * surrogateNormalizedSigmaTruncSummandRealCoeff q'
+    * centeredRamanujanPairPeriodicBoundaryTerm X q q'
+
+/-- Centered-core majorant for one ordered surrogate periodic-boundary pair. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryCenteredCoreMajorant
+    (X q q' : ℕ) : ℝ :=
+  |surrogateNormalizedSigmaTruncSummandRealCoeff q
+      * surrogateNormalizedSigmaTruncSummandRealCoeff q'|
+    * (∑ g ∈ q.divisors, ∑ h ∈ q'.divisors,
+        |ramanujanGcdClassCoeff q g
+            * ramanujanGcdClassCoeff q' h
+            * centeredRamanujanGcdClassPairBoundaryRemainder X q q' g h|)
+
+theorem abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm_le_centeredCoreMajorant
+    (X q q' : ℕ) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm X q q'|
+      ≤
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryCenteredCoreMajorant X q q' := by
+  unfold surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryCenteredCoreMajorant
+    centeredRamanujanPairPeriodicBoundaryTerm
+  rw [abs_mul, abs_mul]
+  refine mul_le_mul_of_nonneg_left ?_ (mul_nonneg (abs_nonneg _) (abs_nonneg _))
+  calc
+    |∑ g ∈ q.divisors, ∑ h ∈ q'.divisors,
+        ramanujanGcdClassCoeff q g
+          * ramanujanGcdClassCoeff q' h
+          * centeredRamanujanGcdClassPairBoundaryRemainder X q q' g h|
+      ≤
+    ∑ g ∈ q.divisors,
+      |∑ h ∈ q'.divisors,
+          ramanujanGcdClassCoeff q g
+            * ramanujanGcdClassCoeff q' h
+            * centeredRamanujanGcdClassPairBoundaryRemainder X q q' g h| := by
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun g =>
+              ∑ h ∈ q'.divisors,
+                ramanujanGcdClassCoeff q g
+                  * ramanujanGcdClassCoeff q' h
+                  * centeredRamanujanGcdClassPairBoundaryRemainder X q q' g h)
+            q.divisors)
+    _ ≤
+      ∑ g ∈ q.divisors, ∑ h ∈ q'.divisors,
+        |ramanujanGcdClassCoeff q g
+            * ramanujanGcdClassCoeff q' h
+            * centeredRamanujanGcdClassPairBoundaryRemainder X q q' g h| := by
+        refine Finset.sum_le_sum ?_
+        intro g hg
+        simpa using
+          (Finset.abs_sum_le_sum_abs
+            (fun h =>
+              ramanujanGcdClassCoeff q g
+                * ramanujanGcdClassCoeff q' h
+                * centeredRamanujanGcdClassPairBoundaryRemainder X q q' g h)
+            q'.divisors)
+
+/-- Reversible surrogate periodic-boundary block attached to an unordered off-diagonal pair. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlock
+    (X q q' : ℕ) : ℝ :=
+  surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm X q q'
+    + surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm X q' q
+
+/-- Centered-core majorant for a reversible surrogate periodic-boundary block. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlockCenteredCoreMajorant
+    (X q q' : ℕ) : ℝ :=
+  surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryCenteredCoreMajorant X q q'
+    + surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryCenteredCoreMajorant X q' q
+
+theorem abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlock_le_centeredCoreMajorant
+    (X q q' : ℕ) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlock X q q'|
+      ≤
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlockCenteredCoreMajorant X q q' := by
+  unfold surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlock
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlockCenteredCoreMajorant
+  calc
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm X q q'
+        + surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm X q' q|
+      ≤
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm X q q'|
+      + |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm X q' q| := by
+        exact abs_add_le
+          (surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm X q q')
+          (surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm X q' q)
+    _ ≤
+      surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryCenteredCoreMajorant X q q'
+        + surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryCenteredCoreMajorant X q' q := by
+          gcongr
+          · exact
+              abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm_le_centeredCoreMajorant
+                X q q'
+          · exact
+              abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryTerm_le_centeredCoreMajorant
+                X q' q
+
+/-- Finite selected reversible surrogate boundary blocks. -/
+noncomputable def surrogateBoundarySelectedBlocks
+    (X : ℕ) (selected : Finset (ℕ × ℕ)) : ℝ :=
+  ∑ p ∈ selected,
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlock X p.1 p.2
+
+/-- Finite coherent pair-count-2 leftover blocks on the surrogate boundary surface. -/
+noncomputable def surrogateBoundaryCoherentPairTwoLeftover
+    (X : ℕ) (coh2 : Finset (ℕ × ℕ)) : ℝ :=
+  ∑ p ∈ coh2,
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlock X p.1 p.2
+
+/-- Centered-core majorant for the coherent pair-count-2 leftover surrogate boundary blocks. -/
+noncomputable def surrogateBoundaryCoherentPairTwoCenteredCoreMajorant
+    (X : ℕ) (coh2 : Finset (ℕ × ℕ)) : ℝ :=
+  ∑ p ∈ coh2,
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlockCenteredCoreMajorant
+      X p.1 p.2
+
+/-- The residual surrogate boundary mass left after extracting selected exact blocks and the
+coherent pair-count-2 block family. -/
+noncomputable def surrogateBoundaryIncoherentLeftover
+    (X : ℕ) (selected coh2 : Finset (ℕ × ℕ)) : ℝ :=
+  surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X
+    - surrogateBoundarySelectedBlocks X selected
+    - surrogateBoundaryCoherentPairTwoLeftover X coh2
+
+theorem abs_surrogateBoundaryCoherentPairTwoLeftover_le_centeredCoreMajorant
+    (X : ℕ) (coh2 : Finset (ℕ × ℕ)) :
+    |surrogateBoundaryCoherentPairTwoLeftover X coh2|
+      ≤
+    surrogateBoundaryCoherentPairTwoCenteredCoreMajorant X coh2 := by
+  unfold surrogateBoundaryCoherentPairTwoLeftover surrogateBoundaryCoherentPairTwoCenteredCoreMajorant
+  calc
+    |∑ p ∈ coh2,
+        surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlock X p.1 p.2|
+      ≤
+    ∑ p ∈ coh2,
+      |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlock X p.1 p.2| := by
+        exact Finset.abs_sum_le_sum_abs _ _
+    _ ≤
+      ∑ p ∈ coh2,
+        surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlockCenteredCoreMajorant
+          X p.1 p.2 := by
+            refine Finset.sum_le_sum ?_
+            intro p hp
+            exact
+              abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryReversibleBlock_le_centeredCoreMajorant
+                X p.1 p.2
+
+theorem surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_eq_selected_add_coh2_add_incoh
+    (X : ℕ) (selected coh2 : Finset (ℕ × ℕ)) :
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X
+      =
+    surrogateBoundarySelectedBlocks X selected
+      + surrogateBoundaryCoherentPairTwoLeftover X coh2
+      + surrogateBoundaryIncoherentLeftover X selected coh2 := by
+  unfold surrogateBoundaryIncoherentLeftover
+  ring
+
+theorem abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_le_selected_add_coh2Majorant_add_incoh
+    (X : ℕ) (selected coh2 : Finset (ℕ × ℕ)) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X|
+      ≤
+    |surrogateBoundarySelectedBlocks X selected|
+      + surrogateBoundaryCoherentPairTwoCenteredCoreMajorant X coh2
+      + |surrogateBoundaryIncoherentLeftover X selected coh2| := by
+  rw [surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_eq_selected_add_coh2_add_incoh]
+  calc
+    |surrogateBoundarySelectedBlocks X selected
+        + surrogateBoundaryCoherentPairTwoLeftover X coh2
+        + surrogateBoundaryIncoherentLeftover X selected coh2|
+      ≤
+    |surrogateBoundarySelectedBlocks X selected
+        + surrogateBoundaryCoherentPairTwoLeftover X coh2|
+      + |surrogateBoundaryIncoherentLeftover X selected coh2| := by
+        simpa [add_assoc] using
+          abs_add_le
+            (surrogateBoundarySelectedBlocks X selected
+              + surrogateBoundaryCoherentPairTwoLeftover X coh2)
+            (surrogateBoundaryIncoherentLeftover X selected coh2)
+    _ ≤
+      (|surrogateBoundarySelectedBlocks X selected|
+        + |surrogateBoundaryCoherentPairTwoLeftover X coh2|)
+        + |surrogateBoundaryIncoherentLeftover X selected coh2| := by
+          gcongr
+          exact abs_add_le
+            (surrogateBoundarySelectedBlocks X selected)
+            (surrogateBoundaryCoherentPairTwoLeftover X coh2)
+    _ ≤
+      (|surrogateBoundarySelectedBlocks X selected|
+        + surrogateBoundaryCoherentPairTwoCenteredCoreMajorant X coh2)
+        + |surrogateBoundaryIncoherentLeftover X selected coh2| := by
+          gcongr
+          exact abs_surrogateBoundaryCoherentPairTwoLeftover_le_centeredCoreMajorant X coh2
+    _ =
+      |surrogateBoundarySelectedBlocks X selected|
+        + surrogateBoundaryCoherentPairTwoCenteredCoreMajorant X coh2
+        + |surrogateBoundaryIncoherentLeftover X selected coh2| := by
+          ring
+
+/-- Rational shadow of the surrogate pair-level periodic boundary term. -/
+noncomputable def surrogateCenteredRamanujanPairPeriodicBoundaryTermRat
+    (X q q' : ℕ) : ℚ :=
+  ∑ g ∈ q.divisors, ∑ h ∈ q'.divisors,
+    ramanujanGcdClassCoeffRat q g * ramanujanGcdClassCoeffRat q' h
+      * centeredRamanujanGcdClassPairBoundaryRemainderRat X q q' g h
+
+/-- Rational shadow of the full surrogate periodic-boundary pair sum up to `Q0`. -/
+noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat
+    (X : ℕ) : ℚ :=
+  ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+    ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      if q = q' then 0
+      else
+        surrogateNormalizedSigmaTruncSummandCoeffRat q
+          * surrogateNormalizedSigmaTruncSummandCoeffRat q'
+          * surrogateCenteredRamanujanPairPeriodicBoundaryTermRat X q q'
+
+theorem centeredRamanujanPairPeriodicBoundaryTerm_eq_ratCast_surrogate
+    (X q q' : ℕ) :
+    centeredRamanujanPairPeriodicBoundaryTerm X q q'
+      =
+    (surrogateCenteredRamanujanPairPeriodicBoundaryTermRat X q q' : ℝ) := by
+  unfold centeredRamanujanPairPeriodicBoundaryTerm
+    surrogateCenteredRamanujanPairPeriodicBoundaryTermRat
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  rw [ramanujanGcdClassCoeff_eq_ratCast, ramanujanGcdClassCoeff_eq_ratCast,
+    centeredRamanujanGcdClassPairBoundaryRemainder_eq_ratCast]
+  simp
+
+theorem surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_eq_ratCast
+    (X : ℕ) :
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X
+      =
+    (surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat X : ℝ) := by
+  unfold surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q' hq'
+  by_cases hqq' : q = q'
+  · simp [hqq']
+  · simp [hqq', surrogateNormalizedSigmaTruncSummandRealCoeff_eq_ratCast,
+      centeredRamanujanPairPeriodicBoundaryTerm_eq_ratCast_surrogate]
+
 noncomputable def centeredNormalizedSigmaTruncPeriodicMainRemainingPairSumUpToQ0
     (X : ℕ) : ℝ :=
   centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
     - centeredRamanujanPairCleanPeriodicSupportedNonCoprimeDefectUpToQ0 X
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_trueScale_mul_surrogate
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      =
+    trueSeriesPointwiseQuadraticScale
+      * surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0
+    surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicMainTerm
+  symm
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q' hq'
+  by_cases hqq' : q = q'
+  · simp [hqq']
+  · simp [hqq', trueSeriesPointwiseQuadraticScale,
+      normalizedSigmaTruncSummandRealCoeff_eq_trueScaleLinear_mul_surrogate]
+    ring
+
+theorem centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_eq_trueScale_mul_surrogate
+    (X : ℕ) :
+    centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X
+      =
+    trueSeriesPointwiseQuadraticScale
+      * surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X := by
+  unfold centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0
+    surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0
+    centeredNormalizedSigmaTruncPeriodicBoundaryTerm
+  symm
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rw [Finset.mul_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q' hq'
+  by_cases hqq' : q = q'
+  · simp [hqq']
+  · simp [hqq', trueSeriesPointwiseQuadraticScale,
+      normalizedSigmaTruncSummandRealCoeff_eq_trueScaleLinear_mul_surrogate]
+    ring
 
 /-- The periodic-main clean supported non-coprime branch, named on the truncation side. -/
 noncomputable def centeredNormalizedSigmaTruncPeriodicMainCleanSupportedNonCoprimePairSumUpToQ0
@@ -22816,6 +23608,204 @@ structure CenteredNormalizedSigmaTruncPeriodicBoundaryDirectTarget (Cboundary : 
   bound : ∀ {X : ℕ}, X0 ≤ X →
     |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X| ≤ Cboundary
 
+/-- Pointwise direct diagonal target at a fixed window start `X`. -/
+def CenteredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt
+    (X : ℕ) (Cdiag : ℝ) : Prop :=
+  centeredNormalizedSigmaTruncDiagonalEnergy X ≤ Cdiag
+
+/-- Pointwise direct periodic-main target at a fixed window start `X`. -/
+def CenteredNormalizedSigmaTruncPeriodicMainDirectTargetAt
+    (X : ℕ) (Cmain : ℝ) : Prop :=
+  |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X| ≤ Cmain
+
+/-- Pointwise direct periodic-boundary target at a fixed window start `X`. -/
+def CenteredNormalizedSigmaTruncPeriodicBoundaryDirectTargetAt
+    (X : ℕ) (Cboundary : ℝ) : Prop :=
+  |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X| ≤ Cboundary
+
+/-- Pointwise direct truncation window-energy target at a fixed window start `X`. -/
+def CenteredNormalizedSigmaTruncWindowEnergyTargetAt
+    (X : ℕ) (Cτ : ℝ) : Prop :=
+  centeredNormalizedSigmaTruncWindowEnergy X ≤ Cτ
+
+/--
+Pointwise certificate for the direct diagonal route at a fixed window start `X`, split into
+the dominant six-term bucket, the finite `q ≤ 50` remainder, and the coarse tail.
+-/
+structure CenteredNormalizedSigmaTruncDiagonalPointwiseCertificate
+    (X : ℕ) (Cmain CsmallRest Ctail : ℝ) : Prop where
+  main_bound :
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X ≤ Cmain
+  smallRest_bound :
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X ≤ CsmallRest
+  tail_bound :
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X ≤ Ctail
+
+/-- Pointwise certificate for the direct periodic-main route at fixed `X`. -/
+structure CenteredNormalizedSigmaTruncPeriodicMainPointwiseCertificate
+    (X : ℕ) (Cmain : ℝ) : Prop where
+  bound :
+    |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X| ≤ Cmain
+
+/-- Pointwise certificate for the direct periodic-boundary route at fixed `X`. -/
+structure CenteredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate
+    (X : ℕ) (Cboundary : ℝ) : Prop where
+  bound :
+    |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X| ≤ Cboundary
+
+theorem centeredNormalizedSigmaTruncDiagonalPointwiseCertificate_of_bounds
+    {X : ℕ} {Cmain CsmallRest Ctail : ℝ}
+    (hmain :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X ≤ Cmain)
+    (hsmallRest :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X ≤ CsmallRest)
+    (htail :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X ≤ Ctail) :
+    CenteredNormalizedSigmaTruncDiagonalPointwiseCertificate X Cmain CsmallRest Ctail :=
+  ⟨hmain, hsmallRest, htail⟩
+
+theorem centeredNormalizedSigmaTruncPeriodicMainPointwiseCertificate_of_bound
+    {X : ℕ} {Cmain : ℝ}
+    (hmain :
+      |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X| ≤ Cmain) :
+    CenteredNormalizedSigmaTruncPeriodicMainPointwiseCertificate X Cmain :=
+  ⟨hmain⟩
+
+theorem centeredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate_of_bound
+    {X : ℕ} {Cboundary : ℝ}
+    (hboundary :
+      |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X| ≤ Cboundary) :
+    CenteredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate X Cboundary :=
+  ⟨hboundary⟩
+
+def surrogateBoundaryX0Check : Goldbach.Cert.MajorArcCertChecker.CheckLE :=
+  { name := "surrogate_boundary_abs_x0"
+    lhs := (25340615131376 : ℚ) / 1000000000000
+    rhs := (26 : ℚ) }
+
+def surrogatePeriodicMainX0Check : Goldbach.Cert.MajorArcCertChecker.CheckLE :=
+  { name := "surrogate_periodic_main_abs_x0"
+    lhs := (37602761245367554 : ℚ) / 1000000000000
+    rhs := (37603 : ℚ) }
+
+def surrogateDiagMainX0Check : Goldbach.Cert.MajorArcCertChecker.CheckLE :=
+  { name := "surrogate_diag_main_x0"
+    lhs := (36322684490879605 : ℚ) / 1000000000000
+    rhs := (36326 : ℚ) }
+
+def surrogateDiagSmallRestX0Check : Goldbach.Cert.MajorArcCertChecker.CheckLE :=
+  { name := "surrogate_diag_smallRest_x0"
+    lhs := (1206926874800648 : ℚ) / 1000000000000
+    rhs := (1207 : ℚ) }
+
+def surrogateDiagTailX0Check : Goldbach.Cert.MajorArcCertChecker.CheckLE :=
+  { name := "surrogate_diag_tail_x0"
+    lhs := (99905902858299 : ℚ) / 1000000000000
+    rhs := (100 : ℚ) }
+
+theorem surrogateBoundaryX0Check_holds :
+    surrogateBoundaryX0Check.Holds := by
+  native_decide
+
+theorem surrogatePeriodicMainX0Check_holds :
+    surrogatePeriodicMainX0Check.Holds := by
+  native_decide
+
+theorem surrogateDiagMainX0Check_holds :
+    surrogateDiagMainX0Check.Holds := by
+  native_decide
+
+theorem surrogateDiagSmallRestX0Check_holds :
+    surrogateDiagSmallRestX0Check.Holds := by
+  native_decide
+
+theorem surrogateDiagTailX0Check_holds :
+    surrogateDiagTailX0Check.Holds := by
+  native_decide
+
+theorem abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_26_of_decimal_certificate
+    (hboundary :
+      |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0|
+        ≤ (surrogateBoundaryX0Check.lhs : ℝ)) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| ≤ 26 := by
+  have hround : (surrogateBoundaryX0Check.lhs : ℝ) ≤ (surrogateBoundaryX0Check.rhs : ℝ) :=
+    Goldbach.Cert.MajorArcCertChecker.CheckLE.holds_cast_real surrogateBoundaryX0Check_holds
+  simpa [surrogateBoundaryX0Check] using le_trans hboundary hround
+
+theorem abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_decimal_of_rat_shadow
+    (hboundaryRat :
+      |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat X0|
+        ≤ surrogateBoundaryX0Check.lhs) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0|
+      ≤ (surrogateBoundaryX0Check.lhs : ℝ) := by
+  rw [surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_eq_ratCast]
+  have hcast :
+      ((|surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat X0| : ℚ) : ℝ)
+        ≤ (surrogateBoundaryX0Check.lhs : ℝ) := by
+    exact_mod_cast hboundaryRat
+  simpa using hcast
+
+theorem abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_26_of_rat_shadow
+    (hboundaryRat :
+      |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat X0|
+        ≤ surrogateBoundaryX0Check.lhs) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| ≤ 26 := by
+  exact
+    abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_26_of_decimal_certificate
+      (abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_decimal_of_rat_shadow
+        hboundaryRat)
+
+theorem abs_surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_X0_le_37603_of_decimal_certificate
+    (hmain :
+      |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0|
+        ≤ (surrogatePeriodicMainX0Check.lhs : ℝ)) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0| ≤ 37603 := by
+  have hround : (surrogatePeriodicMainX0Check.lhs : ℝ) ≤ (surrogatePeriodicMainX0Check.rhs : ℝ) :=
+    Goldbach.Cert.MajorArcCertChecker.CheckLE.holds_cast_real surrogatePeriodicMainX0Check_holds
+  simpa [surrogatePeriodicMainX0Check] using le_trans hmain hround
+
+theorem surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_X0_le_36326_of_decimal_certificate
+    (hmainDiag :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0
+        ≤ (surrogateDiagMainX0Check.lhs : ℝ)) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0 ≤ 36326 := by
+  have hround : (surrogateDiagMainX0Check.lhs : ℝ) ≤ (surrogateDiagMainX0Check.rhs : ℝ) :=
+    Goldbach.Cert.MajorArcCertChecker.CheckLE.holds_cast_real surrogateDiagMainX0Check_holds
+  simpa [surrogateDiagMainX0Check] using le_trans hmainDiag hround
+
+theorem surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest_X0_le_1207_of_decimal_certificate
+    (hsmallRest :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0
+        ≤ (surrogateDiagSmallRestX0Check.lhs : ℝ)) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0 ≤ 1207 := by
+  have hround : (surrogateDiagSmallRestX0Check.lhs : ℝ) ≤ (surrogateDiagSmallRestX0Check.rhs : ℝ) :=
+    Goldbach.Cert.MajorArcCertChecker.CheckLE.holds_cast_real surrogateDiagSmallRestX0Check_holds
+  simpa [surrogateDiagSmallRestX0Check] using le_trans hsmallRest hround
+
+theorem surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail_X0_le_100_of_decimal_certificate
+    (htail :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X0
+        ≤ (surrogateDiagTailX0Check.lhs : ℝ)) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X0 ≤ 100 := by
+  have hround : (surrogateDiagTailX0Check.lhs : ℝ) ≤ (surrogateDiagTailX0Check.rhs : ℝ) :=
+    Goldbach.Cert.MajorArcCertChecker.CheckLE.holds_cast_real surrogateDiagTailX0Check_holds
+  simpa [surrogateDiagTailX0Check] using le_trans htail hround
+
+/--
+First isolated pointwise certificate target on the direct Route A surface: the periodic boundary
+term at the base point `X0`.
+-/
+theorem abs_centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_26_of_certificate
+    (hboundary :
+      |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| ≤ 26) :
+    |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| ≤ 26 := hboundary
+
+theorem centeredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate_X0_26
+    (hboundary :
+      |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| ≤ 26) :
+    CenteredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate X0 26 :=
+  centeredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate_of_bound hboundary
+
 theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectTarget_of_majorant
     {Cdiag : ℝ}
     (hdiag_nonneg : 0 ≤ Cdiag)
@@ -22827,6 +23817,56 @@ theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectTarget_of_majorant
   intro X hX
   rw [centeredNormalizedSigmaTruncDiagonalEnergy_eq_directMajorant]
   exact hdiag hX
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectTarget_of_main_smallRest_tail_bounds
+    {Cmain CsmallRest Ctail : ℝ}
+    (hmain_nonneg : 0 ≤ Cmain)
+    (hsmallRest_nonneg : 0 ≤ CsmallRest)
+    (htail_nonneg : 0 ≤ Ctail)
+    (hmain :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X ≤ Cmain)
+    (hsmallRest :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X ≤ CsmallRest)
+    (htail :
+      ∀ {X : ℕ}, X0 ≤ X →
+        centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X ≤ Ctail) :
+    CenteredNormalizedSigmaTruncDiagonalEnergyDirectTarget
+      (Cmain + CsmallRest + Ctail) := by
+  refine centeredNormalizedSigmaTruncDiagonalEnergyDirectTarget_of_majorant
+    (Cdiag := Cmain + CsmallRest + Ctail) ?_ ?_
+  · linarith
+  · intro X hX
+    rw [centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant_eq_mainLowQ_add_smallRest_add_tail]
+    have hm := hmain hX
+    have hs := hsmallRest hX
+    have ht := htail hX
+    linarith
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt_of_main_smallRest_tail_bounds
+    {X : ℕ} {Cmain CsmallRest Ctail : ℝ}
+    (hmain :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X ≤ Cmain)
+    (hsmallRest :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X ≤ CsmallRest)
+    (htail :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X ≤ Ctail) :
+    CenteredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt X
+      (Cmain + CsmallRest + Ctail) := by
+  dsimp [CenteredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt]
+  rw [centeredNormalizedSigmaTruncDiagonalEnergy_eq_directMajorant,
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectMajorant_eq_mainLowQ_add_smallRest_add_tail]
+  linarith
+
+theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt_of_pointwiseCertificate
+    {X : ℕ} {Cmain CsmallRest Ctail : ℝ}
+    (hcert :
+      CenteredNormalizedSigmaTruncDiagonalPointwiseCertificate X Cmain CsmallRest Ctail) :
+    CenteredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt X
+      (Cmain + CsmallRest + Ctail) := by
+  exact centeredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt_of_main_smallRest_tail_bounds
+    hcert.main_bound hcert.smallRest_bound hcert.tail_bound
 
 theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_and_offDiagonal
     {Cdiag Coff : ℝ}
@@ -22841,6 +23881,291 @@ theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_and_offDiagon
   intro X hX
   rw [centeredNormalizedSigmaTruncWindowEnergy_eq_diagonal_add_offDiagonal]
   linarith [hdiag hX, hoff hX]
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_of_directTargets
+    {X : ℕ} {Cdiag Cmain Cboundary : ℝ}
+    (hdiag :
+      CenteredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt X Cdiag)
+    (hmain :
+      CenteredNormalizedSigmaTruncPeriodicMainDirectTargetAt X Cmain)
+    (hboundary :
+      CenteredNormalizedSigmaTruncPeriodicBoundaryDirectTargetAt X Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X (Cdiag + Cmain + Cboundary) := by
+  dsimp [CenteredNormalizedSigmaTruncWindowEnergyTargetAt,
+    CenteredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt,
+    CenteredNormalizedSigmaTruncPeriodicMainDirectTargetAt,
+    CenteredNormalizedSigmaTruncPeriodicBoundaryDirectTargetAt] at *
+  rw [centeredNormalizedSigmaTruncWindowEnergy_eq_diagonal_add_offDiagonal,
+    centeredNormalizedSigmaTruncOffDiagonalCorrelation_eq_sum_pairCorrelations]
+  change
+    centeredNormalizedSigmaTruncDiagonalEnergy X
+      + centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0 X
+      ≤
+    Cdiag + Cmain + Cboundary
+  have hpair :
+      centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0 X ≤ Cmain + Cboundary := by
+    exact centeredNormalizedSigmaTruncPairCorrelationSumUpToQ0_le_abs_periodicMain_add_abs_boundary
+      (X := X) hmain hboundary
+  linarith
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_of_pointwiseCertificates
+    {X : ℕ} {CmainDiag CsmallRest Ctail Cmain Cboundary : ℝ}
+    (hdiag :
+      CenteredNormalizedSigmaTruncDiagonalPointwiseCertificate X CmainDiag CsmallRest Ctail)
+    (hmain :
+      CenteredNormalizedSigmaTruncPeriodicMainPointwiseCertificate X Cmain)
+    (hboundary :
+      CenteredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate X Cboundary) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X
+      (CmainDiag + CsmallRest + Ctail + Cmain + Cboundary) := by
+  have hdiag' :
+      CenteredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt X
+        (CmainDiag + CsmallRest + Ctail) :=
+    centeredNormalizedSigmaTruncDiagonalEnergyDirectTargetAt_of_pointwiseCertificate hdiag
+  have hmain' :
+      CenteredNormalizedSigmaTruncPeriodicMainDirectTargetAt X Cmain := hmain.bound
+  have hboundary' :
+      CenteredNormalizedSigmaTruncPeriodicBoundaryDirectTargetAt X Cboundary := hboundary.bound
+  have htarget :=
+    centeredNormalizedSigmaTruncWindowEnergyTargetAt_of_directTargets
+      (X := X) hdiag' hmain' hboundary'
+  dsimp [CenteredNormalizedSigmaTruncWindowEnergyTargetAt] at htarget ⊢
+  linarith
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_numericCertificates
+    (hdiag :
+      CenteredNormalizedSigmaTruncDiagonalPointwiseCertificate X0 36326 1207 100)
+    (hmain :
+      CenteredNormalizedSigmaTruncPeriodicMainPointwiseCertificate X0 37603)
+    (hboundary :
+      CenteredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate X0 26) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 75262 := by
+  have htarget :=
+    centeredNormalizedSigmaTruncWindowEnergyTargetAt_of_pointwiseCertificates
+      (X := X0) hdiag hmain hboundary
+  dsimp [CenteredNormalizedSigmaTruncWindowEnergyTargetAt] at htarget ⊢
+  norm_num at htarget ⊢
+  exact htarget
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_numericBounds
+    (hmainDiag :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0 ≤ 36326)
+    (hsmallRest :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0 ≤ 1207)
+    (htail :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X0 ≤ 100)
+    (hmain :
+      |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0| ≤ 37603)
+    (hboundary :
+      |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| ≤ 26) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 75262 := by
+  apply centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_numericCertificates
+  · exact centeredNormalizedSigmaTruncDiagonalPointwiseCertificate_of_bounds
+      hmainDiag hsmallRest htail
+  · exact centeredNormalizedSigmaTruncPeriodicMainPointwiseCertificate_of_bound hmain
+  · exact centeredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate_of_bound hboundary
+
+private theorem ramanujanSeriesOnWindow_C2_ge_81_125_local :
+    (81 : ℝ) / 125 ≤ ramanujanSeriesOnWindow.C.C2 := by
+  have htrunc : (33 : ℝ) / 25 ≤ Goldbach.AO_OffDiag.TailBlock.sigma_trunc_Q0 2 :=
+    Goldbach.Cert.SigmaTruncQ0At2Cert.sigma_trunc_Q0_two_ge_33_25
+  have htail_abs :
+      |Goldbach.AO_OffDiag.SigmaTailReindex.sigmaTail 2|
+        ≤ (180 : ℝ) / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ) * (2 : ℝ) ^ 2 := by
+    simpa using
+      (Goldbach.Cert.SigmaTailRealBoundFun.sigmaTail_abs_le_180_div_Q_mul_N_sq
+        Goldbach.AO_OffDiag.TailBlock.Q0 2 (by decide) (by simp [Goldbach.AO_OffDiag.TailBlock.Q0]))
+  have htail_lower :
+      -((180 : ℝ) / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ) * (2 : ℝ) ^ 2)
+        ≤ Goldbach.AO_OffDiag.SigmaTailReindex.sigmaTail 2 := by
+    exact (abs_le.mp htail_abs).1
+  have hσ :
+      (162 : ℝ) / 125 ≤
+        Goldbach.BankPieces.Cert.SingularSeriesRamanujanBridge.sigmaSeriesRamanujan 2 := by
+    have hnum :
+        (162 : ℝ) / 125
+          = (33 : ℝ) / 25
+              - ((180 : ℝ) / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ) * (2 : ℝ) ^ 2) := by
+      norm_num [Goldbach.AO_OffDiag.TailBlock.Q0]
+    rw [hnum]
+    rw [Goldbach.BankPieces.Cert.SingularSeriesRamanujanBridge.sigmaSeriesRamanujan]
+    linarith
+  have hcanon :
+      Goldbach.BankPieces.Cert.SingularSeriesRamanujanBridge.sigmaSeriesRamanujan 2
+        = (2 : ℝ) * ramanujanSeriesOnWindow.C.C2 := by
+    have hσeven :
+        Goldbach.Singular.sigma ramanujanSeriesOnWindow.C 2
+          = Goldbach.BankPieces.Cert.SingularSeriesRamanujanBridge.sigmaSeriesRamanujan 2 := by
+      change Goldbach.Singular.sigma ramanujanEvenEulerRealization.C 2
+          = ramanujanSeriesGlobal.sigma 2
+      simpa [ramanujanSeriesGlobal] using
+        (ramanujanEvenEulerRealization.sigma_eq_euler_even
+          (by decide : 0 < 2) (by decide : Even 2)).symm
+    calc
+      Goldbach.BankPieces.Cert.SingularSeriesRamanujanBridge.sigmaSeriesRamanujan 2
+          = Goldbach.Singular.sigma ramanujanSeriesOnWindow.C 2 := hσeven.symm
+      _ = (2 : ℝ) * ramanujanSeriesOnWindow.C.C2
+              * ∏ p ∈ Goldbach.Singular.oddPrimeSupport 2, Goldbach.Singular.oddFactor p := by
+            simpa using
+              (Goldbach.Singular.sigma_even_expand (C := ramanujanSeriesOnWindow.C)
+                (by decide : Even 2))
+      _ = (2 : ℝ) * ramanujanSeriesOnWindow.C.C2 := by
+            have hsupp : Goldbach.Singular.oddPrimeSupport 2 = ∅ := by
+              simpa using Goldbach.Singular.oddPrimeSupport_two_pow_succ 0
+            simp [hsupp]
+  rw [hcanon] at hσ
+  nlinarith
+
+theorem trueSeries_pointwise_quadratic_scale_le_625_div_26244 :
+    (1 / ((10 : ℝ) * ramanujanSeriesOnWindow.C.C2)) ^ 2
+      ≤ (625 : ℝ) / 26244 := by
+  have hC2 :
+      (81 : ℝ) / 125 ≤ ramanujanSeriesOnWindow.C.C2 :=
+    ramanujanSeriesOnWindow_C2_ge_81_125_local
+  have htenC2_pos : 0 < (10 : ℝ) * ramanujanSeriesOnWindow.C.C2 := by
+    positivity
+  have htenC2_lb : (162 : ℝ) / 25 ≤ (10 : ℝ) * ramanujanSeriesOnWindow.C.C2 := by
+    nlinarith
+  have hrecip :
+      1 / ((10 : ℝ) * ramanujanSeriesOnWindow.C.C2) ≤ (25 : ℝ) / 162 := by
+    have hpos : 0 < (162 : ℝ) / 25 := by norm_num
+    have := one_div_le_one_div_of_le hpos htenC2_lb
+    simpa using this
+  have hnonneg : 0 ≤ 1 / ((10 : ℝ) * ramanujanSeriesOnWindow.C.C2) := by positivity
+  have hsquare := mul_le_mul hrecip hrecip hnonneg (by positivity : 0 ≤ (25 : ℝ) / 162)
+  have hrhs : ((25 : ℝ) / 162) * ((25 : ℝ) / 162) = (625 : ℝ) / 26244 := by
+    norm_num
+  simpa [pow_two, hrhs] using hsquare
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_trueNumericCertificates
+    (hdiag :
+      CenteredNormalizedSigmaTruncDiagonalPointwiseCertificate X0 866 29 3)
+    (hmain :
+      CenteredNormalizedSigmaTruncPeriodicMainPointwiseCertificate X0 896)
+    (hboundary :
+      CenteredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate X0 1) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795 := by
+  have htarget :=
+    centeredNormalizedSigmaTruncWindowEnergyTargetAt_of_pointwiseCertificates
+      (X := X0) hdiag hmain hboundary
+  dsimp [CenteredNormalizedSigmaTruncWindowEnergyTargetAt] at htarget ⊢
+  norm_num at htarget ⊢
+  exact htarget
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_trueNumericBounds
+    (hmainDiag :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0 ≤ 866)
+    (hsmallRest :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0 ≤ 29)
+    (htail :
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X0 ≤ 3)
+    (hmain :
+      |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0| ≤ 896)
+    (hboundary :
+      |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| ≤ 1) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795 := by
+  apply centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_trueNumericCertificates
+  · exact centeredNormalizedSigmaTruncDiagonalPointwiseCertificate_of_bounds
+      hmainDiag hsmallRest htail
+  · exact centeredNormalizedSigmaTruncPeriodicMainPointwiseCertificate_of_bound hmain
+  · exact centeredNormalizedSigmaTruncPeriodicBoundaryPointwiseCertificate_of_bound hboundary
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_surrogateNumericBounds
+    (hmainDiag :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0 ≤ 36326)
+    (hsmallRest :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0 ≤ 1207)
+    (htail :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X0 ≤ 100)
+    (hmain :
+      |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0| ≤ 37603)
+    (hboundary :
+      |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| ≤ 26) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795 := by
+  apply centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_trueNumericBounds
+  · calc
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0
+          = trueSeriesPointwiseQuadraticScale
+              * surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0 := by
+                rw [centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_eq_trueScale_mul_surrogate]
+      _ ≤ trueSeriesPointwiseQuadraticScale * 36326 := by
+            exact mul_le_mul_of_nonneg_left hmainDiag trueSeriesPointwiseQuadraticScale_nonneg
+      _ ≤ ((625 : ℝ) / 26244) * 36326 := by
+            exact mul_le_mul_of_nonneg_right
+              trueSeries_pointwise_quadratic_scale_le_625_div_26244 (by positivity : (0 : ℝ) ≤ 36326)
+      _ ≤ 866 := by norm_num
+  · calc
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0
+          = trueSeriesPointwiseQuadraticScale
+              * surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0 := by
+                rw [centeredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest_eq_trueScale_mul_surrogate]
+      _ ≤ trueSeriesPointwiseQuadraticScale * 1207 := by
+            exact mul_le_mul_of_nonneg_left hsmallRest trueSeriesPointwiseQuadraticScale_nonneg
+      _ ≤ ((625 : ℝ) / 26244) * 1207 := by
+            exact mul_le_mul_of_nonneg_right
+              trueSeries_pointwise_quadratic_scale_le_625_div_26244 (by positivity : (0 : ℝ) ≤ 1207)
+      _ ≤ 29 := by norm_num
+  · calc
+      centeredNormalizedSigmaTruncDiagonalEnergyDirectTail X0
+          = trueSeriesPointwiseQuadraticScale
+              * surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X0 := by
+                rw [centeredNormalizedSigmaTruncDiagonalEnergyDirectTail_eq_trueScale_mul_surrogate]
+      _ ≤ trueSeriesPointwiseQuadraticScale * 100 := by
+            exact mul_le_mul_of_nonneg_left htail trueSeriesPointwiseQuadraticScale_nonneg
+      _ ≤ ((625 : ℝ) / 26244) * 100 := by
+            exact mul_le_mul_of_nonneg_right
+              trueSeries_pointwise_quadratic_scale_le_625_div_26244 (by positivity : (0 : ℝ) ≤ 100)
+      _ ≤ 3 := by norm_num
+  · calc
+      |centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0|
+          =
+        trueSeriesPointwiseQuadraticScale
+          * |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0| := by
+            rw [centeredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_trueScale_mul_surrogate]
+            rw [abs_mul, abs_of_nonneg trueSeriesPointwiseQuadraticScale_nonneg]
+      _ ≤ trueSeriesPointwiseQuadraticScale * 37603 := by
+            exact mul_le_mul_of_nonneg_left hmain trueSeriesPointwiseQuadraticScale_nonneg
+      _ ≤ ((625 : ℝ) / 26244) * 37603 := by
+            exact mul_le_mul_of_nonneg_right
+              trueSeries_pointwise_quadratic_scale_le_625_div_26244 (by positivity : (0 : ℝ) ≤ 37603)
+      _ ≤ 896 := by norm_num
+  · calc
+      |centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0|
+          =
+        trueSeriesPointwiseQuadraticScale
+          * |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| := by
+            rw [centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_eq_trueScale_mul_surrogate]
+            rw [abs_mul, abs_of_nonneg trueSeriesPointwiseQuadraticScale_nonneg]
+      _ ≤ trueSeriesPointwiseQuadraticScale * 26 := by
+            exact mul_le_mul_of_nonneg_left hboundary trueSeriesPointwiseQuadraticScale_nonneg
+      _ ≤ ((625 : ℝ) / 26244) * 26 := by
+            exact mul_le_mul_of_nonneg_right
+              trueSeries_pointwise_quadratic_scale_le_625_div_26244 (by positivity : (0 : ℝ) ≤ 26)
+      _ ≤ 1 := by norm_num
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_surrogateDecimalCertificates
+    (hmainDiag :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0
+        ≤ (surrogateDiagMainX0Check.lhs : ℝ))
+    (hsmallRest :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0
+        ≤ (surrogateDiagSmallRestX0Check.lhs : ℝ))
+    (htail :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X0
+        ≤ (surrogateDiagTailX0Check.lhs : ℝ))
+    (hmain :
+      |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0|
+        ≤ (surrogatePeriodicMainX0Check.lhs : ℝ))
+    (hboundary :
+      |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0|
+        ≤ (surrogateBoundaryX0Check.lhs : ℝ)) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795 := by
+  apply centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_surrogateNumericBounds
+  · exact surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_X0_le_36326_of_decimal_certificate hmainDiag
+  · exact surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest_X0_le_1207_of_decimal_certificate hsmallRest
+  · exact surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail_X0_le_100_of_decimal_certificate htail
+  · exact abs_surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_X0_le_37603_of_decimal_certificate hmain
+  · exact abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_26_of_decimal_certificate hboundary
 
 theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_and_pairCorrelationBounds
     {Cdiag Cpair : ℝ}

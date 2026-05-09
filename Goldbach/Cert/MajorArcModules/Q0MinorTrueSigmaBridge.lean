@@ -94,6 +94,37 @@ theorem canonicalSigmaNormalization_eq_two_mul_ramanujanC2 :
             simpa using Goldbach.Singular.oddPrimeSupport_two_pow_succ 0
           simp [hsupp]
 
+theorem canonicalSigmaNormalization_ge_162_125 :
+    (162 : ℝ) / 125 ≤ canonicalSigmaNormalization := by
+  have htrunc : (33 : ℝ) / 25 ≤ Goldbach.AO_OffDiag.TailBlock.sigma_trunc_Q0 2 :=
+    Goldbach.Cert.SigmaTruncQ0At2Cert.sigma_trunc_Q0_two_ge_33_25
+  have htail_abs :
+      |Goldbach.AO_OffDiag.SigmaTailReindex.sigmaTail 2|
+        ≤ (180 : ℝ) / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ) * (2 : ℝ) ^ 2 := by
+    simpa using
+      (Goldbach.Cert.SigmaTailRealBoundFun.sigmaTail_abs_le_180_div_Q_mul_N_sq
+        Goldbach.AO_OffDiag.TailBlock.Q0 2 (by decide) (by simp [Goldbach.AO_OffDiag.TailBlock.Q0]))
+  have htail_lower :
+      -((180 : ℝ) / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ) * (2 : ℝ) ^ 2)
+        ≤ Goldbach.AO_OffDiag.SigmaTailReindex.sigmaTail 2 := by
+    exact (abs_le.mp htail_abs).1
+  unfold canonicalSigmaNormalization
+  rw [Goldbach.BankPieces.Cert.SingularSeriesRamanujanBridge.sigmaSeriesRamanujan]
+  have hnum :
+      (162 : ℝ) / 125
+        = (33 : ℝ) / 25
+            - ((180 : ℝ) / (Goldbach.AO_OffDiag.TailBlock.Q0 : ℝ) * (2 : ℝ) ^ 2) := by
+    norm_num [Goldbach.AO_OffDiag.TailBlock.Q0]
+  rw [hnum]
+  linarith
+
+theorem ramanujanSeriesOnWindow_C2_ge_81_125 :
+    (81 : ℝ) / 125 ≤ ramanujanSeriesOnWindow.C.C2 := by
+  have hσ : (162 : ℝ) / 125 ≤ canonicalSigmaNormalization :=
+    canonicalSigmaNormalization_ge_162_125
+  rw [canonicalSigmaNormalization_eq_two_mul_ramanujanC2] at hσ
+  nlinarith
+
 theorem canonicalTrueSigmaNormalizedSeries_eq_trueSigmaNormalizedSeries_ramanujanSeriesOnWindow
     {N : ℕ} (hN : 0 < N) :
     canonicalTrueSigmaNormalizedSeries N
