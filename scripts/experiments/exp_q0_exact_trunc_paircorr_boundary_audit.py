@@ -31,6 +31,7 @@ the square of the coefficient ratio, because every centered summand is linear in
 from __future__ import annotations
 
 import argparse
+import heapq
 import json
 import math
 import sys
@@ -223,6 +224,11 @@ def full_block_even_points(X: int, P: int) -> list[int]:
     return [X + k for k in range(P) if (X + k) % 2 == 0]
 
 
+def full_block_even_progression(X: int, P: int) -> tuple[int, int]:
+    first_even = X if X % 2 == 0 else X + 1
+    return first_even, P // 2
+
+
 def boundary_remainder_even_count(X: int, q: int, q2: int) -> int:
     P = block_period(q, q2)
     m = (H + 1) // P
@@ -367,6 +373,18 @@ def fraction_to_q_literal(x: Fraction) -> str:
     return f"({x.numerator} : ℚ) / {x.denominator}"
 
 
+def decimal_string_to_fraction(s: str) -> Fraction:
+    dec = Decimal(s)
+    num, den = dec.as_integer_ratio()
+    return Fraction(num, den)
+
+
+def float_to_fixed_fraction(x: float, places: int = 12) -> Fraction:
+    dec = Decimal(f"{x:.{places}f}")
+    num, den = dec.as_integer_ratio()
+    return Fraction(num, den)
+
+
 def surrogate_coeff_rat(q: int, mu: list[int], phi: list[int]) -> Fraction:
     if mu[q] == 0:
         return Fraction(0, 1)
@@ -375,6 +393,50 @@ def surrogate_coeff_rat(q: int, mu: list[int], phi: list[int]) -> Fraction:
 
 def ramanujan_gcd_class_coeff_rat(q: int, g: int, mu: list[int], phi: list[int]) -> Fraction:
     return Fraction(mu[q // g] * phi[g], 1)
+
+
+def centered_ramanujan_window_average_rat(
+    X: int,
+    q: int,
+    mu: list[int],
+    phi: list[int],
+    even_window: list[int],
+    even_window_card: int,
+) -> Fraction:
+    total = 0
+    for N in even_window:
+        total += ramanujan_sum(q, N, mu, phi)
+    return Fraction(total, even_window_card)
+
+
+def centered_ramanujan_window_energy_rat(
+    X: int,
+    q: int,
+    mu: list[int],
+    phi: list[int],
+    even_window: list[int],
+    even_window_card: int,
+) -> Fraction:
+    avg = centered_ramanujan_window_average_rat(X, q, mu, phi, even_window, even_window_card)
+    total = Fraction(0, 1)
+    for N in even_window:
+        obs = Fraction(ramanujan_sum(q, N, mu, phi), 1) - avg
+        total += obs * obs
+    return total
+
+
+def surrogate_diagonal_energy_q_rat(
+    X: int,
+    q: int,
+    mu: list[int],
+    phi: list[int],
+    even_window: list[int],
+    even_window_card: int,
+) -> Fraction:
+    return (
+        surrogate_coeff_rat(q, mu, phi) ** 2
+        * centered_ramanujan_window_energy_rat(X, q, mu, phi, even_window, even_window_card)
+    )
 
 
 def ramanujan_gcd_class_window_average_rat(
@@ -481,11 +543,62 @@ def build_surrogate_boundary_exact_context(
             )
 
     return {
+        "mu": mu,
+        "spf": spf,
         "coeff_rat": coeff_rat,
         "divisors_by_q": divisors_by_q,
         "avg_by_q": avg_by_q,
         "gcd_coeff_by_q": gcd_coeff_by_q,
+        "divisor_list_cache": {},
+        "divisibility_count_cache": {},
+        "gcd_class_count_cache": {},
+        "gcd_class_pair_count_cache": {},
     }
+
+
+def centered_ramanujan_pair_periodic_main_term_rat_cached(
+    X: int,
+    q: int,
+    q2: int,
+    ctx: dict[str, object],
+) -> Fraction:
+    P = block_period(q, q2)
+    full_blocks = (H + 1) // P
+    if full_blocks == 0:
+        return Fraction(0, 1)
+
+    divisors_by_q = ctx["divisors_by_q"]
+    avg_by_q = ctx["avg_by_q"]
+    gcd_coeff_by_q = ctx["gcd_coeff_by_q"]
+    coeff_rat = ctx["coeff_rat"]
+
+    divs_q = divisors_by_q[q]
+    divs_q2 = divisors_by_q[q2]
+    avg_q = avg_by_q[q]
+    avg_q2 = avg_by_q[q2]
+    coeff_q = gcd_coeff_by_q[q]
+    coeff_q2 = gcd_coeff_by_q[q2]
+
+    first_even, even_count = full_block_even_progression(X, P)
+    out = Fraction(0, 1)
+    coeff_pair = coeff_rat[q] * coeff_rat[q2]
+    full_blocks_rat = Fraction(full_blocks, 1)
+    even_count_rat = Fraction(even_count, 1)
+    for g in divs_q:
+        avg_g = avg_q[g]
+        left = Fraction(gcd_class_count_in_even_progression(q, g, first_even, even_count, ctx), 1)
+        c_g = coeff_q[g]
+        for h in divs_q2:
+            avg_h = avg_q2[h]
+            right = Fraction(gcd_class_count_in_even_progression(q2, h, first_even, even_count, ctx), 1)
+            pair = Fraction(
+                gcd_class_pair_count_in_even_progression(q, q2, g, h, first_even, even_count, ctx),
+                1,
+            )
+            c_h = coeff_q2[h]
+            centered_full_block = pair - avg_h * left - avg_g * right + avg_g * avg_h * even_count_rat
+            out += coeff_pair * c_g * c_h * full_blocks_rat * centered_full_block
+    return out
 
 
 def centered_ramanujan_pair_boundary_term_rat_cached(
@@ -828,6 +941,10 @@ def main() -> None:
                     help="Print the concrete X-point certificate data for the direct Route A wrapper.")
     ap.add_argument("--emit-lean-checkle", action="store_true",
                     help="Emit a ready-to-paste Lean MajorArcCertChecker `CheckLE` payload for the current surrogate audit values.")
+    ap.add_argument("--emit-diag-tail-rat-total", action="store_true",
+                    help="Emit the exact surrogate diagonal tail rational total at the current X as a Lean ℚ literal.")
+    ap.add_argument("--emit-periodic-main-rat-total", action="store_true",
+                    help="Emit the exact surrogate periodic-main rational total at the current X as a Lean ℚ literal.")
     ap.add_argument("--emit-boundary-pair-rat", nargs=2, type=int, metavar=("Q", "Q2"),
                     help="Emit the exact surrogate boundary pair contribution for one ordered pair as a Lean ℚ literal.")
     ap.add_argument("--emit-boundary-rat-total", action="store_true",
@@ -922,7 +1039,155 @@ def main() -> None:
                     help="Evaluate only active reversible blocks in the half-open index range [START, END). Intended for chunked boundary-signed-split runs.")
     ap.add_argument("--combine-boundary-chunks", nargs="*", default=[],
                     help="Combine chunk JSON files emitted by --boundary-signed-split-fast or --boundary-signed-split-report --block-range.")
+    ap.add_argument("--emit-boundary-final-certificate", action="store_true",
+                    help="With --combine-boundary-chunks, emit Lean-facing ℚ certificate defs for active signed total, inactive correction, and full boundary.")
+    ap.add_argument("--boundary-full-signed-decimal", type=str, default="",
+                    help="With --emit-boundary-final-certificate, the full surrogate boundary signed decimal to package as the final full certificate value.")
     args = ap.parse_args()
+
+    if args.combine_boundary_chunks:
+        top_remove_ref = None
+        selected_patterns_ref = None
+        total_active_blocks_ref = None
+        X_ref = None
+        covered_ranges: list[tuple[int, int]] = []
+        chunk_paths = list(args.combine_boundary_chunks)
+
+        def rec_key(rec: dict[str, object]) -> tuple[float, float, int, int, int, int]:
+            pattern = tuple(rec["pattern"])
+            G = int(rec["G"])
+            return (
+                float(rec["abs"]),
+                abs(float(rec["signed"])),
+                int(rec["pair_count"]),
+                G,
+                pattern[0],
+                pattern[1],
+            )
+
+        # Pass 1: metadata validation + global top-N heap by the same ordering used in the
+        # in-memory classifier.
+        top_heap: list[tuple[tuple[float, float, int, int, int, int], tuple[tuple[int, int], int]]] = []
+        top_seen: set[tuple[tuple[int, int], int]] = set()
+
+        for path in chunk_paths:
+            with open(path, "r", encoding="utf-8") as fh:
+                payload = json.load(fh)
+            if payload.get("mode") != "boundary-signed-split-chunk":
+                raise SystemExit(f"{path}: not a boundary signed split chunk payload")
+            if top_remove_ref is None:
+                top_remove_ref = int(payload["top_remove"])
+                selected_patterns_ref = {tuple(p) for p in payload["selected_patterns"]}
+                total_active_blocks_ref = int(payload["total_active_blocks"])
+                X_ref = int(payload["X"])
+            else:
+                if int(payload["top_remove"]) != top_remove_ref:
+                    raise SystemExit(f"{path}: mismatched top_remove")
+                if {tuple(p) for p in payload["selected_patterns"]} != selected_patterns_ref:
+                    raise SystemExit(f"{path}: mismatched selected_patterns")
+                if int(payload["total_active_blocks"]) != total_active_blocks_ref:
+                    raise SystemExit(f"{path}: mismatched total_active_blocks")
+                if int(payload["X"]) != X_ref:
+                    raise SystemExit(f"{path}: mismatched X")
+            covered_ranges.append(tuple(payload["block_range"]))
+            for rec in payload["records"]:
+                pattern = tuple(rec["pattern"])
+                G = int(rec["G"])
+                key = (pattern, G)
+                if key in top_seen:
+                    raise SystemExit(f"{path}: duplicate block record for {key}")
+                top_seen.add(key)
+                if (top_remove_ref or 0) <= 0:
+                    continue
+                score = rec_key(rec)
+                if len(top_heap) < (top_remove_ref or 0):
+                    heapq.heappush(top_heap, (score, key))
+                elif score > top_heap[0][0]:
+                    heapq.heapreplace(top_heap, (score, key))
+
+        top_global_blocks = {key for _, key in top_heap}
+        selected_patterns = selected_patterns_ref or set()
+        coherent_threshold = 1.0 - 1e-12
+        selected_signed = 0.0
+        selected_abs = 0.0
+        coh2_signed = 0.0
+        coh2_abs = 0.0
+        incoh_signed = 0.0
+        incoh_abs = 0.0
+        covered_blocks = 0
+
+        # Pass 2: stream totals without materializing all blocks.
+        for path in chunk_paths:
+            with open(path, "r", encoding="utf-8") as fh:
+                payload = json.load(fh)
+            for rec in payload["records"]:
+                pattern = tuple(rec["pattern"])
+                G = int(rec["G"])
+                key = (pattern, G)
+                signed = float(rec["signed"])
+                abs_val = float(rec["abs"])
+                pair_count = int(rec["pair_count"])
+                covered_blocks += 1
+                if key in top_global_blocks or pattern in selected_patterns:
+                    selected_signed += signed
+                    selected_abs += abs_val
+                elif pair_count == 2 and ((abs(signed) / abs_val) if abs_val else 0.0) >= coherent_threshold:
+                    coh2_signed += signed
+                    coh2_abs += abs_val
+                else:
+                    incoh_signed += signed
+                    incoh_abs += abs_val
+
+        total_signed = selected_signed + coh2_signed + incoh_signed
+        total_abs = selected_abs + coh2_abs + incoh_abs
+
+        print("Combined boundary chunk report")
+        print(f"  X                      = {X_ref}")
+        print(f"  chunk files            = {len(chunk_paths)}")
+        print(f"  covered ranges         = {sorted(covered_ranges)}")
+        print(f"  covered blocks         = {covered_blocks}")
+        print(f"  total active blocks    = {total_active_blocks_ref}")
+        print(f"  top_remove             = {top_remove_ref}")
+        print(f"  selected patterns      = {sorted(selected_patterns)}")
+        print()
+        print("  combined active-scope split")
+        print(f"    selected_signed      = {selected_signed:.12e}")
+        print(f"    selected_abs         = {selected_abs:.12e}")
+        print(f"    coh2_signed          = {coh2_signed:.12e}")
+        print(f"    coh2_abs             = {coh2_abs:.12e}")
+        print(f"    incoh_signed         = {incoh_signed:.12e}")
+        print(f"    incoh_abs            = {incoh_abs:.12e}")
+        print(f"    total_signed         = {total_signed:.12e}")
+        print(f"    abs(total_signed)    = {abs(total_signed):.12e}")
+        print(f"    total_abs            = {total_abs:.12e}")
+        if args.emit_boundary_final_certificate:
+            if not args.boundary_full_signed_decimal:
+                raise SystemExit("--emit-boundary-final-certificate requires --boundary-full-signed-decimal")
+            active_frac = float_to_fixed_fraction(total_signed)
+            full_frac = decimal_string_to_fraction(args.boundary_full_signed_decimal)
+            inactive_frac = full_frac - active_frac
+            print()
+            print("Lean-facing boundary final certificate")
+            print(f"  active_signed_decimal     = {float(active_frac):.12f}")
+            print(f"  inactive_correction       = {float(inactive_frac):.12f}")
+            print(f"  full_boundary_decimal     = {float(full_frac):.12f}")
+            print()
+            print("def surrogateBoundaryX0ActiveSignedCert : ℚ :=")
+            print(f"  {fraction_to_q_literal(active_frac)}")
+            print()
+            print("def surrogateBoundaryX0InactiveCorrectionCert : ℚ :=")
+            print(f"  {fraction_to_q_literal(inactive_frac)}")
+            print()
+            print("def surrogateBoundaryX0FullCert : ℚ :=")
+            print("  surrogateBoundaryX0ActiveSignedCert + surrogateBoundaryX0InactiveCorrectionCert")
+            print()
+            print("theorem surrogateBoundaryX0FullCert_abs_le_check :")
+            print("    |(surrogateBoundaryX0FullCert : ℝ)| ≤ surrogateBoundaryX0Check.lhs := by")
+            print("  norm_num [surrogateBoundaryX0FullCert,")
+            print("            surrogateBoundaryX0ActiveSignedCert,")
+            print("            surrogateBoundaryX0InactiveCorrectionCert,")
+            print("            surrogateBoundaryX0Check]")
+        return
 
     X = args.X
     q_active_max = args.q_max_active
@@ -986,6 +1251,130 @@ def main() -> None:
                     indent=2,
                     sort_keys=True,
                 )
+
+    if args.boundary_signed_split_fast:
+        if args.true_series:
+            raise SystemExit("--boundary-signed-split-fast is only implemented for the surrogate normalization")
+
+        selected_patterns = parse_selected_patterns(args.boundary_family_patterns)
+        block_scope = active_support
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            block_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+        ctx = build_surrogate_boundary_float_context(
+            X, mu, phi, spf, even_window_card, block_scope,
+            progress=args.progress,
+        )
+
+        all_blocks = list(pair_count_by_block.keys())
+        total_active_blocks = len(all_blocks)
+        start = 0
+        end = total_active_blocks
+        if args.block_range is not None:
+            start, end = args.block_range
+            if start < 0 or end < start:
+                raise SystemExit("--block-range must satisfy 0 <= START <= END")
+            start = min(start, total_active_blocks)
+            end = min(end, total_active_blocks)
+            all_blocks = all_blocks[start:end]
+
+        signed_by_block: dict[tuple[tuple[int, int], int], float] = {}
+        abs_by_block: dict[tuple[tuple[int, int], int], float] = {}
+        block_progress_every = min(max(args.progress_every, 1), 50_000)
+        processed = 0
+        started = time.time()
+        for pattern, G in all_blocks:
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            val = 2.0 * surrogate_boundary_pair_contribution_float_cached(X, q, q2, ctx)
+            block = (pattern, G)
+            signed_by_block[block] = val
+            abs_by_block[block] = abs(val)
+            processed += 1
+            if args.progress and processed % block_progress_every == 0:
+                elapsed = time.time() - started
+                print(
+                    f"[boundary-signed-split-fast] processed_blocks={processed}/{len(all_blocks)} "
+                    f"elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        if args.block_range is not None:
+            records = []
+            for block in all_blocks:
+                pattern, G = block
+                records.append({
+                    "pattern": [pattern[0], pattern[1]],
+                    "G": G,
+                    "pair_count": pair_count_by_block[block],
+                    "signed": signed_by_block[block],
+                    "abs": abs_by_block[block],
+                })
+            payload = {
+                "mode": "boundary-signed-split-chunk",
+                "X": X,
+                "active_ordered_pairs": total_pairs,
+                "active_support_card": len(active_support),
+                "block_range": [start, end],
+                "top_remove": max(args.boundary_pattern_g_remove_top, 0),
+                "selected_patterns": [list(p) for p in sorted(selected_patterns)],
+                "total_active_blocks": total_active_blocks,
+                "records": records,
+            }
+            if args.checkpoint_json:
+                with open(args.checkpoint_json, "w", encoding="utf-8") as fh:
+                    json.dump(payload, fh, indent=2, sort_keys=True)
+            print("Boundary signed split fast chunk report")
+            print(f"  X                        = {X}")
+            print(f"  active ordered pairs     = {total_pairs}")
+            print(f"  total active blocks      = {total_active_blocks}")
+            print(f"  block range              = [{start}, {end})")
+            print(f"  evaluated chunk blocks   = {len(all_blocks)}")
+            print(f"  chunk signed total       = {math.fsum(signed_by_block.values()):.12e}")
+            print(f"  chunk abs total          = {math.fsum(abs_by_block.values()):.12e}")
+            if args.checkpoint_json:
+                print(f"  wrote checkpoint json    = {args.checkpoint_json}")
+            return
+
+        classified = classify_signed_boundary_blocks(
+            pair_count_by_block,
+            signed_by_block,
+            abs_by_block,
+            top_remove=max(args.boundary_pattern_g_remove_top, 0),
+            selected_patterns=selected_patterns,
+        )
+        total_signed = (
+            classified["selected_signed"]
+            + classified["coh2_signed"]
+            + classified["incoh_signed"]
+        )
+        total_abs = (
+            classified["selected_abs"]
+            + classified["coh2_abs"]
+            + classified["incoh_abs"]
+        )
+        print("Boundary signed split fast report")
+        print(f"  X                        = {X}")
+        print(f"  active support card      = {len(active_support)}")
+        print(f"  active ordered pairs     = {total_pairs}")
+        print(f"  distinct active blocks   = {total_active_blocks}")
+        print(f"  top global blocks selected = {min(max(args.boundary_pattern_g_remove_top, 0), total_active_blocks)}")
+        print(f"  expanded family patterns   = {sorted(selected_patterns)}")
+        print()
+        print("  active-scope signed split")
+        print(f"    selected_signed        = {classified['selected_signed']:.12e}")
+        print(f"    selected_abs           = {classified['selected_abs']:.12e}")
+        print(f"    coh2_signed            = {classified['coh2_signed']:.12e}")
+        print(f"    coh2_abs               = {classified['coh2_abs']:.12e}")
+        print(f"    incoh_signed           = {classified['incoh_signed']:.12e}")
+        print(f"    incoh_abs              = {classified['incoh_abs']:.12e}")
+        print(f"    total_signed           = {total_signed:.12e}")
+        print(f"    abs(total_signed)      = {abs(total_signed):.12e}")
+        print(f"    total_abs              = {total_abs:.12e}")
+        return
 
     if args.boundary_zero_prune_report:
         if args.true_series:
@@ -3051,6 +3440,88 @@ def main() -> None:
             for p, mass in sorted(spf_mass.items(), key=lambda kv: (-kv[1], kv[0])):
                 share = (mass / diagonal) if diagonal else 0.0
                 print(f"  {p:>5}   {rescale(mass):> .12e}  {share:> .6f}")
+        return
+
+    if args.emit_diag_tail_rat_total:
+        if args.true_series:
+            raise SystemExit("--emit-diag-tail-rat-total is only implemented for the surrogate normalization")
+        tail_support = [
+            q for q in support
+            if q not in DIAG_MAIN_LOW_Q and q > 50
+        ]
+        total_rat = Fraction(0, 1)
+        started = time.time()
+        for i, q in enumerate(tail_support, start=1):
+            total_rat += surrogate_diagonal_energy_q_rat(X, q, mu, phi, even_window, even_window_card)
+            if args.progress and (i % max(1, args.progress_every) == 0 or i == len(tail_support)):
+                elapsed = time.time() - started
+                print(
+                    f"[diag-tail-rat] q={i}/{len(tail_support)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+        print("Surrogate diagonal tail exact rational total")
+        print(f"  X                         = {X}")
+        print(f"  tail support card         = {len(tail_support)}")
+        print(f"  rational total numerator  = {total_rat.numerator}")
+        print(f"  rational total denominator= {total_rat.denominator}")
+        print(f"  Lean ℚ literal            = {fraction_to_q_literal(total_rat)}")
+        print(f"  float value               = {float(total_rat):.15f}")
+        print("  Lean payload")
+        print(f"def surrogateDiagTailX0RatCert : ℚ := {fraction_to_q_literal(total_rat)}")
+        print()
+        print("theorem surrogateDiagTailX0RatCert_le_check :")
+        print("    surrogateDiagTailX0RatCert ≤ surrogateDiagTailX0Check.lhs := by")
+        print("  norm_num [surrogateDiagTailX0RatCert, surrogateDiagTailX0Check]")
+        return
+
+    if args.emit_periodic_main_rat_total:
+        if args.true_series:
+            raise SystemExit("--emit-periodic-main-rat-total is only implemented for the surrogate normalization")
+        ctx = build_surrogate_boundary_exact_context(
+            X,
+            mu,
+            phi,
+            spf,
+            even_window_card,
+            active_support,
+            progress=args.progress,
+            progress_every_q=max(1, args.progress_every),
+        )
+        total_rat = Fraction(0, 1)
+        active_main_unordered_pairs = 0
+        started = time.time()
+        total_pairs = len(active_support) * max(len(active_support) - 1, 0) // 2
+        processed = 0
+        for i, q in enumerate(active_support):
+            for q2 in active_support[i + 1:]:
+                processed += 1
+                val = centered_ramanujan_pair_periodic_main_term_rat_cached(X, q, q2, ctx)
+                if val != 0:
+                    active_main_unordered_pairs += 1
+                    total_rat += 2 * val
+                if args.progress and (processed % max(1, args.progress_every) == 0 or processed == total_pairs):
+                    elapsed = time.time() - started
+                    print(
+                        f"[periodic-main-rat] processed={processed}/{total_pairs} "
+                        f"active_pairs={active_main_unordered_pairs} elapsed={elapsed:.1f}s",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+        print("Surrogate periodic-main exact rational total")
+        print(f"  X                         = {X}")
+        print(f"  active support card       = {len(active_support)}")
+        print(f"  active unordered pairs    = {active_main_unordered_pairs}")
+        print(f"  rational total numerator  = {total_rat.numerator}")
+        print(f"  rational total denominator= {total_rat.denominator}")
+        print(f"  Lean ℚ literal            = {fraction_to_q_literal(total_rat)}")
+        print(f"  float value               = {float(total_rat):.15f}")
+        print("  Lean payload")
+        print(f"def surrogatePeriodicMainX0RatCert : ℚ := {fraction_to_q_literal(total_rat)}")
+        print()
+        print("theorem surrogatePeriodicMainX0RatCert_abs_le_check :")
+        print("    |(surrogatePeriodicMainX0RatCert : ℝ)| ≤ surrogatePeriodicMainX0Check.lhs := by")
+        print("  norm_num [surrogatePeriodicMainX0RatCert, surrogatePeriodicMainX0Check]")
         return
 
     # Exact periodic-main total on the active full-block coefficient-supported surface.

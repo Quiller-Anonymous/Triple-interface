@@ -1463,7 +1463,7 @@ noncomputable def surrogateNormalizedSigmaTruncSummandRealCoeff (q : ℕ) : ℝ 
     / ((1 : ℝ) / 5)
 
 /-- Rational shadow of the surrogate fixed real `q`-amplitude. -/
-noncomputable def surrogateNormalizedSigmaTruncSummandCoeffRat (q : ℕ) : ℚ :=
+def surrogateNormalizedSigmaTruncSummandCoeffRat (q : ℕ) : ℚ :=
   if Squarefree q then (5 : ℚ) / ((Nat.totient q : ℚ) ^ 2) else 0
 
 theorem surrogateNormalizedSigmaTruncSummandRealCoeff_eq_ratCast
@@ -1753,7 +1753,7 @@ noncomputable def ramanujanGcdClassCoeff (q g : ℕ) : ℝ :=
     * (Nat.totient g : ℝ)
 
 /-- Rational shadow of the gcd-class coefficient. -/
-noncomputable def ramanujanGcdClassCoeffRat (q g : ℕ) : ℚ :=
+def ramanujanGcdClassCoeffRat (q g : ℕ) : ℚ :=
   (((ArithmeticFunction.moebius : ArithmeticFunction ℤ) (q / g) : ℤ) : ℚ)
     * (Nat.totient g : ℚ)
 
@@ -1777,26 +1777,31 @@ noncomputable def ramanujanGcdClassWindowAverage (X q g : ℕ) : ℝ :=
     * ∑ N ∈ EvenIn X H, ramanujanGcdClassIndicator q g N
 
 /-- Rational shadow of the gcd-class indicator. -/
-noncomputable def ramanujanGcdClassIndicatorRat (q g N : ℕ) : ℚ :=
+def ramanujanGcdClassIndicatorRat (q g N : ℕ) : ℚ :=
   if Nat.gcd q N = g then 1 else 0
 
 /-- Rational shadow of the gcd-class window average on the canonical even window. -/
-noncomputable def ramanujanGcdClassWindowAverageRat (X q g : ℕ) : ℚ :=
+def ramanujanGcdClassWindowAverageRat (X q g : ℕ) : ℚ :=
   ((((EvenIn X H).filter (fun N => Nat.gcd q N = g)).card : ℚ)
     / (((EvenIn X H).card : ℚ)))
 
 /-- Rational shadow of the centered gcd-class observable. -/
-noncomputable def centeredRamanujanGcdClassObservableRat (X q g N : ℕ) : ℚ :=
+def centeredRamanujanGcdClassObservableRat (X q g N : ℕ) : ℚ :=
   ramanujanGcdClassIndicatorRat q g N - ramanujanGcdClassWindowAverageRat X q g
 
+/-- Rational shadow of the centered Ramanujan observable. -/
+def centeredRamanujanObservableRat (X q N : ℕ) : ℚ :=
+  ∑ g ∈ q.divisors,
+    ramanujanGcdClassCoeffRat q g * centeredRamanujanGcdClassObservableRat X q g N
+
 /-- Rational shadow of the pointwise centered gcd-class covariance kernel. -/
-noncomputable def centeredRamanujanGcdClassPairKernelRat
+def centeredRamanujanGcdClassPairKernelRat
     (X q q' g h N : ℕ) : ℚ :=
   centeredRamanujanGcdClassObservableRat X q g N
     * centeredRamanujanGcdClassObservableRat X q' h N
 
 /-- Rational shadow of the even-offset gcd-class covariance kernel. -/
-noncomputable def centeredEvenRamanujanGcdClassPairOffsetRat
+def centeredEvenRamanujanGcdClassPairOffsetRat
     (X q q' g h k : ℕ) : ℚ :=
   if Goldbach.Windows.IsEven (X + k) then
     centeredRamanujanGcdClassPairKernelRat X q q' g h (X + k)
@@ -2096,6 +2101,18 @@ theorem centeredRamanujanObservable_eq_sum_centeredGcdClasses
           refine Finset.sum_congr rfl ?_
           intro g hg
           ring
+
+theorem centeredRamanujanObservable_eq_ratCast
+    {X q N : ℕ} (hq : 1 ≤ q) :
+    centeredRamanujanObservable X q N
+      = (centeredRamanujanObservableRat X q N : ℝ) := by
+  rw [centeredRamanujanObservable_eq_sum_centeredGcdClasses (X := X) (q := q) (N := N) hq]
+  unfold centeredRamanujanObservableRat
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  rw [ramanujanGcdClassCoeff_eq_ratCast, centeredRamanujanGcdClassObservable_eq_ratCast]
+  norm_num
 
 theorem centeredRamanujanPairCorrelation_eq_sum_gcdClassCovariances
     {X q q' : ℕ} (hq : 1 ≤ q) (hq' : 1 ≤ q') :
@@ -17912,11 +17929,43 @@ theorem centeredNormalizedSigmaTruncSummandWindowEnergy_eq_coeff_sq_mul_centered
         * centeredRamanujanWindowEnergy X q := by
           rw [centeredRamanujanWindowEnergy]
 
+/-- Rational shadow of the centered Ramanujan window energy. -/
+def centeredRamanujanWindowEnergyRat
+    (X q : ℕ) : ℚ :=
+  ∑ N ∈ EvenIn X H, (centeredRamanujanObservableRat X q N) ^ 2
+
+/-- Rational shadow of the surrogate per-`q` diagonal window energy. -/
+def surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+    (X q : ℕ) : ℚ :=
+  (surrogateNormalizedSigmaTruncSummandCoeffRat q) ^ 2
+    * centeredRamanujanWindowEnergyRat X q
+
 /-- Surrogate per-`q` diagonal window energy using the working normalization. -/
 noncomputable def surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy
     (X q : ℕ) : ℝ :=
   (surrogateNormalizedSigmaTruncSummandRealCoeff q) ^ 2
     * centeredRamanujanWindowEnergy X q
+
+theorem centeredRamanujanWindowEnergy_eq_ratCast
+    {X q : ℕ} (hq : 1 ≤ q) :
+    centeredRamanujanWindowEnergy X q
+      = (centeredRamanujanWindowEnergyRat X q : ℝ) := by
+  unfold centeredRamanujanWindowEnergy centeredRamanujanWindowEnergyRat
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  rw [centeredRamanujanObservable_eq_ratCast (X := X) (q := q) (N := N) hq]
+  norm_num
+
+theorem surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_eq_ratCast
+    {X q : ℕ} (hq : 1 ≤ q) :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X q
+      = (surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X q : ℝ) := by
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [surrogateNormalizedSigmaTruncSummandRealCoeff_eq_ratCast]
+  rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X) (q := q) hq]
+  norm_num
 
 theorem centeredNormalizedSigmaTruncSummandWindowEnergy_eq_trueScale_mul_surrogate
     (X q : ℕ) :
@@ -18014,6 +18063,12 @@ noncomputable def surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainL
       (fun q => q ∈ centeredNormalizedSigmaTruncDiagonalMainLowQSupport),
     surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X q
 
+/-- Rational shadow of the surrogate finite dominant low-`q` diagonal mass. -/
+def surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQRat
+    (X : ℕ) : ℚ :=
+  ∑ q ∈ centeredNormalizedSigmaTruncDiagonalMainLowQSupport,
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X q
+
 private lemma centeredNormalizedSigmaTruncDiagonalMainLowQSupport_subset_coeffSupport
     {q : ℕ}
     (hq : q ∈ centeredNormalizedSigmaTruncDiagonalMainLowQSupport) :
@@ -18059,6 +18114,23 @@ theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_eq_sixTerms
   rw [filter_coeffSupport_mem_mainLowQ_eq_mainLowQSupport]
   simp [centeredNormalizedSigmaTruncDiagonalMainLowQSupport, add_assoc, add_comm, add_left_comm]
 
+theorem surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_eq_ratCast
+    (X : ℕ) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X
+      = (surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQRat X : ℝ) := by
+  unfold surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQRat
+  rw [filter_coeffSupport_mem_mainLowQ_eq_mainLowQSupport]
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  have hqpos : 1 ≤ q := by
+    have hmem : q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 :=
+      centeredNormalizedSigmaTruncDiagonalMainLowQSupport_subset_coeffSupport hq
+    rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hmem with ⟨hqIcc, _⟩
+    exact (Finset.mem_Icc.mp hqIcc).1
+  rw [surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_eq_ratCast (X := X) (q := q) hqpos]
+
 theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_le_of_termwise_bounds
     {X : ℕ} {C3 C5 C6 C7 C10 C14 : ℝ}
     (h3 : centeredNormalizedSigmaTruncDiagonalMainTerm3 X ≤ C3)
@@ -18086,6 +18158,17 @@ noncomputable def surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmall
       (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ q ≤ 50),
     surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X q
 
+/-- Explicit supported low-`q` small-rest diagonal support at `q ≤ 50`. -/
+def centeredNormalizedSigmaTruncDiagonalSmallRestSupport : Finset ℕ :=
+  ([11, 13, 15, 17, 19, 21, 22, 23, 26, 29, 30, 31,
+    33, 34, 35, 37, 38, 39, 41, 42, 43, 46, 47] : List ℕ).toFinset
+
+/-- Rational shadow of the supported low-`q` small-rest diagonal mass. -/
+def surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRestRat
+    (X : ℕ) : ℚ :=
+  ∑ q ∈ centeredNormalizedSigmaTruncDiagonalSmallRestSupport,
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X q
+
 /-- Supported diagonal tail beyond `q = 50`, disjoint from the finite low-`q` bucket. -/
 noncomputable def centeredNormalizedSigmaTruncDiagonalEnergyDirectTail
     (X : ℕ) : ℝ :=
@@ -18099,6 +18182,28 @@ noncomputable def surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail
   ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
       (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ 50 < q),
     surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X q
+
+/-- Rational shadow of the surrogate supported diagonal tail beyond `q = 50`. -/
+def surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTailRat
+    (X : ℕ) : ℚ :=
+  ∑ q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+      (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ 50 < q),
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X q
+
+theorem surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail_eq_ratCast
+    (X : ℕ) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X
+      = (surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTailRat X : ℝ) := by
+  unfold surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTailRat
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  have hqpos : 1 ≤ q := by
+    have hsuppq : q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 := (Finset.mem_filter.mp hq).1
+    rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hsuppq with ⟨hqIcc, _⟩
+    exact (Finset.mem_Icc.mp hqIcc).1
+  rw [surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_eq_ratCast (X := X) (q := q) hqpos]
 
 theorem centeredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_eq_trueScale_mul_surrogate
     (X : ℕ) :
@@ -18413,6 +18518,157 @@ noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0
         surrogateNormalizedSigmaTruncSummandRealCoeff q
           * surrogateNormalizedSigmaTruncSummandRealCoeff q'
           * centeredRamanujanPairPeriodicMainTerm X q q'
+
+/-- Rational shadow of the number of even points in one complete `2*lcm(q,q')` block. -/
+def evenRamanujanBlockCountRat
+    (q q' : ℕ) : ℚ :=
+  Nat.lcm q q'
+
+theorem evenRamanujanBlockCount_eq_ratCast
+    (X q q' : ℕ) :
+    evenRamanujanBlockCount X q q'
+      = (evenRamanujanBlockCountRat q q' : ℝ) := by
+  unfold evenRamanujanBlockCountRat
+  simpa using evenRamanujanBlockCount_eq_lcm X q q'
+
+/-- Rational shadow of the one-variable periodic gcd-class block count. -/
+def rawEvenRamanujanGcdClassBlockPeriodicCountRat
+    (X q q' q0 g0 : ℕ) : ℚ :=
+  if Goldbach.Windows.IsEven g0 then
+    let A := X ⌈/⌉ g0
+    let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g0 + 1) - A
+    let M := q0 / g0
+    (((L / M) * (((Finset.range M).filter (fun t => Nat.Coprime M (A + t))).card)
+      + (((Finset.range (L % M)).filter
+          (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℚ)
+  else
+    let A := X ⌈/⌉ g0
+    let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / g0 + 1) - A
+    let M := q0 / g0
+    (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+        (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+      + (((Finset.range (L % (2 * M))).filter
+          (fun t =>
+            Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+              ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℚ)
+
+theorem rawEvenRamanujanGcdClassBlockPeriodicCount_eq_ratCast
+    (X q q' q0 g0 : ℕ) :
+    rawEvenRamanujanGcdClassBlockPeriodicCount X q q' q0 g0
+      = (rawEvenRamanujanGcdClassBlockPeriodicCountRat X q q' q0 g0 : ℝ) := by
+  unfold rawEvenRamanujanGcdClassBlockPeriodicCount
+    rawEvenRamanujanGcdClassBlockPeriodicCountRat
+  by_cases hgEven : Goldbach.Windows.IsEven g0
+  · simp [hgEven]
+  · simp [hgEven]
+
+/-- Rational shadow of the pair periodic gcd-class block count. -/
+def rawEvenRamanujanGcdClassPairBlockPeriodicCountRat
+    (X q q' g h : ℕ) : ℚ :=
+  if Goldbach.Windows.IsEven (Nat.lcm g h) then
+    let A := X ⌈/⌉ Nat.lcm g h
+    let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1) - A
+    let M := ramanujanGcdClassJointModulus q q' g h
+    (((L / M) * (((Finset.range M).filter (fun t => Nat.Coprime M (A + t))).card)
+      + (((Finset.range (L % M)).filter
+          (fun t => Nat.Coprime M (A + (L / M) * M + t))).card) : ℕ) : ℚ)
+  else
+    let A := X ⌈/⌉ Nat.lcm g h
+    let L := ((X + centeredRamanujanPairBlockPeriod q q' - 1) / Nat.lcm g h + 1) - A
+    let M := ramanujanGcdClassJointModulus q q' g h
+    (((L / (2 * M)) * (((Finset.range (2 * M)).filter
+        (fun t => Goldbach.Windows.IsEven (A + t) ∧ Nat.Coprime M (A + t))).card)
+      + (((Finset.range (L % (2 * M))).filter
+          (fun t =>
+            Goldbach.Windows.IsEven (A + (L / (2 * M)) * (2 * M) + t)
+              ∧ Nat.Coprime M (A + (L / (2 * M)) * (2 * M) + t))).card) : ℕ) : ℚ)
+
+theorem rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_ratCast
+    (X q q' g h : ℕ) :
+    rawEvenRamanujanGcdClassPairBlockPeriodicCount X q q' g h
+      = (rawEvenRamanujanGcdClassPairBlockPeriodicCountRat X q q' g h : ℝ) := by
+  unfold rawEvenRamanujanGcdClassPairBlockPeriodicCount
+    rawEvenRamanujanGcdClassPairBlockPeriodicCountRat
+  by_cases hEven : Goldbach.Windows.IsEven (Nat.lcm g h)
+  · simp [hEven]
+  · simp [hEven]
+
+/-- Rational shadow of the resolved pair periodic gcd-class block count. -/
+def rawEvenRamanujanGcdClassPairBlockResolvedCountRat
+    (X q q' g h : ℕ) : ℚ :=
+  if ramanujanGcdClassJointCompatibility q q' g h then
+    rawEvenRamanujanGcdClassPairBlockPeriodicCountRat X q q' g h
+  else
+    0
+
+theorem rawEvenRamanujanGcdClassPairBlockResolvedCount_eq_ratCast
+    (X q q' g h : ℕ) :
+    rawEvenRamanujanGcdClassPairBlockResolvedCount X q q' g h
+      = (rawEvenRamanujanGcdClassPairBlockResolvedCountRat X q q' g h : ℝ) := by
+  unfold rawEvenRamanujanGcdClassPairBlockResolvedCount
+    rawEvenRamanujanGcdClassPairBlockResolvedCountRat
+  by_cases hcompat : ramanujanGcdClassJointCompatibility q q' g h
+  · simp [hcompat, rawEvenRamanujanGcdClassPairBlockPeriodicCount_eq_ratCast]
+  · simp [hcompat]
+
+/-- Rational shadow of the centered periodic-main gcd-class contribution. -/
+def centeredRamanujanPairPeriodicMainTermRat
+    (X q q' : ℕ) : ℚ :=
+  ∑ g ∈ q.divisors, ∑ h ∈ q'.divisors,
+    ramanujanGcdClassCoeffRat q g * ramanujanGcdClassCoeffRat q' h
+      * ((((H + 1) / centeredRamanujanPairBlockPeriod q q') : ℕ)
+          • (rawEvenRamanujanGcdClassPairBlockResolvedCountRat X q q' g h
+              - ramanujanGcdClassWindowAverageRat X q' h
+                  * rawEvenRamanujanGcdClassBlockPeriodicCountRat X q q' q g
+              - ramanujanGcdClassWindowAverageRat X q g
+                  * rawEvenRamanujanGcdClassBlockPeriodicCountRat X q q' q' h
+              + ramanujanGcdClassWindowAverageRat X q g * ramanujanGcdClassWindowAverageRat X q' h
+                  * evenRamanujanBlockCountRat q q'))
+
+theorem centeredRamanujanPairPeriodicMainTerm_eq_ratCast
+    (X q q' : ℕ) :
+    centeredRamanujanPairPeriodicMainTerm X q q'
+      = (centeredRamanujanPairPeriodicMainTermRat X q q' : ℝ) := by
+  unfold centeredRamanujanPairPeriodicMainTerm centeredRamanujanPairPeriodicMainTermRat
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro g hg
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro h hh
+  simp [ramanujanGcdClassCoeff_eq_ratCast,
+    rawEvenRamanujanGcdClassPairBlockResolvedCount_eq_ratCast,
+    ramanujanGcdClassWindowAverage_eq_ratCast,
+    rawEvenRamanujanGcdClassBlockPeriodicCount_eq_ratCast,
+    evenRamanujanBlockCount_eq_ratCast]
+
+/-- Rational shadow of the full surrogate periodic-main pair sum up to `Q0`. -/
+def surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat
+    (X : ℕ) : ℚ :=
+  ∑ q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+    ∑ q' ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0,
+      if q = q' then 0
+      else
+        surrogateNormalizedSigmaTruncSummandCoeffRat q
+          * surrogateNormalizedSigmaTruncSummandCoeffRat q'
+          * centeredRamanujanPairPeriodicMainTermRat X q q'
+
+theorem surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_ratCast
+    (X : ℕ) :
+    surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X
+      = (surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat X : ℝ) := by
+  unfold surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0
+    surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q' hq'
+  by_cases hqq' : q = q'
+  · simp [hqq']
+  · simp [hqq', surrogateNormalizedSigmaTruncSummandRealCoeff_eq_ratCast,
+      centeredRamanujanPairPeriodicMainTerm_eq_ratCast]
 
 noncomputable def centeredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0
     (X : ℕ) : ℝ :=
@@ -23703,6 +23959,10 @@ def surrogateDiagTailX0Check : Goldbach.Cert.MajorArcCertChecker.CheckLE :=
     lhs := (99905902858299 : ℚ) / 1000000000000
     rhs := (100 : ℚ) }
 
+def surrogateDiagTailX0RatCert : ℚ :=
+  (4065293210666163024880498919965919789551816278193962649278831497149090809833817381346778031328632301168500631843604735676903805862662806888857818397520386453608655257117299332795041871962789014748389887500175137065678711595405967929614536422034608224076355233308029700436612970327804584967418701412323170451075757231334187399941707049118086498721128864867181242877103634934545799961051355799551021656205535085051061625734657029971793363741759396424391549845423216132682433223317335044120724145390008825498832441259892534793541515289567153775846798009758086155923919922284293948933994684895647753560087386364748836222149943465718172688889166801255324545416360525705373847872172474374300303736344304573392516982292599236331870427656602883862506905973956772391309028631035963136197944827095689191505593756165585107396561261852228407088022054708156702155599808076336250848542226141820316370104983580351792121223737349481164423501236768054954434597826815573647490741683291138937977891650183416512300552467535970553537499352849654411639648696943537731167933276734628142534735498204066067165953251664645443595684119655849519049925883551757690807756019399140725786801860240193009453592678776083388295952538790342445137309913848986995860718542776133003322305418467507241355871591135514716776308664628125795117869744623484466986012900011409438636393518947207833995400235200482423143284843817904497597688529185144892475128928194733167777921154939050433206541956343729009148840412092778304222183984113003566430963731619811392606147292613093840508808673827961713610110472892387241842635946621795908000339689890683990044638738115301021118026470074607124857030767047170025402062104260282973681409518792278442074679719040370915283223667554456585606836561350452143860119726330649383564992521357438530001837301092707923304045636782716307283002699059816148864222590705606590471075418450239451099064386989731686988153133396219978168229512330057227256262761610692926120256457892168910325137844069961932359723276980636682026174244078546404555926822276628292369511138884378304713279758921195066289054714608120909772310226120267464234906504631183481233096491708812728308450228850173560275228093539690133184543676778940884732116601140309668710743745587596782597294136712830652519524730867846826038993194232726607853866433684347454519544424476778310289821082422526611019887420284989003107852448846873480973919882229722595722937598403910327435636599867928527977153421136351519837593840237376826374281455570201659022266374888763620151361600234818161057266430450048181096504858098940319996653686225599278474013059105037115547751276475685007909744374599945221629756468252699663289777733414299886742818429851985097417912641941498685132080053880939464452108024330826709844540252681701289362938684832334769696229748105123448496196805747899060308414063203524998680228638306581192362118270522256649703083642663784924220021302620861145935994223333806185005166361494361443211686463077898010509434034506062325494170917499035285438416010190269609961779191608091333926071159476085957632051521453800200995903786125181399340623662508040779722097110463705029336203524736622037960869750945243151675209192824392704358032157161919164185526853402333227120227540989313552885795634811803512403389716982760467203943805062367056355816900532266712760859959132538344742692215540308052642303323644974764857315486481367736289127004269530641740911189265808002755826505276642993864686910420873271030116431930710017673820965762593076967565065166224302447518759704251696058669580647584699441681467304541685726515848812726355177236882873662825435865478855765404013139607513941669905661293201379099215099999751442142699780306226014373853060239189582115916694894769302024574642688850932324224650716249022420641966652017046914316227136984543081279572410399623404195133678051250217774584769722430439636617144176693488715485597366517286815872150097691743156863755087537395840383033117467946559808102040343117854275871209387599509152627374832050410989363644759335732681816683673400462184845418211187040797690537487050478965332167685645851942125590337238343709073878036104406148693325612385918861237114965627999191473932982550881251628152731758337786944282317163930794021273640443033116277377132063838396310773223932513701523004074356915491296594453365907013516277276861592678917345737441911613959523980310226632869289745695595502440875803154123801581259362576932090929686528855421814839776048332954415012718495199048682973630666876764249361466986805282177989821781848592946943180847825736797429382834672910308366779857769413097046209388631399834929417781464354291157415046430615599090539892150393657971215223639409779926620224996827207823184005457730337999803452052068305429613959042355603530632716137512420147923378482602076200067977560641627346979049094403939695169358981724612321453295389013743174257569513754521641265939805777104364070267931206814163497748430352753674709278647156888513731043792903314598308617360382411011593957168451341298695269802101784841309265243293088237304348470229203753000523181084078908658225556212111193562015967090728579401058624956788659816667095241871096243003619225742030364240551327501 : ℚ)
+    / 40691221382906132925674232606751772696962417123471286077808754857267463666116803169162791594962151731620101535991738144019966224193767376646531550278045305106291508379564033152554745335496399131384406270641515281959073008057162948184099087768147491524303657585274517021650692582058182262494641251286300235256197211657823305179107502057249191233336607061053487898189991880871322414752933657748945488225523589384602820734847939416730066863283528463460680707357861752690431658480184589691443786890170490123719388161697646195648372711854974542888807445142947139699348303046725110759891796509657064960375465436820324554279917465912396630968452037030257672449506881146313681653725413298558475802614151255282703253560515506050803167191500453282308911185563517269699708370594337508440199635295865582194722209445905782864794825262204080993335923200538468345197874645739960698612215601465872300995379315168624671962638858567014572479648659974739507907967473953761440687989988660154544345113195922618541759086919493236794709646304182735765134082363654308300166356467720654052948814698477112628008425403416118023077819276990540317343832160048172446733682887785949310323313015465269000930171062132708399373817594099845816763753518073511207799101630944759132879337242800502527859241446838644035317542576343033331962492574515346585164377531153623577060069677820307828300001323007305190867195575103962480433237196503615316591939156384159671021067623577149067458459030051181524064431475609184648623464875841022716739804316187731586645468149771983677066669357651420492269068302227380898267344519324893606401430284721770342530017241933453399018634118251754402107676638075969118364609723736727080567865283623712219108882265620393215939058252543403606048605480173470910880957653581177137492719192016001774833154333877834951946058440968441630888120818904109545546859235875880440812560947438212757503184344991473622561197609324977009583382455896541707936505287114222391925156617552869039945489468386956048438593758171550540927749139732086503125776806450110668133014447287604592614793206063690040213633743584549720427772417365894173267092443942936752415048648183165246471532029800208830753536610774449165921905535882153127963944580118243092855310601802308186277516283318765848493287766662141853048084017242393095391511658903106543291246612392806423629239772416488130343979857259532507432818451407614357276277708939863554711813409834056288551814214980681992895223970035846544131662311040962750373705232725211185862277689868499474582809006685021394917757366473029329239794425389088731869572411561016138324687200561932560874501606244354073186971893238439984755000768695754405194908198334725966757073115415474454941960947169675130791100055329994284329809790134985105176784101967127974928278772086713162136529204458100985982419595454689875081675987343560098057035466151765245714489788503277852309537010481041954273939235191108930915577994366889340562429926095203798673887729994651138447001721500470532986517332562061784700057781262313459793286876784184391066856223766750693747176827183747926598286689262239717817804003173725454393865056137551208231202366480915462613293076973166440349784436577124791006076398542173164625117831479065145642374382911689749992083023206635813283265636080072919436118074661074057408434352034839860226132132610730516201597357337070803454557267924182307456995032679325595180252673384028567320556935728861934064574699399221703422849443043006370442893054701215151127438405616297042546161560025906644619832273598521037707410315470796346278232521982581556814479517880642185662283299417121039805579586526147018345087418384676856497694399269082181823870743302587992281276624252553379951165294107729057489250283775621477244489150258742630712133272896778676426274114769988441141292740239323980298431067997689587176934241232067515353603394566548418398683118918901636291837186247735320399558684739310224468761241302755491906315679659393357538506821118169800421855772777965124965456959202012265128771680770485007171697091260325847958165019350311126828645641700237409775301483021347744621981289729285147224272683421145749724063441561586616145505174545484906894976464794505163176593373438823274702252886578568756015954370040905955923518416822567101253689261148025745757532313870182130098000563021581520858269584285622026602597754157247150772069378372204966450069564411346482327831097465737647261803381374758957025951872783625510413709016700274840458186195039576446953944552702698463472371905504210886355970810268935226891668763847012298451526908013505028577418847507149197394419983206319824819456992674071631243554189447205071776591486192511126832748457740585879690794770324438245390736262648094371095254694978926865998619285964197219790852144944929753953053948802525431246844191139681020962973707242584190160291470330807095813045949269439082034972632869308554337017995986735469777935497708195132180159616514228624639031198374340753784334661912444288727118658300720363471023546290829285820501482075358661492865219095199392965218678928980487789979392448912929828569842279188429389650560476445984904653968268482394924294036181961387321109265501963419648000000000000000000
+
 theorem surrogateBoundaryX0Check_holds :
     surrogateBoundaryX0Check.Holds := by
   native_decide
@@ -23710,6 +23970,14 @@ theorem surrogateBoundaryX0Check_holds :
 theorem surrogatePeriodicMainX0Check_holds :
     surrogatePeriodicMainX0Check.Holds := by
   native_decide
+
+def surrogatePeriodicMainX0RatCert : ℚ :=
+  (785178974672733767636555336344033048349645155413574425199224448938082727620428828844052131001730185977470072111264119080341160384638850426506671171669372345431315538863564141733138850376072907862453798133218160655899304952594478414068198665761992224022029331835841435251374021618148681298907868263830098455022263629272339466328063140414779285907724573858062436863708566695284869471560404170427765030911053437850162084237572685710150573399456166727073845720080900171794188604818256380360558913099891810091065051969627334070740259235801111951353204015109363488976137376837507734998292417222728037946014353860245452799360872776561824305504523271917895076954426131766331163937460840137567490180441785091510541342165988762831981555018952145187392432237696011499062516801947337874878704190010691543771582407482821950301154814595760046907709881382770914032253250497623136988544129787336161731956557325449305038157638707 : ℚ)
+    / 20880886101668219097212228964952440048797104053466675872451300902334146619273614580350570299720873183284028729654863910834034100991618269612661347845686503912045978200228677675135648940974645166198005403086155609827172960219143574734169569849849076119603541821083276898038120928185824102431581281191073443670935509870638011656093166821921295947581692685289463730501096519971397788170506977823559979372257631047810660081265738810334740037859885842270950865770833825676859475265720339089717760595476322946413202844037960948960168886230831871912062867770451448854976718442569233448472191740467859905065377933277534281952082271259225418434180145664616093891416699038312443574842403798190454693215353637562367420704133214065425551981318409380635277139710662442513217057691956231573381809398649268717758826090841977511035383524941683706940605272567158601176402262084869960824675345565591434070490873856000000000000
+
+theorem surrogatePeriodicMainX0RatCert_abs_le_check :
+    |surrogatePeriodicMainX0RatCert| ≤ surrogatePeriodicMainX0Check.lhs := by
+  norm_num [surrogatePeriodicMainX0RatCert, surrogatePeriodicMainX0Check]
 
 theorem surrogateDiagMainX0Check_holds :
     surrogateDiagMainX0Check.Holds := by
@@ -23755,6 +24023,51 @@ theorem abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X
       (abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_decimal_of_rat_shadow
         hboundaryRat)
 
+def surrogateBoundaryX0ActiveSignedCert : ℚ :=
+  (-25284933542677 : ℚ) / 1000000000000
+
+def surrogateBoundaryX0InactiveCorrectionCert : ℚ :=
+  (-55681588699 : ℚ) / 1000000000000
+
+def surrogateBoundaryX0FullCert : ℚ :=
+  surrogateBoundaryX0ActiveSignedCert + surrogateBoundaryX0InactiveCorrectionCert
+
+theorem surrogateBoundaryX0FullCert_abs_le_check :
+    |(surrogateBoundaryX0FullCert : ℝ)| ≤ surrogateBoundaryX0Check.lhs := by
+  norm_num [surrogateBoundaryX0FullCert,
+            surrogateBoundaryX0ActiveSignedCert,
+            surrogateBoundaryX0InactiveCorrectionCert,
+            surrogateBoundaryX0Check]
+
+theorem abs_surrogateBoundary_X0_le_decimal_from_cert
+    (hcert :
+      surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat X0
+        = surrogateBoundaryX0FullCert) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0|
+      ≤ (surrogateBoundaryX0Check.lhs : ℝ) := by
+  apply abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_decimal_of_rat_shadow
+  rw [hcert]
+  have hcast : (|(surrogateBoundaryX0FullCert : ℝ)|) ≤ (surrogateBoundaryX0Check.lhs : ℝ) :=
+    surrogateBoundaryX0FullCert_abs_le_check
+  exact_mod_cast hcast
+
+def CenteredNormalizedSigmaTruncBoundaryRatCertificateAtX0 : Prop :=
+  surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat X0 =
+    surrogateBoundaryX0FullCert
+
+theorem abs_surrogateBoundary_X0_le_decimal_of_certificate
+    (hcert : CenteredNormalizedSigmaTruncBoundaryRatCertificateAtX0) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0|
+      ≤ (surrogateBoundaryX0Check.lhs : ℝ) := by
+  exact abs_surrogateBoundary_X0_le_decimal_from_cert hcert
+
+theorem abs_surrogateBoundary_X0_le_26_of_certificate
+    (hcert : CenteredNormalizedSigmaTruncBoundaryRatCertificateAtX0) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0 X0| ≤ 26 := by
+  exact
+    abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_26_of_decimal_certificate
+      (abs_surrogateBoundary_X0_le_decimal_of_certificate hcert)
+
 theorem abs_surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_X0_le_37603_of_decimal_certificate
     (hmain :
       |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0|
@@ -23790,6 +24103,6954 @@ theorem surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail_X0_le_100_
   have hround : (surrogateDiagTailX0Check.lhs : ℝ) ≤ (surrogateDiagTailX0Check.rhs : ℝ) :=
     Goldbach.Cert.MajorArcCertChecker.CheckLE.holds_cast_real surrogateDiagTailX0Check_holds
   simpa [surrogateDiagTailX0Check] using le_trans htail hround
+
+def CenteredNormalizedSigmaTruncSurrogatePeriodicMainDecimalCertificateAtX0 : Prop :=
+  |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0|
+    ≤ (surrogatePeriodicMainX0Check.lhs : ℝ)
+
+def CenteredNormalizedSigmaTruncSurrogatePeriodicMainRatCertificateAtX0 : Prop :=
+  |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat X0|
+    ≤ surrogatePeriodicMainX0Check.lhs
+
+def CenteredNormalizedSigmaTruncSurrogatePeriodicMainExactRatCertificateAtX0 : Prop :=
+  surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat X0
+    = surrogatePeriodicMainX0RatCert
+
+def CenteredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0 : Prop :=
+  ∃ c : ℚ,
+    surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat X0 = c ∧
+      |c| ≤ surrogatePeriodicMainX0Check.lhs
+
+def CenteredNormalizedSigmaTruncSurrogateDiagonalMainDecimalCertificateAtX0 : Prop :=
+  surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0
+    ≤ (surrogateDiagMainX0Check.lhs : ℝ)
+
+def CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestDecimalCertificateAtX0 : Prop :=
+  surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0
+    ≤ (surrogateDiagSmallRestX0Check.lhs : ℝ)
+
+def CenteredNormalizedSigmaTruncSurrogateDiagonalTailDecimalCertificateAtX0 : Prop :=
+  surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X0
+    ≤ (surrogateDiagTailX0Check.lhs : ℝ)
+
+def CenteredNormalizedSigmaTruncSurrogateDiagonalTailRatCertificateAtX0 : Prop :=
+  surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTailRat X0
+    ≤ surrogateDiagTailX0Check.lhs
+
+def CenteredNormalizedSigmaTruncSurrogateDiagonalTailExactRatCertificateAtX0 : Prop :=
+  surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTailRat X0
+    = surrogateDiagTailX0RatCert
+
+def CenteredNormalizedSigmaTruncSurrogateDiagonalTailExactRatCheckCertificateAtX0 : Prop :=
+  surrogateDiagTailX0RatCert ≤ surrogateDiagTailX0Check.lhs
+
+theorem abs_surrogatePeriodicMain_X0_le_37603_of_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogatePeriodicMainDecimalCertificateAtX0) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0| ≤ 37603 := by
+  exact abs_surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_X0_le_37603_of_decimal_certificate hcert
+
+theorem abs_surrogatePeriodicMain_X0_le_decimal_of_rat_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogatePeriodicMainRatCertificateAtX0) :
+    CenteredNormalizedSigmaTruncSurrogatePeriodicMainDecimalCertificateAtX0 := by
+  unfold CenteredNormalizedSigmaTruncSurrogatePeriodicMainDecimalCertificateAtX0
+    CenteredNormalizedSigmaTruncSurrogatePeriodicMainRatCertificateAtX0 at *
+  rw [surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_eq_ratCast]
+  have hcast :
+      ((|surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat X0| : ℚ) : ℝ)
+        ≤ (surrogatePeriodicMainX0Check.lhs : ℝ) := by
+    exact_mod_cast hcert
+  simpa using hcast
+
+theorem abs_surrogatePeriodicMain_X0_le_37603_of_rat_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogatePeriodicMainRatCertificateAtX0) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0| ≤ 37603 := by
+  exact
+    abs_surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_X0_le_37603_of_decimal_certificate
+      (abs_surrogatePeriodicMain_X0_le_decimal_of_rat_certificate hcert)
+
+theorem centeredNormalizedSigmaTruncSurrogatePeriodicMainRatCertificateAtX0_of_exactCheckedCertificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0) :
+    CenteredNormalizedSigmaTruncSurrogatePeriodicMainRatCertificateAtX0 := by
+  rcases hcert with ⟨c, hc, hcheck⟩
+  unfold CenteredNormalizedSigmaTruncSurrogatePeriodicMainRatCertificateAtX0
+  rw [hc]
+  exact hcheck
+
+theorem centeredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0_of_exactCertificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogatePeriodicMainExactRatCertificateAtX0) :
+    CenteredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0 := by
+  refine ⟨surrogatePeriodicMainX0RatCert, hcert, ?_⟩
+  exact surrogatePeriodicMainX0RatCert_abs_le_check
+
+theorem abs_surrogatePeriodicMain_X0_le_37603_of_exactChecked_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0) :
+    |surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0 X0| ≤ 37603 := by
+  exact abs_surrogatePeriodicMain_X0_le_37603_of_rat_certificate
+    (centeredNormalizedSigmaTruncSurrogatePeriodicMainRatCertificateAtX0_of_exactCheckedCertificate
+      hcert)
+
+theorem surrogateDiagonalMain_X0_le_36326_of_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalMainDecimalCertificateAtX0) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0 ≤ 36326 := by
+  exact surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_X0_le_36326_of_decimal_certificate hcert
+
+def surrogateDiagMainTerm3X0RatCert : ℚ := (125025 : ℚ) / 8
+
+def surrogateDiagMainTerm5X0RatCert : ℚ := (78203125 : ℚ) / 40008
+
+def surrogateDiagMainTerm7X0RatCert : ℚ := (208312475 : ℚ) / 360072
+
+def surrogateDiagonalMainX0RatCert : ℚ := (6539390825 : ℚ) / 180036
+
+theorem surrogateDiagonalMainX0RatCert_le_check :
+    surrogateDiagonalMainX0RatCert ≤ surrogateDiagMainX0Check.lhs := by
+  norm_num [surrogateDiagonalMainX0RatCert, surrogateDiagMainX0Check]
+
+private theorem X0_isEven : Goldbach.Windows.IsEven X0 := by
+  norm_num [X0, Goldbach.Windows.IsEven]
+
+private theorem evenIn_X0_H_card_eq_5001 :
+    (EvenIn X0 H).card = 5001 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · norm_num [H]
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverageRat_three_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 3 1 = (2 / 3 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 3 1 : ℝ) = (((2 / 3 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      (ramanujanGcdClassWindowAverage_three_one_eq_two_thirds_of_isEven (X := X0) X0_isEven)
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_three_three_X0 :
+    ramanujanGcdClassWindowAverageRat X0 3 3 = (1 / 3 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 3 3 : ℝ) = (((1 / 3 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      (ramanujanGcdClassWindowAverage_three_three_eq_one_third_of_isEven (X := X0) X0_isEven)
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_three_one_add_three_three_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 3 1 N + ramanujanGcdClassIndicatorRat 3 3 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 3 N = 1
+  · have h3 : Nat.gcd 3 N ≠ 3 := by
+      rw [h1]
+      norm_num
+    simp [h1, h3]
+  · have hdiv : Nat.gcd 3 N ∣ 3 := Nat.gcd_dvd_left 3 N
+    have h3 : Nat.gcd 3 N = 3 := by
+      have hgcdpos : 0 < Nat.gcd 3 N := Nat.gcd_pos_of_pos_left N (by norm_num)
+      have hgcdle : Nat.gcd 3 N ≤ 3 := Nat.le_of_dvd (by norm_num) hdiv
+      have hne2 : Nat.gcd 3 N ≠ 2 := by
+        intro h2
+        have : 2 ∣ 3 := by simpa [h2] using hdiv
+        norm_num at this
+      omega
+    simp [h1, h3]
+
+private theorem centeredRamanujanObservableRat_X0_3_eq_indicator3
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 3 N
+      = (-1 : ℚ) + 3 * ramanujanGcdClassIndicatorRat 3 3 N := by
+  have hdivs : (3 : ℕ).divisors = ({1, 3} : Finset ℕ) := by
+    simpa using (show Nat.Prime 3 by decide).divisors
+  have hsum :
+      ramanujanGcdClassIndicatorRat 3 1 N + ramanujanGcdClassIndicatorRat 3 3 N = 1 :=
+    ramanujanGcdClassIndicatorRat_three_one_add_three_three_eq_one N
+  have hcoeff1 : ramanujanGcdClassCoeffRat 3 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 3)]
+  have hcoeff3 : ramanujanGcdClassCoeffRat 3 3 = 2 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 3)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff3, ramanujanGcdClassWindowAverageRat_three_one_X0,
+    ramanujanGcdClassWindowAverageRat_three_three_X0]
+  linarith
+
+private theorem centeredRamanujanObservableRat_X0_3_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 3 N) ^ 2
+      = 1 + 3 * ramanujanGcdClassIndicatorRat 3 3 N := by
+  rw [centeredRamanujanObservableRat_X0_3_eq_indicator3]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h3 : Nat.gcd 3 N = 3
+  · simp [h3]
+    norm_num
+  · simp [h3]
+
+private theorem sum_ramanujanGcdClassIndicatorRat_three_three_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 3 3 N = 1667 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 3 N = 3)).card : ℚ) = 1667 := by
+    have havg := ramanujanGcdClassWindowAverageRat_three_three_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 3 3 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 3 N = 3)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 3 N = 3 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 3 N = 3)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul]
+          rw [mul_one]
+    _ = 1667 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_3_eq_10002 :
+    centeredRamanujanWindowEnergyRat X0 3 = 10002 := by
+  unfold centeredRamanujanWindowEnergyRat
+  calc
+    ∑ N ∈ EvenIn X0 H, (centeredRamanujanObservableRat X0 3 N) ^ 2
+        = ∑ N ∈ EvenIn X0 H, (1 + 3 * ramanujanGcdClassIndicatorRat 3 3 N) := by
+          refine Finset.sum_congr rfl ?_
+          intro N hN
+          exact centeredRamanujanObservableRat_X0_3_sq N
+    _ = (∑ _N ∈ EvenIn X0 H, (1 : ℚ))
+          + ∑ N ∈ EvenIn X0 H, (3 * ramanujanGcdClassIndicatorRat 3 3 N) := by
+          rw [Finset.sum_add_distrib]
+    _ = ((EvenIn X0 H).card : ℚ)
+          + 3 * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 3 3 N := by
+          rw [Finset.sum_const, nsmul_eq_mul, Finset.mul_sum]
+          simp only [mul_one]
+    _ = 5001 + 3 * 1667 := by
+          rw [evenIn_X0_H_card_eq_5001, sum_ramanujanGcdClassIndicatorRat_three_three_X0]
+          norm_num
+    _ = 10002 := by norm_num
+
+theorem surrogateDiagonalMainTerm3_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 3
+      = surrogateDiagMainTerm3X0RatCert := by
+  have hsqfree : Squarefree 3 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+    surrogateDiagMainTerm3X0RatCert
+  rw [centeredRamanujanWindowEnergyRat_X0_3_eq_10002]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 3)]
+  norm_num
+
+private theorem ramanujanR_six_eq_three_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 6 N
+      =
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 3 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  by_cases h1 : Nat.gcd 3 k = 1
+  · have hgcd6 : Nat.gcd 6 (2 * k) = 2 := by
+      simpa [show 6 = 2 * 3 by norm_num, h1, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 3 k)
+    have hgcd3 : Nat.gcd 3 (2 * k) = 1 := by
+      have hcop : Nat.Coprime 3 k := Nat.coprime_iff_gcd_eq_one.mpr h1
+      have h2cop : Nat.Coprime 3 2 := by norm_num
+      have hcop' : Nat.Coprime 3 (2 * k) := (Nat.coprime_mul_iff_right).2 ⟨h2cop, hcop⟩
+      exact Nat.coprime_iff_gcd_eq_one.mp hcop'
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [hgcd6, hgcd3]
+  · have hdiv : Nat.gcd 3 k ∣ 3 := Nat.gcd_dvd_left 3 k
+    have h3 : Nat.gcd 3 k = 3 := by
+      have hgcdpos : 0 < Nat.gcd 3 k := Nat.gcd_pos_of_pos_left k (by norm_num)
+      have hgcdle : Nat.gcd 3 k ≤ 3 := Nat.le_of_dvd (by norm_num) hdiv
+      have hne2 : Nat.gcd 3 k ≠ 2 := by
+        intro h2
+        have : 2 ∣ 3 := by simpa [h2] using hdiv
+        norm_num at this
+      omega
+    have hgcd6 : Nat.gcd 6 (2 * k) = 6 := by
+      simpa [show 6 = 2 * 3 by norm_num, h3, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 3 k)
+    have hgcd3 : Nat.gcd 3 (2 * k) = 3 := by
+      have h3divk : 3 ∣ k := by simpa [h3] using Nat.gcd_dvd_right 3 k
+      have h3div2k : 3 ∣ 2 * k := dvd_mul_of_dvd_right h3divk 2
+      have hle : Nat.gcd 3 (2 * k) ≤ 3 := Nat.le_of_dvd (by norm_num) (Nat.gcd_dvd_left 3 (2 * k))
+      have hpos : 0 < Nat.gcd 3 (2 * k) := Nat.gcd_pos_of_pos_left (2 * k) (by norm_num)
+      have hdvd : 3 ∣ Nat.gcd 3 (2 * k) := Nat.dvd_gcd (dvd_rfl) h3div2k
+      omega
+    have hram6 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 6 (2 * k) = 2 := by
+      have htot6 : Nat.totient 6 = 2 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd6]
+      rw [htot6]
+      norm_num [ArithmeticFunction.moebius_apply_one]
+    have hram3 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 3 (2 * k) = 2 := by
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd3]
+      norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 3)]
+    rw [hram6, hram3]
+
+private theorem ramanujanWindowAverage_X0_6_eq_three :
+    ramanujanWindowAverage X0 6 = ramanujanWindowAverage X0 3 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_six_eq_three_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_6_eq_three
+    {N : ℕ} (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 6 N = centeredRamanujanObservable X0 3 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_six_eq_three_of_isEven (isEven_of_mem_EvenIn hN), ramanujanWindowAverage_X0_6_eq_three]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_6_eq_10002 :
+    centeredRamanujanWindowEnergyRat X0 6 = 10002 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 6 = centeredRamanujanWindowEnergy X0 3 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_6_eq_three hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 6 : ℝ) = (10002 : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 6) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 3) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_3_eq_10002]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalMainTerm6_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 6
+      = surrogateDiagMainTerm3X0RatCert := by
+  have hsqfree : Squarefree 6 := by native_decide
+  have hphi6 : Nat.totient 6 = 2 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+    surrogateDiagMainTerm3X0RatCert
+  rw [centeredRamanujanWindowEnergyRat_X0_6_eq_10002]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi6]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_five_one_period_five_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 5 1 (X + 2 * (k + 5))
+      =
+    ramanujanGcdClassIndicator 5 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 5 (X + 2 * (k + 5)) = Nat.gcd 5 (X + 2 * k) := by
+    calc
+      Nat.gcd 5 (X + 2 * (k + 5))
+          = Nat.gcd 5 ((X + 2 * k) + 2 * 5) := by ring_nf
+      _ = Nat.gcd 5 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_five_one_sum_range_five_eq_four_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 5, ramanujanGcdClassIndicator 5 1 (X + 2 * k) = 4 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 5 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 5 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop52 : Nat.Coprime 5 2 := by norm_num
+    have hcop :
+        Nat.Coprime 5 (2 * (X / 2 + k)) ↔ Nat.Coprime 5 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 5 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 5 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop52.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (5 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 5, ramanujanGcdClassIndicator 5 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 5, (if Nat.Coprime 5 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 5).filter (fun k => Nat.Coprime 5 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 5) (p := fun k => Nat.Coprime 5 (X / 2 + k))).symm
+    _ = 4 := by
+          have hcard :
+              (((Finset.range 5).filter (fun k => Nat.Coprime 5 (X / 2 + k))).card : ℕ) = 4 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 5 (by norm_num)
+          exact_mod_cast hcard
+
+private theorem ramanujanGcdClassWindowAverage_five_one_X0 :
+    ramanujanGcdClassWindowAverage X0 5 1 = (4000 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 5 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 5 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 1000 * 5 + 1 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 5 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_five_one_period_five_on_even_progression (X := X0) (k := k))
+      (m := 1000) (r := 1)]
+    rw [ramanujanGcdClassIndicator_five_one_sum_range_five_eq_four_of_isEven X0_isEven]
+    have hrem : ramanujanGcdClassIndicator 5 1 (X0 + 2 * (1000 * 5 + 0)) = 0 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    simp [hrem]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_five_five_X0 :
+    ramanujanGcdClassWindowAverage X0 5 5 = (1001 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 5 1 + ramanujanGcdClassWindowAverage X0 5 5 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 5 1 N + ramanujanGcdClassIndicator 5 5 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 5 1 N + ramanujanGcdClassIndicator 5 5 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 5 N = 1
+            · have h5 : Nat.gcd 5 N ≠ 5 := by
+                rw [h1]
+                norm_num
+              simp [h1, h5]
+            · have hdiv : Nat.gcd 5 N ∣ 5 := Nat.gcd_dvd_left 5 N
+              have h5 : Nat.gcd 5 N = 5 := by
+                have hgcdpos : 0 < Nat.gcd 5 N := Nat.gcd_pos_of_pos_left N (by norm_num)
+                have hgcdle : Nat.gcd 5 N ≤ 5 := Nat.le_of_dvd (by norm_num) hdiv
+                have hne2 : Nat.gcd 5 N ≠ 2 := by
+                  intro h2
+                  have : 2 ∣ 5 := by simpa [h2] using hdiv
+                  norm_num at this
+                have hne3 : Nat.gcd 5 N ≠ 3 := by
+                  intro h3
+                  have : 3 ∣ 5 := by simpa [h3] using hdiv
+                  norm_num at this
+                have hne4 : Nat.gcd 5 N ≠ 4 := by
+                  intro h4
+                  have : 4 ∣ 5 := by simpa [h4] using hdiv
+                  norm_num at this
+                omega
+              simp [h1, h5]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    rw [ramanujanGcdClassWindowAverage_five_one_X0] at hsumPair
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_five_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_five_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 5 1 = (4000 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 5 1 : ℝ) = (((4000 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_five_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_five_five_X0 :
+    ramanujanGcdClassWindowAverageRat X0 5 5 = (1001 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 5 5 : ℝ) = (((1001 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_five_five_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_five_one_add_five_five_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 5 1 N + ramanujanGcdClassIndicatorRat 5 5 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 5 N = 1
+  · have h5 : Nat.gcd 5 N ≠ 5 := by
+      rw [h1]
+      norm_num
+    simp [h1, h5]
+  · have hdiv : Nat.gcd 5 N ∣ 5 := Nat.gcd_dvd_left 5 N
+    have h5 : Nat.gcd 5 N = 5 := by
+      have hgcdpos : 0 < Nat.gcd 5 N := Nat.gcd_pos_of_pos_left N (by norm_num)
+      have hgcdle : Nat.gcd 5 N ≤ 5 := Nat.le_of_dvd (by norm_num) hdiv
+      have hne2 : Nat.gcd 5 N ≠ 2 := by
+        intro h2
+        have : 2 ∣ 5 := by simpa [h2] using hdiv
+        norm_num at this
+      have hne3 : Nat.gcd 5 N ≠ 3 := by
+        intro h3
+        have : 3 ∣ 5 := by simpa [h3] using hdiv
+        norm_num at this
+      have hne4 : Nat.gcd 5 N ≠ 4 := by
+        intro h4
+        have : 4 ∣ 5 := by simpa [h4] using hdiv
+        norm_num at this
+      omega
+    simp [h1, h5]
+
+private theorem centeredRamanujanObservableRat_X0_5_eq_indicator5
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 5 N
+      = (-5005 / 5001 : ℚ) + 5 * ramanujanGcdClassIndicatorRat 5 5 N := by
+  have hdivs : (5 : ℕ).divisors = ({1, 5} : Finset ℕ) := by
+    simpa using (show Nat.Prime 5 by decide).divisors
+  have hsum :
+      ramanujanGcdClassIndicatorRat 5 1 N + ramanujanGcdClassIndicatorRat 5 5 N = 1 :=
+    ramanujanGcdClassIndicatorRat_five_one_add_five_five_eq_one N
+  have hcoeff1 : ramanujanGcdClassCoeffRat 5 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 5)]
+  have hcoeff5 : ramanujanGcdClassCoeffRat 5 5 = 4 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 5)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff5, ramanujanGcdClassWindowAverageRat_five_one_X0,
+    ramanujanGcdClassWindowAverageRat_five_five_X0]
+  linarith
+
+private theorem centeredRamanujanObservableRat_X0_5_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 5 N) ^ 2
+      =
+    (25050025 / 25010001 : ℚ)
+      + (374949975 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 5 5 N := by
+  rw [centeredRamanujanObservableRat_X0_5_eq_indicator5]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h5 : Nat.gcd 5 N = 5
+  · simp [h5]
+    norm_num
+  · simp [h5]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_five_five_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 5 5 N = 1001 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 5 N = 5)).card : ℚ) = 1001 := by
+    have havg := ramanujanGcdClassWindowAverageRat_five_five_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 5 5 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 5 N = 5)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 5 N = 5 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 5 N = 5)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 1001 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_5_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 5 = (100100000 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 5
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((25050025 / 25010001 : ℚ)
+          + (374949975 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 5 5 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_5_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (25050025 / 25010001 : ℚ)
+        + (374949975 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 5 5 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (100100000 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (25050025 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (25050025 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_five_five_X0]
+          norm_num
+
+theorem surrogateDiagonalMainTerm5_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 5
+      = surrogateDiagMainTerm5X0RatCert := by
+  have hsqfree : Squarefree 5 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+    surrogateDiagMainTerm5X0RatCert
+  rw [centeredRamanujanWindowEnergyRat_X0_5_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 5)]
+  norm_num
+
+private theorem ramanujanR_ten_eq_five_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 10 N
+      = Goldbach.AO_OffDiag.TailBlock.ramanujanR 5 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  by_cases h1 : Nat.gcd 5 k = 1
+  · have hgcd10 : Nat.gcd 10 (2 * k) = 2 := by
+      simpa [show 10 = 2 * 5 by norm_num, h1, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 5 k)
+    have hgcd5 : Nat.gcd 5 (2 * k) = 1 := by
+      have hcop : Nat.Coprime 5 k := Nat.coprime_iff_gcd_eq_one.mpr h1
+      have h2cop : Nat.Coprime 5 2 := by norm_num
+      have hcop' : Nat.Coprime 5 (2 * k) := (Nat.coprime_mul_iff_right).2 ⟨h2cop, hcop⟩
+      exact Nat.coprime_iff_gcd_eq_one.mp hcop'
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [hgcd10, hgcd5, ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 5)]
+  · have hdiv : Nat.gcd 5 k ∣ 5 := Nat.gcd_dvd_left 5 k
+    have h5 : Nat.gcd 5 k = 5 := by
+      have hgcdpos : 0 < Nat.gcd 5 k := Nat.gcd_pos_of_pos_left k (by norm_num)
+      have hgcdle : Nat.gcd 5 k ≤ 5 := Nat.le_of_dvd (by norm_num) hdiv
+      have hne2 : Nat.gcd 5 k ≠ 2 := by
+        intro h2
+        have : 2 ∣ 5 := by simpa [h2] using hdiv
+        norm_num at this
+      have hne3 : Nat.gcd 5 k ≠ 3 := by
+        intro h3
+        have : 3 ∣ 5 := by simpa [h3] using hdiv
+        norm_num at this
+      have hne4 : Nat.gcd 5 k ≠ 4 := by
+        intro h4
+        have : 4 ∣ 5 := by simpa [h4] using hdiv
+        norm_num at this
+      omega
+    have hgcd10 : Nat.gcd 10 (2 * k) = 10 := by
+      simpa [show 10 = 2 * 5 by norm_num, h5, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 5 k)
+    have hgcd5 : Nat.gcd 5 (2 * k) = 5 := by
+      have h5divk : 5 ∣ k := by simpa [h5] using Nat.gcd_dvd_right 5 k
+      have h5div2k : 5 ∣ 2 * k := dvd_mul_of_dvd_right h5divk 2
+      have hle : Nat.gcd 5 (2 * k) ≤ 5 := Nat.le_of_dvd (by norm_num) (Nat.gcd_dvd_left 5 (2 * k))
+      have hpos : 0 < Nat.gcd 5 (2 * k) := Nat.gcd_pos_of_pos_left (2 * k) (by norm_num)
+      have hdvd : 5 ∣ Nat.gcd 5 (2 * k) := Nat.dvd_gcd (dvd_rfl) h5div2k
+      omega
+    have hram10 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 10 (2 * k) = 4 := by
+      have htot10 : Nat.totient 10 = 4 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd10, htot10]
+      norm_num [ArithmeticFunction.moebius_apply_one]
+    have hram5 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 5 (2 * k) = 4 := by
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd5]
+      norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 5)]
+    rw [hram10, hram5]
+
+private theorem ramanujanWindowAverage_X0_10_eq_five :
+    ramanujanWindowAverage X0 10 = ramanujanWindowAverage X0 5 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_ten_eq_five_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_10_eq_five
+    (N : ℕ) (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 10 N
+      = centeredRamanujanObservable X0 5 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_ten_eq_five_of_isEven (isEven_of_mem_EvenIn hN), ramanujanWindowAverage_X0_10_eq_five]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_10_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 10 = (100100000 : ℚ) / 5001 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 10 = centeredRamanujanWindowEnergy X0 5 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_10_eq_five N hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 10 : ℝ) = ((((100100000 : ℚ) / 5001 : ℚ)) : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 10) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 5) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_5_eq_cert]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalMainTerm10_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 10
+      = surrogateDiagMainTerm5X0RatCert := by
+  have hsqfree : Squarefree 10 := by native_decide
+  have hphi10 : Nat.totient 10 = 4 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+    surrogateDiagMainTerm5X0RatCert
+  rw [centeredRamanujanWindowEnergyRat_X0_10_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi10]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_seven_one_period_seven_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 7 1 (X + 2 * (k + 7))
+      =
+    ramanujanGcdClassIndicator 7 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 7 (X + 2 * (k + 7)) = Nat.gcd 7 (X + 2 * k) := by
+    calc
+      Nat.gcd 7 (X + 2 * (k + 7))
+          = Nat.gcd 7 ((X + 2 * k) + 2 * 7) := by ring_nf
+      _ = Nat.gcd 7 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_seven_one_sum_range_seven_eq_six_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 7, ramanujanGcdClassIndicator 7 1 (X + 2 * k) = 6 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 7 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 7 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop72 : Nat.Coprime 7 2 := by norm_num
+    have hcop :
+        Nat.Coprime 7 (2 * (X / 2 + k)) ↔ Nat.Coprime 7 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 7 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 7 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop72.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (7 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 7, ramanujanGcdClassIndicator 7 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 7, (if Nat.Coprime 7 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 7).filter (fun k => Nat.Coprime 7 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 7) (p := fun k => Nat.Coprime 7 (X / 2 + k))).symm
+    _ = 6 := by
+          have hcard :
+              (((Finset.range 7).filter (fun k => Nat.Coprime 7 (X / 2 + k))).card : ℕ) = 6 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 7 (by norm_num)
+          rw [show (((Finset.range 7).filter (fun k => Nat.Coprime 7 (X / 2 + k))).card : ℝ) = 6 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_seven_one_X0 :
+    ramanujanGcdClassWindowAverage X0 7 1 = (4287 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 7 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 7 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 714 * 7 + 3 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 7 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_seven_one_period_seven_on_even_progression (X := X0) (k := k))
+      (m := 714) (r := 3)]
+    rw [ramanujanGcdClassIndicator_seven_one_sum_range_seven_eq_six_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 7 1 (X0 + 2 * (4998 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 7 1 (X0 + 2 * (4998 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 7 1 (X0 + 2 * (4998 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 3, ramanujanGcdClassIndicator 7 1 (X0 + 2 * (4998 + x)) = 3 := by
+      calc
+        ∑ x ∈ Finset.range 3, ramanujanGcdClassIndicator 7 1 (X0 + 2 * (4998 + x))
+            =
+          ramanujanGcdClassIndicator 7 1 (X0 + 2 * (4998 + 0))
+            + ramanujanGcdClassIndicator 7 1 (X0 + 2 * (4998 + 1))
+            + ramanujanGcdClassIndicator 7 1 (X0 + 2 * (4998 + 2)) := by
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 3 := by
+              rw [hrem0, hrem1, hrem2]
+              norm_num
+    rw [show 714 * 7 = 4998 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_seven_seven_X0 :
+    ramanujanGcdClassWindowAverage X0 7 7 = (714 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 7 1 + ramanujanGcdClassWindowAverage X0 7 7 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 7 1 N + ramanujanGcdClassIndicator 7 7 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 7 1 N + ramanujanGcdClassIndicator 7 7 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 7 N = 1
+            · have h7 : Nat.gcd 7 N ≠ 7 := by
+                rw [h1]
+                norm_num
+              simp [h1, h7]
+            · have hdiv : Nat.gcd 7 N ∣ 7 := Nat.gcd_dvd_left 7 N
+              have h7 : Nat.gcd 7 N = 7 := by
+                have hgcdpos : 0 < Nat.gcd 7 N := Nat.gcd_pos_of_pos_left N (by norm_num)
+                have hgcdle : Nat.gcd 7 N ≤ 7 := Nat.le_of_dvd (by norm_num) hdiv
+                have hne2 : Nat.gcd 7 N ≠ 2 := by
+                  intro h2
+                  have : 2 ∣ 7 := by simpa [h2] using hdiv
+                  norm_num at this
+                have hne3 : Nat.gcd 7 N ≠ 3 := by
+                  intro h3
+                  have : 3 ∣ 7 := by simpa [h3] using hdiv
+                  norm_num at this
+                have hne4 : Nat.gcd 7 N ≠ 4 := by
+                  intro h4
+                  have : 4 ∣ 7 := by simpa [h4] using hdiv
+                  norm_num at this
+                have hne5 : Nat.gcd 7 N ≠ 5 := by
+                  intro h5
+                  have : 5 ∣ 7 := by simpa [h5] using hdiv
+                  norm_num at this
+                have hne6 : Nat.gcd 7 N ≠ 6 := by
+                  intro h6
+                  have : 6 ∣ 7 := by simpa [h6] using hdiv
+                  norm_num at this
+                omega
+              simp [h1, h7]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 7 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 7 7 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_seven_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_seven_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 7 1 = (4287 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 7 1 : ℝ) = (((4287 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_seven_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_seven_seven_X0 :
+    ramanujanGcdClassWindowAverageRat X0 7 7 = (714 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 7 7 : ℝ) = (((714 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_seven_seven_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_seven_one_add_seven_seven_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 7 1 N + ramanujanGcdClassIndicatorRat 7 7 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 7 N = 1
+  · have h7 : Nat.gcd 7 N ≠ 7 := by
+      rw [h1]
+      norm_num
+    simp [h1, h7]
+  · have hdiv : Nat.gcd 7 N ∣ 7 := Nat.gcd_dvd_left 7 N
+    have h7 : Nat.gcd 7 N = 7 := by
+      have hgcdpos : 0 < Nat.gcd 7 N := Nat.gcd_pos_of_pos_left N (by norm_num)
+      have hgcdle : Nat.gcd 7 N ≤ 7 := Nat.le_of_dvd (by norm_num) hdiv
+      have hne2 : Nat.gcd 7 N ≠ 2 := by
+        intro h2
+        have : 2 ∣ 7 := by simpa [h2] using hdiv
+        norm_num at this
+      have hne3 : Nat.gcd 7 N ≠ 3 := by
+        intro h3
+        have : 3 ∣ 7 := by simpa [h3] using hdiv
+        norm_num at this
+      have hne4 : Nat.gcd 7 N ≠ 4 := by
+        intro h4
+        have : 4 ∣ 7 := by simpa [h4] using hdiv
+        norm_num at this
+      have hne5 : Nat.gcd 7 N ≠ 5 := by
+        intro h5
+        have : 5 ∣ 7 := by simpa [h5] using hdiv
+        norm_num at this
+      have hne6 : Nat.gcd 7 N ≠ 6 := by
+        intro h6
+        have : 6 ∣ 7 := by simpa [h6] using hdiv
+        norm_num at this
+      omega
+    simp [h1, h7]
+
+private theorem centeredRamanujanObservableRat_X0_7_eq_indicator7
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 7 N
+      = (-1666 / 1667 : ℚ) + 7 * ramanujanGcdClassIndicatorRat 7 7 N := by
+  have hdivs : (7 : ℕ).divisors = ({1, 7} : Finset ℕ) := by
+    simpa using (show Nat.Prime 7 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 7 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 7)]
+  have hcoeff7 : ramanujanGcdClassCoeffRat 7 7 = 6 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 7)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff7, ramanujanGcdClassWindowAverageRat_seven_one_X0,
+    ramanujanGcdClassWindowAverageRat_seven_seven_X0]
+  linarith [ramanujanGcdClassIndicatorRat_seven_one_add_seven_seven_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_7_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 7 N) ^ 2
+      =
+    (2775556 / 2778889 : ℚ)
+      + (97284453 / 2778889 : ℚ) * ramanujanGcdClassIndicatorRat 7 7 N := by
+  rw [centeredRamanujanObservableRat_X0_7_eq_indicator7]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h7 : Nat.gcd 7 N = 7
+  · simp [h7]
+    norm_num
+  · simp [h7]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_seven_seven_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 7 7 N = 714 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 7 N = 7)).card : ℚ) = 714 := by
+    have havg := ramanujanGcdClassWindowAverageRat_seven_seven_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 7 7 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 7 N = 7)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 7 N = 7 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 7 N = 7)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 714 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_7_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 7 = (49994994 : ℚ) / 1667 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 7
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((2775556 / 2778889 : ℚ)
+          + (97284453 / 2778889 : ℚ) * ramanujanGcdClassIndicatorRat 7 7 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_7_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (2775556 / 2778889 : ℚ)
+        + (97284453 / 2778889 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 7 7 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (49994994 : ℚ) / 1667 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (2775556 / 2778889 : ℚ)
+                =
+              (5001 : ℚ) * (2775556 / 2778889 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_seven_seven_X0]
+          norm_num
+
+theorem surrogateDiagonalMainTerm7_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 7
+      = surrogateDiagMainTerm7X0RatCert := by
+  have hsqfree : Squarefree 7 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+    surrogateDiagMainTerm7X0RatCert
+  rw [centeredRamanujanWindowEnergyRat_X0_7_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 7)]
+  norm_num
+
+private theorem ramanujanR_fourteen_eq_seven_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 14 N
+      = Goldbach.AO_OffDiag.TailBlock.ramanujanR 7 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  by_cases h1 : Nat.gcd 7 k = 1
+  · have hgcd14 : Nat.gcd 14 (2 * k) = 2 := by
+      simpa [show 14 = 2 * 7 by norm_num, h1, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 7 k)
+    have hgcd7 : Nat.gcd 7 (2 * k) = 1 := by
+      have hcop : Nat.Coprime 7 k := Nat.coprime_iff_gcd_eq_one.mpr h1
+      have h2cop : Nat.Coprime 7 2 := by norm_num
+      have hcop' : Nat.Coprime 7 (2 * k) := (Nat.coprime_mul_iff_right).2 ⟨h2cop, hcop⟩
+      exact Nat.coprime_iff_gcd_eq_one.mp hcop'
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [hgcd14, hgcd7, ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 7)]
+  · have hdiv : Nat.gcd 7 k ∣ 7 := Nat.gcd_dvd_left 7 k
+    have h7 : Nat.gcd 7 k = 7 := by
+      have hgcdpos : 0 < Nat.gcd 7 k := Nat.gcd_pos_of_pos_left k (by norm_num)
+      have hgcdle : Nat.gcd 7 k ≤ 7 := Nat.le_of_dvd (by norm_num) hdiv
+      have hne2 : Nat.gcd 7 k ≠ 2 := by
+        intro h2
+        have : 2 ∣ 7 := by simpa [h2] using hdiv
+        norm_num at this
+      have hne3 : Nat.gcd 7 k ≠ 3 := by
+        intro h3
+        have : 3 ∣ 7 := by simpa [h3] using hdiv
+        norm_num at this
+      have hne4 : Nat.gcd 7 k ≠ 4 := by
+        intro h4
+        have : 4 ∣ 7 := by simpa [h4] using hdiv
+        norm_num at this
+      have hne5 : Nat.gcd 7 k ≠ 5 := by
+        intro h5
+        have : 5 ∣ 7 := by simpa [h5] using hdiv
+        norm_num at this
+      have hne6 : Nat.gcd 7 k ≠ 6 := by
+        intro h6
+        have : 6 ∣ 7 := by simpa [h6] using hdiv
+        norm_num at this
+      omega
+    have hgcd14 : Nat.gcd 14 (2 * k) = 14 := by
+      simpa [show 14 = 2 * 7 by norm_num, h7, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 7 k)
+    have hgcd7 : Nat.gcd 7 (2 * k) = 7 := by
+      have h7divk : 7 ∣ k := by simpa [h7] using Nat.gcd_dvd_right 7 k
+      have h7div2k : 7 ∣ 2 * k := dvd_mul_of_dvd_right h7divk 2
+      have hle : Nat.gcd 7 (2 * k) ≤ 7 := Nat.le_of_dvd (by norm_num) (Nat.gcd_dvd_left 7 (2 * k))
+      have hpos : 0 < Nat.gcd 7 (2 * k) := Nat.gcd_pos_of_pos_left (2 * k) (by norm_num)
+      have hdvd : 7 ∣ Nat.gcd 7 (2 * k) := Nat.dvd_gcd (dvd_rfl) h7div2k
+      omega
+    have hram14 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 14 (2 * k) = 6 := by
+      have htot14 : Nat.totient 14 = 6 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd14, htot14]
+      norm_num [ArithmeticFunction.moebius_apply_one]
+    have hram7 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 7 (2 * k) = 6 := by
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd7]
+      norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 7)]
+    rw [hram14, hram7]
+
+private theorem ramanujanWindowAverage_X0_14_eq_seven :
+    ramanujanWindowAverage X0 14 = ramanujanWindowAverage X0 7 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_fourteen_eq_seven_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_14_eq_seven
+    (N : ℕ) (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 14 N
+      = centeredRamanujanObservable X0 7 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_fourteen_eq_seven_of_isEven (isEven_of_mem_EvenIn hN), ramanujanWindowAverage_X0_14_eq_seven]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_14_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 14 = (49994994 : ℚ) / 1667 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 14 = centeredRamanujanWindowEnergy X0 7 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_14_eq_seven N hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 14 : ℝ) = ((((49994994 : ℚ) / 1667 : ℚ)) : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 14) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 7) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_7_eq_cert]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalMainTerm14_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 14
+      = surrogateDiagMainTerm7X0RatCert := by
+  have hsqfree : Squarefree 14 := by native_decide
+  have hphi14 : Nat.totient 14 = 6 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+    surrogateDiagMainTerm7X0RatCert
+  rw [centeredRamanujanWindowEnergyRat_X0_14_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi14]
+  norm_num
+
+structure CenteredNormalizedSigmaTruncSurrogateDiagonalMainSixTermRatCertificateAtX0 : Prop where
+  term3 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 3
+      = surrogateDiagMainTerm3X0RatCert
+  term5 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 5
+      = surrogateDiagMainTerm5X0RatCert
+  term6 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 6
+      = surrogateDiagMainTerm3X0RatCert
+  term7 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 7
+      = surrogateDiagMainTerm7X0RatCert
+  term10 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 10
+      = surrogateDiagMainTerm5X0RatCert
+  term14 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 14
+      = surrogateDiagMainTerm7X0RatCert
+
+def CenteredNormalizedSigmaTruncSurrogateDiagonalMainRatCertificateAtX0 : Prop :=
+  surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQRat X0
+    = surrogateDiagonalMainX0RatCert
+
+theorem surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQRat_X0_eq_six_terms :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQRat X0
+      =
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 3
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 5
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 6
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 7
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 10
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 14 := by
+  unfold surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQRat
+    centeredNormalizedSigmaTruncDiagonalMainLowQSupport
+  simp [add_assoc, add_comm, add_left_comm]
+
+theorem surrogateDiagonalMainX0RatCert_eq_sum_six_terms :
+    surrogateDiagMainTerm3X0RatCert
+      + surrogateDiagMainTerm5X0RatCert
+      + surrogateDiagMainTerm3X0RatCert
+      + surrogateDiagMainTerm7X0RatCert
+      + surrogateDiagMainTerm5X0RatCert
+      + surrogateDiagMainTerm7X0RatCert
+      =
+    surrogateDiagonalMainX0RatCert := by
+  norm_num [surrogateDiagMainTerm3X0RatCert, surrogateDiagMainTerm5X0RatCert,
+    surrogateDiagMainTerm7X0RatCert, surrogateDiagonalMainX0RatCert]
+
+theorem centeredNormalizedSigmaTruncSurrogateDiagonalMainRatCertificateAtX0_of_sixTermCertificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalMainSixTermRatCertificateAtX0) :
+    CenteredNormalizedSigmaTruncSurrogateDiagonalMainRatCertificateAtX0 := by
+  unfold CenteredNormalizedSigmaTruncSurrogateDiagonalMainRatCertificateAtX0
+  rw [surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQRat_X0_eq_six_terms]
+  rw [hcert.term3, hcert.term5, hcert.term6, hcert.term7, hcert.term10, hcert.term14]
+  exact surrogateDiagonalMainX0RatCert_eq_sum_six_terms
+
+theorem centeredNormalizedSigmaTruncSurrogateDiagonalMainSixTermRatCertificateAtX0_true :
+    CenteredNormalizedSigmaTruncSurrogateDiagonalMainSixTermRatCertificateAtX0 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_, ?_⟩
+  · exact surrogateDiagonalMainTerm3_X0_eq_cert
+  · exact surrogateDiagonalMainTerm5_X0_eq_cert
+  · exact surrogateDiagonalMainTerm6_X0_eq_cert
+  · exact surrogateDiagonalMainTerm7_X0_eq_cert
+  · exact surrogateDiagonalMainTerm10_X0_eq_cert
+  · exact surrogateDiagonalMainTerm14_X0_eq_cert
+
+theorem surrogateDiagonalMain_X0_le_decimal_of_rat_shadow
+    (hmainRat :
+      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQRat X0
+        ≤ surrogateDiagMainX0Check.lhs) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0
+      ≤ (surrogateDiagMainX0Check.lhs : ℝ) := by
+  rw [surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ_eq_ratCast]
+  exact_mod_cast hmainRat
+
+theorem surrogateDiagonalMain_X0_le_decimal_of_rat_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalMainRatCertificateAtX0) :
+    CenteredNormalizedSigmaTruncSurrogateDiagonalMainDecimalCertificateAtX0 := by
+  apply surrogateDiagonalMain_X0_le_decimal_of_rat_shadow
+  rw [hcert]
+  exact surrogateDiagonalMainX0RatCert_le_check
+
+theorem surrogateDiagonalMain_X0_le_36326_of_rat_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalMainRatCertificateAtX0) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0 ≤ 36326 := by
+  exact surrogateDiagonalMain_X0_le_36326_of_certificate
+    (surrogateDiagonalMain_X0_le_decimal_of_rat_certificate hcert)
+
+theorem surrogateDiagonalMain_X0_le_36326_of_sixTerm_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalMainSixTermRatCertificateAtX0) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0 ≤ 36326 := by
+  exact surrogateDiagonalMain_X0_le_36326_of_rat_certificate
+    (centeredNormalizedSigmaTruncSurrogateDiagonalMainRatCertificateAtX0_of_sixTermCertificate hcert)
+
+theorem surrogateDiagonalMain_X0_le_36326 :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectMainLowQ X0 ≤ 36326 := by
+  exact surrogateDiagonalMain_X0_le_36326_of_sixTerm_certificate
+    centeredNormalizedSigmaTruncSurrogateDiagonalMainSixTermRatCertificateAtX0_true
+
+private theorem ramanujanGcdClassIndicator_eleven_one_period_eleven_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 11 1 (X + 2 * (k + 11))
+      =
+    ramanujanGcdClassIndicator 11 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 11 (X + 2 * (k + 11)) = Nat.gcd 11 (X + 2 * k) := by
+    calc
+      Nat.gcd 11 (X + 2 * (k + 11))
+          = Nat.gcd 11 ((X + 2 * k) + 2 * 11) := by ring_nf
+      _ = Nat.gcd 11 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_eleven_one_sum_range_eleven_eq_ten_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 11, ramanujanGcdClassIndicator 11 1 (X + 2 * k) = 10 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 11 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 11 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop112 : Nat.Coprime 11 2 := by norm_num
+    have hcop :
+        Nat.Coprime 11 (2 * (X / 2 + k)) ↔ Nat.Coprime 11 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 11 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 11 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop112.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (11 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 11, ramanujanGcdClassIndicator 11 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 11, (if Nat.Coprime 11 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 11).filter (fun k => Nat.Coprime 11 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 11) (p := fun k => Nat.Coprime 11 (X / 2 + k))).symm
+    _ = 10 := by
+          have hcard :
+              (((Finset.range 11).filter (fun k => Nat.Coprime 11 (X / 2 + k))).card : ℕ) = 10 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 11 (by norm_num)
+          rw [show (((Finset.range 11).filter (fun k => Nat.Coprime 11 (X / 2 + k))).card : ℝ) = 10 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_eleven_one_X0 :
+    ramanujanGcdClassWindowAverage X0 11 1 = (4546 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 11 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 11 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 454 * 11 + 7 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 11 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_eleven_one_period_eleven_on_even_progression (X := X0) (k := k))
+      (m := 454) (r := 7)]
+    rw [ramanujanGcdClassIndicator_eleven_one_sum_range_eleven_eq_ten_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem3 : ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 3)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem4 : ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 4)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem5 : ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 5)) = 0 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem6 : ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 6)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 7, ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + x)) = 6 := by
+      calc
+        ∑ x ∈ Finset.range 7, ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + x))
+            =
+          ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 0))
+            + ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 1))
+            + ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 2))
+            + ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 3))
+            + ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 4))
+            + ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 5))
+            + ramanujanGcdClassIndicator 11 1 (X0 + 2 * (4994 + 6)) := by
+              rw [show (7 : ℕ) = 6 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (6 : ℕ) = 5 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (5 : ℕ) = 4 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (4 : ℕ) = 3 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 6 := by
+              rw [hrem0, hrem1, hrem2, hrem3, hrem4, hrem5, hrem6]
+              norm_num
+    rw [show 454 * 11 = 4994 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_eleven_eleven_X0 :
+    ramanujanGcdClassWindowAverage X0 11 11 = (455 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 11 1 + ramanujanGcdClassWindowAverage X0 11 11 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 11 1 N + ramanujanGcdClassIndicator 11 11 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 11 1 N + ramanujanGcdClassIndicator 11 11 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 11 N = 1
+            · have h11 : Nat.gcd 11 N ≠ 11 := by
+                rw [h1]
+                norm_num
+              simp [h1, h11]
+            · have hdiv : Nat.gcd 11 N ∣ 11 := Nat.gcd_dvd_left 11 N
+              have h11 : Nat.gcd 11 N = 11 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 11 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h11]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 11 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 11 11 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_eleven_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_eleven_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 11 1 = (4546 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 11 1 : ℝ) = (((4546 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_eleven_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_eleven_eleven_X0 :
+    ramanujanGcdClassWindowAverageRat X0 11 11 = (455 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 11 11 : ℝ) = (((455 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_eleven_eleven_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_eleven_one_add_eleven_eleven_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 11 1 N + ramanujanGcdClassIndicatorRat 11 11 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 11 N = 1
+  · have h11 : Nat.gcd 11 N ≠ 11 := by
+      rw [h1]
+      norm_num
+    simp [h1, h11]
+  · have hdiv : Nat.gcd 11 N ∣ 11 := Nat.gcd_dvd_left 11 N
+    have h11 : Nat.gcd 11 N = 11 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 11 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h11]
+
+private theorem centeredRamanujanObservableRat_X0_11_eq_indicator11
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 11 N
+      = (-5005 / 5001 : ℚ) + 11 * ramanujanGcdClassIndicatorRat 11 11 N := by
+  have hdivs : (11 : ℕ).divisors = ({1, 11} : Finset ℕ) := by
+    simpa using (show Nat.Prime 11 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 11 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 11)]
+  have hcoeff11 : ramanujanGcdClassCoeffRat 11 11 = 10 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 11)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff11, ramanujanGcdClassWindowAverageRat_eleven_one_X0,
+    ramanujanGcdClassWindowAverageRat_eleven_eleven_X0]
+  linarith [ramanujanGcdClassIndicatorRat_eleven_one_add_eleven_eleven_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_11_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 11 N) ^ 2
+      =
+    (25050025 / 25010001 : ℚ)
+      + (2475550011 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 11 11 N := by
+  rw [centeredRamanujanObservableRat_X0_11_eq_indicator11]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h11 : Nat.gcd 11 N = 11
+  · simp [h11]
+    norm_num
+  · simp [h11]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_eleven_eleven_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 11 11 N = 455 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 11 N = 11)).card : ℚ) = 455 := by
+    have havg := ramanujanGcdClassWindowAverageRat_eleven_eleven_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 11 11 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 11 N = 11)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 11 N = 11 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 11 N = 11)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 455 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_11_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 11 = (250280030 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 11
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((25050025 / 25010001 : ℚ)
+          + (2475550011 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 11 11 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_11_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (25050025 / 25010001 : ℚ)
+        + (2475550011 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 11 11 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (250280030 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (25050025 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (25050025 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_eleven_eleven_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm11_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 11
+      = (25028003 : ℚ) / 200040 := by
+  have hsqfree : Squarefree 11 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_11_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 11)]
+  norm_num
+
+private theorem ramanujanR_twentyTwo_eq_eleven_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 22 N
+      = Goldbach.AO_OffDiag.TailBlock.ramanujanR 11 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  by_cases h1 : Nat.gcd 11 k = 1
+  · have hgcd22 : Nat.gcd 22 (2 * k) = 2 := by
+      simpa [show 22 = 2 * 11 by norm_num, h1, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 11 k)
+    have hgcd11 : Nat.gcd 11 (2 * k) = 1 := by
+      have hcop : Nat.Coprime 11 k := Nat.coprime_iff_gcd_eq_one.mpr h1
+      have h2cop : Nat.Coprime 11 2 := by norm_num
+      have hcop' : Nat.Coprime 11 (2 * k) := (Nat.coprime_mul_iff_right).2 ⟨h2cop, hcop⟩
+      exact Nat.coprime_iff_gcd_eq_one.mp hcop'
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [hgcd22, hgcd11, ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 11)]
+  · have hdiv : Nat.gcd 11 k ∣ 11 := Nat.gcd_dvd_left 11 k
+    have h11 : Nat.gcd 11 k = 11 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 11 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    have hgcd22 : Nat.gcd 22 (2 * k) = 22 := by
+      simpa [show 22 = 2 * 11 by norm_num, h11, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 11 k)
+    have hgcd11 : Nat.gcd 11 (2 * k) = 11 := by
+      have h11divk : 11 ∣ k := by simpa [h11] using Nat.gcd_dvd_right 11 k
+      have h11div2k : 11 ∣ 2 * k := dvd_mul_of_dvd_right h11divk 2
+      have hle : Nat.gcd 11 (2 * k) ≤ 11 := Nat.le_of_dvd (by norm_num) (Nat.gcd_dvd_left 11 (2 * k))
+      have hpos : 0 < Nat.gcd 11 (2 * k) := Nat.gcd_pos_of_pos_left (2 * k) (by norm_num)
+      have hdvd : 11 ∣ Nat.gcd 11 (2 * k) := Nat.dvd_gcd (dvd_rfl) h11div2k
+      omega
+    have hram22 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 22 (2 * k) = 10 := by
+      have htot22 : Nat.totient 22 = 10 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd22, htot22]
+      norm_num [ArithmeticFunction.moebius_apply_one]
+    have hram11 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 11 (2 * k) = 10 := by
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd11]
+      norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 11)]
+    rw [hram22, hram11]
+
+private theorem ramanujanWindowAverage_X0_22_eq_eleven :
+    ramanujanWindowAverage X0 22 = ramanujanWindowAverage X0 11 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_twentyTwo_eq_eleven_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_22_eq_eleven
+    (N : ℕ) (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 22 N
+      = centeredRamanujanObservable X0 11 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_twentyTwo_eq_eleven_of_isEven (isEven_of_mem_EvenIn hN),
+    ramanujanWindowAverage_X0_22_eq_eleven]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_22_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 22 = (250280030 : ℚ) / 5001 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 22 = centeredRamanujanWindowEnergy X0 11 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_22_eq_eleven N hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 22 : ℝ) = ((((250280030 : ℚ) / 5001 : ℚ)) : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 22) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 11) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_11_eq_cert]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalSmallRestTerm22_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 22
+      = (25028003 : ℚ) / 200040 := by
+  have hsqfree : Squarefree 22 := by native_decide
+  have hphi22 : Nat.totient 22 = 10 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_22_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi22]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_thirteen_one_period_thirteen_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 13 1 (X + 2 * (k + 13))
+      =
+    ramanujanGcdClassIndicator 13 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 13 (X + 2 * (k + 13)) = Nat.gcd 13 (X + 2 * k) := by
+    calc
+      Nat.gcd 13 (X + 2 * (k + 13))
+          = Nat.gcd 13 ((X + 2 * k) + 2 * 13) := by ring_nf
+      _ = Nat.gcd 13 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_thirteen_one_sum_range_thirteen_eq_twelve_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 13, ramanujanGcdClassIndicator 13 1 (X + 2 * k) = 12 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 13 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 13 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop132 : Nat.Coprime 13 2 := by norm_num
+    have hcop :
+        Nat.Coprime 13 (2 * (X / 2 + k)) ↔ Nat.Coprime 13 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 13 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 13 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop132.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (13 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 13, ramanujanGcdClassIndicator 13 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 13, (if Nat.Coprime 13 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 13).filter (fun k => Nat.Coprime 13 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 13) (p := fun k => Nat.Coprime 13 (X / 2 + k))).symm
+    _ = 12 := by
+          have hcard :
+              (((Finset.range 13).filter (fun k => Nat.Coprime 13 (X / 2 + k))).card : ℕ) = 12 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 13 (by norm_num)
+          rw [show (((Finset.range 13).filter (fun k => Nat.Coprime 13 (X / 2 + k))).card : ℝ) = 12 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_thirteen_one_X0 :
+    ramanujanGcdClassWindowAverage X0 13 1 = (4616 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 13 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 13 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 384 * 13 + 9 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 13 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_thirteen_one_period_thirteen_on_even_progression (X := X0) (k := k))
+      (m := 384) (r := 9)]
+    rw [ramanujanGcdClassIndicator_thirteen_one_sum_range_thirteen_eq_twelve_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem3 : ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 3)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem4 : ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 4)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem5 : ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 5)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem6 : ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 6)) = 0 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem7 : ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 7)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem8 : ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 8)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 9, ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + x)) = 8 := by
+      calc
+        ∑ x ∈ Finset.range 9, ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + x))
+            =
+          ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 0))
+            + ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 1))
+            + ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 2))
+            + ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 3))
+            + ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 4))
+            + ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 5))
+            + ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 6))
+            + ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 7))
+            + ramanujanGcdClassIndicator 13 1 (X0 + 2 * (4992 + 8)) := by
+              rw [show (9 : ℕ) = 8 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (8 : ℕ) = 7 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (7 : ℕ) = 6 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (6 : ℕ) = 5 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (5 : ℕ) = 4 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (4 : ℕ) = 3 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 8 := by
+              rw [hrem0, hrem1, hrem2, hrem3, hrem4, hrem5, hrem6, hrem7, hrem8]
+              norm_num
+    rw [show 384 * 13 = 4992 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_thirteen_thirteen_X0 :
+    ramanujanGcdClassWindowAverage X0 13 13 = (385 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 13 1 + ramanujanGcdClassWindowAverage X0 13 13 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 13 1 N + ramanujanGcdClassIndicator 13 13 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 13 1 N + ramanujanGcdClassIndicator 13 13 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 13 N = 1
+            · have h13 : Nat.gcd 13 N ≠ 13 := by
+                rw [h1]
+                norm_num
+              simp [h1, h13]
+            · have hdiv : Nat.gcd 13 N ∣ 13 := Nat.gcd_dvd_left 13 N
+              have h13 : Nat.gcd 13 N = 13 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 13 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h13]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 13 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 13 13 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_thirteen_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_thirteen_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 13 1 = (4616 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 13 1 : ℝ) = (((4616 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_thirteen_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_thirteen_thirteen_X0 :
+    ramanujanGcdClassWindowAverageRat X0 13 13 = (385 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 13 13 : ℝ) = (((385 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_thirteen_thirteen_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_thirteen_one_add_thirteen_thirteen_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 13 1 N + ramanujanGcdClassIndicatorRat 13 13 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 13 N = 1
+  · have h13 : Nat.gcd 13 N ≠ 13 := by
+      rw [h1]
+      norm_num
+    simp [h1, h13]
+  · have hdiv : Nat.gcd 13 N ∣ 13 := Nat.gcd_dvd_left 13 N
+    have h13 : Nat.gcd 13 N = 13 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 13 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h13]
+
+private theorem centeredRamanujanObservableRat_X0_13_eq_indicator13
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 13 N
+      = (-5005 / 5001 : ℚ) + 13 * ramanujanGcdClassIndicatorRat 13 13 N := by
+  have hdivs : (13 : ℕ).divisors = ({1, 13} : Finset ℕ) := by
+    simpa using (show Nat.Prime 13 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 13 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 13)]
+  have hcoeff13 : ramanujanGcdClassCoeffRat 13 13 = 12 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 13)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff13, ramanujanGcdClassWindowAverageRat_thirteen_one_X0,
+    ramanujanGcdClassWindowAverageRat_thirteen_thirteen_X0]
+  linarith [ramanujanGcdClassIndicatorRat_thirteen_one_add_thirteen_thirteen_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_13_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 13 N) ^ 2
+      =
+    (25050025 / 25010001 : ℚ)
+      + (3575910039 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 13 13 N := by
+  rw [centeredRamanujanObservableRat_X0_13_eq_indicator13]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h13 : Nat.gcd 13 N = 13
+  · simp [h13]
+    norm_num
+  · simp [h13]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirteen_thirteen_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 13 13 N = 385 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 13 N = 13)).card : ℚ) = 385 := by
+    have havg := ramanujanGcdClassWindowAverageRat_thirteen_thirteen_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 13 13 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 13 N = 13)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 13 N = 13 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 13 N = 13)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 385 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_13_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 13 = (300340040 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 13
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((25050025 / 25010001 : ℚ)
+          + (3575910039 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 13 13 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_13_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (25050025 / 25010001 : ℚ)
+        + (3575910039 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 13 13 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (300340040 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (25050025 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (25050025 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_thirteen_thirteen_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm13_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 13
+      = (938562625 : ℚ) / 12962592 := by
+  have hsqfree : Squarefree 13 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_13_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 13)]
+  norm_num
+
+private theorem ramanujanR_twentySix_eq_thirteen_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 26 N
+      = Goldbach.AO_OffDiag.TailBlock.ramanujanR 13 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  by_cases h1 : Nat.gcd 13 k = 1
+  · have hgcd26 : Nat.gcd 26 (2 * k) = 2 := by
+      simpa [show 26 = 2 * 13 by norm_num, h1, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 13 k)
+    have hgcd13 : Nat.gcd 13 (2 * k) = 1 := by
+      have hcop : Nat.Coprime 13 k := Nat.coprime_iff_gcd_eq_one.mpr h1
+      have h2cop : Nat.Coprime 13 2 := by norm_num
+      have hcop' : Nat.Coprime 13 (2 * k) := (Nat.coprime_mul_iff_right).2 ⟨h2cop, hcop⟩
+      exact Nat.coprime_iff_gcd_eq_one.mp hcop'
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [hgcd26, hgcd13, ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 13)]
+  · have hdiv : Nat.gcd 13 k ∣ 13 := Nat.gcd_dvd_left 13 k
+    have h13 : Nat.gcd 13 k = 13 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 13 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    have hgcd26 : Nat.gcd 26 (2 * k) = 26 := by
+      simpa [show 26 = 2 * 13 by norm_num, h13, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 13 k)
+    have hgcd13 : Nat.gcd 13 (2 * k) = 13 := by
+      have h13divk : 13 ∣ k := by simpa [h13] using Nat.gcd_dvd_right 13 k
+      have h13div2k : 13 ∣ 2 * k := dvd_mul_of_dvd_right h13divk 2
+      have hle : Nat.gcd 13 (2 * k) ≤ 13 := Nat.le_of_dvd (by norm_num) (Nat.gcd_dvd_left 13 (2 * k))
+      have hpos : 0 < Nat.gcd 13 (2 * k) := Nat.gcd_pos_of_pos_left (2 * k) (by norm_num)
+      have hdvd : 13 ∣ Nat.gcd 13 (2 * k) := Nat.dvd_gcd (dvd_rfl) h13div2k
+      omega
+    have hram26 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 26 (2 * k) = 12 := by
+      have htot26 : Nat.totient 26 = 12 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd26, htot26]
+      norm_num [ArithmeticFunction.moebius_apply_one]
+    have hram13 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 13 (2 * k) = 12 := by
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd13]
+      norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 13)]
+    rw [hram26, hram13]
+
+private theorem ramanujanWindowAverage_X0_26_eq_thirteen :
+    ramanujanWindowAverage X0 26 = ramanujanWindowAverage X0 13 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_twentySix_eq_thirteen_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_26_eq_thirteen
+    (N : ℕ) (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 26 N
+      = centeredRamanujanObservable X0 13 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_twentySix_eq_thirteen_of_isEven (isEven_of_mem_EvenIn hN),
+    ramanujanWindowAverage_X0_26_eq_thirteen]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_26_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 26 = (300340040 : ℚ) / 5001 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 26 = centeredRamanujanWindowEnergy X0 13 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_26_eq_thirteen N hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 26 : ℝ) = ((((300340040 : ℚ) / 5001 : ℚ)) : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 26) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 13) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_13_eq_cert]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalSmallRestTerm26_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 26
+      = (938562625 : ℚ) / 12962592 := by
+  have hsqfree : Squarefree 26 := by native_decide
+  have hphi26 : Nat.totient 26 = 12 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_26_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi26]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_seventeen_one_period_seventeen_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 17 1 (X + 2 * (k + 17))
+      =
+    ramanujanGcdClassIndicator 17 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 17 (X + 2 * (k + 17)) = Nat.gcd 17 (X + 2 * k) := by
+    calc
+      Nat.gcd 17 (X + 2 * (k + 17))
+          = Nat.gcd 17 ((X + 2 * k) + 2 * 17) := by ring_nf
+      _ = Nat.gcd 17 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_seventeen_one_sum_range_seventeen_eq_sixteen_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 17, ramanujanGcdClassIndicator 17 1 (X + 2 * k) = 16 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 17 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 17 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop172 : Nat.Coprime 17 2 := by norm_num
+    have hcop :
+        Nat.Coprime 17 (2 * (X / 2 + k)) ↔ Nat.Coprime 17 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 17 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 17 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop172.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (17 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 17, ramanujanGcdClassIndicator 17 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 17, (if Nat.Coprime 17 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 17).filter (fun k => Nat.Coprime 17 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 17) (p := fun k => Nat.Coprime 17 (X / 2 + k))).symm
+    _ = 16 := by
+          have hcard :
+              (((Finset.range 17).filter (fun k => Nat.Coprime 17 (X / 2 + k))).card : ℕ) = 16 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 17 (by norm_num)
+          rw [show (((Finset.range 17).filter (fun k => Nat.Coprime 17 (X / 2 + k))).card : ℝ) = 16 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_seventeen_one_X0 :
+    ramanujanGcdClassWindowAverage X0 17 1 = (4707 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 17 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 17 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 294 * 17 + 3 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 17 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_seventeen_one_period_seventeen_on_even_progression (X := X0) (k := k))
+      (m := 294) (r := 3)]
+    rw [ramanujanGcdClassIndicator_seventeen_one_sum_range_seventeen_eq_sixteen_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 17 1 (X0 + 2 * (4998 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 17 1 (X0 + 2 * (4998 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 17 1 (X0 + 2 * (4998 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 3, ramanujanGcdClassIndicator 17 1 (X0 + 2 * (4998 + x)) = 3 := by
+      calc
+        ∑ x ∈ Finset.range 3, ramanujanGcdClassIndicator 17 1 (X0 + 2 * (4998 + x))
+            =
+          ramanujanGcdClassIndicator 17 1 (X0 + 2 * (4998 + 0))
+            + ramanujanGcdClassIndicator 17 1 (X0 + 2 * (4998 + 1))
+            + ramanujanGcdClassIndicator 17 1 (X0 + 2 * (4998 + 2)) := by
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 3 := by
+              rw [hrem0, hrem1, hrem2]
+              norm_num
+    rw [show 294 * 17 = 4998 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_seventeen_seventeen_X0 :
+    ramanujanGcdClassWindowAverage X0 17 17 = (294 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 17 1 + ramanujanGcdClassWindowAverage X0 17 17 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 17 1 N + ramanujanGcdClassIndicator 17 17 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 17 1 N + ramanujanGcdClassIndicator 17 17 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 17 N = 1
+            · have h17 : Nat.gcd 17 N ≠ 17 := by
+                rw [h1]
+                norm_num
+              simp [h1, h17]
+            · have hdiv : Nat.gcd 17 N ∣ 17 := Nat.gcd_dvd_left 17 N
+              have h17 : Nat.gcd 17 N = 17 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 17 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h17]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 17 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 17 17 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_seventeen_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_seventeen_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 17 1 = (4707 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 17 1 : ℝ) = (((4707 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_seventeen_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_seventeen_seventeen_X0 :
+    ramanujanGcdClassWindowAverageRat X0 17 17 = (294 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 17 17 : ℝ) = (((294 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_seventeen_seventeen_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_seventeen_one_add_seventeen_seventeen_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 17 1 N + ramanujanGcdClassIndicatorRat 17 17 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 17 N = 1
+  · have h17 : Nat.gcd 17 N ≠ 17 := by
+      rw [h1]
+      norm_num
+    simp [h1, h17]
+  · have hdiv : Nat.gcd 17 N ∣ 17 := Nat.gcd_dvd_left 17 N
+    have h17 : Nat.gcd 17 N = 17 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 17 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h17]
+
+private theorem centeredRamanujanObservableRat_X0_17_eq_indicator17
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 17 N
+      = (-4998 / 5001 : ℚ) + 17 * ramanujanGcdClassIndicatorRat 17 17 N := by
+  have hdivs : (17 : ℕ).divisors = ({1, 17} : Finset ℕ) := by
+    simpa using (show Nat.Prime 17 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 17 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 17)]
+  have hcoeff17 : ramanujanGcdClassCoeffRat 17 17 = 16 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 17)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff17, ramanujanGcdClassWindowAverageRat_seventeen_one_X0,
+    ramanujanGcdClassWindowAverageRat_seventeen_seventeen_X0]
+  linarith [ramanujanGcdClassIndicatorRat_seventeen_one_add_seventeen_seventeen_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_17_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 17 N) ^ 2
+      =
+    (2775556 / 2778889 : ℚ)
+      + (708673373 / 2778889 : ℚ) * ramanujanGcdClassIndicatorRat 17 17 N := by
+  rw [centeredRamanujanObservableRat_X0_17_eq_indicator17]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h17 : Nat.gcd 17 N = 17
+  · simp [h17]
+    norm_num
+  · simp [h17]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_seventeen_seventeen_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 17 17 N = 294 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 17 N = 17)).card : ℚ) = 294 := by
+    have havg := ramanujanGcdClassWindowAverageRat_seventeen_seventeen_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 17 17 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 17 N = 17)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 17 N = 17 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 17 N = 17)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 294 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_17_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 17 = (133311654 : ℚ) / 1667 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 17
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((2775556 / 2778889 : ℚ)
+          + (708673373 / 2778889 : ℚ) * ramanujanGcdClassIndicatorRat 17 17 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_17_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (2775556 / 2778889 : ℚ)
+        + (708673373 / 2778889 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 17 17 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (133311654 : ℚ) / 1667 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (2775556 / 2778889 : ℚ)
+                =
+              (5001 : ℚ) * (2775556 / 2778889 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_seventeen_seventeen_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm17_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 17
+      = (1666395675 : ℚ) / 54624256 := by
+  have hsqfree : Squarefree 17 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_17_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 17)]
+  norm_num
+
+private theorem ramanujanR_thirtyFour_eq_seventeen_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 34 N
+      = Goldbach.AO_OffDiag.TailBlock.ramanujanR 17 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  by_cases h1 : Nat.gcd 17 k = 1
+  · have hgcd34 : Nat.gcd 34 (2 * k) = 2 := by
+      simpa [show 34 = 2 * 17 by norm_num, h1, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 17 k)
+    have hgcd17 : Nat.gcd 17 (2 * k) = 1 := by
+      have hcop : Nat.Coprime 17 k := Nat.coprime_iff_gcd_eq_one.mpr h1
+      have h2cop : Nat.Coprime 17 2 := by norm_num
+      have hcop' : Nat.Coprime 17 (2 * k) := (Nat.coprime_mul_iff_right).2 ⟨h2cop, hcop⟩
+      exact Nat.coprime_iff_gcd_eq_one.mp hcop'
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [hgcd34, hgcd17, ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 17)]
+  · have hdiv : Nat.gcd 17 k ∣ 17 := Nat.gcd_dvd_left 17 k
+    have h17 : Nat.gcd 17 k = 17 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 17 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    have hgcd34 : Nat.gcd 34 (2 * k) = 34 := by
+      simpa [show 34 = 2 * 17 by norm_num, h17, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 17 k)
+    have hgcd17 : Nat.gcd 17 (2 * k) = 17 := by
+      have h17divk : 17 ∣ k := by simpa [h17] using Nat.gcd_dvd_right 17 k
+      have h17div2k : 17 ∣ 2 * k := dvd_mul_of_dvd_right h17divk 2
+      have hle : Nat.gcd 17 (2 * k) ≤ 17 := Nat.le_of_dvd (by norm_num) (Nat.gcd_dvd_left 17 (2 * k))
+      have hpos : 0 < Nat.gcd 17 (2 * k) := Nat.gcd_pos_of_pos_left (2 * k) (by norm_num)
+      have hdvd : 17 ∣ Nat.gcd 17 (2 * k) := Nat.dvd_gcd (dvd_rfl) h17div2k
+      omega
+    have hram34 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 34 (2 * k) = 16 := by
+      have htot34 : Nat.totient 34 = 16 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd34, htot34]
+      norm_num [ArithmeticFunction.moebius_apply_one]
+    have hram17 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 17 (2 * k) = 16 := by
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd17]
+      norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 17)]
+    rw [hram34, hram17]
+
+private theorem ramanujanWindowAverage_X0_34_eq_seventeen :
+    ramanujanWindowAverage X0 34 = ramanujanWindowAverage X0 17 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_thirtyFour_eq_seventeen_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_34_eq_seventeen
+    (N : ℕ) (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 34 N
+      = centeredRamanujanObservable X0 17 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_thirtyFour_eq_seventeen_of_isEven (isEven_of_mem_EvenIn hN),
+    ramanujanWindowAverage_X0_34_eq_seventeen]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_34_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 34 = (133311654 : ℚ) / 1667 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 34 = centeredRamanujanWindowEnergy X0 17 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_34_eq_seventeen N hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 34 : ℝ) = ((((133311654 : ℚ) / 1667 : ℚ)) : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 34) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 17) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_17_eq_cert]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalSmallRestTerm34_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 34
+      = (1666395675 : ℚ) / 54624256 := by
+  have hsqfree : Squarefree 34 := by native_decide
+  have hphi34 : Nat.totient 34 = 16 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_34_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi34]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_nineteen_one_period_nineteen_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 19 1 (X + 2 * (k + 19))
+      =
+    ramanujanGcdClassIndicator 19 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 19 (X + 2 * (k + 19)) = Nat.gcd 19 (X + 2 * k) := by
+    calc
+      Nat.gcd 19 (X + 2 * (k + 19))
+          = Nat.gcd 19 ((X + 2 * k) + 2 * 19) := by ring_nf
+      _ = Nat.gcd 19 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_nineteen_one_sum_range_nineteen_eq_eighteen_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 19, ramanujanGcdClassIndicator 19 1 (X + 2 * k) = 18 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 19 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 19 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop192 : Nat.Coprime 19 2 := by norm_num
+    have hcop :
+        Nat.Coprime 19 (2 * (X / 2 + k)) ↔ Nat.Coprime 19 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 19 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 19 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop192.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (19 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 19, ramanujanGcdClassIndicator 19 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 19, (if Nat.Coprime 19 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 19).filter (fun k => Nat.Coprime 19 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 19) (p := fun k => Nat.Coprime 19 (X / 2 + k))).symm
+    _ = 18 := by
+          have hcard :
+              (((Finset.range 19).filter (fun k => Nat.Coprime 19 (X / 2 + k))).card : ℕ) = 18 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 19 (by norm_num)
+          rw [show (((Finset.range 19).filter (fun k => Nat.Coprime 19 (X / 2 + k))).card : ℝ) = 18 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_nineteen_one_X0 :
+    ramanujanGcdClassWindowAverage X0 19 1 = (4738 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 19 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 19 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 263 * 19 + 4 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 19 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_nineteen_one_period_nineteen_on_even_progression (X := X0) (k := k))
+      (m := 263) (r := 4)]
+    rw [ramanujanGcdClassIndicator_nineteen_one_sum_range_nineteen_eq_eighteen_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem3 : ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + 3)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 4, ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + x)) = 4 := by
+      calc
+        ∑ x ∈ Finset.range 4, ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + x))
+            =
+          ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + 0))
+            + ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + 1))
+            + ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + 2))
+            + ramanujanGcdClassIndicator 19 1 (X0 + 2 * (4997 + 3)) := by
+              rw [show (4 : ℕ) = 3 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 4 := by
+              rw [hrem0, hrem1, hrem2, hrem3]
+              norm_num
+    rw [show 263 * 19 = 4997 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_nineteen_nineteen_X0 :
+    ramanujanGcdClassWindowAverage X0 19 19 = (263 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 19 1 + ramanujanGcdClassWindowAverage X0 19 19 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 19 1 N + ramanujanGcdClassIndicator 19 19 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 19 1 N + ramanujanGcdClassIndicator 19 19 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 19 N = 1
+            · have h19 : Nat.gcd 19 N ≠ 19 := by
+                rw [h1]
+                norm_num
+              simp [h1, h19]
+            · have hdiv : Nat.gcd 19 N ∣ 19 := Nat.gcd_dvd_left 19 N
+              have h19 : Nat.gcd 19 N = 19 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 19 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h19]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 19 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 19 19 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_nineteen_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_nineteen_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 19 1 = (4738 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 19 1 : ℝ) = (((4738 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_nineteen_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_nineteen_nineteen_X0 :
+    ramanujanGcdClassWindowAverageRat X0 19 19 = (263 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 19 19 : ℝ) = (((263 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_nineteen_nineteen_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_nineteen_one_add_nineteen_nineteen_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 19 1 N + ramanujanGcdClassIndicatorRat 19 19 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 19 N = 1
+  · have h19 : Nat.gcd 19 N ≠ 19 := by
+      rw [h1]
+      norm_num
+    simp [h1, h19]
+  · have hdiv : Nat.gcd 19 N ∣ 19 := Nat.gcd_dvd_left 19 N
+    have h19 : Nat.gcd 19 N = 19 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 19 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h19]
+
+private theorem centeredRamanujanObservableRat_X0_19_eq_indicator19
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 19 N
+      = (-4997 / 5001 : ℚ) + 19 * ramanujanGcdClassIndicatorRat 19 19 N := by
+  have hdivs : (19 : ℕ).divisors = ({1, 19} : Finset ℕ) := by
+    simpa using (show Nat.Prime 19 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 19 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 19)]
+  have hcoeff19 : ramanujanGcdClassCoeffRat 19 19 = 18 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 19)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff19, ramanujanGcdClassWindowAverageRat_nineteen_one_X0,
+    ramanujanGcdClassWindowAverageRat_nineteen_nineteen_X0]
+  linarith [ramanujanGcdClassIndicatorRat_nineteen_one_add_nineteen_nineteen_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_19_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 19 N) ^ 2
+      =
+    (24970009 / 25010001 : ℚ)
+      + (8078990475 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 19 19 N := by
+  rw [centeredRamanujanObservableRat_X0_19_eq_indicator19]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h19 : Nat.gcd 19 N = 19
+  · have hind : (if Nat.gcd 19 N = 19 then (1 : ℚ) else 0) = 1 := by simp [h19]
+    rw [hind]
+    norm_num
+  · have hind : (if Nat.gcd 19 N = 19 then (1 : ℚ) else 0) = 0 := by simp [h19]
+    rw [hind]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_nineteen_nineteen_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 19 19 N = 263 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 19 N = 19)).card : ℚ) = 263 := by
+    have havg := ramanujanGcdClassWindowAverageRat_nineteen_nineteen_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 19 19 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 19 N = 19)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 19 N = 19 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 19 N = 19)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 263 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_19_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 19 = (449839934 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 19
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((24970009 / 25010001 : ℚ)
+          + (8078990475 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 19 19 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_19_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (24970009 / 25010001 : ℚ)
+        + (8078990475 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 19 19 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (449839934 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (24970009 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (24970009 / 25010001 : ℚ) := by
+            rw [Finset.sum_const, evenIn_X0_H_card_eq_5001, nsmul_eq_mul]
+            norm_num
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_nineteen_nineteen_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm19_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 19
+      = (5622999175 : ℚ) / 262492488 := by
+  have hsqfree : Squarefree 19 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_19_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 19)]
+  norm_num
+
+private theorem ramanujanR_thirtyEight_eq_nineteen_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 38 N
+      = Goldbach.AO_OffDiag.TailBlock.ramanujanR 19 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  by_cases h1 : Nat.gcd 19 k = 1
+  · have hgcd38 : Nat.gcd 38 (2 * k) = 2 := by
+      simpa [show 38 = 2 * 19 by norm_num, h1, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 19 k)
+    have hgcd19 : Nat.gcd 19 (2 * k) = 1 := by
+      have hcop : Nat.Coprime 19 k := Nat.coprime_iff_gcd_eq_one.mpr h1
+      have h2cop : Nat.Coprime 19 2 := by norm_num
+      have hcop' : Nat.Coprime 19 (2 * k) := (Nat.coprime_mul_iff_right).2 ⟨h2cop, hcop⟩
+      exact Nat.coprime_iff_gcd_eq_one.mp hcop'
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [hgcd38, hgcd19, ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 19)]
+  · have hdiv : Nat.gcd 19 k ∣ 19 := Nat.gcd_dvd_left 19 k
+    have h19 : Nat.gcd 19 k = 19 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 19 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    have hgcd38 : Nat.gcd 38 (2 * k) = 38 := by
+      simpa [show 38 = 2 * 19 by norm_num, h19, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 19 k)
+    have hgcd19 : Nat.gcd 19 (2 * k) = 19 := by
+      have h19divk : 19 ∣ k := by simpa [h19] using Nat.gcd_dvd_right 19 k
+      have h19div2k : 19 ∣ 2 * k := dvd_mul_of_dvd_right h19divk 2
+      have hle : Nat.gcd 19 (2 * k) ≤ 19 := Nat.le_of_dvd (by norm_num) (Nat.gcd_dvd_left 19 (2 * k))
+      have hpos : 0 < Nat.gcd 19 (2 * k) := Nat.gcd_pos_of_pos_left (2 * k) (by norm_num)
+      have hdvd : 19 ∣ Nat.gcd 19 (2 * k) := Nat.dvd_gcd (dvd_rfl) h19div2k
+      omega
+    have hram38 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 38 (2 * k) = 18 := by
+      have htot38 : Nat.totient 38 = 18 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd38, htot38]
+      norm_num [ArithmeticFunction.moebius_apply_one]
+    have hram19 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 19 (2 * k) = 18 := by
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd19]
+      norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 19)]
+    rw [hram38, hram19]
+
+private theorem ramanujanWindowAverage_X0_38_eq_nineteen :
+    ramanujanWindowAverage X0 38 = ramanujanWindowAverage X0 19 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_thirtyEight_eq_nineteen_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_38_eq_nineteen
+    (N : ℕ) (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 38 N
+      = centeredRamanujanObservable X0 19 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_thirtyEight_eq_nineteen_of_isEven (isEven_of_mem_EvenIn hN),
+    ramanujanWindowAverage_X0_38_eq_nineteen]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_38_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 38 = (449839934 : ℚ) / 5001 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 38 = centeredRamanujanWindowEnergy X0 19 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_38_eq_nineteen N hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 38 : ℝ) = ((((449839934 : ℚ) / 5001 : ℚ)) : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 38) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 19) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_19_eq_cert]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalSmallRestTerm38_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 38
+      = (5622999175 : ℚ) / 262492488 := by
+  have hsqfree : Squarefree 38 := by native_decide
+  have hphi38 : Nat.totient 38 = 18 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_38_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi38]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_twentyThree_one_period_twentyThree_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 23 1 (X + 2 * (k + 23))
+      =
+    ramanujanGcdClassIndicator 23 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 23 (X + 2 * (k + 23)) = Nat.gcd 23 (X + 2 * k) := by
+    calc
+      Nat.gcd 23 (X + 2 * (k + 23))
+          = Nat.gcd 23 ((X + 2 * k) + 2 * 23) := by ring_nf
+      _ = Nat.gcd 23 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_twentyThree_one_sum_range_twentyThree_eq_twentyTwo_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 23, ramanujanGcdClassIndicator 23 1 (X + 2 * k) = 22 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 23 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 23 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop232 : Nat.Coprime 23 2 := by norm_num
+    have hcop :
+        Nat.Coprime 23 (2 * (X / 2 + k)) ↔ Nat.Coprime 23 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 23 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 23 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop232.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (23 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 23, ramanujanGcdClassIndicator 23 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 23, (if Nat.Coprime 23 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 23).filter (fun k => Nat.Coprime 23 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 23) (p := fun k => Nat.Coprime 23 (X / 2 + k))).symm
+    _ = 22 := by
+          have hcard :
+              (((Finset.range 23).filter (fun k => Nat.Coprime 23 (X / 2 + k))).card : ℕ) = 22 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 23 (by norm_num)
+          rw [show (((Finset.range 23).filter (fun k => Nat.Coprime 23 (X / 2 + k))).card : ℝ) = 22 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_twentyThree_one_X0 :
+    ramanujanGcdClassWindowAverage X0 23 1 = (4784 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 23 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 23 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 217 * 23 + 10 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 23 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_twentyThree_one_period_twentyThree_on_even_progression (X := X0) (k := k))
+      (m := 217) (r := 10)]
+    rw [ramanujanGcdClassIndicator_twentyThree_one_sum_range_twentyThree_eq_twentyTwo_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem3 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 3)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem4 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 4)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem5 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 5)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem6 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 6)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem7 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 7)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem8 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 8)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem9 : ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 9)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 10, ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + x)) = 10 := by
+      calc
+        ∑ x ∈ Finset.range 10, ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + x))
+            =
+          ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 0))
+            + ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 1))
+            + ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 2))
+            + ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 3))
+            + ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 4))
+            + ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 5))
+            + ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 6))
+            + ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 7))
+            + ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 8))
+            + ramanujanGcdClassIndicator 23 1 (X0 + 2 * (4991 + 9)) := by
+              rw [show (10 : ℕ) = 9 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (9 : ℕ) = 8 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (8 : ℕ) = 7 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (7 : ℕ) = 6 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (6 : ℕ) = 5 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (5 : ℕ) = 4 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (4 : ℕ) = 3 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 10 := by
+              rw [hrem0, hrem1, hrem2, hrem3, hrem4, hrem5, hrem6, hrem7, hrem8, hrem9]
+              norm_num
+    rw [show 217 * 23 = 4991 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_twentyThree_twentyThree_X0 :
+    ramanujanGcdClassWindowAverage X0 23 23 = (217 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 23 1 + ramanujanGcdClassWindowAverage X0 23 23 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 23 1 N + ramanujanGcdClassIndicator 23 23 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 23 1 N + ramanujanGcdClassIndicator 23 23 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 23 N = 1
+            · have h23 : Nat.gcd 23 N ≠ 23 := by
+                rw [h1]
+                norm_num
+              simp [h1, h23]
+            · have hdiv : Nat.gcd 23 N ∣ 23 := Nat.gcd_dvd_left 23 N
+              have h23 : Nat.gcd 23 N = 23 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 23 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h23]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 23 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 23 23 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_twentyThree_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_twentyThree_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 23 1 = (4784 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 23 1 : ℝ) = (((4784 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_twentyThree_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_twentyThree_twentyThree_X0 :
+    ramanujanGcdClassWindowAverageRat X0 23 23 = (217 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 23 23 : ℝ) = (((217 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_twentyThree_twentyThree_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_twentyThree_one_add_twentyThree_twentyThree_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 23 1 N + ramanujanGcdClassIndicatorRat 23 23 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 23 N = 1
+  · have h23 : Nat.gcd 23 N ≠ 23 := by
+      rw [h1]
+      norm_num
+    simp [h1, h23]
+  · have hdiv : Nat.gcd 23 N ∣ 23 := Nat.gcd_dvd_left 23 N
+    have h23 : Nat.gcd 23 N = 23 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 23 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h23]
+
+private theorem centeredRamanujanObservableRat_X0_23_eq_indicator23
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 23 N
+      = (-4991 / 5001 : ℚ) + 23 * ramanujanGcdClassIndicatorRat 23 23 N := by
+  have hdivs : (23 : ℕ).divisors = ({1, 23} : Finset ℕ) := by
+    simpa using (show Nat.Prime 23 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 23 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 23)]
+  have hcoeff23 : ramanujanGcdClassCoeffRat 23 23 = 22 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 23)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff23, ramanujanGcdClassWindowAverageRat_twentyThree_one_X0,
+    ramanujanGcdClassWindowAverageRat_twentyThree_twentyThree_X0]
+  linarith [ramanujanGcdClassIndicatorRat_twentyThree_one_add_twentyThree_twentyThree_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_23_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 23 N) ^ 2
+      =
+    (24910081 / 25010001 : ℚ)
+      + (12082130943 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 23 23 N := by
+  rw [centeredRamanujanObservableRat_X0_23_eq_indicator23]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h23 : Nat.gcd 23 N = 23
+  · have hind : (if Nat.gcd 23 N = 23 then (1 : ℚ) else 0) = 1 := by simp [h23]
+    rw [hind]
+    norm_num
+  · have hind : (if Nat.gcd 23 N = 23 then (1 : ℚ) else 0) = 0 := by simp [h23]
+    rw [hind]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_twentyThree_twentyThree_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 23 23 N = 217 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 23 N = 23)).card : ℚ) = 217 := by
+    have havg := ramanujanGcdClassWindowAverageRat_twentyThree_twentyThree_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 23 23 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 23 N = 23)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 23 N = 23 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 23 N = 23)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 217 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_23_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 23 = (549169712 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 23
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((24910081 / 25010001 : ℚ)
+          + (12082130943 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 23 23 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_23_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (24910081 / 25010001 : ℚ)
+        + (12082130943 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 23 23 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (549169712 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (24910081 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (24910081 / 25010001 : ℚ) := by
+            rw [Finset.sum_const, evenIn_X0_H_card_eq_5001, nsmul_eq_mul]
+            norm_num
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_twentyThree_twentyThree_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm23_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 23
+      = (858077675 : ℚ) / 73219641 := by
+  have hsqfree : Squarefree 23 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_23_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 23)]
+  norm_num
+
+private theorem ramanujanR_fortySix_eq_twentyThree_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 46 N
+      = Goldbach.AO_OffDiag.TailBlock.ramanujanR 23 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  by_cases h1 : Nat.gcd 23 k = 1
+  · have hgcd46 : Nat.gcd 46 (2 * k) = 2 := by
+      simpa [show 46 = 2 * 23 by norm_num, h1, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 23 k)
+    have hgcd23 : Nat.gcd 23 (2 * k) = 1 := by
+      have hcop : Nat.Coprime 23 k := Nat.coprime_iff_gcd_eq_one.mpr h1
+      have h2cop : Nat.Coprime 23 2 := by norm_num
+      have hcop' : Nat.Coprime 23 (2 * k) := (Nat.coprime_mul_iff_right).2 ⟨h2cop, hcop⟩
+      exact Nat.coprime_iff_gcd_eq_one.mp hcop'
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [hgcd46, hgcd23, ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 23)]
+  · have hdiv : Nat.gcd 23 k ∣ 23 := Nat.gcd_dvd_left 23 k
+    have h23 : Nat.gcd 23 k = 23 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 23 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    have hgcd46 : Nat.gcd 46 (2 * k) = 46 := by
+      simpa [show 46 = 2 * 23 by norm_num, h23, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+        (Nat.gcd_mul_left 2 23 k)
+    have hgcd23 : Nat.gcd 23 (2 * k) = 23 := by
+      have h23divk : 23 ∣ k := by simpa [h23] using Nat.gcd_dvd_right 23 k
+      have h23div2k : 23 ∣ 2 * k := dvd_mul_of_dvd_right h23divk 2
+      have hle : Nat.gcd 23 (2 * k) ≤ 23 := Nat.le_of_dvd (by norm_num) (Nat.gcd_dvd_left 23 (2 * k))
+      have hpos : 0 < Nat.gcd 23 (2 * k) := Nat.gcd_pos_of_pos_left (2 * k) (by norm_num)
+      have hdvd : 23 ∣ Nat.gcd 23 (2 * k) := Nat.dvd_gcd (dvd_rfl) h23div2k
+      omega
+    have hram46 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 46 (2 * k) = 22 := by
+      have htot46 : Nat.totient 46 = 22 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd46, htot46]
+      norm_num [ArithmeticFunction.moebius_apply_one]
+    have hram23 : Goldbach.AO_OffDiag.TailBlock.ramanujanR 23 (2 * k) = 22 := by
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd23]
+      norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 23)]
+    rw [hram46, hram23]
+
+private theorem ramanujanWindowAverage_X0_46_eq_twentyThree :
+    ramanujanWindowAverage X0 46 = ramanujanWindowAverage X0 23 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_fortySix_eq_twentyThree_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_46_eq_twentyThree
+    (N : ℕ) (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 46 N
+      = centeredRamanujanObservable X0 23 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_fortySix_eq_twentyThree_of_isEven (isEven_of_mem_EvenIn hN),
+    ramanujanWindowAverage_X0_46_eq_twentyThree]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_46_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 46 = (549169712 : ℚ) / 5001 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 46 = centeredRamanujanWindowEnergy X0 23 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_46_eq_twentyThree N hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 46 : ℝ) = ((((549169712 : ℚ) / 5001 : ℚ)) : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 46) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 23) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_23_eq_cert]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalSmallRestTerm46_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 46
+      = (858077675 : ℚ) / 73219641 := by
+  have hsqfree : Squarefree 46 := by native_decide
+  have hphi46 : Nat.totient 46 = 22 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_46_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi46]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_twentyNine_one_period_twentyNine_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 29 1 (X + 2 * (k + 29))
+      =
+    ramanujanGcdClassIndicator 29 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 29 (X + 2 * (k + 29)) = Nat.gcd 29 (X + 2 * k) := by
+    calc
+      Nat.gcd 29 (X + 2 * (k + 29))
+          = Nat.gcd 29 ((X + 2 * k) + 2 * 29) := by ring_nf
+      _ = Nat.gcd 29 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_twentyNine_one_sum_range_twentyNine_eq_twentyEight_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 29, ramanujanGcdClassIndicator 29 1 (X + 2 * k) = 28 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 29 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 29 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop292 : Nat.Coprime 29 2 := by norm_num
+    have hcop :
+        Nat.Coprime 29 (2 * (X / 2 + k)) ↔ Nat.Coprime 29 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 29 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 29 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop292.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (29 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 29, ramanujanGcdClassIndicator 29 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 29, (if Nat.Coprime 29 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 29).filter (fun k => Nat.Coprime 29 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 29) (p := fun k => Nat.Coprime 29 (X / 2 + k))).symm
+    _ = 28 := by
+          have hcard :
+              (((Finset.range 29).filter (fun k => Nat.Coprime 29 (X / 2 + k))).card : ℕ) = 28 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 29 (by norm_num)
+          rw [show (((Finset.range 29).filter (fun k => Nat.Coprime 29 (X / 2 + k))).card : ℝ) = 28 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_twentyNine_one_X0 :
+    ramanujanGcdClassWindowAverage X0 29 1 = (4829 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 29 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 29 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 172 * 29 + 13 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 29 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_twentyNine_one_period_twentyNine_on_even_progression
+          (X := X0) (k := k))
+      (m := 172) (r := 13)]
+    rw [ramanujanGcdClassIndicator_twentyNine_one_sum_range_twentyNine_eq_twentyEight_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem3 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 3)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem4 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 4)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem5 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 5)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem6 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 6)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem7 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 7)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem8 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 8)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem9 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 9)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem10 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 10)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem11 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 11)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem12 : ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 12)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 13, ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + x)) = 13 := by
+      calc
+        ∑ x ∈ Finset.range 13, ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + x))
+            =
+          ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 0))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 1))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 2))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 3))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 4))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 5))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 6))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 7))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 8))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 9))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 10))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 11))
+            + ramanujanGcdClassIndicator 29 1 (X0 + 2 * (4988 + 12)) := by
+              rw [show (13 : ℕ) = 12 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (12 : ℕ) = 11 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (11 : ℕ) = 10 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (10 : ℕ) = 9 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (9 : ℕ) = 8 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (8 : ℕ) = 7 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (7 : ℕ) = 6 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (6 : ℕ) = 5 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (5 : ℕ) = 4 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (4 : ℕ) = 3 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 13 := by
+              rw [hrem0, hrem1, hrem2, hrem3, hrem4, hrem5, hrem6, hrem7, hrem8, hrem9,
+                hrem10, hrem11, hrem12]
+              norm_num
+    rw [show 172 * 29 = 4988 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_twentyNine_twentyNine_X0 :
+    ramanujanGcdClassWindowAverage X0 29 29 = (172 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 29 1 + ramanujanGcdClassWindowAverage X0 29 29 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 29 1 N + ramanujanGcdClassIndicator 29 29 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 29 1 N + ramanujanGcdClassIndicator 29 29 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 29 N = 1
+            · have h29 : Nat.gcd 29 N ≠ 29 := by
+                rw [h1]
+                norm_num
+              simp [h1, h29]
+            · have hdiv : Nat.gcd 29 N ∣ 29 := Nat.gcd_dvd_left 29 N
+              have h29 : Nat.gcd 29 N = 29 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 29 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h29]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 29 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 29 29 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_twentyNine_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_twentyNine_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 29 1 = (4829 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 29 1 : ℝ) = (((4829 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_twentyNine_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_twentyNine_twentyNine_X0 :
+    ramanujanGcdClassWindowAverageRat X0 29 29 = (172 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 29 29 : ℝ) = (((172 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_twentyNine_twentyNine_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_twentyNine_one_add_twentyNine_twentyNine_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 29 1 N + ramanujanGcdClassIndicatorRat 29 29 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 29 N = 1
+  · have h29 : Nat.gcd 29 N ≠ 29 := by
+      rw [h1]
+      norm_num
+    simp [h1, h29]
+  · have hdiv : Nat.gcd 29 N ∣ 29 := Nat.gcd_dvd_left 29 N
+    have h29 : Nat.gcd 29 N = 29 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 29 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h29]
+
+private theorem centeredRamanujanObservableRat_X0_29_eq_indicator29
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 29 N
+      = (-4988 / 5001 : ℚ) + 29 * ramanujanGcdClassIndicatorRat 29 29 N := by
+  have hdivs : (29 : ℕ).divisors = ({1, 29} : Finset ℕ) := by
+    simpa using (show Nat.Prime 29 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 29 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 29)]
+  have hcoeff29 : ramanujanGcdClassCoeffRat 29 29 = 28 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 29)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff29, ramanujanGcdClassWindowAverageRat_twentyNine_one_X0,
+    ramanujanGcdClassWindowAverageRat_twentyNine_twentyNine_X0]
+  linarith [ramanujanGcdClassIndicatorRat_twentyNine_one_add_twentyNine_twentyNine_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_29_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 29 N) ^ 2
+      =
+    (24880144 / 25010001 : ℚ)
+      + (19586601537 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 29 29 N := by
+  rw [centeredRamanujanObservableRat_X0_29_eq_indicator29]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h29 : Nat.gcd 29 N = 29
+  · have hind : (if Nat.gcd 29 N = 29 then (1 : ℚ) else 0) = 1 := by simp [h29]
+    rw [hind]
+    norm_num
+  · have hind : (if Nat.gcd 29 N = 29 then (1 : ℚ) else 0) = 0 := by simp [h29]
+    rw [hind]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_twentyNine_twentyNine_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 29 29 N = 172 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 29 N = 29)).card : ℚ) = 172 := by
+    have havg := ramanujanGcdClassWindowAverageRat_twentyNine_twentyNine_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 29 29 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 29 N = 29)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 29 N = 29 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 29 N = 29)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 172 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_29_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 29 = (698524508 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 29
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((24880144 / 25010001 : ℚ)
+          + (19586601537 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 29 29 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_29_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (24880144 / 25010001 : ℚ)
+        + (19586601537 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 29 29 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (698524508 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (24880144 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (24880144 / 25010001 : ℚ) := by
+            rw [Finset.sum_const, evenIn_X0_H_card_eq_5001, nsmul_eq_mul]
+            norm_num
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_twentyNine_twentyNine_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm29_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 29
+      = (4365778175 : ℚ) / 768473664 := by
+  have hsqfree : Squarefree 29 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_29_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 29)]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_thirtyOne_one_period_thirtyOne_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 31 1 (X + 2 * (k + 31))
+      =
+    ramanujanGcdClassIndicator 31 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 31 (X + 2 * (k + 31)) = Nat.gcd 31 (X + 2 * k) := by
+    calc
+      Nat.gcd 31 (X + 2 * (k + 31))
+          = Nat.gcd 31 ((X + 2 * k) + 2 * 31) := by ring_nf
+      _ = Nat.gcd 31 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_thirtyOne_one_sum_range_thirtyOne_eq_thirty_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 31, ramanujanGcdClassIndicator 31 1 (X + 2 * k) = 30 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 31 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 31 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop312 : Nat.Coprime 31 2 := by norm_num
+    have hcop :
+        Nat.Coprime 31 (2 * (X / 2 + k)) ↔ Nat.Coprime 31 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 31 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 31 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop312.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (31 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 31, ramanujanGcdClassIndicator 31 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 31, (if Nat.Coprime 31 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 31).filter (fun k => Nat.Coprime 31 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 31) (p := fun k => Nat.Coprime 31 (X / 2 + k))).symm
+    _ = 30 := by
+          have hcard :
+              (((Finset.range 31).filter (fun k => Nat.Coprime 31 (X / 2 + k))).card : ℕ) = 30 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 31 (by norm_num)
+          rw [show (((Finset.range 31).filter (fun k => Nat.Coprime 31 (X / 2 + k))).card : ℝ) = 30 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_thirtyOne_one_X0 :
+    ramanujanGcdClassWindowAverage X0 31 1 = (4840 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 31 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 31 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 161 * 31 + 10 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 31 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_thirtyOne_one_period_thirtyOne_on_even_progression
+          (X := X0) (k := k))
+      (m := 161) (r := 10)]
+    rw [ramanujanGcdClassIndicator_thirtyOne_one_sum_range_thirtyOne_eq_thirty_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem3 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 3)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem4 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 4)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem5 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 5)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem6 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 6)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem7 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 7)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem8 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 8)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem9 : ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 9)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 10, ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + x)) = 10 := by
+      calc
+        ∑ x ∈ Finset.range 10, ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + x))
+            =
+          ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 0))
+            + ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 1))
+            + ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 2))
+            + ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 3))
+            + ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 4))
+            + ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 5))
+            + ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 6))
+            + ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 7))
+            + ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 8))
+            + ramanujanGcdClassIndicator 31 1 (X0 + 2 * (4991 + 9)) := by
+              rw [show (10 : ℕ) = 9 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (9 : ℕ) = 8 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (8 : ℕ) = 7 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (7 : ℕ) = 6 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (6 : ℕ) = 5 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (5 : ℕ) = 4 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (4 : ℕ) = 3 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 10 := by
+              rw [hrem0, hrem1, hrem2, hrem3, hrem4, hrem5, hrem6, hrem7, hrem8, hrem9]
+              norm_num
+    rw [show 161 * 31 = 4991 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_thirtyOne_thirtyOne_X0 :
+    ramanujanGcdClassWindowAverage X0 31 31 = (161 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 31 1 + ramanujanGcdClassWindowAverage X0 31 31 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 31 1 N + ramanujanGcdClassIndicator 31 31 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 31 1 N + ramanujanGcdClassIndicator 31 31 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 31 N = 1
+            · have h31 : Nat.gcd 31 N ≠ 31 := by
+                rw [h1]
+                norm_num
+              simp [h1, h31]
+            · have hdiv : Nat.gcd 31 N ∣ 31 := Nat.gcd_dvd_left 31 N
+              have h31 : Nat.gcd 31 N = 31 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 31 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h31]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 31 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 31 31 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_thirtyOne_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyOne_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 31 1 = (4840 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 31 1 : ℝ) = (((4840 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_thirtyOne_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyOne_thirtyOne_X0 :
+    ramanujanGcdClassWindowAverageRat X0 31 31 = (161 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 31 31 : ℝ) = (((161 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_thirtyOne_thirtyOne_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_thirtyOne_one_add_thirtyOne_thirtyOne_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 31 1 N + ramanujanGcdClassIndicatorRat 31 31 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 31 N = 1
+  · have h31 : Nat.gcd 31 N ≠ 31 := by
+      rw [h1]
+      norm_num
+    simp [h1, h31]
+  · have hdiv : Nat.gcd 31 N ∣ 31 := Nat.gcd_dvd_left 31 N
+    have h31 : Nat.gcd 31 N = 31 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 31 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h31]
+
+private theorem centeredRamanujanObservableRat_X0_31_eq_indicator31
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 31 N
+      = (-4991 / 5001 : ℚ) + 31 * ramanujanGcdClassIndicatorRat 31 31 N := by
+  have hdivs : (31 : ℕ).divisors = ({1, 31} : Finset ℕ) := by
+    simpa using (show Nat.Prime 31 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 31 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 31)]
+  have hcoeff31 : ramanujanGcdClassCoeffRat 31 31 = 30 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 31)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff31, ramanujanGcdClassWindowAverageRat_thirtyOne_one_X0,
+    ramanujanGcdClassWindowAverageRat_thirtyOne_thirtyOne_X0]
+  linarith [ramanujanGcdClassIndicatorRat_thirtyOne_one_add_thirtyOne_thirtyOne_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_31_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 31 N) ^ 2
+      =
+    (24910081 / 25010001 : ℚ)
+      + (22487091519 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 31 31 N := by
+  rw [centeredRamanujanObservableRat_X0_31_eq_indicator31]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h31 : Nat.gcd 31 N = 31
+  · simp [h31]
+    norm_num
+  · simp [h31]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtyOne_thirtyOne_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 31 31 N = 161 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 31 N = 31)).card : ℚ) = 161 := by
+    have havg := ramanujanGcdClassWindowAverageRat_thirtyOne_thirtyOne_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 31 31 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 31 N = 31)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 31 N = 31 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 31 N = 31)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 161 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_31_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 31 = (748849640 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 31
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((24910081 / 25010001 : ℚ)
+          + (22487091519 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 31 31 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_31_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (24910081 / 25010001 : ℚ)
+        + (22487091519 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 31 31 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (748849640 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (24910081 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (24910081 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_thirtyOne_thirtyOne_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm31_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 31
+      = (18721241 : ℚ) / 4050810 := by
+  have hsqfree : Squarefree 31 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_31_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 31)]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_thirtySeven_one_period_thirtySeven_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 37 1 (X + 2 * (k + 37))
+      =
+    ramanujanGcdClassIndicator 37 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 37 (X + 2 * (k + 37)) = Nat.gcd 37 (X + 2 * k) := by
+    calc
+      Nat.gcd 37 (X + 2 * (k + 37))
+          = Nat.gcd 37 ((X + 2 * k) + 2 * 37) := by ring_nf
+      _ = Nat.gcd 37 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_thirtySeven_one_sum_range_thirtySeven_eq_thirtySix_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 37, ramanujanGcdClassIndicator 37 1 (X + 2 * k) = 36 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 37 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 37 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop372 : Nat.Coprime 37 2 := by norm_num
+    have hcop :
+        Nat.Coprime 37 (2 * (X / 2 + k)) ↔ Nat.Coprime 37 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 37 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 37 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop372.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (37 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 37, ramanujanGcdClassIndicator 37 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 37, (if Nat.Coprime 37 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 37).filter (fun k => Nat.Coprime 37 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 37) (p := fun k => Nat.Coprime 37 (X / 2 + k))).symm
+    _ = 36 := by
+          have hcard :
+              (((Finset.range 37).filter (fun k => Nat.Coprime 37 (X / 2 + k))).card : ℕ) = 36 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 37 (by norm_num)
+          rw [show (((Finset.range 37).filter (fun k => Nat.Coprime 37 (X / 2 + k))).card : ℝ) = 36 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_thirtySeven_one_X0 :
+    ramanujanGcdClassWindowAverage X0 37 1 = (4866 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 37 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 37 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 135 * 37 + 6 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 37 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_thirtySeven_one_period_thirtySeven_on_even_progression
+          (X := X0) (k := k))
+      (m := 135) (r := 6)]
+    rw [ramanujanGcdClassIndicator_thirtySeven_one_sum_range_thirtySeven_eq_thirtySix_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem3 : ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 3)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem4 : ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 4)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem5 : ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 5)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 6, ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + x)) = 6 := by
+      calc
+        ∑ x ∈ Finset.range 6, ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + x))
+            =
+          ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 0))
+            + ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 1))
+            + ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 2))
+            + ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 3))
+            + ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 4))
+            + ramanujanGcdClassIndicator 37 1 (X0 + 2 * (4995 + 5)) := by
+              rw [show (6 : ℕ) = 5 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (5 : ℕ) = 4 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (4 : ℕ) = 3 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 6 := by
+              rw [hrem0, hrem1, hrem2, hrem3, hrem4, hrem5]
+              norm_num
+    rw [show 135 * 37 = 4995 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_thirtySeven_thirtySeven_X0 :
+    ramanujanGcdClassWindowAverage X0 37 37 = (135 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 37 1 + ramanujanGcdClassWindowAverage X0 37 37 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 37 1 N + ramanujanGcdClassIndicator 37 37 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 37 1 N + ramanujanGcdClassIndicator 37 37 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 37 N = 1
+            · have h37 : Nat.gcd 37 N ≠ 37 := by
+                rw [h1]
+                norm_num
+              simp [h1, h37]
+            · have hdiv : Nat.gcd 37 N ∣ 37 := Nat.gcd_dvd_left 37 N
+              have h37 : Nat.gcd 37 N = 37 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 37 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h37]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 37 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 37 37 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_thirtySeven_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtySeven_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 37 1 = (4866 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 37 1 : ℝ) = (((4866 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_thirtySeven_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtySeven_thirtySeven_X0 :
+    ramanujanGcdClassWindowAverageRat X0 37 37 = (135 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 37 37 : ℝ) = (((135 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_thirtySeven_thirtySeven_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_thirtySeven_one_add_thirtySeven_thirtySeven_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 37 1 N + ramanujanGcdClassIndicatorRat 37 37 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 37 N = 1
+  · have h37 : Nat.gcd 37 N ≠ 37 := by
+      rw [h1]
+      norm_num
+    simp [h1, h37]
+  · have hdiv : Nat.gcd 37 N ∣ 37 := Nat.gcd_dvd_left 37 N
+    have h37 : Nat.gcd 37 N = 37 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 37 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h37]
+
+private theorem centeredRamanujanObservableRat_X0_37_eq_indicator37
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 37 N
+      = (-4995 / 5001 : ℚ) + 37 * ramanujanGcdClassIndicatorRat 37 37 N := by
+  have hdivs : (37 : ℕ).divisors = ({1, 37} : Finset ℕ) := by
+    simpa using (show Nat.Prime 37 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 37 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 37)]
+  have hcoeff37 : ramanujanGcdClassCoeffRat 37 37 = 36 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 37)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff37, ramanujanGcdClassWindowAverageRat_thirtySeven_one_X0,
+    ramanujanGcdClassWindowAverageRat_thirtySeven_thirtySeven_X0]
+  linarith [ramanujanGcdClassIndicatorRat_thirtySeven_one_add_thirtySeven_thirtySeven_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_37_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 37 N) ^ 2
+      =
+    (24950025 / 25010001 : ℚ)
+      + (32390171739 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 37 37 N := by
+  rw [centeredRamanujanObservableRat_X0_37_eq_indicator37]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h37 : Nat.gcd 37 N = 37
+  · simp [h37]
+    norm_num
+  · simp [h37]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtySeven_thirtySeven_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 37 37 N = 135 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 37 N = 37)).card : ℚ) = 135 := by
+    have havg := ramanujanGcdClassWindowAverageRat_thirtySeven_thirtySeven_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 37 37 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 37 N = 37)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 37 N = 37 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 37 N = 37)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 135 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_37_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 37 = (299769930 : ℚ) / 1667 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 37
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((24950025 / 25010001 : ℚ)
+          + (32390171739 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 37 37 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_37_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (24950025 / 25010001 : ℚ)
+        + (32390171739 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 37 37 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (299769930 : ℚ) / 1667 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (24950025 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (24950025 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_thirtySeven_thirtySeven_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm37_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 37
+      = (138782375 : ℚ) / 51850368 := by
+  have hsqfree : Squarefree 37 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_37_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 37)]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_fortyThree_one_period_fortyThree_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 43 1 (X + 2 * (k + 43))
+      =
+    ramanujanGcdClassIndicator 43 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 43 (X + 2 * (k + 43)) = Nat.gcd 43 (X + 2 * k) := by
+    calc
+      Nat.gcd 43 (X + 2 * (k + 43))
+          = Nat.gcd 43 ((X + 2 * k) + 2 * 43) := by ring_nf
+      _ = Nat.gcd 43 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_fortyThree_one_sum_range_fortyThree_eq_fortyTwo_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 43, ramanujanGcdClassIndicator 43 1 (X + 2 * k) = 42 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 43 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 43 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop432 : Nat.Coprime 43 2 := by norm_num
+    have hcop :
+        Nat.Coprime 43 (2 * (X / 2 + k)) ↔ Nat.Coprime 43 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 43 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 43 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop432.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (43 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 43, ramanujanGcdClassIndicator 43 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 43, (if Nat.Coprime 43 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 43).filter (fun k => Nat.Coprime 43 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 43) (p := fun k => Nat.Coprime 43 (X / 2 + k))).symm
+    _ = 42 := by
+          have hcard :
+              (((Finset.range 43).filter (fun k => Nat.Coprime 43 (X / 2 + k))).card : ℕ) = 42 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 43 (by norm_num)
+          rw [show (((Finset.range 43).filter (fun k => Nat.Coprime 43 (X / 2 + k))).card : ℝ) = 42 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_fortyThree_one_X0 :
+    ramanujanGcdClassWindowAverage X0 43 1 = (4884 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 43 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 43 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 116 * 43 + 13 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 43 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_fortyThree_one_period_fortyThree_on_even_progression
+          (X := X0) (k := k))
+      (m := 116) (r := 13)]
+    rw [ramanujanGcdClassIndicator_fortyThree_one_sum_range_fortyThree_eq_fortyTwo_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem3 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 3)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem4 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 4)) = 0 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem5 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 5)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem6 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 6)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem7 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 7)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem8 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 8)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem9 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 9)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem10 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 10)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem11 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 11)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem12 : ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 12)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 13, ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + x)) = 12 := by
+      calc
+        ∑ x ∈ Finset.range 13, ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + x))
+            =
+          ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 0))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 1))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 2))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 3))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 4))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 5))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 6))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 7))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 8))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 9))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 10))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 11))
+            + ramanujanGcdClassIndicator 43 1 (X0 + 2 * (4988 + 12)) := by
+              rw [show (13 : ℕ) = 12 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (12 : ℕ) = 11 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (11 : ℕ) = 10 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (10 : ℕ) = 9 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (9 : ℕ) = 8 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (8 : ℕ) = 7 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (7 : ℕ) = 6 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (6 : ℕ) = 5 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (5 : ℕ) = 4 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (4 : ℕ) = 3 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 12 := by
+              rw [hrem0, hrem1, hrem2, hrem3, hrem4, hrem5, hrem6, hrem7, hrem8, hrem9,
+                hrem10, hrem11, hrem12]
+              norm_num
+    rw [show 116 * 43 = 4988 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_fortyThree_fortyThree_X0 :
+    ramanujanGcdClassWindowAverage X0 43 43 = (117 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 43 1 + ramanujanGcdClassWindowAverage X0 43 43 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 43 1 N + ramanujanGcdClassIndicator 43 43 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 43 1 N + ramanujanGcdClassIndicator 43 43 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 43 N = 1
+            · have h43 : Nat.gcd 43 N ≠ 43 := by
+                rw [h1]
+                norm_num
+              simp [h1, h43]
+            · have hdiv : Nat.gcd 43 N ∣ 43 := Nat.gcd_dvd_left 43 N
+              have h43 : Nat.gcd 43 N = 43 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 43 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h43]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 43 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 43 43 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_fortyThree_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_fortyThree_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 43 1 = (4884 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 43 1 : ℝ) = (((4884 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_fortyThree_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_fortyThree_fortyThree_X0 :
+    ramanujanGcdClassWindowAverageRat X0 43 43 = (117 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 43 43 : ℝ) = (((117 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_fortyThree_fortyThree_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_fortyThree_one_add_fortyThree_fortyThree_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 43 1 N + ramanujanGcdClassIndicatorRat 43 43 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 43 N = 1
+  · have h43 : Nat.gcd 43 N ≠ 43 := by
+      rw [h1]
+      norm_num
+    simp [h1, h43]
+  · have hdiv : Nat.gcd 43 N ∣ 43 := Nat.gcd_dvd_left 43 N
+    have h43 : Nat.gcd 43 N = 43 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 43 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h43]
+
+private theorem centeredRamanujanObservableRat_X0_43_eq_indicator43
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 43 N
+      = (-5031 / 5001 : ℚ) + 43 * ramanujanGcdClassIndicatorRat 43 43 N := by
+  have hdivs : (43 : ℕ).divisors = ({1, 43} : Finset ℕ) := by
+    simpa using (show Nat.Prime 43 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 43 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 43)]
+  have hcoeff43 : ramanujanGcdClassCoeffRat 43 43 = 42 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 43)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff43, ramanujanGcdClassWindowAverageRat_fortyThree_one_X0,
+    ramanujanGcdClassWindowAverageRat_fortyThree_fortyThree_X0]
+  linarith [ramanujanGcdClassIndicatorRat_fortyThree_one_add_fortyThree_fortyThree_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_43_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 43 N) ^ 2
+      =
+    (25310961 / 25010001 : ℚ)
+      + (44079729183 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 43 43 N := by
+  rw [centeredRamanujanObservableRat_X0_43_eq_indicator43]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h43 : Nat.gcd 43 N = 43
+  · simp [h43]
+    norm_num
+  · simp [h43]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_fortyThree_fortyThree_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 43 43 N = 117 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 43 N = 43)).card : ℚ) = 117 := by
+    have havg := ramanujanGcdClassWindowAverageRat_fortyThree_fortyThree_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 43 43 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 43 N = 43)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 43 N = 43 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 43 N = 43)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 117 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_43_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 43 = (352190124 : ℚ) / 1667 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 43
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((25310961 / 25010001 : ℚ)
+          + (44079729183 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 43 43 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_43_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (25310961 / 25010001 : ℚ)
+        + (44079729183 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 43 43 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (352190124 : ℚ) / 1667 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (25310961 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (25310961 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_fortyThree_fortyThree_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm43_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 43
+      = (244576475 : ℚ) / 144088812 := by
+  have hsqfree : Squarefree 43 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_43_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 43)]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_fortySeven_one_period_fortySeven_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 47 1 (X + 2 * (k + 47))
+      =
+    ramanujanGcdClassIndicator 47 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 47 (X + 2 * (k + 47)) = Nat.gcd 47 (X + 2 * k) := by
+    calc
+      Nat.gcd 47 (X + 2 * (k + 47))
+          = Nat.gcd 47 ((X + 2 * k) + 2 * 47) := by ring_nf
+      _ = Nat.gcd 47 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_fortySeven_one_sum_range_fortySeven_eq_fortySix_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 47, ramanujanGcdClassIndicator 47 1 (X + 2 * k) = 46 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 47 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 47 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop472 : Nat.Coprime 47 2 := by norm_num
+    have hcop :
+        Nat.Coprime 47 (2 * (X / 2 + k)) ↔ Nat.Coprime 47 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 47 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 47 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop472.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (47 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 47, ramanujanGcdClassIndicator 47 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 47, (if Nat.Coprime 47 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 47).filter (fun k => Nat.Coprime 47 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 47) (p := fun k => Nat.Coprime 47 (X / 2 + k))).symm
+    _ = 46 := by
+          have hcard :
+              (((Finset.range 47).filter (fun k => Nat.Coprime 47 (X / 2 + k))).card : ℕ) = 46 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 47 (by norm_num)
+          rw [show (((Finset.range 47).filter (fun k => Nat.Coprime 47 (X / 2 + k))).card : ℝ) = 46 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_fortySeven_one_X0 :
+    ramanujanGcdClassWindowAverage X0 47 1 = (4895 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 47 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 47 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 106 * 47 + 19 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 47 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_fortySeven_one_period_fortySeven_on_even_progression
+          (X := X0) (k := k))
+      (m := 106) (r := 19)]
+    rw [ramanujanGcdClassIndicator_fortySeven_one_sum_range_fortySeven_eq_fortySix_of_isEven X0_isEven]
+    have hrem0 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 0)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem1 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 1)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem2 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 2)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem3 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 3)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem4 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 4)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem5 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 5)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem6 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 6)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem7 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 7)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem8 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 8)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem9 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 9)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem10 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 10)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem11 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 11)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem12 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 12)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem13 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 13)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem14 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 14)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem15 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 15)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem16 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 16)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem17 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 17)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hrem18 : ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 18)) = 1 := by
+      unfold ramanujanGcdClassIndicator
+      norm_num [X0]
+    have hremSum :
+        ∑ x ∈ Finset.range 19, ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + x)) = 19 := by
+      calc
+        ∑ x ∈ Finset.range 19, ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + x))
+            =
+          ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 0))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 1))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 2))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 3))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 4))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 5))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 6))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 7))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 8))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 9))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 10))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 11))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 12))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 13))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 14))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 15))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 16))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 17))
+            + ramanujanGcdClassIndicator 47 1 (X0 + 2 * (4982 + 18)) := by
+              rw [show (19 : ℕ) = 18 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (18 : ℕ) = 17 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (17 : ℕ) = 16 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (16 : ℕ) = 15 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (15 : ℕ) = 14 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (14 : ℕ) = 13 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (13 : ℕ) = 12 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (12 : ℕ) = 11 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (11 : ℕ) = 10 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (10 : ℕ) = 9 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (9 : ℕ) = 8 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (8 : ℕ) = 7 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (7 : ℕ) = 6 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (6 : ℕ) = 5 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (5 : ℕ) = 4 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (4 : ℕ) = 3 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (3 : ℕ) = 2 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (2 : ℕ) = 1 + 1 by norm_num, Finset.sum_range_succ]
+              rw [show (1 : ℕ) = 0 + 1 by norm_num, Finset.sum_range_succ]
+              norm_num
+        _ = 19 := by
+              rw [hrem0, hrem1, hrem2, hrem3, hrem4, hrem5, hrem6, hrem7, hrem8, hrem9,
+                hrem10, hrem11, hrem12, hrem13, hrem14, hrem15, hrem16, hrem17, hrem18]
+              norm_num
+    rw [show 106 * 47 = 4982 by norm_num]
+    rw [hremSum]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_fortySeven_fortySeven_X0 :
+    ramanujanGcdClassWindowAverage X0 47 47 = (106 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 47 1 + ramanujanGcdClassWindowAverage X0 47 47 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 47 1 N + ramanujanGcdClassIndicator 47 47 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 47 1 N + ramanujanGcdClassIndicator 47 47 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 47 N = 1
+            · have h47 : Nat.gcd 47 N ≠ 47 := by
+                rw [h1]
+                norm_num
+              simp [h1, h47]
+            · have hdiv : Nat.gcd 47 N ∣ 47 := Nat.gcd_dvd_left 47 N
+              have h47 : Nat.gcd 47 N = 47 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 47 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h47]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 47 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 47 47 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_fortySeven_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_fortySeven_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 47 1 = (4895 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 47 1 : ℝ) = (((4895 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_fortySeven_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_fortySeven_fortySeven_X0 :
+    ramanujanGcdClassWindowAverageRat X0 47 47 = (106 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 47 47 : ℝ) = (((106 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_fortySeven_fortySeven_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_fortySeven_one_add_fortySeven_fortySeven_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 47 1 N + ramanujanGcdClassIndicatorRat 47 47 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 47 N = 1
+  · have h47 : Nat.gcd 47 N ≠ 47 := by
+      rw [h1]
+      norm_num
+    simp [h1, h47]
+  · have hdiv : Nat.gcd 47 N ∣ 47 := Nat.gcd_dvd_left 47 N
+    have h47 : Nat.gcd 47 N = 47 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 47 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h47]
+
+private theorem centeredRamanujanObservableRat_X0_47_eq_indicator47
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 47 N
+      = (-4982 / 5001 : ℚ) + 47 * ramanujanGcdClassIndicatorRat 47 47 N := by
+  have hdivs : (47 : ℕ).divisors = ({1, 47} : Finset ℕ) := by
+    simpa using (show Nat.Prime 47 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 47 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 47)]
+  have hcoeff47 : ramanujanGcdClassCoeffRat 47 47 = 46 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 47)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff47, ramanujanGcdClassWindowAverageRat_fortySeven_one_X0,
+    ramanujanGcdClassWindowAverageRat_fortySeven_fortySeven_X0]
+  linarith [ramanujanGcdClassIndicatorRat_fortySeven_one_add_fortySeven_fortySeven_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_47_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 47 N) ^ 2
+      =
+    (24820324 / 25010001 : ℚ)
+      + (52905083901 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 47 47 N := by
+  rw [centeredRamanujanObservableRat_X0_47_eq_indicator47]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h47 : Nat.gcd 47 N = 47
+  · simp [h47]
+    norm_num
+  · simp [h47]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_fortySeven_fortySeven_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 47 47 N = 106 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 47 N = 47)).card : ℚ) = 106 := by
+    have havg := ramanujanGcdClassWindowAverageRat_fortySeven_fortySeven_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 47 47 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 47 N = 47)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 47 N = 47 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 47 N = 47)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 106 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_47_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 47 = (1146183830 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 47
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((24820324 / 25010001 : ℚ)
+          + (52905083901 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 47 47 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_47_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (24820324 / 25010001 : ℚ)
+        + (52905083901 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 47 47 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (1146183830 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (24820324 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (24820324 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_fortySeven_fortySeven_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm47_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 47
+      = (14327297875 : ℚ) / 11195878728 := by
+  have hsqfree : Squarefree 47 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_47_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 47)]
+  norm_num
+
+private theorem ramanujanGcdClassIndicator_fortyOne_one_period_fortyOne_on_even_progression
+    {X k : ℕ} :
+    ramanujanGcdClassIndicator 41 1 (X + 2 * (k + 41))
+      =
+    ramanujanGcdClassIndicator 41 1 (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicator
+  have hgcd :
+      Nat.gcd 41 (X + 2 * (k + 41)) = Nat.gcd 41 (X + 2 * k) := by
+    calc
+      Nat.gcd 41 (X + 2 * (k + 41))
+          = Nat.gcd 41 ((X + 2 * k) + 2 * 41) := by ring_nf
+      _ = Nat.gcd 41 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem ramanujanGcdClassIndicator_fortyOne_one_sum_range_fortyOne_eq_forty_of_isEven
+    {X : ℕ} (hXEven : Goldbach.Windows.IsEven X) :
+    ∑ k ∈ Finset.range 41, ramanujanGcdClassIndicator 41 1 (X + 2 * k) = 40 := by
+  have hXeq : X = 2 * (X / 2) := by
+    exact (Nat.two_mul_div_two_of_even (Goldbach.Windows.even_of_isEven hXEven)).symm
+  have hterm :
+      ∀ k,
+        ramanujanGcdClassIndicator 41 1 (X + 2 * k)
+          =
+        (if Nat.Coprime 41 (X / 2 + k) then 1 else 0) := by
+    intro k
+    rw [hXeq]
+    have hmul : 2 * (X / 2) + 2 * k = 2 * (X / 2 + k) := by ring
+    rw [hmul]
+    have hcop412 : Nat.Coprime 41 2 := by norm_num
+    have hcop :
+        Nat.Coprime 41 (2 * (X / 2 + k)) ↔ Nat.Coprime 41 (X / 2 + k) := by
+      constructor
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 41 := h.symm
+        exact (Nat.coprime_mul_iff_left.mp h').2.symm
+      · intro h
+        have h' : Nat.Coprime (2 * (X / 2 + k)) 41 := by
+          exact Nat.coprime_mul_iff_left.mpr ⟨hcop412.symm, h.symm⟩
+        exact h'.symm
+    have hg : 1 ∈ (41 : ℕ).divisors := by norm_num
+    rw [ramanujanGcdClassIndicator_eq_coprimeIndicator_of_mem_divisors (N := 2 * (X / 2 + k)) hg]
+    unfold ramanujanGcdClassCoprimeIndicator
+    simpa [hcop]
+  calc
+    ∑ k ∈ Finset.range 41, ramanujanGcdClassIndicator 41 1 (X + 2 * k)
+        =
+      ∑ k ∈ Finset.range 41, (if Nat.Coprime 41 (X / 2 + k) then 1 else 0) := by
+          refine Finset.sum_congr rfl ?_
+          intro k hk
+          exact hterm k
+    _ = (((Finset.range 41).filter (fun k => Nat.Coprime 41 (X / 2 + k))).card : ℝ) := by
+          exact_mod_cast
+            (card_filter_range_eq_sum_indicator
+              (L := 41) (p := fun k => Nat.Coprime 41 (X / 2 + k))).symm
+    _ = 40 := by
+          have hcard :
+              (((Finset.range 41).filter (fun k => Nat.Coprime 41 (X / 2 + k))).card : ℕ) = 40 := by
+            simpa using card_filter_range_coprime_shift_eq_totient (X / 2) 41 (by norm_num)
+          rw [show (((Finset.range 41).filter (fun k => Nat.Coprime 41 (X / 2 + k))).card : ℝ) = 40 by
+            exact_mod_cast hcard]
+
+private theorem ramanujanGcdClassWindowAverage_fortyOne_one_X0 :
+    ramanujanGcdClassWindowAverage X0 41 1 = (4879 / 5001 : ℝ) := by
+  unfold ramanujanGcdClassWindowAverage
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  rw [Finset.card_image_of_injective]
+  · rw [Finset.card_range]
+    have hsum :
+        ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+            ramanujanGcdClassIndicator 41 1 N
+          =
+        ∑ k ∈ Finset.range (H / 2 + 1),
+            ramanujanGcdClassIndicator 41 1 (X0 + 2 * k) := by
+      rw [Finset.sum_image]
+      simp
+    rw [hsum]
+    have hlen : H / 2 + 1 = 121 * 41 + 40 := by
+      norm_num [H]
+    rw [hlen]
+    rw [periodic_sum_range_blocks_add_remainder
+      (f := fun k => ramanujanGcdClassIndicator 41 1 (X0 + 2 * k))
+      (hP := by norm_num)
+      (hper := fun k =>
+        ramanujanGcdClassIndicator_fortyOne_one_period_fortyOne_on_even_progression
+          (X := X0) (k := k))
+      (m := 121) (r := 40)]
+    rw [ramanujanGcdClassIndicator_fortyOne_one_sum_range_fortyOne_eq_forty_of_isEven X0_isEven]
+    have hrem :
+        ∑ x ∈ Finset.range 40, ramanujanGcdClassIndicator 41 1 (X0 + 2 * (4961 + x)) = 39 := by
+      have hfull :
+          ∑ x ∈ Finset.range 41, ramanujanGcdClassIndicator 41 1 (X0 + 2 * (4961 + x)) = 40 := by
+        simpa [show 4961 = 121 * 41 by norm_num] using
+          ramanujanGcdClassIndicator_fortyOne_one_sum_range_fortyOne_eq_forty_of_isEven X0_isEven
+      rw [show (41 : ℕ) = 40 + 1 by norm_num, Finset.sum_range_succ] at hfull
+      have hlast : ramanujanGcdClassIndicator 41 1 (X0 + 2 * (4961 + 40)) = 1 := by
+        unfold ramanujanGcdClassIndicator
+        norm_num [X0]
+      linarith
+    rw [show 121 * 41 = 4961 by norm_num]
+    rw [hrem]
+    norm_num
+  · intro a b hab
+    exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
+
+private theorem ramanujanGcdClassWindowAverage_fortyOne_fortyOne_X0 :
+    ramanujanGcdClassWindowAverage X0 41 41 = (122 / 5001 : ℝ) := by
+  have hsumPair :
+      ramanujanGcdClassWindowAverage X0 41 1 + ramanujanGcdClassWindowAverage X0 41 41 = 1 := by
+    unfold ramanujanGcdClassWindowAverage
+    rw [evenIn_X0_H_card_eq_5001]
+    have hsum :
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 41 1 N + ramanujanGcdClassIndicator 41 41 N))
+          = (5001 : ℝ) := by
+      calc
+        (∑ N ∈ EvenIn X0 H,
+            (ramanujanGcdClassIndicator 41 1 N + ramanujanGcdClassIndicator 41 41 N))
+              =
+          ∑ N ∈ EvenIn X0 H, (1 : ℝ) := by
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            unfold ramanujanGcdClassIndicator
+            by_cases h1 : Nat.gcd 41 N = 1
+            · have h41 : Nat.gcd 41 N ≠ 41 := by
+                rw [h1]
+                norm_num
+              simp [h1, h41]
+            · have hdiv : Nat.gcd 41 N ∣ 41 := Nat.gcd_dvd_left 41 N
+              have h41 : Nat.gcd 41 N = 41 := by
+                rcases (Nat.dvd_prime (show Nat.Prime 41 by decide)).mp hdiv with h | h
+                · exact (h1 h).elim
+                · exact h
+              simp [h1, h41]
+        _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+    have hsum' :
+        (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 41 1 N)
+          + (∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator 41 41 N)
+          = (5001 : ℝ) := by
+      simpa [Finset.sum_add_distrib] using hsum
+    linarith
+  have h1 := ramanujanGcdClassWindowAverage_fortyOne_one_X0
+  linarith
+
+private theorem ramanujanGcdClassWindowAverageRat_fortyOne_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 41 1 = (4879 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 41 1 : ℝ) = (((4879 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_fortyOne_one_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassWindowAverageRat_fortyOne_fortyOne_X0 :
+    ramanujanGcdClassWindowAverageRat X0 41 41 = (122 / 5001 : ℚ) := by
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 41 41 : ℝ) = (((122 / 5001 : ℚ)) : ℝ) := by
+    simpa [ramanujanGcdClassWindowAverage_eq_ratCast] using
+      ramanujanGcdClassWindowAverage_fortyOne_fortyOne_X0
+  exact Rat.cast_inj.mp hreal
+
+private theorem ramanujanGcdClassIndicatorRat_fortyOne_one_add_fortyOne_fortyOne_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 41 1 N + ramanujanGcdClassIndicatorRat 41 41 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h1 : Nat.gcd 41 N = 1
+  · have h41 : Nat.gcd 41 N ≠ 41 := by
+      rw [h1]
+      norm_num
+    simp [h1, h41]
+  · have hdiv : Nat.gcd 41 N ∣ 41 := Nat.gcd_dvd_left 41 N
+    have h41 : Nat.gcd 41 N = 41 := by
+      rcases (Nat.dvd_prime (show Nat.Prime 41 by decide)).mp hdiv with h | h
+      · exact (h1 h).elim
+      · exact h
+    simp [h1, h41]
+
+private theorem centeredRamanujanObservableRat_X0_41_eq_indicator41
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 41 N
+      = (-5002 / 5001 : ℚ) + 41 * ramanujanGcdClassIndicatorRat 41 41 N := by
+  have hdivs : (41 : ℕ).divisors = ({1, 41} : Finset ℕ) := by
+    simpa using (show Nat.Prime 41 by decide).divisors
+  have hcoeff1 : ramanujanGcdClassCoeffRat 41 1 = -1 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_prime (by decide : Nat.Prime 41)]
+  have hcoeff41 : ramanujanGcdClassCoeffRat 41 41 = 40 := by
+    unfold ramanujanGcdClassCoeffRat
+    norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 41)]
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff41, ramanujanGcdClassWindowAverageRat_fortyOne_one_X0,
+    ramanujanGcdClassWindowAverageRat_fortyOne_fortyOne_X0]
+  linarith [ramanujanGcdClassIndicatorRat_fortyOne_one_add_fortyOne_fortyOne_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_41_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 41 N) ^ 2
+      =
+    (25020004 / 25010001 : ℚ)
+      + (39990581517 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 41 41 N := by
+  rw [centeredRamanujanObservableRat_X0_41_eq_indicator41]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h41 : Nat.gcd 41 N = 41
+  · simp [h41]
+    norm_num
+  · simp [h41]
+    norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_fortyOne_fortyOne_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 41 41 N = 122 := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 41 N = 41)).card : ℚ) = 122 := by
+    have havg := ramanujanGcdClassWindowAverageRat_fortyOne_fortyOne_X0
+    unfold ramanujanGcdClassWindowAverageRat at havg
+    rw [evenIn_X0_H_card_eq_5001] at havg
+    linarith
+  calc
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 41 41 N
+        = (((EvenIn X0 H).filter (fun N => Nat.gcd 41 N = 41)).card : ℚ) := by
+          unfold ramanujanGcdClassIndicatorRat
+          have hsum :
+              ∑ N ∈ EvenIn X0 H, (if Nat.gcd 41 N = 41 then (1 : ℚ) else 0)
+                =
+              Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 41 N = 41)) (fun _ => (1 : ℚ)) := by
+                rw [Finset.sum_filter]
+          rw [hsum]
+          rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+    _ = 122 := hcount
+
+private theorem centeredRamanujanWindowEnergyRat_X0_41_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 41 = (1000595078 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 41
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((25020004 / 25010001 : ℚ)
+          + (39990581517 / 25010001 : ℚ) * ramanujanGcdClassIndicatorRat 41 41 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_41_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (25020004 / 25010001 : ℚ)
+        + (39990581517 / 25010001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 41 41 N := by
+          rw [Finset.sum_add_distrib, Finset.mul_sum]
+    _ = (1000595078 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (25020004 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (25020004 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst, sum_ramanujanGcdClassIndicatorRat_fortyOne_fortyOne_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm41_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 41
+      = (500297539 : ℚ) / 256051200 := by
+  have hsqfree : Squarefree 41 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_41_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree,
+    Nat.totient_prime (by decide : Nat.Prime 41)]
+  norm_num
+
+private theorem ramanujanGcdClassIndicatorRat_fifteen_period_on_even_progression
+    {g X k : ℕ} :
+    ramanujanGcdClassIndicatorRat 15 g (X + 2 * (k + 15))
+      =
+    ramanujanGcdClassIndicatorRat 15 g (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicatorRat
+  have hgcd :
+      Nat.gcd 15 (X + 2 * (k + 15)) = Nat.gcd 15 (X + 2 * k) := by
+    calc
+      Nat.gcd 15 (X + 2 * (k + 15))
+          = Nat.gcd 15 ((X + 2 * k) + 2 * 15) := by ring_nf
+      _ = Nat.gcd 15 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem sum_range_fifteen_indicatorRat_fifteen_one_X0 :
+    ∑ k ∈ Finset.range 15, ramanujanGcdClassIndicatorRat 15 1 (X0 + 2 * k) = 8 := by
+  native_decide
+
+private theorem sum_range_fifteen_indicatorRat_fifteen_three_X0 :
+    ∑ k ∈ Finset.range 15, ramanujanGcdClassIndicatorRat 15 3 (X0 + 2 * k) = 4 := by
+  native_decide
+
+private theorem sum_range_fifteen_indicatorRat_fifteen_five_X0 :
+    ∑ k ∈ Finset.range 15, ramanujanGcdClassIndicatorRat 15 5 (X0 + 2 * k) = 2 := by
+  native_decide
+
+private theorem sum_range_fifteen_indicatorRat_fifteen_fifteen_X0 :
+    ∑ k ∈ Finset.range 15, ramanujanGcdClassIndicatorRat 15 15 (X0 + 2 * k) = 1 := by
+  native_decide
+
+private theorem sum_range_six_indicatorRat_fifteen_one_X0 :
+    ∑ x ∈ Finset.range 6, ramanujanGcdClassIndicatorRat 15 1 (X0 + 2 * (4995 + x)) = 2 := by
+  native_decide
+
+private theorem sum_range_six_indicatorRat_fifteen_three_X0 :
+    ∑ x ∈ Finset.range 6, ramanujanGcdClassIndicatorRat 15 3 (X0 + 2 * (4995 + x)) = 2 := by
+  native_decide
+
+private theorem sum_range_six_indicatorRat_fifteen_five_X0 :
+    ∑ x ∈ Finset.range 6, ramanujanGcdClassIndicatorRat 15 5 (X0 + 2 * (4995 + x)) = 2 := by
+  native_decide
+
+private theorem sum_range_six_indicatorRat_fifteen_fifteen_X0 :
+    ∑ x ∈ Finset.range 6, ramanujanGcdClassIndicatorRat 15 15 (X0 + 2 * (4995 + x)) = 0 := by
+  native_decide
+
+private theorem sum_ramanujanGcdClassIndicatorRat_fifteen_one_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 1 N = 2666 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 15 1 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 15 1 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 333 * 15 + 6 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 15 1 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_fifteen_period_on_even_progression
+        (g := 1) (X := X0) (k := k))
+    (m := 333) (r := 6)]
+  rw [sum_range_fifteen_indicatorRat_fifteen_one_X0,
+    show 333 * 15 = 4995 by norm_num,
+    sum_range_six_indicatorRat_fifteen_one_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_fifteen_three_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 3 N = 1334 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 15 3 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 15 3 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 333 * 15 + 6 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 15 3 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_fifteen_period_on_even_progression
+        (g := 3) (X := X0) (k := k))
+    (m := 333) (r := 6)]
+  rw [sum_range_fifteen_indicatorRat_fifteen_three_X0,
+    show 333 * 15 = 4995 by norm_num,
+    sum_range_six_indicatorRat_fifteen_three_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_fifteen_five_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 5 N = 668 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 15 5 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 15 5 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 333 * 15 + 6 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 15 5 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_fifteen_period_on_even_progression
+        (g := 5) (X := X0) (k := k))
+    (m := 333) (r := 6)]
+  rw [sum_range_fifteen_indicatorRat_fifteen_five_X0,
+    show 333 * 15 = 4995 by norm_num,
+    sum_range_six_indicatorRat_fifteen_five_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_fifteen_fifteen_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 15 N = 333 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 15 15 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 15 15 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 333 * 15 + 6 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 15 15 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_fifteen_period_on_even_progression
+        (g := 15) (X := X0) (k := k))
+    (m := 333) (r := 6)]
+  rw [sum_range_fifteen_indicatorRat_fifteen_fifteen_X0,
+    show 333 * 15 = 4995 by norm_num,
+    sum_range_six_indicatorRat_fifteen_fifteen_X0]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_fifteen_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 15 1 = (2666 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 1)).card : ℚ) = 2666 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 1)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 1 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 15 N = 1 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 1))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 2666 := sum_ramanujanGcdClassIndicatorRat_fifteen_one_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_fifteen_three_X0 :
+    ramanujanGcdClassWindowAverageRat X0 15 3 = (1334 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 3)).card : ℚ) = 1334 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 3)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 3 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 15 N = 3 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 3))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 1334 := sum_ramanujanGcdClassIndicatorRat_fifteen_three_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_fifteen_five_X0 :
+    ramanujanGcdClassWindowAverageRat X0 15 5 = (668 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 5)).card : ℚ) = 668 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 5)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 5 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 15 N = 5 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 5))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 668 := sum_ramanujanGcdClassIndicatorRat_fifteen_five_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_fifteen_fifteen_X0 :
+    ramanujanGcdClassWindowAverageRat X0 15 15 = (333 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 15)).card : ℚ) = 333 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 15)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 15 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 15 N = 15 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 15 N = 15))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 333 := sum_ramanujanGcdClassIndicatorRat_fifteen_fifteen_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassIndicatorRat_fifteen_sum_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 15 1 N
+      + ramanujanGcdClassIndicatorRat 15 3 N
+      + ramanujanGcdClassIndicatorRat 15 5 N
+      + ramanujanGcdClassIndicatorRat 15 15 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h15 : Nat.gcd 15 N = 15
+  · simp [h15]
+  · by_cases h5 : Nat.gcd 15 N = 5
+    · simp [h15, h5]
+    · by_cases h3 : Nat.gcd 15 N = 3
+      · simp [h15, h5, h3]
+      · have hdivs : (15 : ℕ).divisors = ({1, 3, 5, 15} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 15 N ∈ ({1, 3, 5, 15} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 15 N, by norm_num⟩
+        have h1 : Nat.gcd 15 N = 1 := by
+          simpa [h15, h5, h3] using hmem
+        simp [h15, h5, h3, h1]
+
+private theorem centeredRamanujanObservableRat_X0_15_eq_indicator15
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 15 N
+      = (5011 / 5001 : ℚ)
+          - 3 * ramanujanGcdClassIndicatorRat 15 3 N
+          - 5 * ramanujanGcdClassIndicatorRat 15 5 N
+          + 7 * ramanujanGcdClassIndicatorRat 15 15 N := by
+  have hdivs : (15 : ℕ).divisors = ({1, 3, 5, 15} : Finset ℕ) := by native_decide
+  have hcoeff1 : ramanujanGcdClassCoeffRat 15 1 = 1 := by native_decide
+  have hcoeff3 : ramanujanGcdClassCoeffRat 15 3 = -2 := by native_decide
+  have hcoeff5 : ramanujanGcdClassCoeffRat 15 5 = -4 := by native_decide
+  have hcoeff15 : ramanujanGcdClassCoeffRat 15 15 = 8 := by native_decide
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff3, hcoeff5, hcoeff15,
+    ramanujanGcdClassWindowAverageRat_fifteen_one_X0,
+    ramanujanGcdClassWindowAverageRat_fifteen_three_X0,
+    ramanujanGcdClassWindowAverageRat_fifteen_five_X0,
+    ramanujanGcdClassWindowAverageRat_fifteen_fifteen_X0]
+  linarith [ramanujanGcdClassIndicatorRat_fifteen_sum_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_15_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 15 N) ^ 2
+      =
+    (25110121 / 25010001 : ℚ)
+      + (4981 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 15 3 N
+      + (74915 / 5001 : ℚ) * ramanujanGcdClassIndicatorRat 15 5 N
+      + (315203 / 5001 : ℚ) * ramanujanGcdClassIndicatorRat 15 15 N := by
+  rw [centeredRamanujanObservableRat_X0_15_eq_indicator15]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h15 : Nat.gcd 15 N = 15
+  · simp [h15]
+    norm_num
+  · by_cases h5 : Nat.gcd 15 N = 5
+    · simp [h15, h5]
+      norm_num
+    · by_cases h3 : Nat.gcd 15 N = 3
+      · simp [h15, h5, h3]
+        norm_num
+      · have hdivs : (15 : ℕ).divisors = ({1, 3, 5, 15} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 15 N ∈ ({1, 3, 5, 15} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 15 N, by norm_num⟩
+        have h1 : Nat.gcd 15 N = 1 := by
+          simpa [h15, h5, h3] using hmem
+        simp [h15, h5, h3, h1]
+        norm_num
+
+private theorem centeredRamanujanWindowEnergyRat_X0_15_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 15 = (200049902 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 15
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((25110121 / 25010001 : ℚ)
+          + (4981 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 15 3 N
+          + (74915 / 5001 : ℚ) * ramanujanGcdClassIndicatorRat 15 5 N
+          + (315203 / 5001 : ℚ) * ramanujanGcdClassIndicatorRat 15 15 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_15_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (25110121 / 25010001 : ℚ)
+        + (4981 / 1667 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 3 N
+        + (74915 / 5001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 5 N
+        + (315203 / 5001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 15 15 N := by
+          rw [Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+            Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    _ = (200049902 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (25110121 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (25110121 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst,
+            sum_ramanujanGcdClassIndicatorRat_fifteen_three_X0,
+            sum_ramanujanGcdClassIndicatorRat_fifteen_five_X0,
+            sum_ramanujanGcdClassIndicatorRat_fifteen_fifteen_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm15_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 15
+      = (2500623775 : ℚ) / 10242048 := by
+  have hsqfree : Squarefree 15 := by native_decide
+  have hphi15 : Nat.totient 15 = 8 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_15_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi15]
+  norm_num
+
+private theorem gcd_fifteen_two_mul_eq
+    (k : ℕ) :
+    Nat.gcd 15 (2 * k) = Nat.gcd 15 k := by
+  have hcop : Nat.Coprime 2 15 := by norm_num
+  have h := Nat.Coprime.gcd_mul_left_cancel (k := 2) (m := k) (n := 15) hcop
+  simpa [Nat.gcd_comm, Nat.mul_comm] using h
+
+private theorem ramanujanR_thirty_eq_fifteen_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 30 N
+      = Goldbach.AO_OffDiag.TailBlock.ramanujanR 15 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  have hgcd15 : Nat.gcd 15 (2 * k) = Nat.gcd 15 k := gcd_fifteen_two_mul_eq k
+  have hgcd30 : Nat.gcd 30 (2 * k) = 2 * Nat.gcd 15 k := by
+    simpa [show 30 = 2 * 15 by norm_num, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+      (Nat.gcd_mul_left 2 15 k)
+  by_cases h1 : Nat.gcd 15 k = 1
+  · have h30 : Nat.gcd 30 (2 * k) = 2 := by simpa [h1] using hgcd30
+    have h15 : Nat.gcd 15 (2 * k) = 1 := by simpa [h1] using hgcd15
+    have hmu15 : ArithmeticFunction.moebius 15 = 1 := by native_decide
+    have hphi2 : Nat.totient 2 = 1 := by native_decide
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [h30, h15, hmu15, hphi2]
+  · by_cases h3 : Nat.gcd 15 k = 3
+    · have h30 : Nat.gcd 30 (2 * k) = 6 := by simpa [h3] using hgcd30
+      have h15 : Nat.gcd 15 (2 * k) = 3 := by simpa [h3] using hgcd15
+      have hmu5 : ArithmeticFunction.moebius 5 = -1 := by native_decide
+      have hphi6 : Nat.totient 6 = 2 := by native_decide
+      have hphi3 : Nat.totient 3 = 2 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+      norm_num [h30, h15, hmu5, hphi6, hphi3]
+    · by_cases h5 : Nat.gcd 15 k = 5
+      · have h30 : Nat.gcd 30 (2 * k) = 10 := by simpa [h5] using hgcd30
+        have h15 : Nat.gcd 15 (2 * k) = 5 := by simpa [h5] using hgcd15
+        have hmu3 : ArithmeticFunction.moebius 3 = -1 := by native_decide
+        have hphi10 : Nat.totient 10 = 4 := by native_decide
+        have hphi5 : Nat.totient 5 = 4 := by native_decide
+        rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+        norm_num [h30, h15, hmu3, hphi10, hphi5]
+      · have hdivs : (15 : ℕ).divisors = ({1, 3, 5, 15} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 15 k ∈ ({1, 3, 5, 15} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 15 k, by norm_num⟩
+        have h15k : Nat.gcd 15 k = 15 := by
+          simpa [h1, h3, h5] using hmem
+        have h30 : Nat.gcd 30 (2 * k) = 30 := by simpa [h15k] using hgcd30
+        have h15' : Nat.gcd 15 (2 * k) = 15 := by simpa [h15k] using hgcd15
+        have hphi30 : Nat.totient 30 = 8 := by native_decide
+        have hphi15 : Nat.totient 15 = 8 := by native_decide
+        rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+        norm_num [h30, h15', hphi30, hphi15]
+
+private theorem ramanujanWindowAverage_X0_30_eq_fifteen :
+    ramanujanWindowAverage X0 30 = ramanujanWindowAverage X0 15 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_thirty_eq_fifteen_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_30_eq_fifteen
+    (N : ℕ) (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 30 N
+      = centeredRamanujanObservable X0 15 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_thirty_eq_fifteen_of_isEven (isEven_of_mem_EvenIn hN),
+    ramanujanWindowAverage_X0_30_eq_fifteen]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_30_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 30 = (200049902 : ℚ) / 5001 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 30 = centeredRamanujanWindowEnergy X0 15 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_30_eq_fifteen N hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 30 : ℝ) = ((((200049902 : ℚ) / 5001 : ℚ)) : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 30) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 15) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_15_eq_cert]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalSmallRestTerm30_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 30
+      = (2500623775 : ℚ) / 10242048 := by
+  have hsqfree : Squarefree 30 := by native_decide
+  have hphi30 : Nat.totient 30 = 8 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_30_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi30]
+  norm_num
+
+private theorem ramanujanGcdClassIndicatorRat_twentyOne_period_on_even_progression
+    {g X k : ℕ} :
+    ramanujanGcdClassIndicatorRat 21 g (X + 2 * (k + 21))
+      =
+    ramanujanGcdClassIndicatorRat 21 g (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicatorRat
+  have hgcd :
+      Nat.gcd 21 (X + 2 * (k + 21)) = Nat.gcd 21 (X + 2 * k) := by
+    calc
+      Nat.gcd 21 (X + 2 * (k + 21))
+          = Nat.gcd 21 ((X + 2 * k) + 2 * 21) := by ring_nf
+      _ = Nat.gcd 21 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem sum_range_twentyOne_indicatorRat_twentyOne_one_X0 :
+    ∑ k ∈ Finset.range 21, ramanujanGcdClassIndicatorRat 21 1 (X0 + 2 * k) = 12 := by
+  native_decide
+
+private theorem sum_range_twentyOne_indicatorRat_twentyOne_three_X0 :
+    ∑ k ∈ Finset.range 21, ramanujanGcdClassIndicatorRat 21 3 (X0 + 2 * k) = 6 := by
+  native_decide
+
+private theorem sum_range_twentyOne_indicatorRat_twentyOne_seven_X0 :
+    ∑ k ∈ Finset.range 21, ramanujanGcdClassIndicatorRat 21 7 (X0 + 2 * k) = 2 := by
+  native_decide
+
+private theorem sum_range_twentyOne_indicatorRat_twentyOne_twentyOne_X0 :
+    ∑ k ∈ Finset.range 21, ramanujanGcdClassIndicatorRat 21 21 (X0 + 2 * k) = 1 := by
+  native_decide
+
+private theorem sum_range_three_indicatorRat_twentyOne_one_X0 :
+    ∑ x ∈ Finset.range 3, ramanujanGcdClassIndicatorRat 21 1 (X0 + 2 * (4998 + x)) = 2 := by
+  native_decide
+
+private theorem sum_range_three_indicatorRat_twentyOne_three_X0 :
+    ∑ x ∈ Finset.range 3, ramanujanGcdClassIndicatorRat 21 3 (X0 + 2 * (4998 + x)) = 1 := by
+  native_decide
+
+private theorem sum_range_three_indicatorRat_twentyOne_seven_X0 :
+    ∑ x ∈ Finset.range 3, ramanujanGcdClassIndicatorRat 21 7 (X0 + 2 * (4998 + x)) = 0 := by
+  native_decide
+
+private theorem sum_range_three_indicatorRat_twentyOne_twentyOne_X0 :
+    ∑ x ∈ Finset.range 3, ramanujanGcdClassIndicatorRat 21 21 (X0 + 2 * (4998 + x)) = 0 := by
+  native_decide
+
+private theorem sum_ramanujanGcdClassIndicatorRat_twentyOne_one_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 1 N = 2858 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 21 1 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 21 1 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 238 * 21 + 3 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 21 1 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_twentyOne_period_on_even_progression
+        (g := 1) (X := X0) (k := k))
+    (m := 238) (r := 3)]
+  rw [sum_range_twentyOne_indicatorRat_twentyOne_one_X0,
+    show 238 * 21 = 4998 by norm_num,
+    sum_range_three_indicatorRat_twentyOne_one_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_twentyOne_three_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 3 N = 1429 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 21 3 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 21 3 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 238 * 21 + 3 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 21 3 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_twentyOne_period_on_even_progression
+        (g := 3) (X := X0) (k := k))
+    (m := 238) (r := 3)]
+  rw [sum_range_twentyOne_indicatorRat_twentyOne_three_X0,
+    show 238 * 21 = 4998 by norm_num,
+    sum_range_three_indicatorRat_twentyOne_three_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_twentyOne_seven_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 7 N = 476 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 21 7 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 21 7 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 238 * 21 + 3 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 21 7 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_twentyOne_period_on_even_progression
+        (g := 7) (X := X0) (k := k))
+    (m := 238) (r := 3)]
+  rw [sum_range_twentyOne_indicatorRat_twentyOne_seven_X0,
+    show 238 * 21 = 4998 by norm_num,
+    sum_range_three_indicatorRat_twentyOne_seven_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_twentyOne_twentyOne_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 21 N = 238 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 21 21 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 21 21 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 238 * 21 + 3 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 21 21 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_twentyOne_period_on_even_progression
+        (g := 21) (X := X0) (k := k))
+    (m := 238) (r := 3)]
+  rw [sum_range_twentyOne_indicatorRat_twentyOne_twentyOne_X0,
+    show 238 * 21 = 4998 by norm_num,
+    sum_range_three_indicatorRat_twentyOne_twentyOne_X0]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_twentyOne_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 21 1 = (2858 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 1)).card : ℚ) = 2858 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 1)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 1 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 21 N = 1 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 1))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 2858 := sum_ramanujanGcdClassIndicatorRat_twentyOne_one_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_twentyOne_three_X0 :
+    ramanujanGcdClassWindowAverageRat X0 21 3 = (1429 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 3)).card : ℚ) = 1429 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 3)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 3 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 21 N = 3 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 3))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 1429 := sum_ramanujanGcdClassIndicatorRat_twentyOne_three_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_twentyOne_seven_X0 :
+    ramanujanGcdClassWindowAverageRat X0 21 7 = (476 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 7)).card : ℚ) = 476 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 7)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 7 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 21 N = 7 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 7))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 476 := sum_ramanujanGcdClassIndicatorRat_twentyOne_seven_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_twentyOne_twentyOne_X0 :
+    ramanujanGcdClassWindowAverageRat X0 21 21 = (238 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 21)).card : ℚ) = 238 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 21)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 21 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 21 N = 21 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 21 N = 21))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 238 := sum_ramanujanGcdClassIndicatorRat_twentyOne_twentyOne_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassIndicatorRat_twentyOne_sum_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 21 1 N
+      + ramanujanGcdClassIndicatorRat 21 3 N
+      + ramanujanGcdClassIndicatorRat 21 7 N
+      + ramanujanGcdClassIndicatorRat 21 21 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h21 : Nat.gcd 21 N = 21
+  · simp [h21]
+  · by_cases h7 : Nat.gcd 21 N = 7
+    · simp [h21, h7]
+    · by_cases h3 : Nat.gcd 21 N = 3
+      · simp [h21, h7, h3]
+      · have hdivs : (21 : ℕ).divisors = ({1, 3, 7, 21} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 21 N ∈ ({1, 3, 7, 21} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 21 N, by norm_num⟩
+        have h1 : Nat.gcd 21 N = 1 := by
+          simpa [h21, h7, h3] using hmem
+        simp [h21, h7, h3, h1]
+
+private theorem centeredRamanujanObservableRat_X0_21_eq_indicator21
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 21 N
+      = (1 : ℚ)
+          - 3 * ramanujanGcdClassIndicatorRat 21 3 N
+          - 7 * ramanujanGcdClassIndicatorRat 21 7 N
+          + 11 * ramanujanGcdClassIndicatorRat 21 21 N := by
+  have hdivs : (21 : ℕ).divisors = ({1, 3, 7, 21} : Finset ℕ) := by native_decide
+  have hcoeff1 : ramanujanGcdClassCoeffRat 21 1 = 1 := by native_decide
+  have hcoeff3 : ramanujanGcdClassCoeffRat 21 3 = -2 := by native_decide
+  have hcoeff7 : ramanujanGcdClassCoeffRat 21 7 = -6 := by native_decide
+  have hcoeff21 : ramanujanGcdClassCoeffRat 21 21 = 12 := by native_decide
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff3, hcoeff7, hcoeff21,
+    ramanujanGcdClassWindowAverageRat_twentyOne_one_X0,
+    ramanujanGcdClassWindowAverageRat_twentyOne_three_X0,
+    ramanujanGcdClassWindowAverageRat_twentyOne_seven_X0,
+    ramanujanGcdClassWindowAverageRat_twentyOne_twentyOne_X0]
+  linarith [ramanujanGcdClassIndicatorRat_twentyOne_sum_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_21_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 21 N) ^ 2
+      =
+    (1 : ℚ)
+      + (3 : ℚ) * ramanujanGcdClassIndicatorRat 21 3 N
+      + (35 : ℚ) * ramanujanGcdClassIndicatorRat 21 7 N
+      + (143 : ℚ) * ramanujanGcdClassIndicatorRat 21 21 N := by
+  rw [centeredRamanujanObservableRat_X0_21_eq_indicator21]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h21 : Nat.gcd 21 N = 21
+  · simp [h21]
+    norm_num
+  · by_cases h7 : Nat.gcd 21 N = 7
+    · simp [h21, h7]
+      norm_num
+    · by_cases h3 : Nat.gcd 21 N = 3
+      · simp [h21, h7, h3]
+        norm_num
+      · have hdivs : (21 : ℕ).divisors = ({1, 3, 7, 21} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 21 N ∈ ({1, 3, 7, 21} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 21 N, by norm_num⟩
+        have h1 : Nat.gcd 21 N = 1 := by
+          simpa [h21, h7, h3] using hmem
+        simp [h21, h7, h3, h1]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_21_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 21 = 59982 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 21
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((1 : ℚ)
+          + (3 : ℚ) * ramanujanGcdClassIndicatorRat 21 3 N
+          + (35 : ℚ) * ramanujanGcdClassIndicatorRat 21 7 N
+          + (143 : ℚ) * ramanujanGcdClassIndicatorRat 21 21 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_21_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (1 : ℚ)
+        + (3 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 3 N
+        + (35 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 7 N
+        + (143 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 21 21 N := by
+          rw [Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+            Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    _ = 59982 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (1 : ℚ) = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst,
+            sum_ramanujanGcdClassIndicatorRat_twentyOne_three_X0,
+            sum_ramanujanGcdClassIndicatorRat_twentyOne_seven_X0,
+            sum_ramanujanGcdClassIndicatorRat_twentyOne_twentyOne_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm21_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 21
+      = (249925 : ℚ) / 3456 := by
+  have hsqfree : Squarefree 21 := by native_decide
+  have hphi21 : Nat.totient 21 = 12 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_21_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi21]
+  norm_num
+
+private theorem gcd_twentyOne_two_mul_eq
+    (k : ℕ) :
+    Nat.gcd 21 (2 * k) = Nat.gcd 21 k := by
+  have hcop : Nat.Coprime 2 21 := by norm_num
+  have h := Nat.Coprime.gcd_mul_left_cancel (k := 2) (m := k) (n := 21) hcop
+  simpa [Nat.gcd_comm, Nat.mul_comm] using h
+
+private theorem ramanujanR_fortyTwo_eq_twentyOne_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 42 N
+      = Goldbach.AO_OffDiag.TailBlock.ramanujanR 21 N := by
+  rcases (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven) with ⟨k, hk⟩
+  subst hk
+  have hgcd21 : Nat.gcd 21 (2 * k) = Nat.gcd 21 k := gcd_twentyOne_two_mul_eq k
+  have hgcd42 : Nat.gcd 42 (2 * k) = 2 * Nat.gcd 21 k := by
+    simpa [show 42 = 2 * 21 by norm_num, Nat.mul_comm, Nat.mul_left_comm, Nat.mul_assoc] using
+      (Nat.gcd_mul_left 2 21 k)
+  by_cases h1 : Nat.gcd 21 k = 1
+  · have h42 : Nat.gcd 42 (2 * k) = 2 := by simpa [h1] using hgcd42
+    have h21 : Nat.gcd 21 (2 * k) = 1 := by simpa [h1] using hgcd21
+    have hmu21 : ArithmeticFunction.moebius 21 = 1 := by native_decide
+    have hphi2 : Nat.totient 2 = 1 := by native_decide
+    rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+    norm_num [h42, h21, hmu21, hphi2]
+  · by_cases h3 : Nat.gcd 21 k = 3
+    · have h42 : Nat.gcd 42 (2 * k) = 6 := by simpa [h3] using hgcd42
+      have h21 : Nat.gcd 21 (2 * k) = 3 := by simpa [h3] using hgcd21
+      have hmu7 : ArithmeticFunction.moebius 7 = -1 := by native_decide
+      have hphi6 : Nat.totient 6 = 2 := by native_decide
+      have hphi3 : Nat.totient 3 = 2 := by native_decide
+      rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+      norm_num [h42, h21, hmu7, hphi6, hphi3]
+    · by_cases h7 : Nat.gcd 21 k = 7
+      · have h42 : Nat.gcd 42 (2 * k) = 14 := by simpa [h7] using hgcd42
+        have h21 : Nat.gcd 21 (2 * k) = 7 := by simpa [h7] using hgcd21
+        have hmu3 : ArithmeticFunction.moebius 3 = -1 := by native_decide
+        have hphi14 : Nat.totient 14 = 6 := by native_decide
+        have hphi7 : Nat.totient 7 = 6 := by native_decide
+        rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+        norm_num [h42, h21, hmu3, hphi14, hphi7]
+      · have hdivs : (21 : ℕ).divisors = ({1, 3, 7, 21} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 21 k ∈ ({1, 3, 7, 21} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 21 k, by norm_num⟩
+        have h21k : Nat.gcd 21 k = 21 := by
+          simpa [h1, h3, h7] using hmem
+        have h42 : Nat.gcd 42 (2 * k) = 42 := by simpa [h21k] using hgcd42
+        have h21' : Nat.gcd 21 (2 * k) = 21 := by simpa [h21k] using hgcd21
+        have hphi42 : Nat.totient 42 = 12 := by native_decide
+        have hphi21 : Nat.totient 21 = 12 := by native_decide
+        rw [ramanujanR_eq_moebius_mul_totient_gcd, ramanujanR_eq_moebius_mul_totient_gcd]
+        norm_num [h42, h21', hphi42, hphi21]
+
+private theorem ramanujanWindowAverage_X0_42_eq_twentyOne :
+    ramanujanWindowAverage X0 42 = ramanujanWindowAverage X0 21 := by
+  unfold ramanujanWindowAverage
+  refine congrArg ((((EvenIn X0 H).card : ℝ)⁻¹) * ·) ?_
+  refine Finset.sum_congr rfl ?_
+  intro N hN
+  exact ramanujanR_fortyTwo_eq_twentyOne_of_isEven (isEven_of_mem_EvenIn hN)
+
+private theorem centeredRamanujanObservable_X0_42_eq_twentyOne
+    (N : ℕ) (hN : N ∈ EvenIn X0 H) :
+    centeredRamanujanObservable X0 42 N
+      = centeredRamanujanObservable X0 21 N := by
+  unfold centeredRamanujanObservable
+  rw [ramanujanR_fortyTwo_eq_twentyOne_of_isEven (isEven_of_mem_EvenIn hN),
+    ramanujanWindowAverage_X0_42_eq_twentyOne]
+
+private theorem centeredRamanujanWindowEnergyRat_X0_42_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 42 = 59982 := by
+  have hreal :
+      centeredRamanujanWindowEnergy X0 42 = centeredRamanujanWindowEnergy X0 21 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_congr rfl ?_
+    intro N hN
+    rw [centeredRamanujanObservable_X0_42_eq_twentyOne N hN]
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 42 : ℝ) = (((59982 : ℚ)) : ℝ) := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 42) (by norm_num)]
+    rw [hreal]
+    rw [centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 21) (by norm_num)]
+    norm_num [centeredRamanujanWindowEnergyRat_X0_21_eq_cert]
+  exact Rat.cast_inj.mp hcast
+
+theorem surrogateDiagonalSmallRestTerm42_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 42
+      = (249925 : ℚ) / 3456 := by
+  have hsqfree : Squarefree 42 := by native_decide
+  have hphi42 : Nat.totient 42 = 12 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_42_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi42]
+  norm_num
+
+private theorem ramanujanGcdClassIndicatorRat_thirtyThree_period_on_even_progression
+    {g X k : ℕ} :
+    ramanujanGcdClassIndicatorRat 33 g (X + 2 * (k + 33))
+      =
+    ramanujanGcdClassIndicatorRat 33 g (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicatorRat
+  have hgcd :
+      Nat.gcd 33 (X + 2 * (k + 33)) = Nat.gcd 33 (X + 2 * k) := by
+    calc
+      Nat.gcd 33 (X + 2 * (k + 33))
+          = Nat.gcd 33 ((X + 2 * k) + 2 * 33) := by ring_nf
+      _ = Nat.gcd 33 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem sum_range_thirtyThree_indicatorRat_thirtyThree_one_X0 :
+    ∑ k ∈ Finset.range 33, ramanujanGcdClassIndicatorRat 33 1 (X0 + 2 * k) = 20 := by
+  native_decide
+
+private theorem sum_range_thirtyThree_indicatorRat_thirtyThree_three_X0 :
+    ∑ k ∈ Finset.range 33, ramanujanGcdClassIndicatorRat 33 3 (X0 + 2 * k) = 10 := by
+  native_decide
+
+private theorem sum_range_thirtyThree_indicatorRat_thirtyThree_eleven_X0 :
+    ∑ k ∈ Finset.range 33, ramanujanGcdClassIndicatorRat 33 11 (X0 + 2 * k) = 2 := by
+  native_decide
+
+private theorem sum_range_thirtyThree_indicatorRat_thirtyThree_thirtyThree_X0 :
+    ∑ k ∈ Finset.range 33, ramanujanGcdClassIndicatorRat 33 33 (X0 + 2 * k) = 1 := by
+  native_decide
+
+private theorem sum_range_eighteen_indicatorRat_thirtyThree_one_X0 :
+    ∑ x ∈ Finset.range 18, ramanujanGcdClassIndicatorRat 33 1 (X0 + 2 * (4983 + x)) = 11 := by
+  native_decide
+
+private theorem sum_range_eighteen_indicatorRat_thirtyThree_three_X0 :
+    ∑ x ∈ Finset.range 18, ramanujanGcdClassIndicatorRat 33 3 (X0 + 2 * (4983 + x)) = 5 := by
+  native_decide
+
+private theorem sum_range_eighteen_indicatorRat_thirtyThree_eleven_X0 :
+    ∑ x ∈ Finset.range 18, ramanujanGcdClassIndicatorRat 33 11 (X0 + 2 * (4983 + x)) = 1 := by
+  native_decide
+
+private theorem sum_range_eighteen_indicatorRat_thirtyThree_thirtyThree_X0 :
+    ∑ x ∈ Finset.range 18, ramanujanGcdClassIndicatorRat 33 33 (X0 + 2 * (4983 + x)) = 1 := by
+  native_decide
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtyThree_one_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 1 N = 3031 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 33 1 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 33 1 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 151 * 33 + 18 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 33 1 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_thirtyThree_period_on_even_progression
+        (g := 1) (X := X0) (k := k))
+    (m := 151) (r := 18)]
+  rw [sum_range_thirtyThree_indicatorRat_thirtyThree_one_X0,
+    show 151 * 33 = 4983 by norm_num,
+    sum_range_eighteen_indicatorRat_thirtyThree_one_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtyThree_three_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 3 N = 1515 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 33 3 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 33 3 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 151 * 33 + 18 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 33 3 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_thirtyThree_period_on_even_progression
+        (g := 3) (X := X0) (k := k))
+    (m := 151) (r := 18)]
+  rw [sum_range_thirtyThree_indicatorRat_thirtyThree_three_X0,
+    show 151 * 33 = 4983 by norm_num,
+    sum_range_eighteen_indicatorRat_thirtyThree_three_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtyThree_eleven_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 11 N = 303 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 33 11 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 33 11 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 151 * 33 + 18 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 33 11 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_thirtyThree_period_on_even_progression
+        (g := 11) (X := X0) (k := k))
+    (m := 151) (r := 18)]
+  rw [sum_range_thirtyThree_indicatorRat_thirtyThree_eleven_X0,
+    show 151 * 33 = 4983 by norm_num,
+    sum_range_eighteen_indicatorRat_thirtyThree_eleven_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtyThree_thirtyThree_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 33 N = 152 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 33 33 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 33 33 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 151 * 33 + 18 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 33 33 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_thirtyThree_period_on_even_progression
+        (g := 33) (X := X0) (k := k))
+    (m := 151) (r := 18)]
+  rw [sum_range_thirtyThree_indicatorRat_thirtyThree_thirtyThree_X0,
+    show 151 * 33 = 4983 by norm_num,
+    sum_range_eighteen_indicatorRat_thirtyThree_thirtyThree_X0]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyThree_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 33 1 = (3031 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 1)).card : ℚ) = 3031 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 1)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 1 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 33 N = 1 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 1))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 3031 := sum_ramanujanGcdClassIndicatorRat_thirtyThree_one_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyThree_three_X0 :
+    ramanujanGcdClassWindowAverageRat X0 33 3 = (1515 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 3)).card : ℚ) = 1515 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 3)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 3 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 33 N = 3 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 3))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 1515 := sum_ramanujanGcdClassIndicatorRat_thirtyThree_three_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyThree_eleven_X0 :
+    ramanujanGcdClassWindowAverageRat X0 33 11 = (303 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 11)).card : ℚ) = 303 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 11)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 11 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 33 N = 11 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 11))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 303 := sum_ramanujanGcdClassIndicatorRat_thirtyThree_eleven_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyThree_thirtyThree_X0 :
+    ramanujanGcdClassWindowAverageRat X0 33 33 = (152 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 33)).card : ℚ) = 152 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 33)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 33 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 33 N = 33 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 33 N = 33))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 152 := sum_ramanujanGcdClassIndicatorRat_thirtyThree_thirtyThree_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassIndicatorRat_thirtyThree_sum_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 33 1 N
+      + ramanujanGcdClassIndicatorRat 33 3 N
+      + ramanujanGcdClassIndicatorRat 33 11 N
+      + ramanujanGcdClassIndicatorRat 33 33 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h33 : Nat.gcd 33 N = 33
+  · simp [h33]
+  · by_cases h11 : Nat.gcd 33 N = 11
+    · simp [h33, h11]
+    · by_cases h3 : Nat.gcd 33 N = 3
+      · simp [h33, h11, h3]
+      · have hdivs : (33 : ℕ).divisors = ({1, 3, 11, 33} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 33 N ∈ ({1, 3, 11, 33} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 33 N, by norm_num⟩
+        have h1 : Nat.gcd 33 N = 1 := by
+          simpa [h33, h11, h3] using hmem
+        simp [h33, h11, h3, h1]
+
+private theorem centeredRamanujanObservableRat_X0_33_eq_indicator33
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 33 N
+      = (4990 / 5001 : ℚ)
+          - 3 * ramanujanGcdClassIndicatorRat 33 3 N
+          - 11 * ramanujanGcdClassIndicatorRat 33 11 N
+          + 19 * ramanujanGcdClassIndicatorRat 33 33 N := by
+  have hdivs : (33 : ℕ).divisors = ({1, 3, 11, 33} : Finset ℕ) := by native_decide
+  have hcoeff1 : ramanujanGcdClassCoeffRat 33 1 = 1 := by native_decide
+  have hcoeff3 : ramanujanGcdClassCoeffRat 33 3 = -2 := by native_decide
+  have hcoeff11 : ramanujanGcdClassCoeffRat 33 11 = -10 := by native_decide
+  have hcoeff33 : ramanujanGcdClassCoeffRat 33 33 = 20 := by native_decide
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff3, hcoeff11, hcoeff33,
+    ramanujanGcdClassWindowAverageRat_thirtyThree_one_X0,
+    ramanujanGcdClassWindowAverageRat_thirtyThree_three_X0,
+    ramanujanGcdClassWindowAverageRat_thirtyThree_eleven_X0,
+    ramanujanGcdClassWindowAverageRat_thirtyThree_thirtyThree_X0]
+  linarith [ramanujanGcdClassIndicatorRat_thirtyThree_sum_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_33_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 33 N) ^ 2
+      =
+    (24900100 / 25010001 : ℚ)
+      + (5023 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 33 3 N
+      + (495341 / 5001 : ℚ) * ramanujanGcdClassIndicatorRat 33 11 N
+      + (1994981 / 5001 : ℚ) * ramanujanGcdClassIndicatorRat 33 33 N := by
+  rw [centeredRamanujanObservableRat_X0_33_eq_indicator33]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h33 : Nat.gcd 33 N = 33
+  · simp [h33]
+    norm_num
+  · by_cases h11 : Nat.gcd 33 N = 11
+    · simp [h33, h11]
+      norm_num
+    · by_cases h3 : Nat.gcd 33 N = 3
+      · simp [h33, h11, h3]
+        norm_num
+      · have hdivs : (33 : ℕ).divisors = ({1, 3, 11, 33} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 33 N ∈ ({1, 3, 11, 33} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 33 N, by norm_num⟩
+        have h1 : Nat.gcd 33 N = 1 := by
+          simpa [h33, h11, h3] using hmem
+        simp [h33, h11, h3, h1]
+        norm_num
+
+private theorem centeredRamanujanWindowEnergyRat_X0_33_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 33 = (501055070 : ℚ) / 5001 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 33
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((24900100 / 25010001 : ℚ)
+          + (5023 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 33 3 N
+          + (495341 / 5001 : ℚ) * ramanujanGcdClassIndicatorRat 33 11 N
+          + (1994981 / 5001 : ℚ) * ramanujanGcdClassIndicatorRat 33 33 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_33_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (24900100 / 25010001 : ℚ)
+        + (5023 / 1667 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 3 N
+        + (495341 / 5001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 11 N
+        + (1994981 / 5001 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 33 33 N := by
+          rw [Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+            Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    _ = (501055070 : ℚ) / 5001 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (24900100 / 25010001 : ℚ)
+                =
+              (5001 : ℚ) * (24900100 / 25010001 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst,
+            sum_ramanujanGcdClassIndicatorRat_thirtyThree_three_X0,
+            sum_ramanujanGcdClassIndicatorRat_thirtyThree_eleven_X0,
+            sum_ramanujanGcdClassIndicatorRat_thirtyThree_thirtyThree_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm33_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 33
+      = (50105507 : ℚ) / 3200640 := by
+  have hsqfree : Squarefree 33 := by native_decide
+  have hphi33 : Nat.totient 33 = 20 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_33_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi33]
+  norm_num
+
+private theorem ramanujanGcdClassIndicatorRat_thirtyFive_period_on_even_progression
+    {g X k : ℕ} :
+    ramanujanGcdClassIndicatorRat 35 g (X + 2 * (k + 35))
+      =
+    ramanujanGcdClassIndicatorRat 35 g (X + 2 * k) := by
+  unfold ramanujanGcdClassIndicatorRat
+  have hgcd :
+      Nat.gcd 35 (X + 2 * (k + 35)) = Nat.gcd 35 (X + 2 * k) := by
+    calc
+      Nat.gcd 35 (X + 2 * (k + 35))
+          = Nat.gcd 35 ((X + 2 * k) + 2 * 35) := by ring_nf
+      _ = Nat.gcd 35 (X + 2 * k) := by
+            rw [Nat.gcd_add_mul_right_right]
+  rw [hgcd]
+
+private theorem sum_range_thirtyFive_indicatorRat_thirtyFive_one_X0 :
+    ∑ k ∈ Finset.range 35, ramanujanGcdClassIndicatorRat 35 1 (X0 + 2 * k) = 24 := by
+  native_decide
+
+private theorem sum_range_thirtyFive_indicatorRat_thirtyFive_five_X0 :
+    ∑ k ∈ Finset.range 35, ramanujanGcdClassIndicatorRat 35 5 (X0 + 2 * k) = 6 := by
+  native_decide
+
+private theorem sum_range_thirtyFive_indicatorRat_thirtyFive_seven_X0 :
+    ∑ k ∈ Finset.range 35, ramanujanGcdClassIndicatorRat 35 7 (X0 + 2 * k) = 4 := by
+  native_decide
+
+private theorem sum_range_thirtyFive_indicatorRat_thirtyFive_thirtyFive_X0 :
+    ∑ k ∈ Finset.range 35, ramanujanGcdClassIndicatorRat 35 35 (X0 + 2 * k) = 1 := by
+  native_decide
+
+private theorem sum_range_thirtyOne_indicatorRat_thirtyFive_one_X0 :
+    ∑ x ∈ Finset.range 31, ramanujanGcdClassIndicatorRat 35 1 (X0 + 2 * (4970 + x)) = 21 := by
+  native_decide
+
+private theorem sum_range_thirtyOne_indicatorRat_thirtyFive_five_X0 :
+    ∑ x ∈ Finset.range 31, ramanujanGcdClassIndicatorRat 35 5 (X0 + 2 * (4970 + x)) = 6 := by
+  native_decide
+
+private theorem sum_range_thirtyOne_indicatorRat_thirtyFive_seven_X0 :
+    ∑ x ∈ Finset.range 31, ramanujanGcdClassIndicatorRat 35 7 (X0 + 2 * (4970 + x)) = 3 := by
+  native_decide
+
+private theorem sum_range_thirtyOne_indicatorRat_thirtyFive_thirtyFive_X0 :
+    ∑ x ∈ Finset.range 31, ramanujanGcdClassIndicatorRat 35 35 (X0 + 2 * (4970 + x)) = 1 := by
+  native_decide
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtyFive_one_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 1 N = 3429 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 35 1 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 35 1 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 142 * 35 + 31 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 35 1 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_thirtyFive_period_on_even_progression
+        (g := 1) (X := X0) (k := k))
+    (m := 142) (r := 31)]
+  rw [sum_range_thirtyFive_indicatorRat_thirtyFive_one_X0,
+    show 142 * 35 = 4970 by norm_num,
+    sum_range_thirtyOne_indicatorRat_thirtyFive_one_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtyFive_five_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 5 N = 858 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 35 5 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 35 5 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 142 * 35 + 31 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 35 5 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_thirtyFive_period_on_even_progression
+        (g := 5) (X := X0) (k := k))
+    (m := 142) (r := 31)]
+  rw [sum_range_thirtyFive_indicatorRat_thirtyFive_five_X0,
+    show 142 * 35 = 4970 by norm_num,
+    sum_range_thirtyOne_indicatorRat_thirtyFive_five_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtyFive_seven_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 7 N = 571 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 35 7 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 35 7 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 142 * 35 + 31 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 35 7 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_thirtyFive_period_on_even_progression
+        (g := 7) (X := X0) (k := k))
+    (m := 142) (r := 31)]
+  rw [sum_range_thirtyFive_indicatorRat_thirtyFive_seven_X0,
+    show 142 * 35 = 4970 by norm_num,
+    sum_range_thirtyOne_indicatorRat_thirtyFive_seven_X0]
+  norm_num
+
+private theorem sum_ramanujanGcdClassIndicatorRat_thirtyFive_thirtyFive_X0 :
+    ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 35 N = 143 := by
+  rw [even_window_eq_image_range_halfH_add_one_of_isEven X0_isEven]
+  have hsum :
+      ∑ N ∈ (Finset.range (H / 2 + 1)).image (fun k : ℕ => X0 + 2 * k),
+          ramanujanGcdClassIndicatorRat 35 35 N
+        =
+      ∑ k ∈ Finset.range (H / 2 + 1),
+          ramanujanGcdClassIndicatorRat 35 35 (X0 + 2 * k) := by
+    rw [Finset.sum_image]
+    simp
+  rw [hsum]
+  have hlen : H / 2 + 1 = 142 * 35 + 31 := by
+    norm_num [H]
+  rw [hlen]
+  rw [periodic_sum_range_blocks_add_remainder
+    (f := fun k => ramanujanGcdClassIndicatorRat 35 35 (X0 + 2 * k))
+    (hP := by norm_num)
+    (hper := fun k =>
+      ramanujanGcdClassIndicatorRat_thirtyFive_period_on_even_progression
+        (g := 35) (X := X0) (k := k))
+    (m := 142) (r := 31)]
+  rw [sum_range_thirtyFive_indicatorRat_thirtyFive_thirtyFive_X0,
+    show 142 * 35 = 4970 by norm_num,
+    sum_range_thirtyOne_indicatorRat_thirtyFive_thirtyFive_X0]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyFive_one_X0 :
+    ramanujanGcdClassWindowAverageRat X0 35 1 = (3429 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 1)).card : ℚ) = 3429 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 1)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 1 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 35 N = 1 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 1))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 3429 := sum_ramanujanGcdClassIndicatorRat_thirtyFive_one_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyFive_five_X0 :
+    ramanujanGcdClassWindowAverageRat X0 35 5 = (858 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 5)).card : ℚ) = 858 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 5)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 5 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 35 N = 5 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 5))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 858 := sum_ramanujanGcdClassIndicatorRat_thirtyFive_five_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyFive_seven_X0 :
+    ramanujanGcdClassWindowAverageRat X0 35 7 = (571 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 7)).card : ℚ) = 571 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 7)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 7 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 35 N = 7 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 7))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 571 := sum_ramanujanGcdClassIndicatorRat_thirtyFive_seven_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassWindowAverageRat_thirtyFive_thirtyFive_X0 :
+    ramanujanGcdClassWindowAverageRat X0 35 35 = (143 / 5001 : ℚ) := by
+  have hcount :
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 35)).card : ℚ) = 143 := by
+    calc
+      (((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 35)).card : ℚ)
+          = ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 35 N := by
+              unfold ramanujanGcdClassIndicatorRat
+              have hsum :
+                  ∑ N ∈ EvenIn X0 H, (if Nat.gcd 35 N = 35 then (1 : ℚ) else 0)
+                    =
+                  Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd 35 N = 35))
+                    (fun _ => (1 : ℚ)) := by
+                      rw [Finset.sum_filter]
+              rw [hsum]
+              rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+      _ = 143 := sum_ramanujanGcdClassIndicatorRat_thirtyFive_thirtyFive_X0
+  unfold ramanujanGcdClassWindowAverageRat
+  rw [evenIn_X0_H_card_eq_5001, hcount]
+  norm_num
+
+private theorem ramanujanGcdClassIndicatorRat_thirtyFive_sum_eq_one
+    (N : ℕ) :
+    ramanujanGcdClassIndicatorRat 35 1 N
+      + ramanujanGcdClassIndicatorRat 35 5 N
+      + ramanujanGcdClassIndicatorRat 35 7 N
+      + ramanujanGcdClassIndicatorRat 35 35 N = 1 := by
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h35 : Nat.gcd 35 N = 35
+  · simp [h35]
+  · by_cases h7 : Nat.gcd 35 N = 7
+    · simp [h35, h7]
+    · by_cases h5 : Nat.gcd 35 N = 5
+      · simp [h35, h7, h5]
+      · have hdivs : (35 : ℕ).divisors = ({1, 5, 7, 35} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 35 N ∈ ({1, 5, 7, 35} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 35 N, by norm_num⟩
+        have h1 : Nat.gcd 35 N = 1 := by
+          simpa [h35, h7, h5] using hmem
+        simp [h35, h7, h5, h1]
+
+private theorem centeredRamanujanObservableRat_X0_35_eq_indicator35
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 35 N
+      = (1666 / 1667 : ℚ)
+          - 5 * ramanujanGcdClassIndicatorRat 35 5 N
+          - 7 * ramanujanGcdClassIndicatorRat 35 7 N
+          + 23 * ramanujanGcdClassIndicatorRat 35 35 N := by
+  have hdivs : (35 : ℕ).divisors = ({1, 5, 7, 35} : Finset ℕ) := by native_decide
+  have hcoeff1 : ramanujanGcdClassCoeffRat 35 1 = 1 := by native_decide
+  have hcoeff5 : ramanujanGcdClassCoeffRat 35 5 = -4 := by native_decide
+  have hcoeff7 : ramanujanGcdClassCoeffRat 35 7 = -6 := by native_decide
+  have hcoeff35 : ramanujanGcdClassCoeffRat 35 35 = 24 := by native_decide
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+  rw [hdivs]
+  simp [hcoeff1, hcoeff5, hcoeff7, hcoeff35,
+    ramanujanGcdClassWindowAverageRat_thirtyFive_one_X0,
+    ramanujanGcdClassWindowAverageRat_thirtyFive_five_X0,
+    ramanujanGcdClassWindowAverageRat_thirtyFive_seven_X0,
+    ramanujanGcdClassWindowAverageRat_thirtyFive_thirtyFive_X0]
+  linarith [ramanujanGcdClassIndicatorRat_thirtyFive_sum_eq_one N]
+
+private theorem centeredRamanujanObservableRat_X0_35_sq
+    (N : ℕ) :
+    (centeredRamanujanObservableRat X0 35 N) ^ 2
+      =
+    (2775556 / 2778889 : ℚ)
+      + (25015 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 35 5 N
+      + (58359 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 35 7 N
+      + (958479 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 35 35 N := by
+  rw [centeredRamanujanObservableRat_X0_35_eq_indicator35]
+  unfold ramanujanGcdClassIndicatorRat
+  by_cases h35 : Nat.gcd 35 N = 35
+  · simp [h35]
+    norm_num
+  · by_cases h7 : Nat.gcd 35 N = 7
+    · simp [h35, h7]
+      norm_num
+    · by_cases h5 : Nat.gcd 35 N = 5
+      · simp [h35, h7, h5]
+        norm_num
+      · have hdivs : (35 : ℕ).divisors = ({1, 5, 7, 35} : Finset ℕ) := by native_decide
+        have hmem : Nat.gcd 35 N ∈ ({1, 5, 7, 35} : Finset ℕ) := by
+          rw [← hdivs]
+          exact Nat.mem_divisors.mpr ⟨Nat.gcd_dvd_left 35 N, by norm_num⟩
+        have h1 : Nat.gcd 35 N = 1 := by
+          simpa [h35, h7, h5] using hmem
+        simp [h35, h7, h5, h1]
+        norm_num
+
+private theorem centeredRamanujanWindowEnergyRat_X0_35_eq_cert :
+    centeredRamanujanWindowEnergyRat X0 35 = (200175024 : ℚ) / 1667 := by
+  calc
+    centeredRamanujanWindowEnergyRat X0 35
+        =
+      ∑ N ∈ EvenIn X0 H,
+        ((2775556 / 2778889 : ℚ)
+          + (25015 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 35 5 N
+          + (58359 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 35 7 N
+          + (958479 / 1667 : ℚ) * ramanujanGcdClassIndicatorRat 35 35 N) := by
+            unfold centeredRamanujanWindowEnergyRat
+            refine Finset.sum_congr rfl ?_
+            intro N hN
+            exact centeredRamanujanObservableRat_X0_35_sq N
+    _ =
+      ∑ N ∈ EvenIn X0 H, (2775556 / 2778889 : ℚ)
+        + (25015 / 1667 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 5 N
+        + (58359 / 1667 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 7 N
+        + (958479 / 1667 : ℚ) * ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicatorRat 35 35 N := by
+          rw [Finset.sum_add_distrib, Finset.sum_add_distrib, Finset.sum_add_distrib,
+            Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    _ = (200175024 : ℚ) / 1667 := by
+          have hconst :
+              ∑ N ∈ EvenIn X0 H, (2775556 / 2778889 : ℚ)
+                =
+              (5001 : ℚ) * (2775556 / 2778889 : ℚ) := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+          rw [hconst,
+            sum_ramanujanGcdClassIndicatorRat_thirtyFive_five_X0,
+            sum_ramanujanGcdClassIndicatorRat_thirtyFive_seven_X0,
+            sum_ramanujanGcdClassIndicatorRat_thirtyFive_thirtyFive_X0]
+          norm_num
+
+theorem surrogateDiagonalSmallRestTerm35_X0_eq_cert :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 35
+      = (104257825 : ℚ) / 11522304 := by
+  have hsqfree : Squarefree 35 := by native_decide
+  have hphi35 : Nat.totient 35 = 24 := by native_decide
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_35_eq_cert]
+  simp [surrogateNormalizedSigmaTruncSummandCoeffRat, hsqfree, hphi35]
+  norm_num
+
+def surrogateDiagonalSmallRestX0RatCert : ℚ :=
+  (159566618962182610738943325697 : ℚ) / 132209019696026528498073600
+
+theorem surrogateDiagonalSmallRestX0RatCert_le_check :
+    surrogateDiagonalSmallRestX0RatCert ≤ surrogateDiagSmallRestX0Check.lhs := by
+  norm_num [surrogateDiagonalSmallRestX0RatCert, surrogateDiagSmallRestX0Check]
+
+structure CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestTermRatCertificateAtX0 : Prop where
+  term11 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 11 = (25028003 : ℚ) / 200040
+  term13 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 13 = (938562625 : ℚ) / 12962592
+  term15 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 15 = (2500623775 : ℚ) / 10242048
+  term17 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 17 = (1666395675 : ℚ) / 54624256
+  term19 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 19 = (5622999175 : ℚ) / 262492488
+  term21 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 21 = (249925 : ℚ) / 3456
+  term22 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 22 = (25028003 : ℚ) / 200040
+  term23 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 23 = (858077675 : ℚ) / 73219641
+  term26 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 26 = (938562625 : ℚ) / 12962592
+  term29 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 29 = (4365778175 : ℚ) / 768473664
+  term30 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 30 = (2500623775 : ℚ) / 10242048
+  term31 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 31 = (18721241 : ℚ) / 4050810
+  term33 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 33 = (50105507 : ℚ) / 3200640
+  term34 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 34 = (1666395675 : ℚ) / 54624256
+  term35 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 35 = (104257825 : ℚ) / 11522304
+  term37 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 37 = (138782375 : ℚ) / 51850368
+  term38 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 38 = (5622999175 : ℚ) / 262492488
+  term39 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 39 = (117180625 : ℚ) / 12962592
+  term41 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 41 = (500297539 : ℚ) / 256051200
+  term42 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 42 = (249925 : ℚ) / 3456
+  term43 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 43 = (244576475 : ℚ) / 144088812
+  term46 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 46 = (858077675 : ℚ) / 73219641
+  term47 :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 47 = (14327297875 : ℚ) / 11195878728
+
+def CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestRatCertificateAtX0 : Prop :=
+  surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRestRat X0
+    = surrogateDiagonalSmallRestX0RatCert
+
+def CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestSupportCertificateAtX0 : Prop :=
+  ((normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+      (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ q ≤ 50)).erase 1).erase 2
+    =
+  centeredNormalizedSigmaTruncDiagonalSmallRestSupport
+
+private theorem filter_coeffSupport_smallRest_eq_squarefree_filter :
+    normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+        (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ q ≤ 50)
+      =
+    (Finset.Icc (1 : ℕ) 50).filter
+      (fun q => Squarefree q ∧ q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport) := by
+  ext q
+  constructor
+  · intro hq
+    rcases Finset.mem_filter.mp hq with ⟨hqmem, hrest⟩
+    rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hqmem with ⟨hqIcc, hsq⟩
+    rcases hrest with ⟨hmain, hqle50⟩
+    refine Finset.mem_filter.mpr ?_
+    refine ⟨?_, ?_⟩
+    exact Finset.mem_Icc.mpr ⟨(Finset.mem_Icc.mp hqIcc).1, hqle50⟩
+    exact ⟨hsq, hmain⟩
+  · intro hq
+    rcases Finset.mem_filter.mp hq with ⟨hqIcc50, hrest⟩
+    rcases hrest with ⟨hsq, hmain⟩
+    have hqIccQ0 : q ∈ Finset.Icc (1 : ℕ) Goldbach.AO_OffDiag.TailBlock.Q0 := by
+      rcases Finset.mem_Icc.mp hqIcc50 with ⟨hq1, hq50⟩
+      refine Finset.mem_Icc.mpr ⟨hq1, ?_⟩
+      have hQ0 : 50 ≤ Goldbach.AO_OffDiag.TailBlock.Q0 := by
+        norm_num [Goldbach.AO_OffDiag.TailBlock.Q0]
+      exact le_trans hq50 hQ0
+    refine Finset.mem_filter.mpr ?_
+    refine ⟨?_, ?_⟩
+    exact (mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff).2 ⟨hqIccQ0, hsq⟩
+    rcases Finset.mem_Icc.mp hqIcc50 with ⟨_, hq50⟩
+    exact ⟨hmain, hq50⟩
+
+private theorem centeredRamanujanObservableRat_X0_1_eq_zero
+    (N : ℕ) :
+    centeredRamanujanObservableRat X0 1 N = 0 := by
+  unfold centeredRamanujanObservableRat centeredRamanujanGcdClassObservableRat
+    ramanujanGcdClassWindowAverageRat ramanujanGcdClassIndicatorRat
+  norm_num [evenIn_X0_H_card_eq_5001]
+
+private theorem surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat_X0_1_eq_zero :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 1 = 0 := by
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat centeredRamanujanWindowEnergyRat
+  simp [centeredRamanujanObservableRat_X0_1_eq_zero]
+
+private theorem surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_X0_1_eq_zero :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X0 1 = 0 := by
+  rw [surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_eq_ratCast (X := X0) (q := 1) (by norm_num)]
+  norm_num [surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat_X0_1_eq_zero]
+
+private theorem ramanujanR_two_eq_one_of_isEven
+    {N : ℕ} (hEven : Goldbach.Windows.IsEven N) :
+    Goldbach.AO_OffDiag.TailBlock.ramanujanR 2 N = 1 := by
+  have h2dvd : 2 ∣ N := (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hEven)
+  have hgcd2 : Nat.gcd 2 N = 2 := by
+    simpa [Nat.gcd_comm] using Nat.gcd_eq_right h2dvd
+  rw [ramanujanR_eq_moebius_mul_totient_gcd, hgcd2]
+  norm_num [ArithmeticFunction.moebius_apply_one, Nat.totient_prime (by decide : Nat.Prime 2)]
+
+private theorem ramanujanWindowAverage_X0_2_eq_one :
+    ramanujanWindowAverage X0 2 = 1 := by
+  unfold ramanujanWindowAverage
+  rw [evenIn_X0_H_card_eq_5001]
+  have hsum : ∑ N ∈ EvenIn X0 H, Goldbach.AO_OffDiag.TailBlock.ramanujanR 2 N = 5001 := by
+    calc
+      ∑ N ∈ EvenIn X0 H, Goldbach.AO_OffDiag.TailBlock.ramanujanR 2 N
+          = ∑ _N ∈ EvenIn X0 H, (1 : ℝ) := by
+              refine Finset.sum_congr rfl ?_
+              intro N hN
+              exact ramanujanR_two_eq_one_of_isEven (isEven_of_mem_EvenIn hN)
+      _ = 5001 := by
+            simpa [Finset.sum_const, nsmul_eq_mul, evenIn_X0_H_card_eq_5001]
+  rw [hsum]
+  norm_num
+
+private theorem centeredRamanujanWindowEnergyRat_X0_2_eq_zero :
+    centeredRamanujanWindowEnergyRat X0 2 = 0 := by
+  have hreal : centeredRamanujanWindowEnergy X0 2 = 0 := by
+    unfold centeredRamanujanWindowEnergy
+    refine Finset.sum_eq_zero ?_
+    intro N hN
+    unfold centeredRamanujanObservable
+    rw [ramanujanR_two_eq_one_of_isEven (isEven_of_mem_EvenIn hN), ramanujanWindowAverage_X0_2_eq_one]
+    norm_num
+  have hcast :
+      (centeredRamanujanWindowEnergyRat X0 2 : ℝ) = 0 := by
+    rw [← centeredRamanujanWindowEnergy_eq_ratCast (X := X0) (q := 2) (by norm_num)]
+    exact hreal
+  exact_mod_cast hcast
+
+private theorem surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat_X0_2_eq_zero :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 2 = 0 := by
+  unfold surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat
+  rw [centeredRamanujanWindowEnergyRat_X0_2_eq_zero]
+  norm_num [surrogateNormalizedSigmaTruncSummandCoeffRat]
+
+private theorem surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_X0_2_eq_zero :
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X0 2 = 0 := by
+  rw [surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_eq_ratCast (X := X0) (q := 2) (by norm_num)]
+  norm_num [surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat_X0_2_eq_zero]
+
+theorem surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRestRat_X0_eq_terms :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRestRat X0
+      =
+    surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 11
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 13
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 15
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 17
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 19
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 21
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 22
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 23
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 26
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 29
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 30
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 31
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 33
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 34
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 35
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 37
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 38
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 39
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 41
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 42
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 43
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 46
+      + surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 47 := by
+  unfold surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRestRat
+    centeredNormalizedSigmaTruncDiagonalSmallRestSupport
+  simp [add_assoc, add_comm, add_left_comm]
+
+theorem surrogateDiagonalSmallRestX0RatCert_eq_sum_terms :
+    (25028003 : ℚ) / 200040
+      + (938562625 : ℚ) / 12962592
+      + (2500623775 : ℚ) / 10242048
+      + (1666395675 : ℚ) / 54624256
+      + (5622999175 : ℚ) / 262492488
+      + (249925 : ℚ) / 3456
+      + (25028003 : ℚ) / 200040
+      + (858077675 : ℚ) / 73219641
+      + (938562625 : ℚ) / 12962592
+      + (4365778175 : ℚ) / 768473664
+      + (2500623775 : ℚ) / 10242048
+      + (18721241 : ℚ) / 4050810
+      + (50105507 : ℚ) / 3200640
+      + (1666395675 : ℚ) / 54624256
+      + (104257825 : ℚ) / 11522304
+      + (138782375 : ℚ) / 51850368
+      + (5622999175 : ℚ) / 262492488
+      + (117180625 : ℚ) / 12962592
+      + (500297539 : ℚ) / 256051200
+      + (249925 : ℚ) / 3456
+      + (244576475 : ℚ) / 144088812
+      + (858077675 : ℚ) / 73219641
+      + (14327297875 : ℚ) / 11195878728
+      =
+    surrogateDiagonalSmallRestX0RatCert := by
+  norm_num [surrogateDiagonalSmallRestX0RatCert]
+
+theorem centeredNormalizedSigmaTruncSurrogateDiagonalSmallRestRatCertificateAtX0_of_termCertificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestTermRatCertificateAtX0) :
+    CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestRatCertificateAtX0 := by
+  unfold CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestRatCertificateAtX0
+  rw [surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRestRat_X0_eq_terms]
+  rw [hcert.term11, hcert.term13, hcert.term15, hcert.term17, hcert.term19, hcert.term21,
+    hcert.term22, hcert.term23, hcert.term26, hcert.term29, hcert.term30, hcert.term31,
+    hcert.term33, hcert.term34, hcert.term35, hcert.term37, hcert.term38, hcert.term39,
+    hcert.term41, hcert.term42, hcert.term43, hcert.term46, hcert.term47]
+  exact surrogateDiagonalSmallRestX0RatCert_eq_sum_terms
+
+theorem surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest_X0_eq_ratCast_of_support_certificate
+    (hsupp : CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestSupportCertificateAtX0) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0
+      = (surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRestRat X0 : ℝ) := by
+  unfold CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestSupportCertificateAtX0 at hsupp
+  unfold surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRestRat
+  let s :=
+    normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+      (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ q ≤ 50)
+  have h1mem : 1 ∈ s := by
+    unfold s
+    refine Finset.mem_filter.mpr ?_
+    refine ⟨?_, ?_⟩
+    · exact (mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff).2 <|
+        by simp [Goldbach.AO_OffDiag.TailBlock.Q0]
+    · simp [centeredNormalizedSigmaTruncDiagonalMainLowQSupport]
+  have h2mem : 2 ∈ s.erase 1 := by
+    refine Finset.mem_erase.mpr ⟨by norm_num, ?_⟩
+    unfold s
+    refine Finset.mem_filter.mpr ?_
+    refine ⟨?_, ?_⟩
+    · exact (mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff).2 <|
+        by
+          refine ⟨?_, ?_⟩
+          · simp [Goldbach.AO_OffDiag.TailBlock.Q0]
+          · simpa using (Nat.squarefree_two : Squarefree (2 : ℕ))
+    · simp [centeredNormalizedSigmaTruncDiagonalMainLowQSupport]
+  have hs1 :
+      ∑ q ∈ s, surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X0 q
+        =
+      ∑ q ∈ s.erase 1, surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X0 q := by
+    rw [← s.sum_erase_add (fun q => surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X0 q) h1mem]
+    rw [surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_X0_1_eq_zero, add_zero]
+  have hs2 :
+      ∑ q ∈ s.erase 1, surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X0 q
+        =
+      ∑ q ∈ (s.erase 1).erase 2, surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X0 q := by
+    rw [← (s.erase 1).sum_erase_add (fun q => surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy X0 q) h2mem]
+    rw [surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_X0_2_eq_zero, add_zero]
+  rw [hs1, hs2, hsupp]
+  rw [Rat.cast_sum]
+  refine Finset.sum_congr rfl ?_
+  intro q hq
+  have hmem :
+      q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0.filter
+        (fun q => q ∉ centeredNormalizedSigmaTruncDiagonalMainLowQSupport ∧ q ≤ 50) := by
+    have hq' : q ∈ (s.erase 1).erase 2 := by
+      rw [hsupp]
+      exact hq
+    have hq'' : q ∈ s.erase 1 := (Finset.mem_erase.mp hq').2
+    exact (Finset.mem_erase.mp hq'').2
+  have hqpos : 1 ≤ q := by
+    have hsuppq : q ∈ normalizedSigmaTruncSummandCoeffSupportUpToQ0 := (Finset.mem_filter.mp hmem).1
+    rcases mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mp hsuppq with ⟨hqIcc, _⟩
+    exact (Finset.mem_Icc.mp hqIcc).1
+  rw [surrogateCenteredNormalizedSigmaTruncSummandWindowEnergy_eq_ratCast (X := X0) (q := q) hqpos]
+
+theorem surrogateDiagonalSmallRest_X0_le_decimal_of_support_and_rat_certificate
+    (hsupp : CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestSupportCertificateAtX0)
+    (hrat : CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestRatCertificateAtX0) :
+    CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestDecimalCertificateAtX0 := by
+  unfold CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestDecimalCertificateAtX0
+  rw [surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest_X0_eq_ratCast_of_support_certificate hsupp]
+  rw [hrat]
+  exact_mod_cast surrogateDiagonalSmallRestX0RatCert_le_check
+
+theorem surrogateDiagonalSmallRest_X0_le_1207_of_support_and_rat_certificate
+    (hsupp : CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestSupportCertificateAtX0)
+    (hrat : CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestRatCertificateAtX0) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0 ≤ 1207 := by
+  exact surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest_X0_le_1207_of_decimal_certificate
+    (surrogateDiagonalSmallRest_X0_le_decimal_of_support_and_rat_certificate hsupp hrat)
+
+theorem surrogateDiagonalSmallRest_X0_le_1207_of_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestDecimalCertificateAtX0) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest X0 ≤ 1207 := by
+  exact surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectSmallRest_X0_le_1207_of_decimal_certificate hcert
+
+theorem surrogateDiagonalTail_X0_le_decimal_of_rat_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalTailRatCertificateAtX0) :
+    CenteredNormalizedSigmaTruncSurrogateDiagonalTailDecimalCertificateAtX0 := by
+  unfold CenteredNormalizedSigmaTruncSurrogateDiagonalTailDecimalCertificateAtX0
+    CenteredNormalizedSigmaTruncSurrogateDiagonalTailRatCertificateAtX0 at *
+  rw [surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail_eq_ratCast]
+  exact_mod_cast hcert
+
+theorem centeredNormalizedSigmaTruncSurrogateDiagonalTailRatCertificateAtX0_of_exactCertificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalTailExactRatCertificateAtX0)
+    (hcheck : CenteredNormalizedSigmaTruncSurrogateDiagonalTailExactRatCheckCertificateAtX0) :
+    CenteredNormalizedSigmaTruncSurrogateDiagonalTailRatCertificateAtX0 := by
+  unfold CenteredNormalizedSigmaTruncSurrogateDiagonalTailExactRatCertificateAtX0 at hcert
+  unfold CenteredNormalizedSigmaTruncSurrogateDiagonalTailRatCertificateAtX0
+  unfold CenteredNormalizedSigmaTruncSurrogateDiagonalTailExactRatCheckCertificateAtX0 at hcheck
+  rw [hcert]
+  exact hcheck
+
+theorem surrogateDiagonalTail_X0_le_100_of_rat_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalTailRatCertificateAtX0) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X0 ≤ 100 := by
+  exact surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail_X0_le_100_of_decimal_certificate
+    (surrogateDiagonalTail_X0_le_decimal_of_rat_certificate hcert)
+
+theorem surrogateDiagonalTail_X0_le_100_of_exact_rat_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalTailExactRatCertificateAtX0)
+    (hcheck : CenteredNormalizedSigmaTruncSurrogateDiagonalTailExactRatCheckCertificateAtX0) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X0 ≤ 100 := by
+  exact surrogateDiagonalTail_X0_le_100_of_rat_certificate
+    (centeredNormalizedSigmaTruncSurrogateDiagonalTailRatCertificateAtX0_of_exactCertificate
+      hcert hcheck)
+
+theorem surrogateDiagonalTail_X0_le_100_of_certificate
+    (hcert : CenteredNormalizedSigmaTruncSurrogateDiagonalTailDecimalCertificateAtX0) :
+    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail X0 ≤ 100 := by
+  exact surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail_X0_le_100_of_decimal_certificate hcert
 
 /--
 First isolated pointwise certificate target on the direct Route A surface: the periodic boundary
@@ -24166,6 +31427,20 @@ theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_surrogateDecimalC
   · exact surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTail_X0_le_100_of_decimal_certificate htail
   · exact abs_surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0_X0_le_37603_of_decimal_certificate hmain
   · exact abs_surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0_X0_le_26_of_decimal_certificate hboundary
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_surrogateCertificates
+    (hmainDiag : CenteredNormalizedSigmaTruncSurrogateDiagonalMainDecimalCertificateAtX0)
+    (hsmallRest : CenteredNormalizedSigmaTruncSurrogateDiagonalSmallRestDecimalCertificateAtX0)
+    (htail : CenteredNormalizedSigmaTruncSurrogateDiagonalTailDecimalCertificateAtX0)
+    (hmain : CenteredNormalizedSigmaTruncSurrogatePeriodicMainDecimalCertificateAtX0)
+    (hboundary : CenteredNormalizedSigmaTruncBoundaryRatCertificateAtX0) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795 := by
+  apply centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_surrogateDecimalCertificates
+  · exact hmainDiag
+  · exact hsmallRest
+  · exact htail
+  · exact hmain
+  · exact abs_surrogateBoundary_X0_le_decimal_of_certificate hboundary
 
 theorem centeredNormalizedSigmaTruncWindowEnergyTarget_of_diagonal_and_pairCorrelationBounds
     {Cdiag Cpair : ℝ}
