@@ -187,7 +187,8 @@ lemma exactGeometricScalar_norm_lower
     {X : ℕ} (hX : X0 ≤ X) :
     Goldbach.BG_Identity.K_full (0 : ℤ) ≤ ‖exactGeometricScalar X‖ := by
   let N := canonicalEvenWindowPoint X
-  have hN : N ∈ EvenIn X H := canonicalEvenWindowPoint_mem_even_window hX
+  have hN : N ∈ EvenIn X H := by
+    simpa [N] using (canonicalEvenWindowPoint_mem_even_window (X := X))
   let hT :=
     Goldbach.Cert.MajorArcModules.Q0MinorHalfMassShellPointwise.unscaledGeometricZeroSliceMassWindowNormTarget_explicit
   have hlower := hT.lower hX hN
@@ -198,7 +199,8 @@ lemma exactGeometricScalar_norm_le_two
     {X : ℕ} (hX : X0 ≤ X) :
     ‖exactGeometricScalar X‖ ≤ 2 := by
   let N := canonicalEvenWindowPoint X
-  have hN : N ∈ EvenIn X H := canonicalEvenWindowPoint_mem_even_window hX
+  have hN : N ∈ EvenIn X H := by
+    simpa [N] using (canonicalEvenWindowPoint_mem_even_window (X := X))
   let hT :=
     Goldbach.Cert.MajorArcModules.Q0MinorHalfMassShellPointwise.unscaledGeometricZeroSliceMassWindowNormTarget_explicit
   have hupper := hT.upper hX hN
@@ -210,7 +212,8 @@ theorem routeAPSBExactGeometricScalarReNonneg_explicit :
   refine ⟨?_⟩
   intro X hX
   let N := canonicalEvenWindowPoint X
-  have hN : N ∈ EvenIn X H := canonicalEvenWindowPoint_mem_even_window hX
+  have hN : N ∈ EvenIn X H := by
+    simpa [N] using (canonicalEvenWindowPoint_mem_even_window (X := X))
   have hnonneg := unscaledGeometricZeroSliceMass_re_nonneg_of_mem_even_window hX hN
   simpa [N, exactGeometricScalar] using hnonneg
 
@@ -220,7 +223,8 @@ theorem routeAPSBExactGeometricScalarReLowerBound_explicit :
   refine ⟨?_⟩
   intro X hX
   let N := canonicalEvenWindowPoint X
-  have hN : N ∈ EvenIn X H := canonicalEvenWindowPoint_mem_even_window hX
+  have hN : N ∈ EvenIn X H := by
+    simpa [N] using (canonicalEvenWindowPoint_mem_even_window (X := X))
   have hlower := unscaledGeometricZeroSliceMass_re_lower_of_mem_even_window hX hN
   simpa [routeAPSBExactGeometricScalarLowerProfile, N, exactGeometricScalar] using hlower
 

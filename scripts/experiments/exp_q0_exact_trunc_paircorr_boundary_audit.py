@@ -373,6 +373,11 @@ def fraction_to_q_literal(x: Fraction) -> str:
     return f"({x.numerator} : ℚ) / {x.denominator}"
 
 
+def nat_list_to_lean_finset_literal(xs: list[int]) -> str:
+    body = ", ".join(str(x) for x in xs)
+    return f"([{body}] : List ℕ).toFinset"
+
+
 def decimal_string_to_fraction(s: str) -> Fraction:
     dec = Decimal(s)
     num, den = dec.as_integer_ratio()
@@ -943,6 +948,24 @@ def main() -> None:
                     help="Emit a ready-to-paste Lean MajorArcCertChecker `CheckLE` payload for the current surrogate audit values.")
     ap.add_argument("--emit-diag-tail-rat-total", action="store_true",
                     help="Emit the exact surrogate diagonal tail rational total at the current X as a Lean ℚ literal.")
+    ap.add_argument("--emit-diag-single-q-rat-data", type=int, default=-1,
+                    help="Emit exact per-q rational certificate data for one diagonal summand.")
+    ap.add_argument("--emit-diag-tail-rat-chunks", action="store_true",
+                    help="Emit chunked exact surrogate diagonal-tail rational totals as Lean ℚ literals.")
+    ap.add_argument("--diag-tail-chunk-size", type=int, default=500,
+                    help="Chunk size for --emit-diag-tail-rat-chunks.")
+    ap.add_argument("--emit-diag-tail-rat-chunk-index", type=int, default=-1,
+                    help="Emit one exact surrogate diagonal-tail chunk by index; requires --diag-tail-chunk-size.")
+    ap.add_argument("--emit-diag-tail-rat-subchunks-for-chunk-index", type=int, default=-1,
+                    help="Emit Lean-ready exact surrogate diagonal-tail subchunk payloads for one chunk index; requires --diag-tail-chunk-size.")
+    ap.add_argument("--diag-tail-subchunk-size", type=int, default=1000,
+                    help="Subchunk size for --emit-diag-tail-rat-subchunks-for-chunk-index.")
+    ap.add_argument("--emit-diag-tail-rat-one-subchunk-for-chunk-index", type=int, default=-1,
+                    help="Emit Lean-ready exact surrogate diagonal-tail payload for one subchunk of one chunk; requires --diag-tail-subchunk-index and --diag-tail-chunk-size.")
+    ap.add_argument("--diag-tail-subchunk-index", type=int, default=-1,
+                    help="With --emit-diag-tail-rat-one-subchunk-for-chunk-index, choose the subchunk index inside the chunk.")
+    ap.add_argument("--diag-tail-one-subchunk-part-size", type=int, default=0,
+                    help="If positive, split the selected one-subchunk payload into smaller explicit part supports of this size.")
     ap.add_argument("--emit-periodic-main-rat-total", action="store_true",
                     help="Emit the exact surrogate periodic-main rational total at the current X as a Lean ℚ literal.")
     ap.add_argument("--emit-boundary-pair-rat", nargs=2, type=int, metavar=("Q", "Q2"),
@@ -3278,6 +3301,11 @@ def main() -> None:
         print()
         print("def surrogateBoundaryX0RatCertificateSum : ℚ :=")
         print(f"  {fraction_to_q_literal(total)}")
+        print()
+        print("-- theorem surrogateBoundaryRat_X0_eq_cert :")
+        print("--     surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat X0")
+        print("--       = surrogateBoundaryX0FullCert := by")
+        print("--   -- generated certificate proof")
         if terms is not None:
             print()
             print("def surrogateBoundaryX0RatCertificateTerms : List ℚ :=")
@@ -3347,7 +3375,7 @@ def main() -> None:
         print(f"even window card = {even_window_card}")
         print(f"coeff support card = {len(support)}")
 
-    if args.diag_only:
+    if args.diag_only and args.emit_diag_single_q_rat_data < 0:
         print_normalization_header()
         print()
         print(f"diagonalExact              = {rescale(diagonal):.12f}")
@@ -3475,6 +3503,459 @@ def main() -> None:
         print("  norm_num [surrogateDiagTailX0RatCert, surrogateDiagTailX0Check]")
         return
 
+    if args.emit_diag_single_q_rat_data >= 0:
+        q = args.emit_diag_single_q_rat_data
+        if q < 1 or q > Q0:
+            raise SystemExit(f"--emit-diag-single-q-rat-data={q} is out of range 1..{Q0}")
+        fac_q = factorization(q, spf)
+        divs_q = divisors_from_factorization(fac_q)
+        coeff_q = surrogate_coeff_rat(q, mu, phi)
+        energy_q = centered_ramanujan_window_energy_rat(
+            X, q, mu, phi, even_window, even_window_card
+        )
+        term_q = surrogate_diagonal_energy_q_rat(
+            X, q, mu, phi, even_window, even_window_card
+        )
+        print("Surrogate diagonal single-q exact rational data")
+        print(f"  X                         = {X}")
+        print(f"  q                         = {q}")
+        print(f"  squarefree                = {mu[q] != 0}")
+        print(f"  totient                   = {phi[q]}")
+        print(f"  divisors                  = {divs_q}")
+        print(f"  coeff rat                 = {fraction_to_q_literal(coeff_q)}")
+        print(f"  energy rat                = {fraction_to_q_literal(energy_q)}")
+        print(f"  term rat                  = {fraction_to_q_literal(term_q)}")
+        print("  gcd-class table")
+        for g in divs_q:
+            avg_g = ramanujan_gcd_class_window_average_rat(X, q, g, even_window_card)
+            count_g = avg_g * even_window_card
+            coeff_g = ramanujan_gcd_class_coeff_rat(q, g, mu, phi)
+            print(
+                "    "
+                f"g={g:<6} coeff={fraction_to_q_literal(coeff_g):>12} "
+                f"count={count_g.numerator:<8} avg={fraction_to_q_literal(avg_g)}"
+            )
+        print("  Lean payload")
+        print(f"-- q = {q}")
+        print(f"-- divisors: {divs_q}")
+        print(f"-- coeff: {fraction_to_q_literal(coeff_q)}")
+        print(f"-- energy: {fraction_to_q_literal(energy_q)}")
+        print(f"-- term: {fraction_to_q_literal(term_q)}")
+        return
+
+    if args.emit_diag_tail_rat_chunks:
+        if args.true_series:
+            raise SystemExit("--emit-diag-tail-rat-chunks is only implemented for the surrogate normalization")
+        chunk_size = max(1, args.diag_tail_chunk_size)
+        tail_support = [
+            q for q in support
+            if q not in DIAG_MAIN_LOW_Q and q > 50
+        ]
+        chunk_payloads = []
+        total_rat = Fraction(0, 1)
+        started = time.time()
+        for chunk_index, start_idx in enumerate(range(0, len(tail_support), chunk_size)):
+            chunk_support = tail_support[start_idx:start_idx + chunk_size]
+            chunk_total = Fraction(0, 1)
+            for q in chunk_support:
+                chunk_total += surrogate_diagonal_energy_q_rat(
+                    X, q, mu, phi, even_window, even_window_card
+                )
+            total_rat += chunk_total
+            chunk_payloads.append((chunk_index, start_idx, start_idx + len(chunk_support), chunk_support[0], chunk_support[-1], chunk_total))
+            if args.progress:
+                elapsed = time.time() - started
+                print(
+                    f"[diag-tail-rat-chunks] chunk={chunk_index + 1}/{math.ceil(len(tail_support) / chunk_size)} "
+                    f"q={start_idx + len(chunk_support)}/{len(tail_support)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+        print("Surrogate diagonal tail exact rational chunks")
+        print(f"  X                         = {X}")
+        print(f"  tail support card         = {len(tail_support)}")
+        print(f"  chunk size                = {chunk_size}")
+        print(f"  chunk count               = {len(chunk_payloads)}")
+        print(f"  rational total numerator  = {total_rat.numerator}")
+        print(f"  rational total denominator= {total_rat.denominator}")
+        print(f"  Lean ℚ literal            = {fraction_to_q_literal(total_rat)}")
+        print(f"  float value               = {float(total_rat):.15f}")
+        print("  Chunk table")
+        for chunk_index, start_idx, end_idx, first_q, last_q, chunk_total in chunk_payloads:
+            print(
+                f"    chunk {chunk_index:03d}: idx=[{start_idx},{end_idx}) "
+                f"q=[{first_q},{last_q}] value={fraction_to_q_literal(chunk_total)}"
+            )
+        print("  Lean payload")
+        for chunk_index, start_idx, end_idx, first_q, last_q, chunk_total in chunk_payloads:
+            print(
+                f"def surrogateDiagTailX0RatChunk{chunk_index:03d} : ℚ := "
+                f"{fraction_to_q_literal(chunk_total)}"
+            )
+            print(
+                f"-- chunk {chunk_index:03d} covers tail-support indices [{start_idx},{end_idx}) "
+                f"and q from {first_q} to {last_q}"
+            )
+        chunk_names = [f"surrogateDiagTailX0RatChunk{chunk_index:03d}" for chunk_index, *_ in chunk_payloads]
+        chunk_sum_expr = " + ".join(chunk_names) if chunk_names else "(0 : ℚ)"
+        print()
+        print("theorem surrogateDiagTailX0RatCert_eq_chunk_sum :")
+        print(f"    {chunk_sum_expr} = surrogateDiagTailX0RatCert := by")
+        print("  norm_num [surrogateDiagTailX0RatCert,")
+        for i, name in enumerate(chunk_names):
+            comma = "," if i + 1 < len(chunk_names) else ""
+            print(f"    {name}{comma}")
+        print("  ]")
+        print()
+        print("theorem surrogateDiagonalTailRat_X0_eq_cert_of_chunked_sum")
+        print("    (hchunked :")
+        print("      surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTailRat X0")
+        print(f"        = {chunk_sum_expr}) :")
+        print("    surrogateCenteredNormalizedSigmaTruncDiagonalEnergyDirectTailRat X0")
+        print("      = surrogateDiagTailX0RatCert := by")
+        print("  rw [hchunked, surrogateDiagTailX0RatCert_eq_chunk_sum]")
+        return
+
+    if args.emit_diag_tail_rat_chunk_index >= 0:
+        if args.true_series:
+            raise SystemExit("--emit-diag-tail-rat-chunk-index is only implemented for the surrogate normalization")
+        chunk_size = max(1, args.diag_tail_chunk_size)
+        tail_support = [
+            q for q in support
+            if q not in DIAG_MAIN_LOW_Q and q > 50
+        ]
+        chunk_count = math.ceil(len(tail_support) / chunk_size)
+        chunk_index = args.emit_diag_tail_rat_chunk_index
+        if chunk_index >= chunk_count:
+            raise SystemExit(
+                f"--emit-diag-tail-rat-chunk-index={chunk_index} out of range for "
+                f"{chunk_count} chunks with size {chunk_size}"
+            )
+        start_idx = chunk_index * chunk_size
+        chunk_support = tail_support[start_idx:start_idx + chunk_size]
+        chunk_total = Fraction(0, 1)
+        started = time.time()
+        for i, q in enumerate(chunk_support, start=1):
+            chunk_total += surrogate_diagonal_energy_q_rat(
+                X, q, mu, phi, even_window, even_window_card
+            )
+            if args.progress and (i % max(1, args.progress_every) == 0 or i == len(chunk_support)):
+                elapsed = time.time() - started
+                print(
+                    f"[diag-tail-rat-chunk] chunk={chunk_index}/{chunk_count} "
+                    f"q={i}/{len(chunk_support)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+        end_idx = start_idx + len(chunk_support)
+        print("Surrogate diagonal tail exact rational chunk")
+        print(f"  X                         = {X}")
+        print(f"  tail support card         = {len(tail_support)}")
+        print(f"  chunk size                = {chunk_size}")
+        print(f"  chunk index               = {chunk_index}")
+        print(f"  chunk count               = {chunk_count}")
+        print(f"  chunk support indices     = [{start_idx}, {end_idx})")
+        print(f"  chunk q range             = [{chunk_support[0]}, {chunk_support[-1]}]")
+        print(f"  rational numerator        = {chunk_total.numerator}")
+        print(f"  rational denominator      = {chunk_total.denominator}")
+        print(f"  Lean ℚ literal            = {fraction_to_q_literal(chunk_total)}")
+        print(f"  float value               = {float(chunk_total):.15f}")
+        print("  Lean payload")
+        print(
+            f"def surrogateDiagTailX0RatChunk{chunk_index:03d} : ℚ := "
+            f"{fraction_to_q_literal(chunk_total)}"
+        )
+        print(
+            f"-- chunk {chunk_index:03d} covers tail-support indices [{start_idx},{end_idx}) "
+            f"and q from {chunk_support[0]} to {chunk_support[-1]}"
+        )
+        return
+
+    if args.emit_diag_tail_rat_one_subchunk_for_chunk_index >= 0:
+        if args.true_series:
+            raise SystemExit("--emit-diag-tail-rat-one-subchunk-for-chunk-index is only implemented for the surrogate normalization")
+        if args.diag_tail_subchunk_index < 0:
+            raise SystemExit("--emit-diag-tail-rat-one-subchunk-for-chunk-index requires --diag-tail-subchunk-index")
+        chunk_size = max(1, args.diag_tail_chunk_size)
+        subchunk_size = max(1, args.diag_tail_subchunk_size)
+        tail_support = [
+            q for q in support
+            if q not in DIAG_MAIN_LOW_Q and q > 50
+        ]
+        chunk_count = math.ceil(len(tail_support) / chunk_size)
+        chunk_index = args.emit_diag_tail_rat_one_subchunk_for_chunk_index
+        if chunk_index >= chunk_count:
+            raise SystemExit(
+                f"--emit-diag-tail-rat-one-subchunk-for-chunk-index={chunk_index} out of range for "
+                f"{chunk_count} chunks with size {chunk_size}"
+            )
+        start_idx = chunk_index * chunk_size
+        chunk_support = tail_support[start_idx:start_idx + chunk_size]
+        subchunk_count = math.ceil(len(chunk_support) / subchunk_size)
+        subchunk_index = args.diag_tail_subchunk_index
+        if subchunk_index >= subchunk_count:
+            raise SystemExit(
+                f"--diag-tail-subchunk-index={subchunk_index} out of range for "
+                f"{subchunk_count} subchunks in chunk {chunk_index}"
+            )
+        sub_start = subchunk_index * subchunk_size
+        sub_support = chunk_support[sub_start:sub_start + subchunk_size]
+        sub_total = Fraction(0, 1)
+        started = time.time()
+        for i, q in enumerate(sub_support, start=1):
+            sub_total += surrogate_diagonal_energy_q_rat(
+                X, q, mu, phi, even_window, even_window_card
+            )
+            if args.progress and (i % max(1, args.progress_every) == 0 or i == len(sub_support)):
+                elapsed = time.time() - started
+                print(
+                    f"[diag-tail-rat-one-subchunk] chunk={chunk_index}/{chunk_count} "
+                    f"subchunk={subchunk_index + 1}/{subchunk_count} q={i}/{len(sub_support)} "
+                    f"elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+        chunk_label = f"{chunk_index:03d}"
+        sub_name = f"surrogateDiagTailX0RatChunk{chunk_label}Sub{subchunk_index:03d}"
+        sub_support_name = (
+            f"centeredNormalizedSigmaTruncSurrogateDiagonalTailChunk{chunk_label}"
+            f"Sub{subchunk_index:03d}SupportAtX0"
+        )
+        theorem_stub_name = f"surrogateDiagonalTailChunk{chunk_label}Sub{subchunk_index:03d}_eq_cert"
+        abs_start = start_idx + sub_start
+        abs_end = abs_start + len(sub_support)
+        print("Surrogate diagonal tail exact rational single subchunk")
+        print(f"  X                         = {X}")
+        print(f"  tail support card         = {len(tail_support)}")
+        print(f"  chunk size                = {chunk_size}")
+        print(f"  subchunk size             = {subchunk_size}")
+        print(f"  chunk index               = {chunk_index}")
+        print(f"  subchunk index            = {subchunk_index}")
+        print(f"  support indices           = [{abs_start}, {abs_end})")
+        print(f"  q range                   = [{sub_support[0]}, {sub_support[-1]}]")
+        print(f"  rational numerator        = {sub_total.numerator}")
+        print(f"  rational denominator      = {sub_total.denominator}")
+        print(f"  Lean ℚ literal            = {fraction_to_q_literal(sub_total)}")
+        print(f"  float value               = {float(sub_total):.15f}")
+        print("  Lean payload")
+        print(f"def {sub_name} : ℚ := {fraction_to_q_literal(sub_total)}")
+        print(f"-- support def: {sub_support_name}")
+        part_size = max(0, args.diag_tail_one_subchunk_part_size)
+        if part_size > 0:
+            print(f"  part size                 = {part_size}")
+            part_names = []
+            part_support_names = []
+            print("  Part table")
+            for part_index, part_start in enumerate(range(0, len(sub_support), part_size)):
+                part_support = sub_support[part_start:part_start + part_size]
+                part_total = Fraction(0, 1)
+                for q in part_support:
+                    part_total += surrogate_diagonal_energy_q_rat(
+                        X, q, mu, phi, even_window, even_window_card
+                    )
+                part_name = f"{sub_name}Part{part_index:03d}"
+                part_support_name = f"{sub_support_name}Part{part_index:03d}Explicit"
+                part_names.append(part_name)
+                part_support_names.append(part_support_name)
+                part_abs_start = abs_start + part_start
+                part_abs_end = part_abs_start + len(part_support)
+                print(
+                    f"    part {part_index:03d}: idx=[{part_abs_start},{part_abs_end}) "
+                    f"q=[{part_support[0]},{part_support[-1]}] "
+                    f"value={fraction_to_q_literal(part_total)}"
+                )
+                print(f"def {part_name} : ℚ := {fraction_to_q_literal(part_total)}")
+                print(
+                    f"def {part_support_name} : Finset ℕ := "
+                    f"{nat_list_to_lean_finset_literal(part_support)}"
+                )
+                print(f"theorem {theorem_stub_name}Part{part_index:03d} :")
+                print(f"    (∑ q ∈ {part_support_name},")
+                print("        surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+                print(f"      = {part_name} := by")
+                print(
+                    f"  -- part {part_index:03d} of subchunk {subchunk_index:03d} "
+                    f"covers tail-support indices [{part_abs_start},{part_abs_end}) "
+                    f"and q from {part_support[0]} to {part_support[-1]}"
+                )
+                print("  -- generated certificate proof")
+                print()
+            print(
+                f"def {sub_support_name}Explicit : Finset ℕ := "
+                f"{nat_list_to_lean_finset_literal(sub_support)}"
+            )
+            part_sum_expr = " + ".join(part_names) if part_names else "(0 : ℚ)"
+            print(f"theorem {sub_name}_eq_part_sum :")
+            print(f"    {part_sum_expr} = {sub_name} := by")
+            print(f"  norm_num [{sub_name},")
+            for i, name in enumerate(part_names):
+                comma = "," if i + 1 < len(part_names) else ""
+                print(f"    {name}{comma}")
+            print("  ]")
+            print(f"theorem {theorem_stub_name} :")
+            print(f"    (∑ q ∈ {sub_support_name}Explicit,")
+            print("        surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+            print(f"      = {sub_name} := by")
+            print(
+                f"  -- combine the part certificates for subchunk {subchunk_index:03d}"
+            )
+            print("  -- generated certificate proof")
+        else:
+            print(
+                f"def {sub_support_name}Explicit : Finset ℕ := "
+                f"{nat_list_to_lean_finset_literal(sub_support)}"
+            )
+            print(f"theorem {theorem_stub_name} :")
+            print(f"    (∑ q ∈ {sub_support_name}Explicit,")
+            print("        surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+            print(f"      = {sub_name} := by")
+            print(
+                f"  -- subchunk {subchunk_index:03d} covers tail-support indices [{abs_start},{abs_end}) "
+                f"and q from {sub_support[0]} to {sub_support[-1]}"
+            )
+            print("  -- generated certificate proof")
+        return
+
+    if args.emit_diag_tail_rat_subchunks_for_chunk_index >= 0:
+        if args.true_series:
+            raise SystemExit("--emit-diag-tail-rat-subchunks-for-chunk-index is only implemented for the surrogate normalization")
+        chunk_size = max(1, args.diag_tail_chunk_size)
+        subchunk_size = max(1, args.diag_tail_subchunk_size)
+        tail_support = [
+            q for q in support
+            if q not in DIAG_MAIN_LOW_Q and q > 50
+        ]
+        chunk_count = math.ceil(len(tail_support) / chunk_size)
+        chunk_index = args.emit_diag_tail_rat_subchunks_for_chunk_index
+        if chunk_index >= chunk_count:
+            raise SystemExit(
+                f"--emit-diag-tail-rat-subchunks-for-chunk-index={chunk_index} out of range for "
+                f"{chunk_count} chunks with size {chunk_size}"
+            )
+        start_idx = chunk_index * chunk_size
+        chunk_support = tail_support[start_idx:start_idx + chunk_size]
+        chunk_end_idx = start_idx + len(chunk_support)
+        chunk_total = Fraction(0, 1)
+        subchunk_payloads = []
+        started = time.time()
+        chunk_label = f"{chunk_index:03d}"
+        support_name = (
+            "centeredNormalizedSigmaTruncSurrogateDiagonalTailChunk000SupportAtX0"
+            if chunk_index == 0
+            else "centeredNormalizedSigmaTruncSurrogateDiagonalTailChunk001SupportAtX0"
+        )
+        cert_name = (
+            "surrogateDiagTailX0RatChunk000"
+            if chunk_index == 0
+            else "surrogateDiagTailX0RatChunk001"
+        )
+        theorem_name = (
+            "CenteredNormalizedSigmaTruncSurrogateDiagonalTailChunk000RatCertificateAtX0"
+            if chunk_index == 0
+            else "CenteredNormalizedSigmaTruncSurrogateDiagonalTailChunk001RatCertificateAtX0"
+        )
+        wrapper_name = (
+            "centeredNormalizedSigmaTruncSurrogateDiagonalTailChunk000RatCertificateAtX0_of_eq_cert"
+            if chunk_index == 0
+            else "centeredNormalizedSigmaTruncSurrogateDiagonalTailChunk001RatCertificateAtX0_of_eq_cert"
+        )
+        for subchunk_index, sub_start in enumerate(range(0, len(chunk_support), subchunk_size)):
+            sub_support = chunk_support[sub_start:sub_start + subchunk_size]
+            sub_total = Fraction(0, 1)
+            for q in sub_support:
+                sub_total += surrogate_diagonal_energy_q_rat(
+                    X, q, mu, phi, even_window, even_window_card
+                )
+            chunk_total += sub_total
+            subchunk_payloads.append(
+                (
+                    subchunk_index,
+                    start_idx + sub_start,
+                    start_idx + sub_start + len(sub_support),
+                    sub_support[0],
+                    sub_support[-1],
+                    sub_total,
+                )
+            )
+            if args.progress:
+                elapsed = time.time() - started
+                print(
+                    f"[diag-tail-rat-subchunks] chunk={chunk_index}/{chunk_count} "
+                    f"subchunk={subchunk_index + 1}/{math.ceil(len(chunk_support) / subchunk_size)} "
+                    f"q={sub_start + len(sub_support)}/{len(chunk_support)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+        print("Surrogate diagonal tail exact rational subchunks")
+        print(f"  X                         = {X}")
+        print(f"  tail support card         = {len(tail_support)}")
+        print(f"  chunk size                = {chunk_size}")
+        print(f"  subchunk size             = {subchunk_size}")
+        print(f"  chunk index               = {chunk_index}")
+        print(f"  chunk support indices     = [{start_idx}, {chunk_end_idx})")
+        print(f"  chunk q range             = [{chunk_support[0]}, {chunk_support[-1]}]")
+        print(f"  chunk rational numerator  = {chunk_total.numerator}")
+        print(f"  chunk rational denominator= {chunk_total.denominator}")
+        print(f"  chunk Lean ℚ literal      = {fraction_to_q_literal(chunk_total)}")
+        print(f"  chunk float value         = {float(chunk_total):.15f}")
+        print("  Subchunk table")
+        for subchunk_index, abs_start, abs_end, first_q, last_q, sub_total in subchunk_payloads:
+            print(
+                f"    subchunk {subchunk_index:03d}: idx=[{abs_start},{abs_end}) "
+                f"q=[{first_q},{last_q}] value={fraction_to_q_literal(sub_total)}"
+            )
+        print("  Lean payload")
+        subchunk_names = []
+        subchunk_support_names = []
+        for subchunk_index, abs_start, abs_end, first_q, last_q, sub_total in subchunk_payloads:
+            sub_name = f"surrogateDiagTailX0RatChunk{chunk_label}Sub{subchunk_index:03d}"
+            sub_support_name = (
+                f"centeredNormalizedSigmaTruncSurrogateDiagonalTailChunk{chunk_label}"
+                f"Sub{subchunk_index:03d}SupportAtX0"
+            )
+            subchunk_names.append(sub_name)
+            subchunk_support_names.append(sub_support_name)
+            print(f"def {sub_name} : ℚ := {fraction_to_q_literal(sub_total)}")
+            print(
+                f"-- subchunk {subchunk_index:03d} covers tail-support indices [{abs_start},{abs_end}) "
+                f"and q from {first_q} to {last_q}"
+            )
+            print(f"-- support def: {sub_support_name}")
+        subchunk_sum_expr = " + ".join(subchunk_names) if subchunk_names else "(0 : ℚ)"
+        print()
+        print(f"theorem {cert_name}_eq_subchunk_sum :")
+        print(f"    {subchunk_sum_expr} = {cert_name} := by")
+        print(f"  norm_num [{cert_name},")
+        for i, name in enumerate(subchunk_names):
+            comma = "," if i + 1 < len(subchunk_names) else ""
+            print(f"    {name}{comma}")
+        print("  ]")
+        print()
+        print("  Lean goal stubs for the remaining exact equalities")
+        for subchunk_index, abs_start, abs_end, first_q, last_q, _sub_total in subchunk_payloads:
+            sub_name = subchunk_names[subchunk_index]
+            sub_support_name = subchunk_support_names[subchunk_index]
+            theorem_stub_name = f"surrogateDiagonalTailChunk{chunk_label}Sub{subchunk_index:03d}_eq_cert"
+            print(f"-- theorem {theorem_stub_name} :")
+            print(f"--     (∑ q ∈ {sub_support_name},")
+            print("--         surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+            print(f"--       = {sub_name} := by")
+            print(
+                f"--   -- subchunk {subchunk_index:03d} covers tail-support indices [{abs_start},{abs_end}) "
+                f"and q from {first_q} to {last_q}"
+            )
+            print("--   -- generated certificate proof")
+        print()
+        print(f"theorem surrogateDiagonalTailChunk{chunk_label}_eq_cert_of_subchunked_sum")
+        print("    (hsubchunked :")
+        print(f"      (∑ q ∈ {support_name},")
+        print("          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+        print(f"        = {subchunk_sum_expr}) :")
+        print(f"    {theorem_name} := by")
+        print(f"  apply {wrapper_name}")
+        print(f"  rw [hsubchunked, {cert_name}_eq_subchunk_sum]")
+        return
+
     if args.emit_periodic_main_rat_total:
         if args.true_series:
             raise SystemExit("--emit-periodic-main-rat-total is only implemented for the surrogate normalization")
@@ -3518,6 +3999,11 @@ def main() -> None:
         print(f"  float value               = {float(total_rat):.15f}")
         print("  Lean payload")
         print(f"def surrogatePeriodicMainX0RatCert : ℚ := {fraction_to_q_literal(total_rat)}")
+        print()
+        print("-- theorem surrogatePeriodicMainRat_X0_eq_cert :")
+        print("--     surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat X0")
+        print("--       = surrogatePeriodicMainX0RatCert := by")
+        print("--   -- generated certificate proof")
         print()
         print("theorem surrogatePeriodicMainX0RatCert_abs_le_check :")
         print("    |(surrogatePeriodicMainX0RatCert : ℝ)| ≤ surrogatePeriodicMainX0Check.lhs := by")
