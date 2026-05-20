@@ -444,6 +444,89 @@ def surrogate_diagonal_energy_q_rat(
     )
 
 
+def even_window_progression(X: int) -> tuple[int, int]:
+    first_even = X if X % 2 == 0 else X + 1
+    return first_even, ((H + 1) + 1) // 2
+
+
+def build_surrogate_diagonal_exact_context(
+    mu: list[int],
+    phi: list[int],
+    spf: list[int],
+    support: list[int],
+) -> dict[str, object]:
+    coeff_rat: dict[int, Fraction] = {}
+    divisors_by_q: dict[int, list[int]] = {}
+    gcd_coeff_by_q: dict[int, dict[int, Fraction]] = {}
+
+    for q in support:
+        coeff_rat[q] = surrogate_coeff_rat(q, mu, phi)
+        fac_q = factorization(q, spf)
+        divs_q = divisors_from_factorization(fac_q)
+        divisors_by_q[q] = divs_q
+        gcd_coeff_by_q[q] = {
+            g: ramanujan_gcd_class_coeff_rat(q, g, mu, phi)
+            for g in divs_q
+        }
+
+    return {
+        "mu": mu,
+        "spf": spf,
+        "coeff_rat": coeff_rat,
+        "divisors_by_q": divisors_by_q,
+        "gcd_coeff_by_q": gcd_coeff_by_q,
+        "divisor_list_cache": {},
+        "divisibility_count_cache": {},
+        "gcd_class_count_cache": {},
+    }
+
+
+def centered_ramanujan_window_average_rat_cached(
+    X: int,
+    q: int,
+    even_window_card: int,
+    ctx: dict[str, object],
+) -> Fraction:
+    first_even, even_count = even_window_progression(X)
+    divs_q = ctx["divisors_by_q"][q]
+    coeff_q = ctx["gcd_coeff_by_q"][q]
+    total = Fraction(0, 1)
+    for g in divs_q:
+        count_g = gcd_class_count_in_even_progression(q, g, first_even, even_count, ctx)
+        total += coeff_q[g] * count_g
+    return total / even_window_card
+
+
+def centered_ramanujan_window_energy_rat_cached(
+    X: int,
+    q: int,
+    even_window_card: int,
+    ctx: dict[str, object],
+) -> Fraction:
+    first_even, even_count = even_window_progression(X)
+    divs_q = ctx["divisors_by_q"][q]
+    coeff_q = ctx["gcd_coeff_by_q"][q]
+    avg = centered_ramanujan_window_average_rat_cached(X, q, even_window_card, ctx)
+    total = Fraction(0, 1)
+    for g in divs_q:
+        count_g = gcd_class_count_in_even_progression(q, g, first_even, even_count, ctx)
+        obs = coeff_q[g] - avg
+        total += count_g * obs * obs
+    return total
+
+
+def surrogate_diagonal_energy_q_rat_cached(
+    X: int,
+    q: int,
+    even_window_card: int,
+    ctx: dict[str, object],
+) -> Fraction:
+    return (
+        ctx["coeff_rat"][q] ** 2
+        * centered_ramanujan_window_energy_rat_cached(X, q, even_window_card, ctx)
+    )
+
+
 def ramanujan_gcd_class_window_average_rat(
     X: int, q: int, g: int, even_window_card: int
 ) -> Fraction:
@@ -966,6 +1049,16 @@ def main() -> None:
                     help="With --emit-diag-tail-rat-one-subchunk-for-chunk-index, choose the subchunk index inside the chunk.")
     ap.add_argument("--diag-tail-one-subchunk-part-size", type=int, default=0,
                     help="If positive, split the selected one-subchunk payload into smaller explicit part supports of this size.")
+    ap.add_argument("--emit-diag-tail-direct-term-block-module-for-chunk-index", type=int, default=-1,
+                    help="Emit a Lean module for direct term-certificate blocks inside one surrogate diagonal-tail subchunk.")
+    ap.add_argument("--diag-tail-block-size", type=int, default=25,
+                    help="Block size, in terms, for --emit-diag-tail-direct-term-block-module-for-chunk-index.")
+    ap.add_argument("--diag-tail-block-start-index", type=int, default=0,
+                    help="Starting block index inside the selected subchunk for --emit-diag-tail-direct-term-block-module-for-chunk-index.")
+    ap.add_argument("--diag-tail-block-count", type=int, default=1,
+                    help="Number of consecutive blocks to emit for --emit-diag-tail-direct-term-block-module-for-chunk-index.")
+    ap.add_argument("--diag-tail-module-name", type=str, default="",
+                    help="Optional output module basename for --emit-diag-tail-direct-term-block-module-for-chunk-index.")
     ap.add_argument("--emit-periodic-main-rat-total", action="store_true",
                     help="Emit the exact surrogate periodic-main rational total at the current X as a Lean ℚ literal.")
     ap.add_argument("--emit-boundary-pair-rat", nargs=2, type=int, metavar=("Q", "Q2"),
@@ -3507,15 +3600,12 @@ def main() -> None:
         q = args.emit_diag_single_q_rat_data
         if q < 1 or q > Q0:
             raise SystemExit(f"--emit-diag-single-q-rat-data={q} is out of range 1..{Q0}")
+        diag_ctx = build_surrogate_diagonal_exact_context(mu, phi, spf, [q])
         fac_q = factorization(q, spf)
         divs_q = divisors_from_factorization(fac_q)
         coeff_q = surrogate_coeff_rat(q, mu, phi)
-        energy_q = centered_ramanujan_window_energy_rat(
-            X, q, mu, phi, even_window, even_window_card
-        )
-        term_q = surrogate_diagonal_energy_q_rat(
-            X, q, mu, phi, even_window, even_window_card
-        )
+        energy_q = centered_ramanujan_window_energy_rat_cached(X, q, even_window_card, diag_ctx)
+        term_q = surrogate_diagonal_energy_q_rat_cached(X, q, even_window_card, diag_ctx)
         print("Surrogate diagonal single-q exact rational data")
         print(f"  X                         = {X}")
         print(f"  q                         = {q}")
@@ -3527,8 +3617,13 @@ def main() -> None:
         print(f"  term rat                  = {fraction_to_q_literal(term_q)}")
         print("  gcd-class table")
         for g in divs_q:
-            avg_g = ramanujan_gcd_class_window_average_rat(X, q, g, even_window_card)
-            count_g = avg_g * even_window_card
+            count_g = Fraction(
+                gcd_class_count_in_even_progression(
+                    q, g, even_window_progression(X)[0], even_window_progression(X)[1], diag_ctx
+                ),
+                1,
+            )
+            avg_g = count_g / even_window_card
             coeff_g = ramanujan_gcd_class_coeff_rat(q, g, mu, phi)
             print(
                 "    "
@@ -3814,6 +3909,223 @@ def main() -> None:
                 f"and q from {sub_support[0]} to {sub_support[-1]}"
             )
             print("  -- generated certificate proof")
+        return
+
+    if args.emit_diag_tail_direct_term_block_module_for_chunk_index >= 0:
+        if args.true_series:
+            raise SystemExit("--emit-diag-tail-direct-term-block-module-for-chunk-index is only implemented for the surrogate normalization")
+        if args.diag_tail_subchunk_index < 0:
+            raise SystemExit("--emit-diag-tail-direct-term-block-module-for-chunk-index requires --diag-tail-subchunk-index")
+        chunk_size = max(1, args.diag_tail_chunk_size)
+        subchunk_size = max(1, args.diag_tail_subchunk_size)
+        block_size = max(1, args.diag_tail_block_size)
+        block_start_index = max(0, args.diag_tail_block_start_index)
+        block_count = max(1, args.diag_tail_block_count)
+        tail_support = [
+            q for q in support
+            if q not in DIAG_MAIN_LOW_Q and q > 50
+        ]
+        chunk_count = math.ceil(len(tail_support) / chunk_size)
+        chunk_index = args.emit_diag_tail_direct_term_block_module_for_chunk_index
+        if chunk_index >= chunk_count:
+            raise SystemExit(
+                f"--emit-diag-tail-direct-term-block-module-for-chunk-index={chunk_index} out of range for "
+                f"{chunk_count} chunks with size {chunk_size}"
+            )
+        start_idx = chunk_index * chunk_size
+        chunk_support = tail_support[start_idx:start_idx + chunk_size]
+        subchunk_count = math.ceil(len(chunk_support) / subchunk_size)
+        subchunk_index = args.diag_tail_subchunk_index
+        if subchunk_index >= subchunk_count:
+            raise SystemExit(
+                f"--diag-tail-subchunk-index={subchunk_index} out of range for "
+                f"{subchunk_count} subchunks in chunk {chunk_index}"
+            )
+        sub_start = subchunk_index * subchunk_size
+        sub_support = chunk_support[sub_start:sub_start + subchunk_size]
+        block_total_count = math.ceil(len(sub_support) / block_size)
+        if block_start_index >= block_total_count:
+            raise SystemExit(
+                f"--diag-tail-block-start-index={block_start_index} out of range for "
+                f"{block_total_count} blocks of size {block_size}"
+            )
+        block_end_index = min(block_total_count, block_start_index + block_count)
+        if block_start_index >= block_end_index:
+            raise SystemExit("empty block range requested")
+
+        chunk_label = f"{chunk_index:03d}"
+        sub_label = f"{subchunk_index:03d}"
+        module_basename = (
+            args.diag_tail_module_name.strip()
+            or f"Q0MinorZeroModeNormalizedAverageX0TailChunk{chunk_label}Sub{sub_label}"
+        )
+        requested_block_support: list[int] = []
+        for block_index in range(block_start_index, block_end_index):
+            block_rel_start = block_index * block_size
+            requested_block_support.extend(
+                sub_support[block_rel_start:block_rel_start + block_size]
+            )
+        diag_ctx = build_surrogate_diagonal_exact_context(
+            mu, phi, spf, requested_block_support
+        )
+
+        def qlit(frac: Fraction) -> str:
+            return fraction_to_q_literal(frac)
+
+        def emit_sum_def(name: str, support_names: list[str]) -> None:
+            if not support_names:
+                print(f"def {name} (X0 : ℕ) : ℚ := (0 : ℚ)")
+                return
+            print(f"def {name} (X0 : ℕ) : ℚ :=")
+            for i, support_name in enumerate(support_names):
+                prefix = "  " if i == 0 else "    + "
+                print(
+                    f"{prefix}(∑ q ∈ {support_name},"
+                )
+                print(
+                    "        surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)"
+                )
+
+        def emit_const_def(name: str, part_names: list[str]) -> None:
+            if not part_names:
+                print(f"def {name} : ℚ := (0 : ℚ)")
+                return
+            print(f"def {name} : ℚ :=")
+            for i, part_name in enumerate(part_names):
+                prefix = "  " if i == 0 else "    + "
+                print(f"{prefix}{part_name}")
+
+        print("import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0TailPilot25")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open scoped BigOperators")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print(
+            f"/- Generated direct-term certificate blocks for tail chunk {chunk_label}, "
+            f"subchunk {sub_label}, blocks [{block_start_index},{block_end_index}). -/"
+        )
+        print()
+
+        for block_index in range(block_start_index, block_end_index):
+            block_rel_start = block_index * block_size
+            block_support = sub_support[block_rel_start:block_rel_start + block_size]
+            block_abs_start = start_idx + sub_start + block_rel_start
+            block_abs_end = block_abs_start + len(block_support)
+            block_name = f"surrogateDiagTailX0RatChunk{chunk_label}Sub{sub_label}Block{block_index:03d}"
+            block_sum_name = f"surrogateDiagonalTailChunk{chunk_label}Sub{sub_label}Block{block_index:03d}Sum"
+            block_label = f"TailChunk{chunk_label}Sub{sub_label}Block{block_index:03d}"
+            print(
+                f"/-- Block {block_index:03d} covers tail-support indices "
+                f"[{block_abs_start},{block_abs_end}) and q from {block_support[0]} to {block_support[-1]}. -/"
+            )
+            print()
+
+            part_names: list[str] = []
+            support_names: list[str] = []
+            part_totals: list[Fraction] = []
+
+            for part_index, q in enumerate(block_support):
+                term_total = surrogate_diagonal_energy_q_rat_cached(
+                    X, q, even_window_card, diag_ctx
+                )
+                part_name = f"{block_name}Part{part_index:03d}"
+                support_name = f"{block_label}Part{part_index:03d}SupportExplicit"
+                cert_name = f"SurrogateDiagonal{block_label}Part{part_index:03d}CertificateAtX0"
+                theorem_name = f"surrogateDiagonal{block_label}Part{part_index:03d}_eq_cert_explicit"
+                part_names.append(part_name)
+                support_names.append(support_name)
+                part_totals.append(term_total)
+                print(f"def {support_name} : Finset ℕ :=")
+                print(f"  {nat_list_to_lean_finset_literal([q])}")
+                print()
+                print(f"def {part_name} : ℚ :=")
+                print(f"  {qlit(term_total)}")
+                print()
+                print(f"def {cert_name} : Prop :=")
+                print(
+                    f"  surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 {q}"
+                )
+                print(f"    = {part_name}")
+                print()
+                print(f"theorem {theorem_name} :")
+                print(f"    {cert_name} →")
+                print(f"    (∑ q ∈ {support_name},")
+                print("        surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+                print(f"      = {part_name} := by")
+                print("  intro hcert")
+                print(f"  unfold {cert_name} at hcert")
+                print(f"  simpa [{support_name}, {part_name}] using hcert")
+                print()
+
+            head_parts = list(range(0, min(10, len(part_names))))
+            mid_parts = list(range(min(10, len(part_names)), min(20, len(part_names))))
+            tail_parts = list(range(min(20, len(part_names)), len(part_names)))
+
+            head_sum_name = f"surrogateDiagonal{block_label}HeadSum"
+            mid_sum_name = f"surrogateDiagonal{block_label}MidSum"
+            tail_sum_name = f"surrogateDiagonal{block_label}TailSum"
+            head_const_name = f"{block_name}Head"
+            mid_const_name = f"{block_name}Mid"
+            tail_const_name = f"{block_name}Tail"
+            head_cert_name = f"SurrogateDiagonal{block_label}HeadCertificateAt"
+            mid_cert_name = f"SurrogateDiagonal{block_label}MidCertificateAt"
+            tail_cert_name = f"SurrogateDiagonal{block_label}TailCertificateAt"
+            arith_name = f"{block_name}_eq_head_add_mid_add_tail"
+            block_theorem_name = f"surrogateDiagonal{block_label}_eq_cert_explicit"
+
+            emit_sum_def(head_sum_name, [support_names[i] for i in head_parts])
+            print()
+            emit_const_def(head_const_name, [part_names[i] for i in head_parts])
+            print()
+            emit_sum_def(mid_sum_name, [support_names[i] for i in mid_parts])
+            print()
+            emit_const_def(mid_const_name, [part_names[i] for i in mid_parts])
+            print()
+            emit_sum_def(tail_sum_name, [support_names[i] for i in tail_parts])
+            print()
+            emit_const_def(tail_const_name, [part_names[i] for i in tail_parts])
+            print()
+            print(f"def {block_sum_name} (X0 : ℕ) : ℚ :=")
+            print(f"  {head_sum_name} X0")
+            print(f"    + {mid_sum_name} X0")
+            print(f"    + {tail_sum_name} X0")
+            print()
+            emit_const_def(block_name, part_names)
+            print()
+            print(f"theorem {arith_name} :")
+            print(f"    {head_const_name} + {mid_const_name} + {tail_const_name} =")
+            print(f"      {block_name} := by")
+            print(f"  unfold {head_const_name} {mid_const_name} {tail_const_name} {block_name}")
+            print("  ring")
+            print()
+            print(f"def {head_cert_name} (X0 : ℕ) : Prop :=")
+            print(f"  {head_sum_name} X0 = {head_const_name}")
+            print()
+            print(f"def {mid_cert_name} (X0 : ℕ) : Prop :=")
+            print(f"  {mid_sum_name} X0 = {mid_const_name}")
+            print()
+            print(f"def {tail_cert_name} (X0 : ℕ) : Prop :=")
+            print(f"  {tail_sum_name} X0 = {tail_const_name}")
+            print()
+            print(f"theorem {block_theorem_name}")
+            print(f"    (hHead : {head_cert_name} X0)")
+            print(f"    (hMid : {mid_cert_name} X0)")
+            print(f"    (hTail : {tail_cert_name} X0) :")
+            print(f"    {block_sum_name} X0 = {block_name} := by")
+            print(f"  unfold {head_cert_name} at hHead")
+            print(f"  unfold {mid_cert_name} at hMid")
+            print(f"  unfold {tail_cert_name} at hTail")
+            print(f"  unfold {block_sum_name}")
+            print("  rw [hHead, hMid, hTail]")
+            print(f"  exact {arith_name}")
+            print()
+
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
         return
 
     if args.emit_diag_tail_rat_subchunks_for_chunk_index >= 0:
