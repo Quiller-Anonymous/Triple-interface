@@ -34,6 +34,8 @@ import argparse
 import heapq
 import json
 import math
+import multiprocessing
+import os
 import sys
 import time
 from collections import Counter, defaultdict
@@ -45,6 +47,9 @@ H = 10_000
 Q0 = 30_000
 C2_NUMERIC = 0.1
 DIAG_MAIN_LOW_Q = {3, 5, 6, 7, 10, 14}
+
+
+_BOUNDARY_EXACT_PARALLEL_GLOBALS: dict[str, object] = {}
 
 
 def mobius_phi_sieve(n: int) -> tuple[list[int], list[int]]:
@@ -745,6 +750,100 @@ def surrogate_boundary_pair_contribution_rat_cached(
     )
 
 
+def _boundary_exact_parallel_eval_chunk(
+    chunk_start: int,
+    chunk_end: int,
+    chunk_blocks: list[tuple[tuple[int, int], int]],
+) -> tuple[dict[str, object], float]:
+    g = _BOUNDARY_EXACT_PARALLEL_GLOBALS
+    X = int(g["X"])
+    exact_ctx = g["exact_ctx"]
+    total_pairs = int(g["total_pairs"])
+    total_active_blocks = int(g["total_active_blocks"])
+    active_support_card = int(g["active_support_card"])
+    progress = bool(g["progress"])
+    progress_every = int(g["progress_every"])
+    block_progress_every = min(
+        max(1, min(max(progress_every, 1), max(1, len(chunk_blocks) // 10))),
+        50_000,
+    )
+    processed = 0
+    started = time.time()
+    chunk_total = Fraction(0, 1)
+    chunk_abs_total = Fraction(0, 1)
+    for pattern, G in chunk_blocks:
+        m, n = pattern
+        q = G * m
+        q2 = G * n
+        val = 2 * surrogate_boundary_pair_contribution_rat_cached(X, q, q2, exact_ctx)
+        abs_val = abs(val)
+        chunk_total += val
+        chunk_abs_total += abs_val
+        processed += 1
+        if progress and processed % block_progress_every == 0:
+            elapsed = time.time() - started
+            print(
+                f"[boundary-signed-split-exact:worker] processed_blocks={processed}/{len(chunk_blocks)} "
+                f"chunk=[{chunk_start},{chunk_end}) elapsed={elapsed:.1f}s",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    elapsed_sec = time.time() - started
+    payload = {
+        "mode": "boundary-signed-split-exact-chunk",
+        "X": X,
+        "active_support_card": active_support_card,
+        "active_ordered_pairs": total_pairs,
+        "total_active_blocks": total_active_blocks,
+        "block_range": [chunk_start, chunk_end],
+        "start": chunk_start,
+        "end": chunk_end,
+        "chunk_total_num": chunk_total.numerator,
+        "chunk_total_den": chunk_total.denominator,
+        "chunk_abs_total_num": chunk_abs_total.numerator,
+        "chunk_abs_total_den": chunk_abs_total.denominator,
+        "elapsed_sec": elapsed_sec,
+    }
+    return payload, elapsed_sec
+
+
+def _boundary_exact_parallel_worker(task: tuple[int, int]) -> dict[str, object]:
+    g = _BOUNDARY_EXACT_PARALLEL_GLOBALS
+    checkpoint_dir = str(g["checkpoint_dir"])
+    skip_existing = bool(g["skip_existing_chunks"])
+    start_ref = int(g["start"])
+    all_blocks = g["all_blocks"]
+    chunk_start, chunk_end = task
+    out_path = os.path.join(
+        checkpoint_dir,
+        f"boundary_active_exact_chunk_{chunk_start:07d}_{chunk_end:07d}.json",
+    )
+    if skip_existing and os.path.exists(out_path):
+        return {
+            "status": "skipped",
+            "chunk_start": chunk_start,
+            "chunk_end": chunk_end,
+            "out_path": out_path,
+        }
+    payload, elapsed_sec = _boundary_exact_parallel_eval_chunk(
+        chunk_start,
+        chunk_end,
+        all_blocks[chunk_start - start_ref:chunk_end - start_ref],
+    )
+    with open(out_path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2, sort_keys=True)
+    return {
+        "status": "written",
+        "chunk_start": chunk_start,
+        "chunk_end": chunk_end,
+        "out_path": out_path,
+        "elapsed_sec": elapsed_sec,
+        "chunk_total_num": payload["chunk_total_num"],
+        "chunk_total_den": payload["chunk_total_den"],
+    }
+
+
 def definitely_zero_surrogate_boundary_pair(q: int, q2: int) -> bool:
     if q == q2:
         return True
@@ -789,6 +888,120 @@ def build_active_boundary_block_table(
     return dict(pair_count_by_block), total_pairs
 
 
+def v2_adic(n: int) -> int:
+    out = 0
+    while n % 2 == 0 and n > 0:
+        n //= 2
+        out += 1
+    return out
+
+
+def odd_radical_from_spf(n: int, spf: list[int]) -> int:
+    if n <= 1:
+        return 1
+    fac = factorization(n, spf)
+    out = 1
+    for p, _ in fac:
+        if p != 2:
+            out *= p
+    return out
+
+
+def prime_support_from_spf(n: int, spf: list[int]) -> tuple[int, ...]:
+    if n <= 1:
+        return ()
+    return tuple(sorted(factorization(n, spf).keys()))
+
+
+def evaluate_exact_boundary_pattern_family(
+    *,
+    X: int,
+    target_pattern: tuple[int, int],
+    family_scope: list[int],
+    pair_count_by_block: dict[tuple[tuple[int, int], int], int],
+    total_pairs: int,
+    mu: list[int],
+    phi: list[int],
+    spf: list[int],
+    even_window_card: int,
+    progress: bool,
+    progress_every: int,
+) -> dict[str, object]:
+    family_blocks = sorted(
+        [block for block in pair_count_by_block if block[0] == target_pattern],
+        key=lambda block: block[1],
+    )
+    if not family_blocks:
+        raise SystemExit(f"no active boundary blocks found for pattern {target_pattern[0]}:{target_pattern[1]}")
+
+    q_needed_exact: set[int] = set()
+    for _, G in family_blocks:
+        q_needed_exact.add(G * target_pattern[0])
+        q_needed_exact.add(G * target_pattern[1])
+
+    exact_ctx = build_surrogate_boundary_exact_context(
+        X, mu, phi, spf, even_window_card, sorted(q_needed_exact),
+        progress=progress,
+        progress_every_q=max(1, progress_every),
+    )
+
+    family_signed = Fraction(0, 1)
+    family_abs = Fraction(0, 1)
+    elapsed_by_block: dict[tuple[tuple[int, int], int], float] = {}
+    signed_by_block: dict[tuple[tuple[int, int], int], Fraction] = {}
+    abs_by_block: dict[tuple[tuple[int, int], int], Fraction] = {}
+    g_prime_support_signed: dict[tuple[int, ...], Fraction] = defaultdict(lambda: Fraction(0, 1))
+    g_prime_support_abs: dict[tuple[int, ...], Fraction] = defaultdict(lambda: Fraction(0, 1))
+    g_prime_support_count: Counter[tuple[int, ...]] = Counter()
+
+    started = time.time()
+    for i, block in enumerate(family_blocks, start=1):
+        _, G = block
+        q = G * target_pattern[0]
+        q2 = G * target_pattern[1]
+        t0 = time.perf_counter()
+        val = 2 * surrogate_boundary_pair_contribution_rat_cached(X, q, q2, exact_ctx)
+        elapsed = time.perf_counter() - t0
+        abs_val = abs(val)
+        elapsed_by_block[block] = elapsed
+        signed_by_block[block] = val
+        abs_by_block[block] = abs_val
+        family_signed += val
+        family_abs += abs_val
+        sig = prime_support_from_spf(G, spf)
+        g_prime_support_signed[sig] += val
+        g_prime_support_abs[sig] += abs_val
+        g_prime_support_count[sig] += 1
+        if progress and i % max(1, min(progress_every, 200)) == 0:
+            elapsed_total = time.time() - started
+            print(
+                f"[boundary-pattern-family-exact] pattern={target_pattern[0]}:{target_pattern[1]} "
+                f"processed_G={i}/{len(family_blocks)} elapsed={elapsed_total:.1f}s",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    total_elapsed = time.time() - started
+    pair_mass = sum(pair_count_by_block[block] for block in family_blocks)
+    return {
+        "pattern": target_pattern,
+        "scope_card": len(family_scope),
+        "total_pairs": total_pairs,
+        "g_count": len(family_blocks),
+        "pair_mass": pair_mass,
+        "signed": family_signed,
+        "abs": family_abs,
+        "elapsed_sec": total_elapsed,
+        "elapsed_by_block": elapsed_by_block,
+        "signed_by_block": signed_by_block,
+        "abs_by_block": abs_by_block,
+        "g_prime_support_signed": g_prime_support_signed,
+        "g_prime_support_abs": g_prime_support_abs,
+        "g_prime_support_count": g_prime_support_count,
+        "family_blocks": family_blocks,
+    }
+
+
 def parse_selected_patterns(raw_patterns: list[str]) -> set[tuple[int, int]]:
     selected_patterns: set[tuple[int, int]] = set()
     for raw in raw_patterns:
@@ -801,6 +1014,23 @@ def parse_selected_patterns(raw_patterns: list[str]) -> set[tuple[int, int]]:
             raise SystemExit(f"invalid pattern {raw!r}; entries must be positive")
         selected_patterns.add((m, n) if m <= n else (n, m))
     return selected_patterns
+
+
+def parse_selected_products(raw_products: list[int]) -> set[int]:
+    selected_products: set[int] = set()
+    for prod in raw_products:
+        if prod <= 0:
+            raise SystemExit(f"invalid product class {prod!r}; entries must be positive")
+        selected_products.add(prod)
+    return selected_products
+
+
+def boundary_pattern_is_excluded(
+    pattern: tuple[int, int],
+    excluded_patterns: set[tuple[int, int]],
+    excluded_products: set[int],
+) -> bool:
+    return pattern in excluded_patterns or (pattern[0] * pattern[1]) in excluded_products
 
 
 def classify_signed_boundary_blocks(
@@ -1047,6 +1277,8 @@ def main() -> None:
                     help="Emit Lean-ready exact surrogate diagonal-tail payload for one subchunk of one chunk; requires --diag-tail-subchunk-index and --diag-tail-chunk-size.")
     ap.add_argument("--diag-tail-subchunk-index", type=int, default=-1,
                     help="With --emit-diag-tail-rat-one-subchunk-for-chunk-index, choose the subchunk index inside the chunk.")
+    ap.add_argument("--diag-tail-subchunk-start-offset", type=int, default=-1,
+                    help="Optional explicit start offset inside the selected chunk for subchunk-based tail emitters.")
     ap.add_argument("--diag-tail-one-subchunk-part-size", type=int, default=0,
                     help="If positive, split the selected one-subchunk payload into smaller explicit part supports of this size.")
     ap.add_argument("--emit-diag-tail-direct-term-block-module-for-chunk-index", type=int, default=-1,
@@ -1067,6 +1299,8 @@ def main() -> None:
                     help="Emit the exact surrogate boundary rational total and nonzero ordered-pair count.")
     ap.add_argument("--emit-boundary-rat-terms", action="store_true",
                     help="Emit the finite nonzero ordered-pair rational term list for the surrogate boundary certificate.")
+    ap.add_argument("--boundary-rat-scope", choices=["full", "active"], default="full",
+                    help="Support scope for exact surrogate boundary export modes.")
     ap.add_argument("--include-terms", action="store_true",
                     help="With --emit-boundary-rat-total, also emit the full nonzero ordered-pair rational term list.")
     ap.add_argument("--progress", action="store_true",
@@ -1119,6 +1353,10 @@ def main() -> None:
                     help="How many top G-values to print in --boundary-pattern-family-detail.")
     ap.add_argument("--boundary-pattern-family-cumulative", action="store_true",
                     help="With --boundary-pattern-family-detail, print cumulative abs-mass share by top G-values.")
+    ap.add_argument("--boundary-pattern-family-exact", nargs=2, type=int, metavar=("M", "N"),
+                    help="Evaluate one unordered multiplier pattern M:N exactly as a one-family boundary sum over G.")
+    ap.add_argument("--boundary-pattern-family-exact-batch", nargs="*", default=[],
+                    help="Evaluate several unordered multiplier patterns exactly, written as m:n, and emit one exact rational per family plus a combined total.")
     ap.add_argument("--boundary-selected-block-certificate-report", action="store_true",
                     help="Report selected global top (pattern,G) blocks plus fully expanded chosen residual families, and measure the leftover over the evaluated candidate pool.")
     ap.add_argument("--boundary-family-patterns", nargs="*", default=[],
@@ -1147,10 +1385,66 @@ def main() -> None:
                     help="Report active reversible-block key multiplicities to estimate cache and chunking potential before full signed evaluation.")
     ap.add_argument("--boundary-block-key-top", type=int, default=20,
                     help="How many top repeated keys to print per key family in --boundary-block-key-report.")
+    ap.add_argument("--boundary-pattern-runtime-report", action="store_true",
+                    help="Evaluate exact boundary contributions for the top active multiplier patterns and report per-pattern cost and mass.")
+    ap.add_argument("--boundary-pattern-runtime-top", type=int, default=10,
+                    help="How many active multiplier patterns to evaluate in --boundary-pattern-runtime-report.")
+    ap.add_argument("--boundary-pattern-runtime-top-g", type=int, default=8,
+                    help="How many costly G-values to print inside each pattern in --boundary-pattern-runtime-report.")
+    ap.add_argument("--boundary-pattern-runtime-scope", choices=("active", "full"), default="active",
+                    help="Support scope for --boundary-pattern-runtime-report. 'active' matches the exact boundary payload path.")
+    ap.add_argument("--boundary-family-candidate-report", action="store_true",
+                    help="Rank unevaluated boundary multiplier families by signed float, abs float, and an exact-runtime proxy.")
+    ap.add_argument("--boundary-family-residual-report", action="store_true",
+                    help="Summarize the remaining unevaluated family mass after excluding exact-certified families, without storing full per-pattern float totals.")
+    ap.add_argument("--boundary-residual-structure-report", action="store_true",
+                    help="Summarize the remaining unevaluated residual by broader signed groups such as numerator, dyadic orbit, and denominator bucket.")
+    ap.add_argument("--boundary-residual-other-structure-report", action="store_true",
+                    help="Restrict the residual structure analysis to the 'other' numerator bucket and group it by combined orbit/scale signatures.")
+    ap.add_argument("--boundary-product-candidate-report", action="store_true",
+                    help="Group unevaluated boundary families by product m*n and rank the grouped residual classes by signed/abs float mass and runtime proxy.")
+    ap.add_argument("--exclude-families", nargs="*", default=[],
+                    help="Patterns to exclude from --boundary-family-candidate-report, written as m:n.")
+    ap.add_argument("--exclude-products", nargs="*", type=int, default=[],
+                    help="Product classes m*n to exclude from boundary family/product residual and ranking reports.")
+    ap.add_argument("--boundary-family-candidate-top", type=int, default=30,
+                    help="How many unevaluated families to print in --boundary-family-candidate-report.")
+    ap.add_argument("--boundary-family-candidate-patterns", type=int, default=0,
+                    help="How many unevaluated patterns to float-evaluate after proxy ranking in --boundary-family-candidate-report (0 = use max(top*10, top)).")
+    ap.add_argument("--boundary-residual-structure-top", type=int, default=20,
+                    help="How many top groups to print per table in --boundary-residual-structure-report.")
+    ap.add_argument("--boundary-residual-denominator-bucket", type=int, default=20,
+                    help="Bucket width for denominator n in --boundary-residual-structure-report.")
+    ap.add_argument("--boundary-pattern-family-exact-topn", type=int, default=0,
+                    help="Evaluate the top N unevaluated families exactly after ranking them by the chosen float criterion.")
+    ap.add_argument("--boundary-pattern-family-topn-order", choices=("negative", "positive", "abs", "runtime"), default="negative",
+                    help="Ranking used by --boundary-pattern-family-exact-topn.")
+    ap.add_argument("--boundary-pattern-product-exact-topn", type=int, default=0,
+                    help="Evaluate the top N unevaluated product classes exactly after ranking them by the chosen float criterion.")
+    ap.add_argument("--boundary-pattern-product-topn-order", choices=("negative", "positive", "abs", "runtime"), default="abs",
+                    help="Ranking used by --boundary-pattern-product-exact-topn.")
+    ap.add_argument("--boundary-pattern-product-exact-batch", nargs="*", type=int, default=[],
+                    help="Evaluate the listed product classes exactly as one batch.")
+    ap.add_argument("--boundary-skeleton-report", action="store_true",
+                    help="Report repeated active boundary block signatures to estimate pattern/skeleton compression potential.")
+    ap.add_argument("--boundary-skeleton-top", type=int, default=30,
+                    help="How many top repeated keys to print per family in --boundary-skeleton-report.")
     ap.add_argument("--boundary-signed-split-report", action="store_true",
                     help="Compute the full active-scope signed selected/coh2/incoh split and compare it against the full surrogate boundary via an inactive correction term.")
     ap.add_argument("--boundary-signed-split-fast", action="store_true",
                     help="Fast path for active-scope signed split evaluation and chunk export. Skips unrelated full boundary pipeline work.")
+    ap.add_argument("--boundary-signed-split-exact", action="store_true",
+                    help="Exact path for active-scope signed split evaluation and chunk export.")
+    ap.add_argument("--boundary-signed-split-exact-parallel", action="store_true",
+                    help="Run exact active-scope chunk emission in parallel after one parent-side setup using forked workers.")
+    ap.add_argument("--workers", type=int, default=1,
+                    help="Worker count for --boundary-signed-split-exact-parallel.")
+    ap.add_argument("--batch-size", type=int, default=0,
+                    help="With --boundary-signed-split-exact and --block-range, emit consecutive exact chunks of this size in one process.")
+    ap.add_argument("--checkpoint-dir", type=str, default="",
+                    help="Directory for batched exact boundary chunk JSON output.")
+    ap.add_argument("--skip-existing-chunks", action="store_true",
+                    help="With batched exact boundary chunk emission, skip writing chunks whose JSON already exists.")
     ap.add_argument("--block-range", nargs=2, type=int, metavar=("START", "END"),
                     help="Evaluate only active reversible blocks in the half-open index range [START, END). Intended for chunked boundary-signed-split runs.")
     ap.add_argument("--combine-boundary-chunks", nargs="*", default=[],
@@ -1168,6 +1462,75 @@ def main() -> None:
         X_ref = None
         covered_ranges: list[tuple[int, int]] = []
         chunk_paths = list(args.combine_boundary_chunks)
+
+        with open(chunk_paths[0], "r", encoding="utf-8") as fh:
+            first_payload = json.load(fh)
+
+        if first_payload.get("mode") == "boundary-signed-split-exact-chunk":
+            X_ref = int(first_payload["X"])
+            total_active_blocks_ref = int(first_payload["total_active_blocks"])
+            covered_blocks = 0
+            active_total = Fraction(0, 1)
+            active_abs_total = Fraction(0, 1)
+            total_elapsed_sec = 0.0
+            elapsed_count = 0
+
+            for path in chunk_paths:
+                with open(path, "r", encoding="utf-8") as fh:
+                    payload = json.load(fh)
+                if payload.get("mode") != "boundary-signed-split-exact-chunk":
+                    raise SystemExit(f"{path}: not a boundary signed split exact chunk payload")
+                if int(payload["X"]) != X_ref:
+                    raise SystemExit(f"{path}: mismatched X")
+                if int(payload["total_active_blocks"]) != total_active_blocks_ref:
+                    raise SystemExit(f"{path}: mismatched total_active_blocks")
+                start_i, end_i = tuple(payload["block_range"])
+                covered_ranges.append((start_i, end_i))
+                covered_blocks += len(payload.get("records", [])) or (end_i - start_i)
+                active_total += Fraction(int(payload["chunk_total_num"]), int(payload["chunk_total_den"]))
+                active_abs_total += Fraction(
+                    int(payload["chunk_abs_total_num"]), int(payload["chunk_abs_total_den"])
+                )
+                if "elapsed_sec" in payload:
+                    total_elapsed_sec += float(payload["elapsed_sec"])
+                    elapsed_count += 1
+
+            print("Combined exact boundary active chunk report")
+            print(f"  X                      = {X_ref}")
+            print(f"  chunk files            = {len(chunk_paths)}")
+            print(f"  covered ranges         = {sorted(covered_ranges)}")
+            print(f"  covered blocks         = {covered_blocks}")
+            print(f"  total active blocks    = {total_active_blocks_ref}")
+            if elapsed_count > 0:
+                print(f"  elapsed chunks         = {elapsed_count}")
+                print(f"  chunk eval elapsed sec = {total_elapsed_sec:.1f}")
+                print(f"  avg sec per chunk      = {total_elapsed_sec / elapsed_count:.1f}")
+                print(f"  avg ms per block       = {(1000.0 * total_elapsed_sec) / covered_blocks:.3f}")
+            print(f"  active_signed_q        = {fraction_to_q_literal(active_total)}")
+            print(f"  active_abs_q           = {fraction_to_q_literal(active_abs_total)}")
+            print()
+            print("def surrogateBoundaryX0ActiveSignedGenerated : ℚ :=")
+            print(f"  {fraction_to_q_literal(active_total)}")
+            if args.emit_boundary_final_certificate:
+                if not args.boundary_full_signed_decimal:
+                    raise SystemExit("--emit-boundary-final-certificate requires --boundary-full-signed-decimal")
+                full_frac = decimal_string_to_fraction(args.boundary_full_signed_decimal)
+                inactive_frac = full_frac - active_total
+                print()
+                print("Lean-facing boundary final certificate")
+                print(f"  active_signed_q           = {fraction_to_q_literal(active_total)}")
+                print(f"  inactive_correction_q     = {fraction_to_q_literal(inactive_frac)}")
+                print(f"  full_boundary_decimal_q   = {fraction_to_q_literal(full_frac)}")
+                print()
+                print("def surrogateBoundaryX0ActiveSignedCert : ℚ :=")
+                print(f"  {fraction_to_q_literal(active_total)}")
+                print()
+                print("def surrogateBoundaryX0InactiveCorrectionCert : ℚ :=")
+                print(f"  {fraction_to_q_literal(inactive_frac)}")
+                print()
+                print("def surrogateBoundaryX0FullCert : ℚ :=")
+                print("  surrogateBoundaryX0ActiveSignedCert + surrogateBoundaryX0InactiveCorrectionCert")
+            return
 
         def rec_key(rec: dict[str, object]) -> tuple[float, float, int, int, int, int]:
             pattern = tuple(rec["pattern"])
@@ -1490,6 +1853,288 @@ def main() -> None:
         print(f"    total_signed           = {total_signed:.12e}")
         print(f"    abs(total_signed)      = {abs(total_signed):.12e}")
         print(f"    total_abs              = {total_abs:.12e}")
+        return
+
+    if args.boundary_signed_split_exact or args.boundary_signed_split_exact_parallel:
+        if args.true_series:
+            raise SystemExit("--boundary-signed-split-exact is only implemented for the surrogate normalization")
+
+        block_scope = active_support
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            block_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        all_blocks = list(pair_count_by_block.keys())
+        total_active_blocks = len(all_blocks)
+        start = 0
+        end = total_active_blocks
+        if args.block_range is not None:
+            start, end = args.block_range
+            if start < 0 or end < start:
+                raise SystemExit("--block-range must satisfy 0 <= START <= END")
+            start = min(start, total_active_blocks)
+            end = min(end, total_active_blocks)
+            all_blocks = all_blocks[start:end]
+
+        q_needed_exact: set[int] = set()
+        for pattern, G in all_blocks:
+            m, n = pattern
+            q_needed_exact.add(G * m)
+            q_needed_exact.add(G * n)
+
+        exact_ctx = build_surrogate_boundary_exact_context(
+            X, mu, phi, spf, even_window_card, sorted(q_needed_exact),
+            progress=args.progress,
+            progress_every_q=max(1, args.progress_every),
+        )
+
+        def eval_exact_chunk(
+            chunk_start: int,
+            chunk_end: int,
+            chunk_blocks: list[tuple[tuple[int, int], int]],
+            *,
+            include_records: bool,
+        ) -> tuple[dict[str, object], float]:
+            block_progress_every = min(
+                max(1, min(max(args.progress_every, 1), max(1, len(chunk_blocks) // 10))),
+                50_000,
+            )
+            processed = 0
+            started = time.time()
+            records = [] if include_records else None
+            chunk_total = Fraction(0, 1)
+            chunk_abs_total = Fraction(0, 1)
+            for pattern, G in chunk_blocks:
+                m, n = pattern
+                q = G * m
+                q2 = G * n
+                val = 2 * surrogate_boundary_pair_contribution_rat_cached(X, q, q2, exact_ctx)
+                abs_val = abs(val)
+                chunk_total += val
+                chunk_abs_total += abs_val
+                if records is not None:
+                    records.append({
+                        "pattern": [pattern[0], pattern[1]],
+                        "G": G,
+                        "pair_count": pair_count_by_block[(pattern, G)],
+                        "signed_num": val.numerator,
+                        "signed_den": val.denominator,
+                        "abs_num": abs_val.numerator,
+                        "abs_den": abs_val.denominator,
+                        "signed_q": fraction_to_q_literal(val),
+                        "abs_q": fraction_to_q_literal(abs_val),
+                    })
+                processed += 1
+                if args.progress and processed % block_progress_every == 0:
+                    elapsed = time.time() - started
+                    print(
+                        f"[boundary-signed-split-exact] processed_blocks={processed}/{len(chunk_blocks)} "
+                        f"chunk=[{chunk_start},{chunk_end}) elapsed={elapsed:.1f}s",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+
+            elapsed_sec = time.time() - started
+            payload = {
+                "mode": "boundary-signed-split-exact-chunk",
+                "X": X,
+                "active_support_card": len(active_support),
+                "active_ordered_pairs": total_pairs,
+                "total_active_blocks": total_active_blocks,
+                "block_range": [chunk_start, chunk_end],
+                "start": chunk_start,
+                "end": chunk_end,
+                "chunk_total_num": chunk_total.numerator,
+                "chunk_total_den": chunk_total.denominator,
+                "chunk_abs_total_num": chunk_abs_total.numerator,
+                "chunk_abs_total_den": chunk_abs_total.denominator,
+                "elapsed_sec": elapsed_sec,
+            }
+            if records is not None:
+                payload["records"] = records
+            return payload, elapsed_sec
+
+        if args.boundary_signed_split_exact_parallel:
+            if args.batch_size <= 0:
+                raise SystemExit("--boundary-signed-split-exact-parallel requires --batch-size N")
+            if args.block_range is None:
+                raise SystemExit("--boundary-signed-split-exact-parallel requires --block-range START END")
+            if not args.checkpoint_dir:
+                raise SystemExit("--boundary-signed-split-exact-parallel requires --checkpoint-dir DIR")
+            if args.workers <= 1:
+                raise SystemExit("--boundary-signed-split-exact-parallel requires --workers >= 2")
+            os.makedirs(args.checkpoint_dir, exist_ok=True)
+            meta_path = os.path.join(args.checkpoint_dir, "boundary_active_exact_batch_meta.json")
+            with open(meta_path, "w", encoding="utf-8") as fh:
+                json.dump(
+                    {
+                        "mode": "boundary-signed-split-exact-batch-meta",
+                        "parallel": True,
+                        "workers": args.workers,
+                        "X": X,
+                        "total_active_blocks": total_active_blocks,
+                        "requested_start": start,
+                        "requested_end": end,
+                        "batch_size": args.batch_size,
+                        "active_support_card": len(active_support),
+                        "active_ordered_pairs": total_pairs,
+                        "status": "setup_complete",
+                    },
+                    fh,
+                    indent=2,
+                    sort_keys=True,
+                )
+            print(
+                f"[boundary-signed-split-exact-parallel] setup complete "
+                f"blocks={total_active_blocks} range=[{start},{end}) batch_size={args.batch_size} workers={args.workers}",
+                flush=True,
+            )
+            global _BOUNDARY_EXACT_PARALLEL_GLOBALS
+            _BOUNDARY_EXACT_PARALLEL_GLOBALS = {
+                "X": X,
+                "exact_ctx": exact_ctx,
+                "total_pairs": total_pairs,
+                "total_active_blocks": total_active_blocks,
+                "active_support_card": len(active_support),
+                "progress": args.progress,
+                "progress_every": args.progress_every,
+                "checkpoint_dir": args.checkpoint_dir,
+                "skip_existing_chunks": args.skip_existing_chunks,
+                "start": start,
+                "all_blocks": all_blocks,
+            }
+            tasks = [
+                (chunk_start, min(chunk_start + args.batch_size, end))
+                for chunk_start in range(start, end, args.batch_size)
+            ]
+            wrote = 0
+            skipped = 0
+            total_chunk_elapsed = 0.0
+            ctx_mp = multiprocessing.get_context("fork")
+            with ctx_mp.Pool(processes=args.workers) as pool:
+                for result in pool.imap_unordered(_boundary_exact_parallel_worker, tasks):
+                    if result["status"] == "skipped":
+                        skipped += 1
+                        continue
+                    wrote += 1
+                    total_chunk_elapsed += float(result["elapsed_sec"])
+                    print(
+                        f"[boundary-signed-split-exact-parallel] wrote {result['out_path']} "
+                        f"elapsed={float(result['elapsed_sec']):.1f}s "
+                        f"total={fraction_to_q_literal(Fraction(int(result['chunk_total_num']), int(result['chunk_total_den'])))}",
+                        flush=True,
+                    )
+            print("Boundary signed split exact parallel batch report")
+            print(f"  X                        = {X}")
+            print(f"  total active blocks      = {total_active_blocks}")
+            print(f"  requested range          = [{start}, {end})")
+            print(f"  batch size               = {args.batch_size}")
+            print(f"  workers                  = {args.workers}")
+            print(f"  checkpoint dir           = {args.checkpoint_dir}")
+            print(f"  chunks written           = {wrote}")
+            print(f"  chunks skipped           = {skipped}")
+            if wrote > 0:
+                print(f"  chunk eval elapsed sec   = {total_chunk_elapsed:.1f}")
+                print(f"  avg sec per written chunk = {total_chunk_elapsed / wrote:.1f}")
+            return
+
+        if args.batch_size > 0:
+            if args.block_range is None:
+                raise SystemExit("--batch-size requires --block-range START END")
+            if not args.checkpoint_dir:
+                raise SystemExit("--batch-size requires --checkpoint-dir DIR")
+            os.makedirs(args.checkpoint_dir, exist_ok=True)
+            meta_path = os.path.join(args.checkpoint_dir, "boundary_active_exact_batch_meta.json")
+            with open(meta_path, "w", encoding="utf-8") as fh:
+                json.dump(
+                    {
+                        "mode": "boundary-signed-split-exact-batch-meta",
+                        "X": X,
+                        "total_active_blocks": total_active_blocks,
+                        "requested_start": start,
+                        "requested_end": end,
+                        "batch_size": args.batch_size,
+                        "active_support_card": len(active_support),
+                        "active_ordered_pairs": total_pairs,
+                        "status": "setup_complete",
+                    },
+                    fh,
+                    indent=2,
+                    sort_keys=True,
+                )
+            print(
+                f"[boundary-signed-split-exact-batch] setup complete "
+                f"blocks={total_active_blocks} range=[{start},{end}) batch_size={args.batch_size}",
+                flush=True,
+            )
+            wrote = 0
+            skipped = 0
+            total_chunk_elapsed = 0.0
+            for chunk_start in range(start, end, args.batch_size):
+                chunk_end = min(chunk_start + args.batch_size, end)
+                out_path = os.path.join(
+                    args.checkpoint_dir,
+                    f"boundary_active_exact_chunk_{chunk_start:07d}_{chunk_end:07d}.json",
+                )
+                if args.skip_existing_chunks and os.path.exists(out_path):
+                    skipped += 1
+                    continue
+                print(
+                    f"[boundary-signed-split-exact-batch] begin chunk [{chunk_start},{chunk_end})",
+                    flush=True,
+                )
+                payload, elapsed_sec = eval_exact_chunk(
+                    chunk_start,
+                    chunk_end,
+                    all_blocks[chunk_start - start:chunk_end - start],
+                    include_records=False,
+                )
+                with open(out_path, "w", encoding="utf-8") as fh:
+                    json.dump(payload, fh, indent=2, sort_keys=True)
+                wrote += 1
+                total_chunk_elapsed += elapsed_sec
+                print(
+                    f"[boundary-signed-split-exact-batch] wrote {out_path} "
+                    f"elapsed={elapsed_sec:.1f}s "
+                    f"total={fraction_to_q_literal(Fraction(int(payload['chunk_total_num']), int(payload['chunk_total_den'])))}",
+                    flush=True,
+                )
+            print("Boundary signed split exact batch report")
+            print(f"  X                        = {X}")
+            print(f"  total active blocks      = {total_active_blocks}")
+            print(f"  requested range          = [{start}, {end})")
+            print(f"  batch size               = {args.batch_size}")
+            print(f"  checkpoint dir           = {args.checkpoint_dir}")
+            print(f"  chunks written           = {wrote}")
+            print(f"  chunks skipped           = {skipped}")
+            if wrote > 0:
+                print(f"  chunk eval elapsed sec   = {total_chunk_elapsed:.1f}")
+                print(f"  avg sec per written chunk = {total_chunk_elapsed / wrote:.1f}")
+            return
+
+        payload, _elapsed_sec = eval_exact_chunk(start, end, all_blocks, include_records=True)
+        if args.checkpoint_json:
+            with open(args.checkpoint_json, "w", encoding="utf-8") as fh:
+                json.dump(payload, fh, indent=2, sort_keys=True)
+
+        print("Boundary signed split exact chunk report")
+        print(f"  X                        = {X}")
+        print(f"  active ordered pairs     = {total_pairs}")
+        print(f"  total active blocks      = {total_active_blocks}")
+        print(f"  block range              = [{start}, {end})")
+        print(f"  evaluated chunk blocks   = {len(all_blocks)}")
+        print(
+            f"  chunk signed total       = "
+            f"{fraction_to_q_literal(Fraction(int(payload['chunk_total_num']), int(payload['chunk_total_den'])))}"
+        )
+        print(
+            f"  chunk abs total          = "
+            f"{fraction_to_q_literal(Fraction(int(payload['chunk_abs_total_num']), int(payload['chunk_abs_total_den'])))}"
+        )
+        if args.checkpoint_json:
+            print(f"  wrote checkpoint json    = {args.checkpoint_json}")
         return
 
     if args.boundary_zero_prune_report:
@@ -2262,6 +2907,152 @@ def main() -> None:
             shown_abs = math.fsum(abs_float_by_block[block] for block in top_family_blocks)
             tail_abs = family_abs_total - shown_abs
             print(f"  tail  {tail_abs:> .12e}")
+        return
+
+    if args.boundary_pattern_family_exact is not None:
+        if args.true_series:
+            raise SystemExit("--boundary-pattern-family-exact is only implemented for the surrogate normalization")
+
+        a, b = args.boundary_pattern_family_exact
+        if a <= 0 or b <= 0:
+            raise SystemExit("pattern entries must be positive")
+        target_pattern = (a, b) if a <= b else (b, a)
+        family_scope = active_support if args.boundary_pattern_family_scope == "active" else support
+
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            family_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+        family_result = evaluate_exact_boundary_pattern_family(
+            X=X,
+            target_pattern=target_pattern,
+            family_scope=family_scope,
+            pair_count_by_block=pair_count_by_block,
+            total_pairs=total_pairs,
+            mu=mu,
+            phi=phi,
+            spf=spf,
+            even_window_card=even_window_card,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+        family_blocks = family_result["family_blocks"]
+        family_signed = family_result["signed"]
+        family_abs = family_result["abs"]
+        elapsed_by_block = family_result["elapsed_by_block"]
+        signed_by_block = family_result["signed_by_block"]
+        abs_by_block = family_result["abs_by_block"]
+        g_prime_support_signed = family_result["g_prime_support_signed"]
+        g_prime_support_abs = family_result["g_prime_support_abs"]
+        g_prime_support_count = family_result["g_prime_support_count"]
+        total_elapsed = float(family_result["elapsed_sec"])
+
+        top_g_blocks = sorted(
+            family_blocks,
+            key=lambda block: (elapsed_by_block[block], float(abs_by_block[block]), block[1]),
+            reverse=True,
+        )[:max(args.boundary_pattern_family_top_g, 1)]
+        top_prime_supports = sorted(
+            g_prime_support_count.keys(),
+            key=lambda sig: (g_prime_support_count[sig], float(g_prime_support_abs[sig]), sig),
+            reverse=True,
+        )[:max(args.boundary_pattern_family_top_g, 1)]
+
+        ratio = (abs(float(family_signed)) / float(family_abs)) if family_abs else 0.0
+        print("Active boundary exact family report")
+        print(f"  X                         = {X}")
+        print(f"  scope                     = {args.boundary_pattern_family_scope}")
+        print(f"  target pattern            = {target_pattern[0]}:{target_pattern[1]}")
+        print(f"  support card              = {len(family_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  G-value count             = {family_result['g_count']}")
+        print(f"  pair mass                 = {family_result['pair_mass']}")
+        print(f"  exact signed total        = {float(family_signed):.12e}")
+        print(f"  exact abs total           = {float(family_abs):.12e}")
+        print(f"  family ratio              = {ratio:.6f}")
+        print(f"  elapsed sec               = {total_elapsed:.3f}")
+        print(f"  avg ms/G                  = {1000.0 * total_elapsed / len(family_blocks):.3f}")
+        print(f"  Lean ℚ signed             = {fraction_to_q_literal(family_signed)}")
+        print()
+        print("  slowest G-values")
+        print("  G         pair_mass   elapsed_ms    signed               abs")
+        for block in top_g_blocks:
+            _, G = block
+            print(
+                f"  {G:>8}  {pair_count_by_block[block]:>9}  {1000.0 * elapsed_by_block[block]:>10.3f}  "
+                f"{float(signed_by_block[block]):> .12e}  {float(abs_by_block[block]):> .12e}"
+            )
+        print()
+        print("  prime-support classes")
+        print("  support                 G-count    signed               abs")
+        for sig in top_prime_supports:
+            print(
+                f"  {sig!r:<22} {g_prime_support_count[sig]:>7}  "
+                f"{float(g_prime_support_signed[sig]):> .12e}  {float(g_prime_support_abs[sig]):> .12e}"
+            )
+        return
+
+    if args.boundary_pattern_family_exact_batch:
+        if args.true_series:
+            raise SystemExit("--boundary-pattern-family-exact-batch is only implemented for the surrogate normalization")
+
+        target_patterns = sorted(parse_selected_patterns(args.boundary_pattern_family_exact_batch))
+        family_scope = active_support if args.boundary_pattern_family_scope == "active" else support
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            family_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        results: list[dict[str, object]] = []
+        combined_signed = Fraction(0, 1)
+        combined_abs = Fraction(0, 1)
+        total_elapsed = 0.0
+        for pattern in target_patterns:
+            result = evaluate_exact_boundary_pattern_family(
+                X=X,
+                target_pattern=pattern,
+                family_scope=family_scope,
+                pair_count_by_block=pair_count_by_block,
+                total_pairs=total_pairs,
+                mu=mu,
+                phi=phi,
+                spf=spf,
+                even_window_card=even_window_card,
+                progress=args.progress,
+                progress_every=args.progress_every,
+            )
+            results.append(result)
+            combined_signed += result["signed"]
+            combined_abs += result["abs"]
+            total_elapsed += float(result["elapsed_sec"])
+
+        print("Active boundary exact family batch report")
+        print(f"  X                         = {X}")
+        print(f"  scope                     = {args.boundary_pattern_family_scope}")
+        print(f"  support card              = {len(family_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  family count              = {len(results)}")
+        print(f"  combined exact signed     = {float(combined_signed):.12e}")
+        print(f"  combined exact abs        = {float(combined_abs):.12e}")
+        print(f"  combined ratio            = {(abs(float(combined_signed)) / float(combined_abs)) if combined_abs else 0.0:.6f}")
+        print(f"  combined elapsed sec      = {total_elapsed:.3f}")
+        print(f"  Lean ℚ combined signed    = {fraction_to_q_literal(combined_signed)}")
+        print()
+        print("  pattern   G-count   pair mass     exact signed         exact abs            ratio     elapsed sec   avg ms/G")
+        for result in results:
+            pattern = result["pattern"]
+            signed = result["signed"]
+            abs_mass = result["abs"]
+            elapsed_sec = float(result["elapsed_sec"])
+            g_count = int(result["g_count"])
+            ratio = (abs(float(signed)) / float(abs_mass)) if abs_mass else 0.0
+            print(
+                f"  {pattern[0]}:{pattern[1]:<5} {g_count:>8}  {int(result['pair_mass']):>10}  "
+                f"{float(signed):> .12e}  {float(abs_mass):> .12e}  {ratio:> .6f}  "
+                f"{elapsed_sec:>11.3f}  {1000.0 * elapsed_sec / max(g_count, 1):>9.3f}"
+            )
         return
 
     if args.boundary_selected_block_certificate_report:
@@ -3316,14 +4107,15 @@ def main() -> None:
     if args.emit_boundary_rat_total or args.emit_boundary_rat_terms:
         if args.true_series:
             raise SystemExit("--emit-boundary-rat-total/--emit-boundary-rat-terms are only implemented for the surrogate normalization")
-        support_ordered_pairs = len(support) * max(len(support) - 1, 0)
+        boundary_support = active_support if args.boundary_rat_scope == "active" else support
+        support_ordered_pairs = len(boundary_support) * max(len(boundary_support) - 1, 0)
         candidate_pairs: list[tuple[int, int]] = []
         q_needed: set[int] = set()
         scanned = 0
         started_scan = time.time()
         pair_limit = args.pair_limit if args.pair_limit > 0 else 0
-        for q in support:
-            for q2 in support:
+        for q in boundary_support:
+            for q2 in boundary_support:
                 if q == q2:
                     continue
                 scanned += 1
@@ -3377,6 +4169,8 @@ def main() -> None:
             log_exact_progress(processed, total_candidates, nonzero_count, total, started)
         print("Exact surrogate boundary rational certificate")
         print(f"  X                         = {X}")
+        print(f"  support scope             = {args.boundary_rat_scope}")
+        print(f"  support card              = {len(boundary_support)}")
         print(f"  support ordered pairs     = {support_ordered_pairs}")
         print(f"  scanned ordered pairs     = {scanned}")
         print(f"  candidate ordered pairs   = {total_candidates}")
@@ -3392,13 +4186,22 @@ def main() -> None:
         print(f"boundary_rat_total_den = {total.denominator}")
         print(f"Lean literal: {fraction_to_q_literal(total)}")
         print()
-        print("def surrogateBoundaryX0RatCertificateSum : ℚ :=")
-        print(f"  {fraction_to_q_literal(total)}")
-        print()
-        print("-- theorem surrogateBoundaryRat_X0_eq_cert :")
-        print("--     surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat X0")
-        print("--       = surrogateBoundaryX0FullCert := by")
-        print("--   -- generated certificate proof")
+        if args.boundary_rat_scope == "active":
+            print("def surrogateBoundaryX0ActiveSignedGenerated : ℚ :=")
+            print(f"  {fraction_to_q_literal(total)}")
+            print()
+            print("-- theorem boundaryActiveCert_true :")
+            print("--     surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryActiveSignedPairSumUpToQ0Rat X0")
+            print("--       = surrogateBoundaryX0ActiveSignedCert := by")
+            print("--   -- generated certificate proof")
+        else:
+            print("def surrogateBoundaryX0RatCertificateSum : ℚ :=")
+            print(f"  {fraction_to_q_literal(total)}")
+            print()
+            print("-- theorem surrogateBoundaryRat_X0_eq_cert :")
+            print("--     surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryPairSumUpToQ0Rat X0")
+            print("--       = surrogateBoundaryX0FullCert := by")
+            print("--   -- generated certificate proof")
         if terms is not None:
             print()
             print("def surrogateBoundaryX0RatCertificateTerms : List ℚ :=")
@@ -3407,6 +4210,220 @@ def main() -> None:
                 print(f"    -- (q,q') = ({q},{q2})")
                 print(f"    {fraction_to_q_literal(term)},")
             print("  ]")
+        return
+
+    if args.emit_diag_tail_direct_term_block_module_for_chunk_index >= 0:
+        if args.true_series:
+            raise SystemExit("--emit-diag-tail-direct-term-block-module-for-chunk-index is only implemented for the surrogate normalization")
+        if args.diag_tail_subchunk_index < 0:
+            raise SystemExit("--emit-diag-tail-direct-term-block-module-for-chunk-index requires --diag-tail-subchunk-index")
+        chunk_size = max(1, args.diag_tail_chunk_size)
+        subchunk_size = max(1, args.diag_tail_subchunk_size)
+        block_size = max(1, args.diag_tail_block_size)
+        block_start_index = max(0, args.diag_tail_block_start_index)
+        block_count = max(1, args.diag_tail_block_count)
+        tail_support = [
+            q for q in support
+            if q not in DIAG_MAIN_LOW_Q and q > 50
+        ]
+        chunk_count = math.ceil(len(tail_support) / chunk_size)
+        chunk_index = args.emit_diag_tail_direct_term_block_module_for_chunk_index
+        if chunk_index >= chunk_count:
+            raise SystemExit(
+                f"--emit-diag-tail-direct-term-block-module-for-chunk-index={chunk_index} out of range for "
+                f"{chunk_count} chunks with size {chunk_size}"
+            )
+        start_idx = chunk_index * chunk_size
+        chunk_support = tail_support[start_idx:start_idx + chunk_size]
+        subchunk_index = args.diag_tail_subchunk_index
+        explicit_sub_start = args.diag_tail_subchunk_start_offset
+        subchunk_count = math.ceil(len(chunk_support) / subchunk_size)
+        if explicit_sub_start >= 0:
+            sub_start = explicit_sub_start
+            if sub_start >= len(chunk_support):
+                raise SystemExit(
+                    f"--diag-tail-subchunk-start-offset={sub_start} out of range for "
+                    f"chunk {chunk_index} with size {len(chunk_support)}"
+                )
+        else:
+            if subchunk_index >= subchunk_count:
+                raise SystemExit(
+                    f"--diag-tail-subchunk-index={subchunk_index} out of range for "
+                    f"{subchunk_count} subchunks in chunk {chunk_index}"
+                )
+            sub_start = subchunk_index * subchunk_size
+        sub_support = chunk_support[sub_start:sub_start + subchunk_size]
+        block_total_count = math.ceil(len(sub_support) / block_size)
+        if block_start_index >= block_total_count:
+            raise SystemExit(
+                f"--diag-tail-block-start-index={block_start_index} out of range for "
+                f"{block_total_count} blocks of size {block_size}"
+            )
+        block_end_index = min(block_total_count, block_start_index + block_count)
+        if block_start_index >= block_end_index:
+            raise SystemExit("empty block range requested")
+
+        chunk_label = f"{chunk_index:03d}"
+        sub_label = f"{subchunk_index:03d}"
+        requested_block_support: list[int] = []
+        for block_index in range(block_start_index, block_end_index):
+            block_rel_start = block_index * block_size
+            requested_block_support.extend(
+                sub_support[block_rel_start:block_rel_start + block_size]
+            )
+        diag_ctx = build_surrogate_diagonal_exact_context(
+            mu, phi, spf, requested_block_support
+        )
+
+        def qlit(frac: Fraction) -> str:
+            return fraction_to_q_literal(frac)
+
+        def emit_sum_def(name: str, support_names: list[str]) -> None:
+            if not support_names:
+                print(f"def {name} (X0 : ℕ) : ℚ := (0 : ℚ)")
+                return
+            print(f"def {name} (X0 : ℕ) : ℚ :=")
+            for i, support_name in enumerate(support_names):
+                prefix = "  " if i == 0 else "    + "
+                print(f"{prefix}(∑ q ∈ {support_name},")
+                print("        surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+
+        def emit_const_def(name: str, part_names: list[str]) -> None:
+            if not part_names:
+                print(f"def {name} : ℚ := (0 : ℚ)")
+                return
+            print(f"def {name} : ℚ :=")
+            for i, part_name in enumerate(part_names):
+                prefix = "  " if i == 0 else "    + "
+                print(f"{prefix}{part_name}")
+
+        print("import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0TailPilot25")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open scoped BigOperators")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print(
+            f"/- Generated direct-term certificate blocks for tail chunk {chunk_label}, "
+            f"subchunk {sub_label}, blocks [{block_start_index},{block_end_index}). -/"
+        )
+        print()
+
+        for block_index in range(block_start_index, block_end_index):
+            block_rel_start = block_index * block_size
+            block_support = sub_support[block_rel_start:block_rel_start + block_size]
+            block_abs_start = start_idx + sub_start + block_rel_start
+            block_abs_end = block_abs_start + len(block_support)
+            block_name = f"surrogateDiagTailX0RatChunk{chunk_label}Sub{sub_label}Block{block_index:03d}"
+            block_sum_name = f"surrogateDiagonalTailChunk{chunk_label}Sub{sub_label}Block{block_index:03d}Sum"
+            block_label = f"TailChunk{chunk_label}Sub{sub_label}Block{block_index:03d}"
+            print(
+                f"/-- Block {block_index:03d} covers tail-support indices "
+                f"[{block_abs_start},{block_abs_end}) and q from {block_support[0]} to {block_support[-1]}. -/"
+            )
+            print()
+
+            part_names: list[str] = []
+            support_names: list[str] = []
+
+            for part_index, q in enumerate(block_support):
+                term_total = surrogate_diagonal_energy_q_rat_cached(
+                    X, q, even_window_card, diag_ctx
+                )
+                part_name = f"{block_name}Part{part_index:03d}"
+                support_name = f"{block_label}Part{part_index:03d}SupportExplicit"
+                cert_name = f"SurrogateDiagonal{block_label}Part{part_index:03d}CertificateAtX0"
+                theorem_name = f"surrogateDiagonal{block_label}Part{part_index:03d}_eq_cert_explicit"
+                part_names.append(part_name)
+                support_names.append(support_name)
+                print(f"def {support_name} : Finset ℕ :=")
+                print(f"  {nat_list_to_lean_finset_literal([q])}")
+                print()
+                print(f"def {part_name} : ℚ :=")
+                print(f"  {qlit(term_total)}")
+                print()
+                print(f"def {cert_name} : Prop :=")
+                print(f"  surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 {q}")
+                print(f"    = {part_name}")
+                print()
+                print(f"theorem {theorem_name} :")
+                print(f"    {cert_name} →")
+                print(f"    (∑ q ∈ {support_name},")
+                print("        surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+                print(f"      = {part_name} := by")
+                print("  intro hcert")
+                print(f"  unfold {cert_name} at hcert")
+                print(f"  simpa [{support_name}, {part_name}] using hcert")
+                print()
+
+            head_parts = list(range(0, min(10, len(part_names))))
+            mid_parts = list(range(min(10, len(part_names)), min(20, len(part_names))))
+            tail_parts = list(range(min(20, len(part_names)), len(part_names)))
+
+            head_sum_name = f"surrogateDiagonal{block_label}HeadSum"
+            mid_sum_name = f"surrogateDiagonal{block_label}MidSum"
+            tail_sum_name = f"surrogateDiagonal{block_label}TailSum"
+            head_const_name = f"{block_name}Head"
+            mid_const_name = f"{block_name}Mid"
+            tail_const_name = f"{block_name}Tail"
+            head_cert_name = f"SurrogateDiagonal{block_label}HeadCertificateAt"
+            mid_cert_name = f"SurrogateDiagonal{block_label}MidCertificateAt"
+            tail_cert_name = f"SurrogateDiagonal{block_label}TailCertificateAt"
+            arith_name = f"{block_name}_eq_head_add_mid_add_tail"
+            block_theorem_name = f"surrogateDiagonal{block_label}_eq_cert_explicit"
+
+            emit_sum_def(head_sum_name, [support_names[i] for i in head_parts])
+            print()
+            emit_const_def(head_const_name, [part_names[i] for i in head_parts])
+            print()
+            emit_sum_def(mid_sum_name, [support_names[i] for i in mid_parts])
+            print()
+            emit_const_def(mid_const_name, [part_names[i] for i in mid_parts])
+            print()
+            emit_sum_def(tail_sum_name, [support_names[i] for i in tail_parts])
+            print()
+            emit_const_def(tail_const_name, [part_names[i] for i in tail_parts])
+            print()
+            print(f"def {block_sum_name} (X0 : ℕ) : ℚ :=")
+            print(f"  {head_sum_name} X0")
+            print(f"    + {mid_sum_name} X0")
+            print(f"    + {tail_sum_name} X0")
+            print()
+            emit_const_def(block_name, part_names)
+            print()
+            print(f"theorem {arith_name} :")
+            print(f"    {head_const_name} + {mid_const_name} + {tail_const_name} =")
+            print(f"      {block_name} := by")
+            print(f"  unfold {head_const_name} {mid_const_name} {tail_const_name} {block_name}")
+            print("  ring")
+            print()
+            print(f"def {head_cert_name} (X0 : ℕ) : Prop :=")
+            print(f"  {head_sum_name} X0 = {head_const_name}")
+            print()
+            print(f"def {mid_cert_name} (X0 : ℕ) : Prop :=")
+            print(f"  {mid_sum_name} X0 = {mid_const_name}")
+            print()
+            print(f"def {tail_cert_name} (X0 : ℕ) : Prop :=")
+            print(f"  {tail_sum_name} X0 = {tail_const_name}")
+            print()
+            print(f"theorem {block_theorem_name}")
+            print(f"    (hHead : {head_cert_name} X0)")
+            print(f"    (hMid : {mid_cert_name} X0)")
+            print(f"    (hTail : {tail_cert_name} X0) :")
+            print(f"    {block_sum_name} X0 = {block_name} := by")
+            print(f"  unfold {head_cert_name} at hHead")
+            print(f"  unfold {mid_cert_name} at hMid")
+            print(f"  unfold {tail_cert_name} at hTail")
+            print(f"  unfold {block_sum_name}")
+            print("  rw [hHead, hMid, hTail]")
+            print(f"  exact {arith_name}")
+            print()
+
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
         return
 
     coeff_q: dict[int, float] = {}
@@ -3786,14 +4803,23 @@ def main() -> None:
             )
         start_idx = chunk_index * chunk_size
         chunk_support = tail_support[start_idx:start_idx + chunk_size]
-        subchunk_count = math.ceil(len(chunk_support) / subchunk_size)
         subchunk_index = args.diag_tail_subchunk_index
-        if subchunk_index >= subchunk_count:
-            raise SystemExit(
-                f"--diag-tail-subchunk-index={subchunk_index} out of range for "
-                f"{subchunk_count} subchunks in chunk {chunk_index}"
-            )
-        sub_start = subchunk_index * subchunk_size
+        explicit_sub_start = args.diag_tail_subchunk_start_offset
+        subchunk_count = math.ceil(len(chunk_support) / subchunk_size)
+        if explicit_sub_start >= 0:
+            sub_start = explicit_sub_start
+            if sub_start >= len(chunk_support):
+                raise SystemExit(
+                    f"--diag-tail-subchunk-start-offset={sub_start} out of range for "
+                    f"chunk {chunk_index} with size {len(chunk_support)}"
+                )
+        else:
+            if subchunk_index >= subchunk_count:
+                raise SystemExit(
+                    f"--diag-tail-subchunk-index={subchunk_index} out of range for "
+                    f"{subchunk_count} subchunks in chunk {chunk_index}"
+                )
+            sub_start = subchunk_index * subchunk_size
         sub_support = chunk_support[sub_start:sub_start + subchunk_size]
         sub_total = Fraction(0, 1)
         started = time.time()
@@ -3934,14 +4960,23 @@ def main() -> None:
             )
         start_idx = chunk_index * chunk_size
         chunk_support = tail_support[start_idx:start_idx + chunk_size]
-        subchunk_count = math.ceil(len(chunk_support) / subchunk_size)
         subchunk_index = args.diag_tail_subchunk_index
-        if subchunk_index >= subchunk_count:
-            raise SystemExit(
-                f"--diag-tail-subchunk-index={subchunk_index} out of range for "
-                f"{subchunk_count} subchunks in chunk {chunk_index}"
-            )
-        sub_start = subchunk_index * subchunk_size
+        explicit_sub_start = args.diag_tail_subchunk_start_offset
+        subchunk_count = math.ceil(len(chunk_support) / subchunk_size)
+        if explicit_sub_start >= 0:
+            sub_start = explicit_sub_start
+            if sub_start >= len(chunk_support):
+                raise SystemExit(
+                    f"--diag-tail-subchunk-start-offset={sub_start} out of range for "
+                    f"chunk {chunk_index} with size {len(chunk_support)}"
+                )
+        else:
+            if subchunk_index >= subchunk_count:
+                raise SystemExit(
+                    f"--diag-tail-subchunk-index={subchunk_index} out of range for "
+                    f"{subchunk_count} subchunks in chunk {chunk_index}"
+                )
+            sub_start = subchunk_index * subchunk_size
         sub_support = chunk_support[sub_start:sub_start + subchunk_size]
         block_total_count = math.ceil(len(sub_support) / block_size)
         if block_start_index >= block_total_count:
@@ -4198,25 +5233,20 @@ def main() -> None:
                     file=sys.stderr,
                     flush=True,
                 )
-        print("Surrogate diagonal tail exact rational subchunks")
-        print(f"  X                         = {X}")
-        print(f"  tail support card         = {len(tail_support)}")
-        print(f"  chunk size                = {chunk_size}")
-        print(f"  subchunk size             = {subchunk_size}")
-        print(f"  chunk index               = {chunk_index}")
-        print(f"  chunk support indices     = [{start_idx}, {chunk_end_idx})")
-        print(f"  chunk q range             = [{chunk_support[0]}, {chunk_support[-1]}]")
-        print(f"  chunk rational numerator  = {chunk_total.numerator}")
-        print(f"  chunk rational denominator= {chunk_total.denominator}")
-        print(f"  chunk Lean ℚ literal      = {fraction_to_q_literal(chunk_total)}")
-        print(f"  chunk float value         = {float(chunk_total):.15f}")
-        print("  Subchunk table")
-        for subchunk_index, abs_start, abs_end, first_q, last_q, sub_total in subchunk_payloads:
-            print(
-                f"    subchunk {subchunk_index:03d}: idx=[{abs_start},{abs_end}) "
-                f"q=[{first_q},{last_q}] value={fraction_to_q_literal(sub_total)}"
-            )
-        print("  Lean payload")
+        print("import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0TailSupportBridge")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open scoped BigOperators")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print(
+            f"/- Generated chunk-level explicit-support bridge for tail chunk {chunk_label}. -/"
+        )
+        print()
         subchunk_names = []
         subchunk_support_names = []
         for subchunk_index, abs_start, abs_end, first_q, last_q, sub_total in subchunk_payloads:
@@ -4234,6 +5264,94 @@ def main() -> None:
             )
             print(f"-- support def: {sub_support_name}")
         subchunk_sum_expr = " + ".join(subchunk_names) if subchunk_names else "(0 : ℚ)"
+        explicit_chunk_support_name = (
+            "TailChunk000SupportExplicit"
+            if chunk_index == 0
+            else "TailChunk001SupportExplicit"
+        )
+        if chunk_index == 0:
+            explicit_subchunk_sum_names = [
+                "TailChunk000Sub000SupportExplicit",
+                "TailChunk000Sub001SupportExplicit",
+            ]
+            explicit_split_name = "TailChunk000SupportExplicit_eq_subchunks"
+            explicit_disjoint_name = "TailChunk000SupportExplicit_subchunks_disjoint"
+            explicit_sum_name = "surrogateDiagonalTailChunk000ExplicitSupportSum"
+            explicit_sum_eq_name = "surrogateDiagTailChunk000_explicitSupport_eq_subchunk_sum"
+            explicit_cert_name = "surrogateDiagTailChunk000_explicitSupport_sum_eq_cert"
+            main_sum_eq_name = "surrogateDiagTailChunk000_mainSupport_sum_eq_cert"
+            main_sum_rewrite_name = "sum_chunk000_over_main_eq_explicit"
+            lower_mid = 51
+            split_mid = 8269
+            upper_mid = 16495
+        else:
+            explicit_subchunk_sum_names = [
+                "TailChunk001Sub000SupportExplicit",
+                "TailChunk001Sub001SupportExplicit",
+            ]
+            explicit_split_name = "TailChunk001SupportExplicit_eq_subchunks"
+            explicit_disjoint_name = "TailChunk001SupportExplicit_subchunks_disjoint"
+            explicit_sum_name = "surrogateDiagonalTailChunk001ExplicitSupportSum"
+            explicit_sum_eq_name = "surrogateDiagTailChunk001_explicitSupport_eq_subchunk_sum"
+            explicit_cert_name = "surrogateDiagTailChunk001_explicitSupport_sum_eq_cert"
+            main_sum_eq_name = "surrogateDiagTailChunk001_mainSupport_sum_eq_cert"
+            main_sum_rewrite_name = "sum_chunk001_over_main_eq_explicit"
+            lower_mid = 16496
+            split_mid = 24726
+            upper_mid = 30000
+        print()
+        print(f"def {explicit_sum_name} (X0 : ℕ) : ℚ :=")
+        print(f"  (∑ q ∈ {explicit_chunk_support_name},")
+        print("      surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+        print()
+        print(f"theorem {explicit_disjoint_name} :")
+        print(f"    Disjoint {explicit_subchunk_sum_names[0]} {explicit_subchunk_sum_names[1]} := by")
+        print("  refine Finset.disjoint_left.mpr ?_")
+        print("  intro q hq0 hq1")
+        print("  rcases Finset.mem_filter.mp hq0 with ⟨hqIcc0, _⟩")
+        print("  rcases Finset.mem_filter.mp hq1 with ⟨hqIcc1, _⟩")
+        print("  have hle : q ≤ "
+              f"{split_mid} := (Finset.mem_Icc.mp hqIcc0).2")
+        print("  have hgt : "
+              f"{split_mid} < q := by")
+        if chunk_index == 0:
+            print("    have hlow : 8270 ≤ q := (Finset.mem_Icc.mp hqIcc1).1")
+        else:
+            print("    have hlow : 24727 ≤ q := (Finset.mem_Icc.mp hqIcc1).1")
+        print("    omega")
+        print("  omega")
+        print()
+        print(f"theorem {explicit_split_name} :")
+        print(f"    {explicit_chunk_support_name} =")
+        print(f"      {explicit_subchunk_sum_names[0]} ∪ {explicit_subchunk_sum_names[1]} := by")
+        print(f"  unfold {explicit_chunk_support_name}")
+        print(f"    {explicit_subchunk_sum_names[0]}")
+        print(f"    {explicit_subchunk_sum_names[1]}")
+        print("  apply Finset.ext")
+        print("  intro q")
+        print("  constructor")
+        print("  · intro hq")
+        print("    rw [Finset.mem_union]")
+        print("    rcases Finset.mem_filter.mp hq with ⟨hqIcc, hsq⟩")
+        print("    rcases Finset.mem_Icc.mp hqIcc with ⟨hlow, hupp⟩")
+        print(f"    by_cases hsplit : q ≤ {split_mid}")
+        print("    · left")
+        print("      exact Finset.mem_filter.mpr ⟨Finset.mem_Icc.mpr ⟨hlow, hsplit⟩, hsq⟩")
+        print("    · right")
+        if chunk_index == 0:
+            print("      have hsplit' : 8270 ≤ q := by omega")
+        else:
+            print("      have hsplit' : 24727 ≤ q := by omega")
+        print("      exact Finset.mem_filter.mpr ⟨Finset.mem_Icc.mpr ⟨hsplit', hupp⟩, hsq⟩")
+        print("  · intro hq")
+        print("    rw [Finset.mem_union] at hq")
+        print("    rcases hq with hq | hq")
+        print("    · rcases Finset.mem_filter.mp hq with ⟨hqIcc, hsq⟩")
+        print("      rcases Finset.mem_Icc.mp hqIcc with ⟨hlow, _hsplit⟩")
+        print("      exact Finset.mem_filter.mpr ⟨Finset.mem_Icc.mpr ⟨hlow, by omega⟩, hsq⟩")
+        print("    · rcases Finset.mem_filter.mp hq with ⟨hqIcc, hsq⟩")
+        print("      rcases Finset.mem_Icc.mp hqIcc with ⟨_hsplit, hupp⟩")
+        print("      exact Finset.mem_filter.mpr ⟨Finset.mem_Icc.mpr ⟨by omega, hupp⟩, hsq⟩")
         print()
         print(f"theorem {cert_name}_eq_subchunk_sum :")
         print(f"    {subchunk_sum_expr} = {cert_name} := by")
@@ -4243,29 +5361,36 @@ def main() -> None:
             print(f"    {name}{comma}")
         print("  ]")
         print()
-        print("  Lean goal stubs for the remaining exact equalities")
-        for subchunk_index, abs_start, abs_end, first_q, last_q, _sub_total in subchunk_payloads:
-            sub_name = subchunk_names[subchunk_index]
-            sub_support_name = subchunk_support_names[subchunk_index]
-            theorem_stub_name = f"surrogateDiagonalTailChunk{chunk_label}Sub{subchunk_index:03d}_eq_cert"
-            print(f"-- theorem {theorem_stub_name} :")
-            print(f"--     (∑ q ∈ {sub_support_name},")
-            print("--         surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
-            print(f"--       = {sub_name} := by")
-            print(
-                f"--   -- subchunk {subchunk_index:03d} covers tail-support indices [{abs_start},{abs_end}) "
-                f"and q from {first_q} to {last_q}"
-            )
-            print("--   -- generated certificate proof")
-        print()
-        print(f"theorem surrogateDiagonalTailChunk{chunk_label}_eq_cert_of_subchunked_sum")
-        print("    (hsubchunked :")
-        print(f"      (∑ q ∈ {support_name},")
+        print(f"theorem {explicit_sum_eq_name}")
+        print("    (hsub000 :")
+        print(f"      (∑ q ∈ {explicit_subchunk_sum_names[0]},")
         print("          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
-        print(f"        = {subchunk_sum_expr}) :")
-        print(f"    {theorem_name} := by")
-        print(f"  apply {wrapper_name}")
-        print(f"  rw [hsubchunked, {cert_name}_eq_subchunk_sum]")
+        print(f"        = {subchunk_names[0]})")
+        print("    (hsub001 :")
+        print(f"      (∑ q ∈ {explicit_subchunk_sum_names[1]},")
+        print("          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+        print(f"        = {subchunk_names[1]}) :")
+        print(f"    {explicit_sum_name} X0 = {cert_name} := by")
+        print(f"  unfold {explicit_sum_name}")
+        print(f"  rw [{explicit_split_name}, Finset.sum_union {explicit_disjoint_name}, hsub000, hsub001]")
+        print(f"  exact {cert_name}_eq_subchunk_sum")
+        print()
+        print(f"theorem {main_sum_eq_name}")
+        print("    (hsub000 :")
+        print(f"      (∑ q ∈ {explicit_subchunk_sum_names[0]},")
+        print("          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+        print(f"        = {subchunk_names[0]})")
+        print("    (hsub001 :")
+        print(f"      (∑ q ∈ {explicit_subchunk_sum_names[1]},")
+        print("          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q)")
+        print(f"        = {subchunk_names[1]}) :")
+        print(f"    (∑ q ∈ {support_name},")
+        print("        surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =")
+        print(f"      {cert_name} := by")
+        print(f"  rw [{main_sum_rewrite_name}]")
+        print(f"  exact {explicit_cert_name} hsub000 hsub001")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
         return
 
     if args.emit_periodic_main_rat_total:
@@ -4322,69 +5447,88 @@ def main() -> None:
         print("  norm_num [surrogatePeriodicMainX0RatCert, surrogatePeriodicMainX0Check]")
         return
 
-    # Exact periodic-main total on the active full-block coefficient-supported surface.
-    divisors: dict[int, list[int]] = {}
-    even_divisors: dict[int, list[int]] = {}
-    gcd_coeff: dict[tuple[int, int], float] = {}
-    averages: dict[int, dict[int, float]] = {}
+    if (
+        args.boundary_block_key_report
+        or args.boundary_skeleton_report
+        or args.boundary_pattern_runtime_report
+        or args.boundary_family_candidate_report
+        or args.boundary_family_residual_report
+        or args.boundary_residual_structure_report
+        or args.boundary_residual_other_structure_report
+        or args.boundary_product_candidate_report
+        or args.boundary_pattern_family_exact_topn > 0
+        or args.boundary_pattern_product_exact_topn > 0
+        or args.boundary_pattern_product_exact_batch
+        or args.boundary_pattern_family_exact is not None
+        or args.boundary_pattern_family_exact_batch
+    ):
+        periodic_main_total = 0.0
+        active_main_unordered_pairs = 0
+        boundary_total = 0.0
+    else:
+        # Exact periodic-main total on the active full-block coefficient-supported surface.
+        divisors: dict[int, list[int]] = {}
+        even_divisors: dict[int, list[int]] = {}
+        gcd_coeff: dict[tuple[int, int], float] = {}
+        averages: dict[int, dict[int, float]] = {}
 
-    for q in active_support:
-        fac = factorization(q, spf)
-        divs = divisors_from_factorization(fac)
-        divisors[q] = divs
-        even_divisors[q] = [d for d in divs if d % 2 == 0]
-        for g in divs:
-            gcd_coeff[(q, g)] = ramanujan_gcd_class_coeff(q, g, mu, phi)
-        counts: dict[int, int] = defaultdict(int)
-        for N in even_window:
-            counts[math.gcd(q, N)] += 1
-        averages[q] = {g: counts.get(g, 0) / float(even_window_card) for g in divs}
+        for q in active_support:
+            fac = factorization(q, spf)
+            divs = divisors_from_factorization(fac)
+            divisors[q] = divs
+            even_divisors[q] = [d for d in divs if d % 2 == 0]
+            for g in divs:
+                gcd_coeff[(q, g)] = ramanujan_gcd_class_coeff(q, g, mu, phi)
+            counts: dict[int, int] = defaultdict(int)
+            for N in even_window:
+                counts[math.gcd(q, N)] += 1
+            averages[q] = {g: counts.get(g, 0) / float(even_window_card) for g in divs}
 
-    def pair_main(q: int, q2: int) -> float:
-        P = block_period(q, q2)
-        full_blocks = (H + 1) // P
-        if full_blocks == 0:
-            return 0.0
+        def pair_main(q: int, q2: int) -> float:
+            P = block_period(q, q2)
+            full_blocks = (H + 1) // P
+            if full_blocks == 0:
+                return 0.0
 
-        even_block = P // 2
-        Ns = full_block_even_points(X, P)
+            even_block = P // 2
+            Ns = full_block_even_points(X, P)
 
-        left_counts: dict[int, int] = defaultdict(int)
-        right_counts: dict[int, int] = defaultdict(int)
-        pair_counts: dict[tuple[int, int], int] = defaultdict(int)
-        for N in Ns:
-            g = math.gcd(q, N)
-            h = math.gcd(q2, N)
-            left_counts[g] += 1
-            right_counts[h] += 1
-            pair_counts[(g, h)] += 1
+            left_counts: dict[int, int] = defaultdict(int)
+            right_counts: dict[int, int] = defaultdict(int)
+            pair_counts: dict[tuple[int, int], int] = defaultdict(int)
+            for N in Ns:
+                g = math.gcd(q, N)
+                h = math.gcd(q2, N)
+                left_counts[g] += 1
+                right_counts[h] += 1
+                pair_counts[(g, h)] += 1
 
-        out = 0.0
-        coeff_pair = coeff_q[q] * coeff_q[q2]
-        for g in divisors[q]:
-            avg_g = averages[q][g]
-            left = float(left_counts.get(g, 0))
-            c_g = gcd_coeff[(q, g)]
-            for h in divisors[q2]:
-                avg_h = averages[q2][h]
-                right = float(right_counts.get(h, 0))
-                pair = float(pair_counts.get((g, h), 0))
-                c_h = gcd_coeff[(q2, h)]
-                centered_full_block = pair - avg_h * left - avg_g * right + avg_g * avg_h * even_block
-                out += coeff_pair * c_g * c_h * float(full_blocks) * centered_full_block
-        return out
+            out = 0.0
+            coeff_pair = coeff_q[q] * coeff_q[q2]
+            for g in divisors[q]:
+                avg_g = averages[q][g]
+                left = float(left_counts.get(g, 0))
+                c_g = gcd_coeff[(q, g)]
+                for h in divisors[q2]:
+                    avg_h = averages[q2][h]
+                    right = float(right_counts.get(h, 0))
+                    pair = float(pair_counts.get((g, h), 0))
+                    c_h = gcd_coeff[(q2, h)]
+                    centered_full_block = pair - avg_h * left - avg_g * right + avg_g * avg_h * even_block
+                    out += coeff_pair * c_g * c_h * float(full_blocks) * centered_full_block
+            return out
 
-    periodic_main_total = 0.0
-    active_main_unordered_pairs = 0
-    for i, q in enumerate(active_support):
-        for q2 in active_support[i + 1:]:
-            val = pair_main(q, q2)
-            if val == 0.0:
-                continue
-            active_main_unordered_pairs += 1
-            periodic_main_total += 2.0 * val
+        periodic_main_total = 0.0
+        active_main_unordered_pairs = 0
+        for i, q in enumerate(active_support):
+            for q2 in active_support[i + 1:]:
+                val = pair_main(q, q2)
+                if val == 0.0:
+                    continue
+                active_main_unordered_pairs += 1
+                periodic_main_total += 2.0 * val
 
-    boundary_total = pair_correlation_total - periodic_main_total
+        boundary_total = pair_correlation_total - periodic_main_total
 
     if args.boundary_block_key_report:
         if args.true_series:
@@ -4444,6 +5588,1583 @@ def main() -> None:
                 boundary_remainder_even_progression(X, block[1] * block[0][0], block[1] * block[0][1])[1],
             ),
         )
+        return
+
+    if args.boundary_skeleton_report:
+        if args.true_series:
+            raise SystemExit("--boundary-skeleton-report is only implemented for the surrogate normalization")
+
+        block_scope = active_support
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            block_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+        blocks = list(pair_count_by_block.keys())
+        odd_rad_cache: dict[int, int] = {}
+        v2_cache: dict[int, int] = {}
+        prime_support_cache: dict[int, tuple[int, ...]] = {}
+        divisor_count_cache: dict[int, int] = {}
+        geom_cache: dict[tuple[int, int], tuple[int, int]] = {}
+
+        def g_v2(G: int) -> int:
+            if G not in v2_cache:
+                v2_cache[G] = v2_adic(G)
+            return v2_cache[G]
+
+        def g_odd_rad(G: int) -> int:
+            if G not in odd_rad_cache:
+                odd_rad_cache[G] = odd_radical_from_spf(G, spf)
+            return odd_rad_cache[G]
+
+        def g_prime_support(G: int) -> tuple[int, ...]:
+            if G not in prime_support_cache:
+                prime_support_cache[G] = prime_support_from_spf(G, spf)
+            return prime_support_cache[G]
+
+        def divisor_count(q: int) -> int:
+            if q not in divisor_count_cache:
+                divisor_count_cache[q] = len(divisors_from_factorization(factorization(q, spf)))
+            return divisor_count_cache[q]
+
+        def geom(q: int, q2: int) -> tuple[int, int]:
+            key = (q, q2)
+            if key not in geom_cache:
+                first_even, even_count = boundary_remainder_even_progression(X, q, q2)
+                geom_cache[key] = (first_even, even_count)
+            return geom_cache[key]
+
+        def print_key_family_report(
+            label: str,
+            key_fn,
+        ) -> None:
+            block_counter: Counter[object] = Counter()
+            pair_counter: Counter[object] = Counter()
+            for block, pair_count in pair_count_by_block.items():
+                key = key_fn(block)
+                block_counter[key] += 1
+                pair_counter[key] += pair_count
+            distinct = len(block_counter)
+            avg_mult = (len(blocks) / distinct) if distinct else 0.0
+            avg_pair_mass = (sum(pair_count_by_block.values()) / distinct) if distinct else 0.0
+            print(f"  {label}")
+            print(f"    distinct keys          = {distinct}")
+            print(f"    average block mult     = {avg_mult:.6f}")
+            print(f"    average pair mass      = {avg_pair_mass:.6f}")
+            top_items = sorted(
+                block_counter.items(),
+                key=lambda kv: (kv[1], pair_counter[kv[0]], kv[0]),
+                reverse=True,
+            )[:args.boundary_skeleton_top]
+            if not top_items:
+                print("    top repeated keys      = none")
+                return
+            print("    top repeated keys")
+            for key, mult in top_items:
+                print(f"      key={key!r} blocks={mult} pair_mass={pair_counter[key]}")
+
+        print("Active boundary skeleton report")
+        print(f"  X                      = {X}")
+        print(f"  active support card    = {len(block_scope)}")
+        print(f"  active ordered pairs   = {total_pairs}")
+        print(f"  distinct blocks        = {len(blocks)}")
+        print()
+        print_key_family_report("pattern m:n", lambda block: block[0])
+        print()
+        print_key_family_report("G prime support", lambda block: g_prime_support(block[1]))
+        print()
+        print_key_family_report("G 2-adic + odd radical", lambda block: (g_v2(block[1]), g_odd_rad(block[1])))
+        print()
+        print_key_family_report("pattern + G skeleton", lambda block: (block[0], g_v2(block[1]), g_odd_rad(block[1])))
+        print()
+        print_key_family_report(
+            "compression signature (pattern, G skeleton, even_count, divisor counts)",
+            lambda block: (
+                block[0],
+                g_v2(block[1]),
+                g_odd_rad(block[1]),
+                geom(block[1] * block[0][0], block[1] * block[0][1])[1],
+                divisor_count(block[1] * block[0][0]),
+                divisor_count(block[1] * block[0][1]),
+            ),
+        )
+        return
+
+    if args.boundary_pattern_runtime_report:
+        if args.true_series:
+            raise SystemExit("--boundary-pattern-runtime-report is only implemented for the surrogate normalization")
+
+        runtime_scope = active_support if args.boundary_pattern_runtime_scope == "active" else support
+        coeff_scope = {q: normalized_sigma_trunc_summand_real_coeff(q, mu, phi) for q in runtime_scope}
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            runtime_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        blocks_by_pattern: dict[tuple[int, int], list[tuple[tuple[int, int], int]]] = defaultdict(list)
+        pair_count_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        abs_coeff_proxy_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        for block, pair_count in pair_count_by_block.items():
+            pattern, G = block
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            blocks_by_pattern[pattern].append(block)
+            pair_count_by_pattern[pattern] += pair_count
+            abs_coeff_proxy_by_pattern[pattern] += abs(coeff_scope[q] * coeff_scope[q2]) * pair_count
+
+        top_patterns = sorted(
+            blocks_by_pattern.keys(),
+            key=lambda pattern: (
+                len(blocks_by_pattern[pattern]),
+                pair_count_by_pattern[pattern],
+                abs_coeff_proxy_by_pattern[pattern],
+                -pattern[0],
+                -pattern[1],
+            ),
+            reverse=True,
+        )[:max(args.boundary_pattern_runtime_top, 1)]
+        top_pattern_set = set(top_patterns)
+
+        q_needed_exact: set[int] = set()
+        selected_block_count = 0
+        for pattern in top_patterns:
+            for _, G in blocks_by_pattern[pattern]:
+                q_needed_exact.add(G * pattern[0])
+                q_needed_exact.add(G * pattern[1])
+                selected_block_count += 1
+
+        exact_ctx = build_surrogate_boundary_exact_context(
+            X, mu, phi, spf, even_window_card, sorted(q_needed_exact),
+            progress=args.progress,
+            progress_every_q=max(1, args.progress_every),
+        )
+
+        signed_by_pattern: dict[tuple[int, int], Fraction] = defaultdict(lambda: Fraction(0, 1))
+        abs_by_pattern: dict[tuple[int, int], Fraction] = defaultdict(lambda: Fraction(0, 1))
+        elapsed_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        max_elapsed_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        costly_gs_by_pattern: dict[tuple[int, int], list[tuple[float, int, Fraction, Fraction, int]]] = {
+            pattern: [] for pattern in top_patterns
+        }
+
+        processed = 0
+        started = time.time()
+        for pattern in top_patterns:
+            for _, G in blocks_by_pattern[pattern]:
+                q = G * pattern[0]
+                q2 = G * pattern[1]
+                t0 = time.perf_counter()
+                val = 2 * surrogate_boundary_pair_contribution_rat_cached(X, q, q2, exact_ctx)
+                elapsed = time.perf_counter() - t0
+                abs_val = abs(val)
+                signed_by_pattern[pattern] += val
+                abs_by_pattern[pattern] += abs_val
+                elapsed_by_pattern[pattern] += elapsed
+                max_elapsed_by_pattern[pattern] = max(max_elapsed_by_pattern[pattern], elapsed)
+                entry = (elapsed, G, val, abs_val, pair_count_by_block[(pattern, G)])
+                costly = costly_gs_by_pattern[pattern]
+                costly.append(entry)
+                costly.sort(key=lambda rec: (rec[0], abs(float(rec[3])), rec[1]), reverse=True)
+                del costly[max(args.boundary_pattern_runtime_top_g, 0):]
+                processed += 1
+                if args.progress and processed % max(1, min(args.progress_every, 1000)) == 0:
+                    elapsed_total = time.time() - started
+                    print(
+                        f"[boundary-pattern-runtime] processed_blocks={processed}/{selected_block_count} "
+                        f"patterns={len(top_pattern_set)} elapsed={elapsed_total:.1f}s",
+                        file=sys.stderr,
+                        flush=True,
+                    )
+
+        print("Active boundary pattern runtime report")
+        print(f"  X                         = {X}")
+        print(f"  scope                     = {args.boundary_pattern_runtime_scope}")
+        print(f"  support card              = {len(runtime_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  distinct active blocks    = {len(pair_count_by_block)}")
+        print(f"  evaluated top patterns    = {len(top_patterns)}")
+        print(f"  evaluated selected blocks = {selected_block_count}")
+        print()
+        print("  pattern   G-count   pair mass     abs coeff proxy      exact signed         exact abs            ratio     avg ms/G   max ms/G")
+        for pattern in top_patterns:
+            g_count = len(blocks_by_pattern[pattern])
+            signed = signed_by_pattern[pattern]
+            abs_mass = abs_by_pattern[pattern]
+            ratio = (abs(float(signed)) / float(abs_mass)) if abs_mass else 0.0
+            avg_ms = 1000.0 * elapsed_by_pattern[pattern] / max(g_count, 1)
+            max_ms = 1000.0 * max_elapsed_by_pattern[pattern]
+            print(
+                f"  {pattern[0]}:{pattern[1]:<5} {g_count:>8}  {pair_count_by_pattern[pattern]:>10}  "
+                f"{abs_coeff_proxy_by_pattern[pattern]:> .12e}  {float(signed):> .12e}  "
+                f"{float(abs_mass):> .12e}  {ratio:> .6f}  {avg_ms:>9.3f}  {max_ms:>9.3f}"
+            )
+            for elapsed, G, val, abs_val, pair_count in costly_gs_by_pattern[pattern]:
+                print(
+                    f"    G={G:<8d} pair_mass={pair_count:<3d} elapsed_ms={1000.0 * elapsed:>9.3f} "
+                    f"signed={float(val):> .12e} abs={float(abs_val):> .12e}"
+                )
+        return
+
+    if args.boundary_family_candidate_report:
+        if args.true_series:
+            raise SystemExit("--boundary-family-candidate-report is only implemented for the surrogate normalization")
+
+        excluded_patterns = parse_selected_patterns(args.exclude_families)
+        excluded_products = parse_selected_products(args.exclude_products)
+        excluded_products = parse_selected_products(args.exclude_products)
+        candidate_scope = active_support
+        coeff_scope = {q: normalized_sigma_trunc_summand_real_coeff(q, mu, phi) for q in candidate_scope}
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            candidate_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        block_count_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        pair_mass_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        abs_coeff_proxy_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        runtime_proxy_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        divisor_count_cache: dict[int, int] = {}
+
+        def divisor_count(q: int) -> int:
+            if q not in divisor_count_cache:
+                divisor_count_cache[q] = len(divisors_from_factorization(factorization(q, spf)))
+            return divisor_count_cache[q]
+
+        for block, pair_mass in pair_count_by_block.items():
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            block_count_by_pattern[pattern] += 1
+            pair_mass_by_pattern[pattern] += pair_mass
+            abs_coeff_proxy_by_pattern[pattern] += abs(coeff_scope[q] * coeff_scope[q2]) * pair_mass
+            runtime_proxy_by_pattern[pattern] += divisor_count(q) * divisor_count(q2)
+
+        top_k = max(args.boundary_family_candidate_top, 1)
+        candidate_k = (
+            max(args.boundary_family_candidate_patterns, top_k)
+            if args.boundary_family_candidate_patterns > 0
+            else max(top_k * 10, top_k)
+        )
+        candidate_patterns = sorted(
+            block_count_by_pattern.keys(),
+            key=lambda pat: (
+                abs_coeff_proxy_by_pattern[pat],
+                runtime_proxy_by_pattern[pat],
+                pair_mass_by_pattern[pat],
+                block_count_by_pattern[pat],
+                -pat[0],
+                -pat[1],
+            ),
+            reverse=True,
+        )[:candidate_k]
+        candidate_pattern_set = set(candidate_patterns)
+
+        q_needed: set[int] = set()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern in candidate_pattern_set:
+                q_needed.add(G * pattern[0])
+                q_needed.add(G * pattern[1])
+
+        ctx = build_surrogate_boundary_float_context(
+            X, mu, phi, spf, even_window_card, sorted(q_needed),
+            progress=args.progress,
+        )
+
+        signed_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        abs_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        processed = 0
+        started = time.time()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern not in candidate_pattern_set:
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            val = 2.0 * surrogate_boundary_pair_contribution_float_cached(X, q, q2, ctx)
+            signed_float_by_pattern[pattern] += val
+            abs_float_by_pattern[pattern] += abs(val)
+            processed += 1
+            if args.progress and processed % max(1, min(args.progress_every, 1000)) == 0:
+                elapsed = time.time() - started
+                print(
+                    f"[boundary-family-candidate] processed_blocks={processed} "
+                    f"candidate_patterns={len(candidate_pattern_set)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        top_negative = sorted(
+            candidate_patterns,
+            key=lambda pat: (signed_float_by_pattern[pat], -abs_float_by_pattern[pat]),
+        )[:top_k]
+        top_abs = sorted(
+            candidate_patterns,
+            key=lambda pat: (abs_float_by_pattern[pat], abs(signed_float_by_pattern[pat]), runtime_proxy_by_pattern[pat]),
+            reverse=True,
+        )[:top_k]
+        top_runtime = sorted(
+            candidate_patterns,
+            key=lambda pat: (runtime_proxy_by_pattern[pat], abs_float_by_pattern[pat], pair_mass_by_pattern[pat]),
+            reverse=True,
+        )[:top_k]
+
+        def print_table(title: str, pats: list[tuple[int, int]]) -> None:
+            print(title)
+            print("  pattern   G-count   pair mass     float signed         float abs            ratio     runtime proxy      abs coeff proxy")
+            for pat in pats:
+                signed = signed_float_by_pattern[pat]
+                abs_mass = abs_float_by_pattern[pat]
+                ratio = (abs(signed) / abs_mass) if abs_mass else 0.0
+                print(
+                    f"  {pat[0]}:{pat[1]:<5} {block_count_by_pattern[pat]:>8}  {pair_mass_by_pattern[pat]:>10}  "
+                    f"{signed:> .12e}  {abs_mass:> .12e}  {ratio:> .6f}  "
+                    f"{runtime_proxy_by_pattern[pat]:>13}  {abs_coeff_proxy_by_pattern[pat]:> .12e}"
+                )
+            print()
+
+        print("Active boundary family candidate report")
+        print(f"  X                         = {X}")
+        print(f"  support card              = {len(candidate_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  excluded patterns         = {sorted(excluded_patterns)}")
+        print(f"  excluded products         = {sorted(excluded_products)}")
+        print(f"  candidate patterns eval   = {len(candidate_patterns)}")
+        print()
+        print_table("Top unevaluated families by negative signed float", top_negative)
+        print_table("Top unevaluated families by absolute float mass", top_abs)
+        print_table("Top unevaluated families by runtime proxy", top_runtime)
+        return
+
+    if args.boundary_family_residual_report:
+        if args.true_series:
+            raise SystemExit("--boundary-family-residual-report is only implemented for the surrogate normalization")
+
+        excluded_patterns = parse_selected_patterns(args.exclude_families)
+        excluded_products = parse_selected_products(args.exclude_products)
+        candidate_scope = active_support
+        coeff_scope = {q: normalized_sigma_trunc_summand_real_coeff(q, mu, phi) for q in candidate_scope}
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            candidate_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        block_count_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        pair_mass_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        abs_coeff_proxy_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        runtime_proxy_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        divisor_count_cache: dict[int, int] = {}
+
+        def divisor_count(q: int) -> int:
+            if q not in divisor_count_cache:
+                divisor_count_cache[q] = len(divisors_from_factorization(factorization(q, spf)))
+            return divisor_count_cache[q]
+
+        for block, pair_mass in pair_count_by_block.items():
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            block_count_by_pattern[pattern] += 1
+            pair_mass_by_pattern[pattern] += pair_mass
+            abs_coeff_proxy_by_pattern[pattern] += abs(coeff_scope[q] * coeff_scope[q2]) * pair_mass
+            runtime_proxy_by_pattern[pattern] += divisor_count(q) * divisor_count(q2)
+
+        top_k = max(args.boundary_family_candidate_top, 1)
+        candidate_k = (
+            max(args.boundary_family_candidate_patterns, top_k)
+            if args.boundary_family_candidate_patterns > 0
+            else max(top_k * 10, top_k)
+        )
+        tracked_patterns = sorted(
+            block_count_by_pattern.keys(),
+            key=lambda pat: (
+                abs_coeff_proxy_by_pattern[pat],
+                runtime_proxy_by_pattern[pat],
+                pair_mass_by_pattern[pat],
+                block_count_by_pattern[pat],
+                -pat[0],
+                -pat[1],
+            ),
+            reverse=True,
+        )[:candidate_k]
+        tracked_pattern_set = set(tracked_patterns)
+
+        ctx = build_surrogate_boundary_float_context(
+            X, mu, phi, spf, even_window_card, sorted(candidate_scope),
+            progress=args.progress,
+        )
+
+        tracked_signed_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        tracked_abs_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        remaining_signed_total = 0.0
+        remaining_abs_total = 0.0
+        processed = 0
+        started = time.time()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            val = 2.0 * surrogate_boundary_pair_contribution_float_cached(X, q, q2, ctx)
+            remaining_signed_total += val
+            remaining_abs_total += abs(val)
+            if pattern in tracked_pattern_set:
+                tracked_signed_by_pattern[pattern] += val
+                tracked_abs_by_pattern[pattern] += abs(val)
+            processed += 1
+            if args.progress and processed % max(1, min(args.progress_every, 20000)) == 0:
+                elapsed = time.time() - started
+                print(
+                    f"[boundary-family-residual] processed_blocks={processed}/{len(pair_count_by_block)} "
+                    f"tracked_patterns={len(tracked_pattern_set)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        tracked_negative = sorted(
+            tracked_patterns,
+            key=lambda pat: (tracked_signed_by_pattern[pat], -tracked_abs_by_pattern[pat]),
+        )[:top_k]
+        tracked_positive = sorted(
+            tracked_patterns,
+            key=lambda pat: (tracked_signed_by_pattern[pat], tracked_abs_by_pattern[pat]),
+            reverse=True,
+        )[:top_k]
+        tracked_abs = sorted(
+            tracked_patterns,
+            key=lambda pat: (tracked_abs_by_pattern[pat], abs(tracked_signed_by_pattern[pat]), runtime_proxy_by_pattern[pat]),
+            reverse=True,
+        )[:top_k]
+
+        def print_table(title: str, pats: list[tuple[int, int]]) -> None:
+            print(title)
+            print("  pattern   G-count   pair mass     float signed         float abs            ratio     runtime proxy      abs coeff proxy")
+            for pat in pats:
+                signed = tracked_signed_by_pattern[pat]
+                abs_mass = tracked_abs_by_pattern[pat]
+                ratio = (abs(signed) / abs_mass) if abs_mass else 0.0
+                print(
+                    f"  {pat[0]}:{pat[1]:<5} {block_count_by_pattern[pat]:>8}  {pair_mass_by_pattern[pat]:>10}  "
+                    f"{signed:> .12e}  {abs_mass:> .12e}  {ratio:> .6f}  "
+                    f"{runtime_proxy_by_pattern[pat]:>13}  {abs_coeff_proxy_by_pattern[pat]:> .12e}"
+                )
+            print()
+
+        print("Active boundary residual family report")
+        print(f"  X                         = {X}")
+        print(f"  support card              = {len(candidate_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  excluded patterns         = {sorted(excluded_patterns)}")
+        print(f"  excluded products         = {sorted(excluded_products)}")
+        print(f"  tracked patterns eval     = {len(tracked_patterns)}")
+        print(f"  remaining float signed    = {remaining_signed_total:.12e}")
+        print(f"  remaining float abs       = {remaining_abs_total:.12e}")
+        print(f"  remaining ratio           = {(abs(remaining_signed_total) / remaining_abs_total) if remaining_abs_total else 0.0:.6f}")
+        print()
+        print_table("Top remaining tracked families by positive signed float", tracked_positive)
+        print_table("Top remaining tracked families by negative signed float", tracked_negative)
+        print_table("Top remaining tracked families by absolute float mass", tracked_abs)
+        return
+
+    if args.boundary_residual_structure_report:
+        if args.true_series:
+            raise SystemExit("--boundary-residual-structure-report is only implemented for the surrogate normalization")
+
+        excluded_patterns = parse_selected_patterns(args.exclude_families)
+        excluded_products = parse_selected_products(args.exclude_products)
+        candidate_scope = active_support
+        coeff_scope = {q: normalized_sigma_trunc_summand_real_coeff(q, mu, phi) for q in candidate_scope}
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            candidate_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        block_count_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        pair_mass_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        runtime_proxy_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        divisor_count_cache: dict[int, int] = {}
+
+        def divisor_count(q: int) -> int:
+            if q not in divisor_count_cache:
+                divisor_count_cache[q] = len(divisors_from_factorization(factorization(q, spf)))
+            return divisor_count_cache[q]
+
+        for block, pair_mass in pair_count_by_block.items():
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            block_count_by_pattern[pattern] += 1
+            pair_mass_by_pattern[pattern] += pair_mass
+            runtime_proxy_by_pattern[pattern] += divisor_count(q) * divisor_count(q2)
+
+        ctx = build_surrogate_boundary_float_context(
+            X, mu, phi, spf, even_window_card, sorted(candidate_scope),
+            progress=args.progress,
+        )
+
+        numerator_signed: dict[int, float] = defaultdict(float)
+        numerator_abs: dict[int, float] = defaultdict(float)
+        dyadic_signed: dict[tuple[int, int], float] = defaultdict(float)
+        dyadic_abs: dict[tuple[int, int], float] = defaultdict(float)
+        bucket_signed: dict[str, float] = defaultdict(float)
+        bucket_abs: dict[str, float] = defaultdict(float)
+        class_signed: dict[str, float] = defaultdict(float)
+        class_abs: dict[str, float] = defaultdict(float)
+        remaining_signed_total = 0.0
+        remaining_abs_total = 0.0
+
+        def odd_part(n: int) -> int:
+            while n % 2 == 0:
+                n //= 2
+            return n
+
+        bucket_width = max(args.boundary_residual_denominator_bucket, 1)
+
+        def numerator_class(m: int) -> str:
+            if m in (1, 3, 5, 7, 10):
+                return str(m)
+            return "other"
+
+        processed = 0
+        started = time.time()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            val = 2.0 * surrogate_boundary_pair_contribution_float_cached(X, q, q2, ctx)
+            abs_val = abs(val)
+            m, n = pattern
+            numerator_signed[m] += val
+            numerator_abs[m] += abs_val
+            dyadic_key = (odd_part(m), odd_part(n))
+            dyadic_signed[dyadic_key] += val
+            dyadic_abs[dyadic_key] += abs_val
+            lo = ((n - 1) // bucket_width) * bucket_width + 1
+            hi = lo + bucket_width - 1
+            bucket_key = f"{lo:03d}-{hi:03d}"
+            bucket_signed[bucket_key] += val
+            bucket_abs[bucket_key] += abs_val
+            cls = numerator_class(m)
+            class_signed[cls] += val
+            class_abs[cls] += abs_val
+            remaining_signed_total += val
+            remaining_abs_total += abs_val
+            processed += 1
+            if args.progress and processed % max(1, min(args.progress_every, 20000)) == 0:
+                elapsed = time.time() - started
+                print(
+                    f"[boundary-residual-structure] processed_blocks={processed}/{len(pair_count_by_block)} "
+                    f"elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        numerator_family_count: dict[int, int] = defaultdict(int)
+        numerator_block_count: dict[int, int] = defaultdict(int)
+        numerator_pair_mass: dict[int, int] = defaultdict(int)
+        numerator_runtime: dict[int, int] = defaultdict(int)
+        dyadic_family_count: dict[tuple[int, int], int] = defaultdict(int)
+        dyadic_block_count: dict[tuple[int, int], int] = defaultdict(int)
+        dyadic_pair_mass: dict[tuple[int, int], int] = defaultdict(int)
+        dyadic_runtime: dict[tuple[int, int], int] = defaultdict(int)
+        bucket_family_count: dict[str, int] = defaultdict(int)
+        bucket_block_count: dict[str, int] = defaultdict(int)
+        bucket_pair_mass: dict[str, int] = defaultdict(int)
+        bucket_runtime: dict[str, int] = defaultdict(int)
+        class_family_count: dict[str, int] = defaultdict(int)
+        class_block_count: dict[str, int] = defaultdict(int)
+        class_pair_mass: dict[str, int] = defaultdict(int)
+        class_runtime: dict[str, int] = defaultdict(int)
+
+        for pattern in block_count_by_pattern:
+            m, n = pattern
+            dyadic_key = (odd_part(m), odd_part(n))
+            lo = ((n - 1) // bucket_width) * bucket_width + 1
+            hi = lo + bucket_width - 1
+            bucket_key = f"{lo:03d}-{hi:03d}"
+            cls = numerator_class(m)
+
+            numerator_family_count[m] += 1
+            numerator_block_count[m] += block_count_by_pattern[pattern]
+            numerator_pair_mass[m] += pair_mass_by_pattern[pattern]
+            numerator_runtime[m] += runtime_proxy_by_pattern[pattern]
+
+            dyadic_family_count[dyadic_key] += 1
+            dyadic_block_count[dyadic_key] += block_count_by_pattern[pattern]
+            dyadic_pair_mass[dyadic_key] += pair_mass_by_pattern[pattern]
+            dyadic_runtime[dyadic_key] += runtime_proxy_by_pattern[pattern]
+
+            bucket_family_count[bucket_key] += 1
+            bucket_block_count[bucket_key] += block_count_by_pattern[pattern]
+            bucket_pair_mass[bucket_key] += pair_mass_by_pattern[pattern]
+            bucket_runtime[bucket_key] += runtime_proxy_by_pattern[pattern]
+
+            class_family_count[cls] += 1
+            class_block_count[cls] += block_count_by_pattern[pattern]
+            class_pair_mass[cls] += pair_mass_by_pattern[pattern]
+            class_runtime[cls] += runtime_proxy_by_pattern[pattern]
+
+        top_k = max(args.boundary_residual_structure_top, 1)
+
+        def top_keys(abs_map: dict[object, float]) -> list[object]:
+            return sorted(abs_map.keys(), key=lambda key: (abs_map[key], abs(abs_map[key])), reverse=True)[:top_k]
+
+        def print_group_table(
+            title: str,
+            keys: list[object],
+            signed_map: dict[object, float],
+            abs_map: dict[object, float],
+            family_count_map: dict[object, int],
+            block_count_map: dict[object, int],
+            pair_mass_map: dict[object, int],
+            runtime_map: dict[object, int],
+            key_fmt,
+        ) -> None:
+            print(title)
+            print("  group                 signed              abs            ratio   families   G-count   pair mass   runtime proxy")
+            for key in keys:
+                signed = signed_map[key]
+                abs_mass = abs_map[key]
+                ratio = (abs(signed) / abs_mass) if abs_mass else 0.0
+                print(
+                    f"  {key_fmt(key):<18} {signed:> .12e}  {abs_mass:> .12e}  {ratio:> .6f}"
+                    f"  {family_count_map[key]:>8}  {block_count_map[key]:>8}  {pair_mass_map[key]:>10}  {runtime_map[key]:>13}"
+                )
+            print()
+
+        print("Active boundary residual structure report")
+        print(f"  X                         = {X}")
+        print(f"  support card              = {len(candidate_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  excluded patterns         = {sorted(excluded_patterns)}")
+        print(f"  excluded products         = {sorted(excluded_products)}")
+        print(f"  remaining float signed    = {remaining_signed_total:.12e}")
+        print(f"  remaining float abs       = {remaining_abs_total:.12e}")
+        print(f"  remaining ratio           = {(abs(remaining_signed_total) / remaining_abs_total) if remaining_abs_total else 0.0:.6f}")
+        print()
+        print_group_table(
+            "Top residual groups by numerator m",
+            top_keys(numerator_abs),
+            numerator_signed,
+            numerator_abs,
+            numerator_family_count,
+            numerator_block_count,
+            numerator_pair_mass,
+            numerator_runtime,
+            lambda key: f"m={key}",
+        )
+        print_group_table(
+            "Top residual groups by dyadic orbit",
+            top_keys(dyadic_abs),
+            dyadic_signed,
+            dyadic_abs,
+            dyadic_family_count,
+            dyadic_block_count,
+            dyadic_pair_mass,
+            dyadic_runtime,
+            lambda key: f"({key[0]},{key[1]})",
+        )
+        print_group_table(
+            "Top residual groups by denominator bucket",
+            top_keys(bucket_abs),
+            bucket_signed,
+            bucket_abs,
+            bucket_family_count,
+            bucket_block_count,
+            bucket_pair_mass,
+            bucket_runtime,
+            lambda key: key,
+        )
+        print_group_table(
+            "Residual by small-numerator class",
+            sorted(class_abs.keys(), key=lambda key: (class_abs[key], abs(class_signed[key])), reverse=True),
+            class_signed,
+            class_abs,
+            class_family_count,
+            class_block_count,
+            class_pair_mass,
+            class_runtime,
+            lambda key: key,
+        )
+        return
+
+    if args.boundary_residual_other_structure_report:
+        if args.true_series:
+            raise SystemExit("--boundary-residual-other-structure-report is only implemented for the surrogate normalization")
+
+        excluded_patterns = parse_selected_patterns(args.exclude_families)
+        excluded_products = parse_selected_products(args.exclude_products)
+        candidate_scope = active_support
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            candidate_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        block_count_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        pair_mass_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        runtime_proxy_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        divisor_count_cache: dict[int, int] = {}
+
+        def divisor_count(q: int) -> int:
+            if q not in divisor_count_cache:
+                divisor_count_cache[q] = len(divisors_from_factorization(factorization(q, spf)))
+            return divisor_count_cache[q]
+
+        for block, pair_mass in pair_count_by_block.items():
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            block_count_by_pattern[pattern] += 1
+            pair_mass_by_pattern[pattern] += pair_mass
+            runtime_proxy_by_pattern[pattern] += divisor_count(q) * divisor_count(q2)
+
+        ctx = build_surrogate_boundary_float_context(
+            X, mu, phi, spf, even_window_card, sorted(candidate_scope),
+            progress=args.progress,
+        )
+
+        bucket_width = max(args.boundary_residual_denominator_bucket, 1)
+
+        def odd_part(n: int) -> int:
+            while n % 2 == 0:
+                n //= 2
+            return n
+
+        def numerator_class(m: int) -> str:
+            if m in (1, 3, 5, 7, 10):
+                return str(m)
+            return "other"
+
+        def smallest_prime_factor(n: int) -> int:
+            return spf[n] if n > 1 else 1
+
+        other_signed_total = 0.0
+        other_abs_total = 0.0
+
+        orbit_bucket_signed: dict[tuple[tuple[int, int], str], float] = defaultdict(float)
+        orbit_bucket_abs: dict[tuple[tuple[int, int], str], float] = defaultdict(float)
+        orbit_bucket_family_count: dict[tuple[tuple[int, int], str], int] = defaultdict(int)
+        orbit_bucket_block_count: dict[tuple[tuple[int, int], str], int] = defaultdict(int)
+        orbit_bucket_pair_mass: dict[tuple[tuple[int, int], str], int] = defaultdict(int)
+        orbit_bucket_runtime: dict[tuple[tuple[int, int], str], int] = defaultdict(int)
+
+        spf_pair_signed: dict[tuple[int, int], float] = defaultdict(float)
+        spf_pair_abs: dict[tuple[int, int], float] = defaultdict(float)
+        spf_pair_family_count: dict[tuple[int, int], int] = defaultdict(int)
+        spf_pair_block_count: dict[tuple[int, int], int] = defaultdict(int)
+        spf_pair_pair_mass: dict[tuple[int, int], int] = defaultdict(int)
+        spf_pair_runtime: dict[tuple[int, int], int] = defaultdict(int)
+
+        product_signed: dict[int, float] = defaultdict(float)
+        product_abs: dict[int, float] = defaultdict(float)
+        product_family_count: dict[int, int] = defaultdict(int)
+        product_block_count: dict[int, int] = defaultdict(int)
+        product_pair_mass: dict[int, int] = defaultdict(int)
+        product_runtime: dict[int, int] = defaultdict(int)
+
+        seen_patterns: set[tuple[int, int]] = set()
+        processed = 0
+        started = time.time()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            m, n = pattern
+            if numerator_class(m) != "other":
+                continue
+            q = G * m
+            q2 = G * n
+            val = 2.0 * surrogate_boundary_pair_contribution_float_cached(X, q, q2, ctx)
+            abs_val = abs(val)
+            other_signed_total += val
+            other_abs_total += abs_val
+
+            orbit = (odd_part(m), odd_part(n))
+            lo = ((n - 1) // bucket_width) * bucket_width + 1
+            hi = lo + bucket_width - 1
+            bucket_key = f"{lo:03d}-{hi:03d}"
+            orbit_bucket_key = (orbit, bucket_key)
+            orbit_bucket_signed[orbit_bucket_key] += val
+            orbit_bucket_abs[orbit_bucket_key] += abs_val
+
+            spf_key = (smallest_prime_factor(m), smallest_prime_factor(n))
+            spf_pair_signed[spf_key] += val
+            spf_pair_abs[spf_key] += abs_val
+
+            prod = m * n
+            product_signed[prod] += val
+            product_abs[prod] += abs_val
+
+            if pattern not in seen_patterns:
+                seen_patterns.add(pattern)
+                orbit_bucket_family_count[orbit_bucket_key] += 1
+                orbit_bucket_block_count[orbit_bucket_key] += block_count_by_pattern[pattern]
+                orbit_bucket_pair_mass[orbit_bucket_key] += pair_mass_by_pattern[pattern]
+                orbit_bucket_runtime[orbit_bucket_key] += runtime_proxy_by_pattern[pattern]
+
+                spf_pair_family_count[spf_key] += 1
+                spf_pair_block_count[spf_key] += block_count_by_pattern[pattern]
+                spf_pair_pair_mass[spf_key] += pair_mass_by_pattern[pattern]
+                spf_pair_runtime[spf_key] += runtime_proxy_by_pattern[pattern]
+
+                product_family_count[prod] += 1
+                product_block_count[prod] += block_count_by_pattern[pattern]
+                product_pair_mass[prod] += pair_mass_by_pattern[pattern]
+                product_runtime[prod] += runtime_proxy_by_pattern[pattern]
+
+            processed += 1
+            if args.progress and processed % max(1, min(args.progress_every, 20000)) == 0:
+                elapsed = time.time() - started
+                print(
+                    f"[boundary-residual-other-structure] processed_blocks={processed}/{len(pair_count_by_block)} "
+                    f"elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        top_k = max(args.boundary_residual_structure_top, 1)
+
+        def top_keys(abs_map: dict[object, float]) -> list[object]:
+            return sorted(abs_map.keys(), key=lambda key: (abs_map[key], abs(abs_map[key])), reverse=True)[:top_k]
+
+        def print_group_table(
+            title: str,
+            keys: list[object],
+            signed_map: dict[object, float],
+            abs_map: dict[object, float],
+            family_count_map: dict[object, int],
+            block_count_map: dict[object, int],
+            pair_mass_map: dict[object, int],
+            runtime_map: dict[object, int],
+            key_fmt,
+        ) -> None:
+            print(title)
+            print("  group                           signed              abs            ratio   families   G-count   pair mass   runtime proxy")
+            for key in keys:
+                signed = signed_map[key]
+                abs_mass = abs_map[key]
+                ratio = (abs(signed) / abs_mass) if abs_mass else 0.0
+                print(
+                    f"  {key_fmt(key):<30} {signed:> .12e}  {abs_mass:> .12e}  {ratio:> .6f}"
+                    f"  {family_count_map[key]:>8}  {block_count_map[key]:>8}  {pair_mass_map[key]:>10}  {runtime_map[key]:>13}"
+                )
+            print()
+
+        print("Active boundary residual OTHER-bucket structure report")
+        print(f"  X                         = {X}")
+        print(f"  support card              = {len(candidate_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  excluded patterns         = {sorted(excluded_patterns)}")
+        print(f"  excluded products         = {sorted(excluded_products)}")
+        print(f"  other float signed        = {other_signed_total:.12e}")
+        print(f"  other float abs           = {other_abs_total:.12e}")
+        print(f"  other ratio               = {(abs(other_signed_total) / other_abs_total) if other_abs_total else 0.0:.6f}")
+        print()
+        print_group_table(
+            "Top OTHER groups by (dyadic orbit, denominator bucket)",
+            top_keys(orbit_bucket_abs),
+            orbit_bucket_signed,
+            orbit_bucket_abs,
+            orbit_bucket_family_count,
+            orbit_bucket_block_count,
+            orbit_bucket_pair_mass,
+            orbit_bucket_runtime,
+            lambda key: f"{key[0]} @ {key[1]}",
+        )
+        print_group_table(
+            "Top OTHER groups by (spf(m), spf(n))",
+            top_keys(spf_pair_abs),
+            spf_pair_signed,
+            spf_pair_abs,
+            spf_pair_family_count,
+            spf_pair_block_count,
+            spf_pair_pair_mass,
+            spf_pair_runtime,
+            lambda key: f"({key[0]},{key[1]})",
+        )
+        print_group_table(
+            "Top OTHER groups by product m*n",
+            top_keys(product_abs),
+            product_signed,
+            product_abs,
+            product_family_count,
+            product_block_count,
+            product_pair_mass,
+            product_runtime,
+            lambda key: f"{key}",
+        )
+        return
+
+    if args.boundary_product_candidate_report:
+        if args.true_series:
+            raise SystemExit("--boundary-product-candidate-report is only implemented for the surrogate normalization")
+
+        excluded_patterns = parse_selected_patterns(args.exclude_families)
+        excluded_products = parse_selected_products(args.exclude_products)
+        candidate_scope = active_support
+        coeff_scope = {q: normalized_sigma_trunc_summand_real_coeff(q, mu, phi) for q in candidate_scope}
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            candidate_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        block_count_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        pair_mass_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        abs_coeff_proxy_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        runtime_proxy_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        divisor_count_cache: dict[int, int] = {}
+
+        def divisor_count(q: int) -> int:
+            if q not in divisor_count_cache:
+                divisor_count_cache[q] = len(divisors_from_factorization(factorization(q, spf)))
+            return divisor_count_cache[q]
+
+        for block, pair_mass in pair_count_by_block.items():
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            block_count_by_pattern[pattern] += 1
+            pair_mass_by_pattern[pattern] += pair_mass
+            abs_coeff_proxy_by_pattern[pattern] += abs(coeff_scope[q] * coeff_scope[q2]) * pair_mass
+            runtime_proxy_by_pattern[pattern] += divisor_count(q) * divisor_count(q2)
+
+        top_k = max(args.boundary_family_candidate_top, 1)
+        candidate_k = (
+            max(args.boundary_family_candidate_patterns, top_k)
+            if args.boundary_family_candidate_patterns > 0
+            else max(top_k * 10, top_k)
+        )
+        candidate_patterns = sorted(
+            block_count_by_pattern.keys(),
+            key=lambda pat: (
+                abs_coeff_proxy_by_pattern[pat],
+                runtime_proxy_by_pattern[pat],
+                pair_mass_by_pattern[pat],
+                block_count_by_pattern[pat],
+                -pat[0],
+                -pat[1],
+            ),
+            reverse=True,
+        )[:candidate_k]
+        candidate_pattern_set = set(candidate_patterns)
+
+        q_needed: set[int] = set()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern in candidate_pattern_set:
+                q_needed.add(G * pattern[0])
+                q_needed.add(G * pattern[1])
+
+        ctx = build_surrogate_boundary_float_context(
+            X, mu, phi, spf, even_window_card, sorted(q_needed),
+            progress=args.progress,
+        )
+
+        signed_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        abs_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        processed = 0
+        started = time.time()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern not in candidate_pattern_set:
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            val = 2.0 * surrogate_boundary_pair_contribution_float_cached(X, q, q2, ctx)
+            signed_float_by_pattern[pattern] += val
+            abs_float_by_pattern[pattern] += abs(val)
+            processed += 1
+            if args.progress and processed % max(1, min(args.progress_every, 1000)) == 0:
+                elapsed = time.time() - started
+                print(
+                    f"[boundary-product-candidate] processed_blocks={processed} "
+                    f"candidate_patterns={len(candidate_pattern_set)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        patterns_by_product: dict[int, list[tuple[int, int]]] = defaultdict(list)
+        block_count_by_product: dict[int, int] = defaultdict(int)
+        pair_mass_by_product: dict[int, int] = defaultdict(int)
+        runtime_proxy_by_product: dict[int, int] = defaultdict(int)
+        abs_coeff_proxy_by_product: dict[int, float] = defaultdict(float)
+        signed_float_by_product: dict[int, float] = defaultdict(float)
+        abs_float_by_product: dict[int, float] = defaultdict(float)
+
+        for pattern in candidate_patterns:
+            prod = pattern[0] * pattern[1]
+            patterns_by_product[prod].append(pattern)
+            block_count_by_product[prod] += block_count_by_pattern[pattern]
+            pair_mass_by_product[prod] += pair_mass_by_pattern[pattern]
+            runtime_proxy_by_product[prod] += runtime_proxy_by_pattern[pattern]
+            abs_coeff_proxy_by_product[prod] += abs_coeff_proxy_by_pattern[pattern]
+            signed_float_by_product[prod] += signed_float_by_pattern[pattern]
+            abs_float_by_product[prod] += abs_float_by_pattern[pattern]
+
+        products = list(patterns_by_product.keys())
+        top_negative = sorted(products, key=lambda p: (signed_float_by_product[p], -abs_float_by_product[p]))[:top_k]
+        top_positive = sorted(products, key=lambda p: (signed_float_by_product[p], abs_float_by_product[p]), reverse=True)[:top_k]
+        top_abs = sorted(products, key=lambda p: (abs_float_by_product[p], abs(signed_float_by_product[p]), runtime_proxy_by_product[p]), reverse=True)[:top_k]
+
+        def print_table(title: str, prods: list[int]) -> None:
+            print(title)
+            print("  product  fams   G-count   pair mass     float signed         float abs            ratio     runtime proxy      abs coeff proxy")
+            for prod in prods:
+                signed = signed_float_by_product[prod]
+                abs_mass = abs_float_by_product[prod]
+                ratio = (abs(signed) / abs_mass) if abs_mass else 0.0
+                print(
+                    f"  {prod:<7d} {len(patterns_by_product[prod]):>4}  {block_count_by_product[prod]:>8}  {pair_mass_by_product[prod]:>10}  "
+                    f"{signed:> .12e}  {abs_mass:> .12e}  {ratio:> .6f}  "
+                    f"{runtime_proxy_by_product[prod]:>13}  {abs_coeff_proxy_by_product[prod]:> .12e}"
+                )
+                members = ' '.join(f"{a}:{b}" for (a, b) in sorted(patterns_by_product[prod]))
+                print(f"    members: {members}")
+            print()
+
+        print("Active boundary product-class candidate report")
+        print(f"  X                         = {X}")
+        print(f"  support card              = {len(candidate_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  excluded patterns         = {sorted(excluded_patterns)}")
+        print(f"  excluded products         = {sorted(excluded_products)}")
+        print(f"  candidate patterns eval   = {len(candidate_patterns)}")
+        print(f"  grouped products          = {len(products)}")
+        print()
+        print_table("Top unevaluated product classes by positive signed float", top_positive)
+        print_table("Top unevaluated product classes by negative signed float", top_negative)
+        print_table("Top unevaluated product classes by absolute float mass", top_abs)
+        return
+
+    if args.boundary_pattern_family_exact_topn > 0:
+        if args.true_series:
+            raise SystemExit("--boundary-pattern-family-exact-topn is only implemented for the surrogate normalization")
+
+        excluded_patterns = parse_selected_patterns(args.exclude_families)
+        excluded_products = parse_selected_products(args.exclude_products)
+        candidate_scope = active_support
+        coeff_scope = {q: normalized_sigma_trunc_summand_real_coeff(q, mu, phi) for q in candidate_scope}
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            candidate_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        block_count_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        pair_mass_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        abs_coeff_proxy_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        runtime_proxy_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        divisor_count_cache: dict[int, int] = {}
+
+        def divisor_count(q: int) -> int:
+            if q not in divisor_count_cache:
+                divisor_count_cache[q] = len(divisors_from_factorization(factorization(q, spf)))
+            return divisor_count_cache[q]
+
+        for block, pair_mass in pair_count_by_block.items():
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            block_count_by_pattern[pattern] += 1
+            pair_mass_by_pattern[pattern] += pair_mass
+            abs_coeff_proxy_by_pattern[pattern] += abs(coeff_scope[q] * coeff_scope[q2]) * pair_mass
+            runtime_proxy_by_pattern[pattern] += divisor_count(q) * divisor_count(q2)
+
+        top_k = max(args.boundary_pattern_family_exact_topn, 1)
+        candidate_k = (
+            max(args.boundary_family_candidate_patterns, top_k)
+            if args.boundary_family_candidate_patterns > 0
+            else max(top_k * 10, top_k)
+        )
+        candidate_patterns = sorted(
+            block_count_by_pattern.keys(),
+            key=lambda pat: (
+                abs_coeff_proxy_by_pattern[pat],
+                runtime_proxy_by_pattern[pat],
+                pair_mass_by_pattern[pat],
+                block_count_by_pattern[pat],
+                -pat[0],
+                -pat[1],
+            ),
+            reverse=True,
+        )[:candidate_k]
+        candidate_pattern_set = set(candidate_patterns)
+
+        q_needed: set[int] = set()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern in candidate_pattern_set:
+                q_needed.add(G * pattern[0])
+                q_needed.add(G * pattern[1])
+
+        ctx = build_surrogate_boundary_float_context(
+            X, mu, phi, spf, even_window_card, sorted(q_needed),
+            progress=args.progress,
+        )
+
+        signed_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        abs_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        processed = 0
+        started = time.time()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern not in candidate_pattern_set:
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            val = 2.0 * surrogate_boundary_pair_contribution_float_cached(X, q, q2, ctx)
+            signed_float_by_pattern[pattern] += val
+            abs_float_by_pattern[pattern] += abs(val)
+            processed += 1
+            if args.progress and processed % max(1, min(args.progress_every, 1000)) == 0:
+                elapsed = time.time() - started
+                print(
+                    f"[boundary-family-topn] processed_blocks={processed} "
+                    f"candidate_patterns={len(candidate_pattern_set)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        if args.boundary_pattern_family_topn_order == "negative":
+            selected_patterns = sorted(
+                candidate_patterns,
+                key=lambda pat: (signed_float_by_pattern[pat], -abs_float_by_pattern[pat]),
+            )[:top_k]
+        elif args.boundary_pattern_family_topn_order == "positive":
+            selected_patterns = sorted(
+                candidate_patterns,
+                key=lambda pat: (signed_float_by_pattern[pat], abs_float_by_pattern[pat]),
+                reverse=True,
+            )[:top_k]
+        elif args.boundary_pattern_family_topn_order == "abs":
+            selected_patterns = sorted(
+                candidate_patterns,
+                key=lambda pat: (abs_float_by_pattern[pat], abs(signed_float_by_pattern[pat]), runtime_proxy_by_pattern[pat]),
+                reverse=True,
+            )[:top_k]
+        else:
+            selected_patterns = sorted(
+                candidate_patterns,
+                key=lambda pat: (runtime_proxy_by_pattern[pat], abs_float_by_pattern[pat], pair_mass_by_pattern[pat]),
+                reverse=True,
+            )[:top_k]
+
+        results: list[dict[str, object]] = []
+        combined_signed = Fraction(0, 1)
+        combined_abs = Fraction(0, 1)
+        total_elapsed = 0.0
+        for pattern in selected_patterns:
+            result = evaluate_exact_boundary_pattern_family(
+                X=X,
+                target_pattern=pattern,
+                family_scope=candidate_scope,
+                pair_count_by_block=pair_count_by_block,
+                total_pairs=total_pairs,
+                mu=mu,
+                phi=phi,
+                spf=spf,
+                even_window_card=even_window_card,
+                progress=args.progress,
+                progress_every=args.progress_every,
+            )
+            results.append(result)
+            combined_signed += result["signed"]
+            combined_abs += result["abs"]
+            total_elapsed += float(result["elapsed_sec"])
+
+        print("Active boundary exact top-N family batch report")
+        print(f"  X                         = {X}")
+        print(f"  support card              = {len(candidate_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  excluded patterns         = {sorted(excluded_patterns)}")
+        print(f"  ranking order             = {args.boundary_pattern_family_topn_order}")
+        print(f"  selected family count     = {len(results)}")
+        print(f"  combined exact signed     = {float(combined_signed):.12e}")
+        print(f"  combined exact abs        = {float(combined_abs):.12e}")
+        print(f"  combined ratio            = {(abs(float(combined_signed)) / float(combined_abs)) if combined_abs else 0.0:.6f}")
+        print(f"  combined elapsed sec      = {total_elapsed:.3f}")
+        print(f"  Lean ℚ combined signed    = {fraction_to_q_literal(combined_signed)}")
+        print()
+        print("  pattern   G-count   pair mass     float signed est     float abs est        exact signed         exact abs            ratio     elapsed sec   avg ms/G")
+        for result in results:
+            pattern = result["pattern"]
+            signed = result["signed"]
+            abs_mass = result["abs"]
+            elapsed_sec = float(result["elapsed_sec"])
+            g_count = int(result["g_count"])
+            ratio = (abs(float(signed)) / float(abs_mass)) if abs_mass else 0.0
+            print(
+                f"  {pattern[0]}:{pattern[1]:<5} {g_count:>8}  {int(result['pair_mass']):>10}  "
+                f"{signed_float_by_pattern[pattern]:> .12e}  {abs_float_by_pattern[pattern]:> .12e}  "
+                f"{float(signed):> .12e}  {float(abs_mass):> .12e}  {ratio:> .6f}  "
+                f"{elapsed_sec:>11.3f}  {1000.0 * elapsed_sec / max(g_count, 1):>9.3f}"
+            )
+        return
+
+    if args.boundary_pattern_product_exact_topn > 0:
+        if args.true_series:
+            raise SystemExit("--boundary-pattern-product-exact-topn is only implemented for the surrogate normalization")
+
+        excluded_patterns = parse_selected_patterns(args.exclude_families)
+        excluded_products = parse_selected_products(args.exclude_products)
+        candidate_scope = active_support
+        coeff_scope = {q: normalized_sigma_trunc_summand_real_coeff(q, mu, phi) for q in candidate_scope}
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            candidate_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        block_count_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        pair_mass_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        abs_coeff_proxy_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        runtime_proxy_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        divisor_count_cache: dict[int, int] = {}
+
+        def divisor_count(q: int) -> int:
+            if q not in divisor_count_cache:
+                divisor_count_cache[q] = len(divisors_from_factorization(factorization(q, spf)))
+            return divisor_count_cache[q]
+
+        for block, pair_mass in pair_count_by_block.items():
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            block_count_by_pattern[pattern] += 1
+            pair_mass_by_pattern[pattern] += pair_mass
+            abs_coeff_proxy_by_pattern[pattern] += abs(coeff_scope[q] * coeff_scope[q2]) * pair_mass
+            runtime_proxy_by_pattern[pattern] += divisor_count(q) * divisor_count(q2)
+
+        top_k = max(args.boundary_pattern_product_exact_topn, 1)
+        candidate_k = (
+            max(args.boundary_family_candidate_patterns, top_k)
+            if args.boundary_family_candidate_patterns > 0
+            else max(top_k * 10, top_k)
+        )
+        candidate_patterns = sorted(
+            block_count_by_pattern.keys(),
+            key=lambda pat: (
+                abs_coeff_proxy_by_pattern[pat],
+                runtime_proxy_by_pattern[pat],
+                pair_mass_by_pattern[pat],
+                block_count_by_pattern[pat],
+                -pat[0],
+                -pat[1],
+            ),
+            reverse=True,
+        )[:candidate_k]
+        candidate_pattern_set = set(candidate_patterns)
+
+        q_needed: set[int] = set()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern in candidate_pattern_set:
+                q_needed.add(G * pattern[0])
+                q_needed.add(G * pattern[1])
+
+        ctx = build_surrogate_boundary_float_context(
+            X, mu, phi, spf, even_window_card, sorted(q_needed),
+            progress=args.progress,
+        )
+
+        signed_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        abs_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        processed = 0
+        started = time.time()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern not in candidate_pattern_set:
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            val = 2.0 * surrogate_boundary_pair_contribution_float_cached(X, q, q2, ctx)
+            signed_float_by_pattern[pattern] += val
+            abs_float_by_pattern[pattern] += abs(val)
+            processed += 1
+            if args.progress and processed % max(1, min(args.progress_every, 1000)) == 0:
+                elapsed = time.time() - started
+                print(
+                    f"[boundary-product-topn] processed_blocks={processed} "
+                    f"candidate_patterns={len(candidate_pattern_set)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        patterns_by_product: dict[int, list[tuple[int, int]]] = defaultdict(list)
+        block_count_by_product: dict[int, int] = defaultdict(int)
+        pair_mass_by_product: dict[int, int] = defaultdict(int)
+        runtime_proxy_by_product: dict[int, int] = defaultdict(int)
+        signed_float_by_product: dict[int, float] = defaultdict(float)
+        abs_float_by_product: dict[int, float] = defaultdict(float)
+
+        for pattern in candidate_patterns:
+            prod = pattern[0] * pattern[1]
+            patterns_by_product[prod].append(pattern)
+            block_count_by_product[prod] += block_count_by_pattern[pattern]
+            pair_mass_by_product[prod] += pair_mass_by_pattern[pattern]
+            runtime_proxy_by_product[prod] += runtime_proxy_by_pattern[pattern]
+            signed_float_by_product[prod] += signed_float_by_pattern[pattern]
+            abs_float_by_product[prod] += abs_float_by_pattern[pattern]
+
+        products = list(patterns_by_product.keys())
+        if args.boundary_pattern_product_topn_order == "negative":
+            selected_products = sorted(products, key=lambda p: (signed_float_by_product[p], -abs_float_by_product[p]))[:top_k]
+        elif args.boundary_pattern_product_topn_order == "positive":
+            selected_products = sorted(products, key=lambda p: (signed_float_by_product[p], abs_float_by_product[p]), reverse=True)[:top_k]
+        elif args.boundary_pattern_product_topn_order == "abs":
+            selected_products = sorted(products, key=lambda p: (abs_float_by_product[p], abs(signed_float_by_product[p]), runtime_proxy_by_product[p]), reverse=True)[:top_k]
+        else:
+            selected_products = sorted(products, key=lambda p: (runtime_proxy_by_product[p], abs_float_by_product[p], pair_mass_by_product[p]), reverse=True)[:top_k]
+
+        product_results: list[dict[str, object]] = []
+        combined_signed = Fraction(0, 1)
+        combined_abs = Fraction(0, 1)
+        total_elapsed = 0.0
+        for prod in selected_products:
+            family_results: list[dict[str, object]] = []
+            prod_signed = Fraction(0, 1)
+            prod_abs = Fraction(0, 1)
+            prod_elapsed = 0.0
+            for pattern in sorted(patterns_by_product[prod]):
+                result = evaluate_exact_boundary_pattern_family(
+                    X=X,
+                    target_pattern=pattern,
+                    family_scope=candidate_scope,
+                    pair_count_by_block=pair_count_by_block,
+                    total_pairs=total_pairs,
+                    mu=mu,
+                    phi=phi,
+                    spf=spf,
+                    even_window_card=even_window_card,
+                    progress=args.progress,
+                    progress_every=args.progress_every,
+                )
+                family_results.append(result)
+                prod_signed += result["signed"]
+                prod_abs += result["abs"]
+                prod_elapsed += float(result["elapsed_sec"])
+            product_results.append({
+                "product": prod,
+                "patterns": sorted(patterns_by_product[prod]),
+                "g_count": sum(int(r["g_count"]) for r in family_results),
+                "pair_mass": sum(int(r["pair_mass"]) for r in family_results),
+                "signed": prod_signed,
+                "abs": prod_abs,
+                "elapsed_sec": prod_elapsed,
+            })
+            combined_signed += prod_signed
+            combined_abs += prod_abs
+            total_elapsed += prod_elapsed
+
+        print("Active boundary exact top-N product-class batch report")
+        print(f"  X                         = {X}")
+        print(f"  support card              = {len(candidate_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  excluded patterns         = {sorted(excluded_patterns)}")
+        print(f"  excluded products         = {sorted(excluded_products)}")
+        print(f"  ranking order             = {args.boundary_pattern_product_topn_order}")
+        print(f"  selected product count    = {len(product_results)}")
+        print(f"  combined exact signed     = {float(combined_signed):.12e}")
+        print(f"  combined exact abs        = {float(combined_abs):.12e}")
+        print(f"  combined ratio            = {(abs(float(combined_signed)) / float(combined_abs)) if combined_abs else 0.0:.6f}")
+        print(f"  combined elapsed sec      = {total_elapsed:.3f}")
+        print(f"  Lean ℚ combined signed    = {fraction_to_q_literal(combined_signed)}")
+        print()
+        print("  product  fams   G-count   pair mass     float signed est     float abs est        exact signed         exact abs            ratio     elapsed sec")
+        for result in product_results:
+            prod = int(result["product"])
+            signed = result["signed"]
+            abs_mass = result["abs"]
+            elapsed_sec = float(result["elapsed_sec"])
+            ratio = (abs(float(signed)) / float(abs_mass)) if abs_mass else 0.0
+            print(
+                f"  {prod:<7d} {len(result['patterns']):>4}  {int(result['g_count']):>8}  {int(result['pair_mass']):>10}  "
+                f"{signed_float_by_product[prod]:> .12e}  {abs_float_by_product[prod]:> .12e}  "
+                f"{float(signed):> .12e}  {float(abs_mass):> .12e}  {ratio:> .6f}  "
+                f"{elapsed_sec:>11.3f}"
+            )
+            members = ' '.join(f"{a}:{b}" for (a, b) in result["patterns"])
+            print(f"    members: {members}")
+        return
+
+    if args.boundary_pattern_product_exact_batch:
+        if args.true_series:
+            raise SystemExit("--boundary-pattern-product-exact-batch is only implemented for the surrogate normalization")
+
+        excluded_patterns = parse_selected_patterns(args.exclude_families)
+        excluded_products = parse_selected_products(args.exclude_products)
+        target_products = sorted(set(args.boundary_pattern_product_exact_batch))
+        candidate_scope = active_support
+        coeff_scope = {q: normalized_sigma_trunc_summand_real_coeff(q, mu, phi) for q in candidate_scope}
+        pair_count_by_block, total_pairs = build_active_boundary_block_table(
+            candidate_scope,
+            progress=args.progress,
+            progress_every=args.progress_every,
+        )
+
+        block_count_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        pair_mass_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        abs_coeff_proxy_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        runtime_proxy_by_pattern: dict[tuple[int, int], int] = defaultdict(int)
+        divisor_count_cache: dict[int, int] = {}
+
+        def divisor_count(q: int) -> int:
+            if q not in divisor_count_cache:
+                divisor_count_cache[q] = len(divisors_from_factorization(factorization(q, spf)))
+            return divisor_count_cache[q]
+
+        patterns_by_product: dict[int, list[tuple[int, int]]] = defaultdict(list)
+
+        for block, pair_mass in pair_count_by_block.items():
+            pattern, G = block
+            if boundary_pattern_is_excluded(pattern, excluded_patterns, excluded_products):
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            block_count_by_pattern[pattern] += 1
+            pair_mass_by_pattern[pattern] += pair_mass
+            abs_coeff_proxy_by_pattern[pattern] += abs(coeff_scope[q] * coeff_scope[q2]) * pair_mass
+            runtime_proxy_by_pattern[pattern] += divisor_count(q) * divisor_count(q2)
+
+        for pattern in block_count_by_pattern:
+            patterns_by_product[pattern[0] * pattern[1]].append(pattern)
+
+        missing_products = [prod for prod in target_products if prod not in patterns_by_product]
+        if missing_products:
+            raise SystemExit(f"requested product classes not present after exclusions: {missing_products}")
+
+        q_needed: set[int] = set()
+        selected_patterns: set[tuple[int, int]] = set()
+        for prod in target_products:
+            for pattern in patterns_by_product[prod]:
+                selected_patterns.add(pattern)
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern in selected_patterns:
+                q_needed.add(G * pattern[0])
+                q_needed.add(G * pattern[1])
+
+        ctx = build_surrogate_boundary_float_context(
+            X, mu, phi, spf, even_window_card, sorted(q_needed),
+            progress=args.progress,
+        )
+
+        signed_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        abs_float_by_pattern: dict[tuple[int, int], float] = defaultdict(float)
+        processed = 0
+        started = time.time()
+        for block in pair_count_by_block:
+            pattern, G = block
+            if pattern not in selected_patterns:
+                continue
+            q = G * pattern[0]
+            q2 = G * pattern[1]
+            val = 2.0 * surrogate_boundary_pair_contribution_float_cached(X, q, q2, ctx)
+            signed_float_by_pattern[pattern] += val
+            abs_float_by_pattern[pattern] += abs(val)
+            processed += 1
+            if args.progress and processed % max(1, min(args.progress_every, 1000)) == 0:
+                elapsed = time.time() - started
+                print(
+                    f"[boundary-product-batch] processed_blocks={processed} "
+                    f"selected_patterns={len(selected_patterns)} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        product_results: list[dict[str, object]] = []
+        combined_signed = Fraction(0, 1)
+        combined_abs = Fraction(0, 1)
+        total_elapsed = 0.0
+        for prod in target_products:
+            family_results: list[dict[str, object]] = []
+            prod_signed = Fraction(0, 1)
+            prod_abs = Fraction(0, 1)
+            prod_elapsed = 0.0
+            for pattern in sorted(patterns_by_product[prod]):
+                result = evaluate_exact_boundary_pattern_family(
+                    X=X,
+                    target_pattern=pattern,
+                    family_scope=candidate_scope,
+                    pair_count_by_block=pair_count_by_block,
+                    total_pairs=total_pairs,
+                    mu=mu,
+                    phi=phi,
+                    spf=spf,
+                    even_window_card=even_window_card,
+                    progress=args.progress,
+                    progress_every=args.progress_every,
+                )
+                family_results.append(result)
+                prod_signed += result["signed"]
+                prod_abs += result["abs"]
+                prod_elapsed += float(result["elapsed_sec"])
+            product_results.append({
+                "product": prod,
+                "patterns": sorted(patterns_by_product[prod]),
+                "g_count": sum(int(r["g_count"]) for r in family_results),
+                "pair_mass": sum(int(r["pair_mass"]) for r in family_results),
+                "signed": prod_signed,
+                "abs": prod_abs,
+                "elapsed_sec": prod_elapsed,
+            })
+            combined_signed += prod_signed
+            combined_abs += prod_abs
+            total_elapsed += prod_elapsed
+
+        print("Active boundary exact explicit product-class batch report")
+        print(f"  X                         = {X}")
+        print(f"  support card              = {len(candidate_scope)}")
+        print(f"  active ordered pairs      = {total_pairs}")
+        print(f"  excluded patterns         = {sorted(excluded_patterns)}")
+        print(f"  excluded products         = {sorted(excluded_products)}")
+        print(f"  selected products         = {target_products}")
+        print(f"  combined exact signed     = {float(combined_signed):.12e}")
+        print(f"  combined exact abs        = {float(combined_abs):.12e}")
+        print(f"  combined ratio            = {(abs(float(combined_signed)) / float(combined_abs)) if combined_abs else 0.0:.6f}")
+        print(f"  combined elapsed sec      = {total_elapsed:.3f}")
+        print(f"  Lean ℚ combined signed    = {fraction_to_q_literal(combined_signed)}")
+        print()
+        print("  product  fams   G-count   pair mass     float signed est     float abs est        exact signed         exact abs            ratio     elapsed sec")
+        for result in product_results:
+            prod = int(result["product"])
+            signed = result["signed"]
+            abs_mass = result["abs"]
+            elapsed_sec = float(result["elapsed_sec"])
+            float_signed = sum(signed_float_by_pattern[pat] for pat in result["patterns"])
+            float_abs = sum(abs_float_by_pattern[pat] for pat in result["patterns"])
+            ratio = (abs(float(signed)) / float(abs_mass)) if abs_mass else 0.0
+            print(
+                f"  {prod:<7d} {len(result['patterns']):>4}  {int(result['g_count']):>8}  {int(result['pair_mass']):>10}  "
+                f"{float_signed:> .12e}  {float_abs:> .12e}  "
+                f"{float(signed):> .12e}  {float(abs_mass):> .12e}  {ratio:> .6f}  "
+                f"{elapsed_sec:>11.3f}"
+            )
+            members = ' '.join(f"{a}:{b}" for (a, b) in result["patterns"])
+            print(f"    members: {members}")
         return
 
     if args.boundary_signed_split_report:

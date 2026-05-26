@@ -1,0 +1,17 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+theorem centeredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0_of_eq_cert
+    (hcert :
+      surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat X0
+        = surrogatePeriodicMainX0RatCert) :
+    CenteredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0 := by
+  exact centeredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0_of_exactCertificate
+    (centeredNormalizedSigmaTruncSurrogatePeriodicMainExactRatCertificateAtX0_of_eq_cert hcert)
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
