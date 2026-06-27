@@ -13,6 +13,12 @@
 
 # CI-local staging (never commit)
 .ci-cache/
+.cache/
+
+# Local proof experiments; promote/rename before committing if one becomes part of the cert.
+Goldbach/Cert/MajorArcModules/Q0MinorZeroModeNormalizedAverageX0PeriodicMain*Scratch.lean
+Goldbach/Cert/MajorArcModules/Q0MinorZeroModeNormalizedAverageX0PeriodicMain*Probe.lean
+Goldbach/Cert/MajorArcModules/Q0MinorZeroModeNormalizedAverageX0PeriodicMain*Pilot.lean
 
 
 

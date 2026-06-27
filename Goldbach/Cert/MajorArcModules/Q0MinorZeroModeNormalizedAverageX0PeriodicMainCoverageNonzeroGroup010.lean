@@ -1,0 +1,539 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk250
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk251
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk252
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk253
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk254
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk255
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk256
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk257
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk258
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk259
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk260
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk261
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk262
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk263
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk264
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk265
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk266
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk267
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk268
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk269
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk270
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk271
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk272
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk273
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk274
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Generated periodic-main ordered-record union assembly facts for PeriodicMainNonzeroRecordPairsGroup010. -/
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo000 : Finset (ℕ × ℕ) := PeriodicMainNonzeroRecordPairsChunk250
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo000_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo000.card = 100 := by
+  simpa [PeriodicMainNonzeroRecordPairsGroup010UpTo000] using PeriodicMainNonzeroRecordPairsChunk250_card
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo000_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo000 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  simpa [PeriodicMainNonzeroRecordPairsGroup010UpTo000] using PeriodicMainNonzeroRecordPairsChunk250_subset_fullBlockSquarefreeExplicit
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo001 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo000 ∪ PeriodicMainNonzeroRecordPairsChunk251
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo000_disjoint_PeriodicMainNonzeroRecordPairsChunk251 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo000 PeriodicMainNonzeroRecordPairsChunk251 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo001_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo001.card = 200 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo001, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo000_disjoint_PeriodicMainNonzeroRecordPairsChunk251]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo000_card, PeriodicMainNonzeroRecordPairsChunk251_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo001_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo001 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo000_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk251_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo002 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo001 ∪ PeriodicMainNonzeroRecordPairsChunk252
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo001_disjoint_PeriodicMainNonzeroRecordPairsChunk252 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo001 PeriodicMainNonzeroRecordPairsChunk252 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo002_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo002.card = 300 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo002, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo001_disjoint_PeriodicMainNonzeroRecordPairsChunk252]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo001_card, PeriodicMainNonzeroRecordPairsChunk252_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo002_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo002 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo001_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk252_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo003 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo002 ∪ PeriodicMainNonzeroRecordPairsChunk253
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo002_disjoint_PeriodicMainNonzeroRecordPairsChunk253 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo002 PeriodicMainNonzeroRecordPairsChunk253 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo003_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo003.card = 400 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo003, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo002_disjoint_PeriodicMainNonzeroRecordPairsChunk253]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo002_card, PeriodicMainNonzeroRecordPairsChunk253_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo003_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo003 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo002_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk253_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo004 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo003 ∪ PeriodicMainNonzeroRecordPairsChunk254
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo003_disjoint_PeriodicMainNonzeroRecordPairsChunk254 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo003 PeriodicMainNonzeroRecordPairsChunk254 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo004_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo004.card = 500 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo004, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo003_disjoint_PeriodicMainNonzeroRecordPairsChunk254]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo003_card, PeriodicMainNonzeroRecordPairsChunk254_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo004_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo004 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo003_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk254_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo005 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo004 ∪ PeriodicMainNonzeroRecordPairsChunk255
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo004_disjoint_PeriodicMainNonzeroRecordPairsChunk255 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo004 PeriodicMainNonzeroRecordPairsChunk255 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo005_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo005.card = 600 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo005, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo004_disjoint_PeriodicMainNonzeroRecordPairsChunk255]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo004_card, PeriodicMainNonzeroRecordPairsChunk255_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo005_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo005 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo004_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk255_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo006 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo005 ∪ PeriodicMainNonzeroRecordPairsChunk256
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo005_disjoint_PeriodicMainNonzeroRecordPairsChunk256 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo005 PeriodicMainNonzeroRecordPairsChunk256 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo006_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo006.card = 700 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo006, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo005_disjoint_PeriodicMainNonzeroRecordPairsChunk256]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo005_card, PeriodicMainNonzeroRecordPairsChunk256_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo006_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo006 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo005_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk256_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo007 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo006 ∪ PeriodicMainNonzeroRecordPairsChunk257
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo006_disjoint_PeriodicMainNonzeroRecordPairsChunk257 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo006 PeriodicMainNonzeroRecordPairsChunk257 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo007_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo007.card = 800 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo007, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo006_disjoint_PeriodicMainNonzeroRecordPairsChunk257]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo006_card, PeriodicMainNonzeroRecordPairsChunk257_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo007_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo007 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo006_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk257_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo008 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo007 ∪ PeriodicMainNonzeroRecordPairsChunk258
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo007_disjoint_PeriodicMainNonzeroRecordPairsChunk258 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo007 PeriodicMainNonzeroRecordPairsChunk258 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo008_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo008.card = 900 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo008, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo007_disjoint_PeriodicMainNonzeroRecordPairsChunk258]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo007_card, PeriodicMainNonzeroRecordPairsChunk258_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo008_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo008 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo007_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk258_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo009 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo008 ∪ PeriodicMainNonzeroRecordPairsChunk259
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo008_disjoint_PeriodicMainNonzeroRecordPairsChunk259 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo008 PeriodicMainNonzeroRecordPairsChunk259 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo009_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo009.card = 1000 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo009, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo008_disjoint_PeriodicMainNonzeroRecordPairsChunk259]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo008_card, PeriodicMainNonzeroRecordPairsChunk259_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo009_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo009 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo008_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk259_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo010 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo009 ∪ PeriodicMainNonzeroRecordPairsChunk260
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo009_disjoint_PeriodicMainNonzeroRecordPairsChunk260 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo009 PeriodicMainNonzeroRecordPairsChunk260 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo010_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo010.card = 1100 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo010, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo009_disjoint_PeriodicMainNonzeroRecordPairsChunk260]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo009_card, PeriodicMainNonzeroRecordPairsChunk260_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo010_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo010 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo010] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo009_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk260_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo011 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo010 ∪ PeriodicMainNonzeroRecordPairsChunk261
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo010_disjoint_PeriodicMainNonzeroRecordPairsChunk261 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo010 PeriodicMainNonzeroRecordPairsChunk261 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo011_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo011.card = 1200 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo011, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo010_disjoint_PeriodicMainNonzeroRecordPairsChunk261]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo010_card, PeriodicMainNonzeroRecordPairsChunk261_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo011_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo011 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo011] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo010_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk261_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo012 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo011 ∪ PeriodicMainNonzeroRecordPairsChunk262
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo011_disjoint_PeriodicMainNonzeroRecordPairsChunk262 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo011 PeriodicMainNonzeroRecordPairsChunk262 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo012_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo012.card = 1300 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo012, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo011_disjoint_PeriodicMainNonzeroRecordPairsChunk262]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo011_card, PeriodicMainNonzeroRecordPairsChunk262_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo012_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo012 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo012] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo011_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk262_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo013 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo012 ∪ PeriodicMainNonzeroRecordPairsChunk263
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo012_disjoint_PeriodicMainNonzeroRecordPairsChunk263 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo012 PeriodicMainNonzeroRecordPairsChunk263 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo013_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo013.card = 1400 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo013, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo012_disjoint_PeriodicMainNonzeroRecordPairsChunk263]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo012_card, PeriodicMainNonzeroRecordPairsChunk263_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo013_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo013 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo013] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo012_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk263_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo014 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo013 ∪ PeriodicMainNonzeroRecordPairsChunk264
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo013_disjoint_PeriodicMainNonzeroRecordPairsChunk264 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo013 PeriodicMainNonzeroRecordPairsChunk264 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo014_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo014.card = 1500 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo014, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo013_disjoint_PeriodicMainNonzeroRecordPairsChunk264]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo013_card, PeriodicMainNonzeroRecordPairsChunk264_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo014_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo014 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo014] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo013_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk264_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo015 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo014 ∪ PeriodicMainNonzeroRecordPairsChunk265
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo014_disjoint_PeriodicMainNonzeroRecordPairsChunk265 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo014 PeriodicMainNonzeroRecordPairsChunk265 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo015_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo015.card = 1600 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo015, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo014_disjoint_PeriodicMainNonzeroRecordPairsChunk265]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo014_card, PeriodicMainNonzeroRecordPairsChunk265_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo015_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo015 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo015] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo014_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk265_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo016 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo015 ∪ PeriodicMainNonzeroRecordPairsChunk266
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo015_disjoint_PeriodicMainNonzeroRecordPairsChunk266 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo015 PeriodicMainNonzeroRecordPairsChunk266 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo016_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo016.card = 1700 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo016, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo015_disjoint_PeriodicMainNonzeroRecordPairsChunk266]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo015_card, PeriodicMainNonzeroRecordPairsChunk266_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo016_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo016 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo016] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo015_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk266_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo017 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo016 ∪ PeriodicMainNonzeroRecordPairsChunk267
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo016_disjoint_PeriodicMainNonzeroRecordPairsChunk267 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo016 PeriodicMainNonzeroRecordPairsChunk267 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo017_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo017.card = 1800 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo017, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo016_disjoint_PeriodicMainNonzeroRecordPairsChunk267]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo016_card, PeriodicMainNonzeroRecordPairsChunk267_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo017_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo017 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo017] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo016_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk267_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo018 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo017 ∪ PeriodicMainNonzeroRecordPairsChunk268
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo017_disjoint_PeriodicMainNonzeroRecordPairsChunk268 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo017 PeriodicMainNonzeroRecordPairsChunk268 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo018_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo018.card = 1900 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo018, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo017_disjoint_PeriodicMainNonzeroRecordPairsChunk268]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo017_card, PeriodicMainNonzeroRecordPairsChunk268_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo018_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo018 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo018] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo017_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk268_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo019 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo018 ∪ PeriodicMainNonzeroRecordPairsChunk269
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo018_disjoint_PeriodicMainNonzeroRecordPairsChunk269 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo018 PeriodicMainNonzeroRecordPairsChunk269 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo019_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo019.card = 2000 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo019, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo018_disjoint_PeriodicMainNonzeroRecordPairsChunk269]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo018_card, PeriodicMainNonzeroRecordPairsChunk269_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo019_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo019 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo019] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo018_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk269_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo020 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo019 ∪ PeriodicMainNonzeroRecordPairsChunk270
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo019_disjoint_PeriodicMainNonzeroRecordPairsChunk270 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo019 PeriodicMainNonzeroRecordPairsChunk270 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo020_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo020.card = 2100 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo020, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo019_disjoint_PeriodicMainNonzeroRecordPairsChunk270]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo019_card, PeriodicMainNonzeroRecordPairsChunk270_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo020_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo020 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo020] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo019_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk270_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo021 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo020 ∪ PeriodicMainNonzeroRecordPairsChunk271
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo020_disjoint_PeriodicMainNonzeroRecordPairsChunk271 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo020 PeriodicMainNonzeroRecordPairsChunk271 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo021_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo021.card = 2200 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo021, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo020_disjoint_PeriodicMainNonzeroRecordPairsChunk271]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo020_card, PeriodicMainNonzeroRecordPairsChunk271_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo021_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo021 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo021] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo020_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk271_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo022 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo021 ∪ PeriodicMainNonzeroRecordPairsChunk272
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo021_disjoint_PeriodicMainNonzeroRecordPairsChunk272 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo021 PeriodicMainNonzeroRecordPairsChunk272 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo022_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo022.card = 2300 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo022, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo021_disjoint_PeriodicMainNonzeroRecordPairsChunk272]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo021_card, PeriodicMainNonzeroRecordPairsChunk272_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo022_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo022 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo022] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo021_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk272_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo023 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo022 ∪ PeriodicMainNonzeroRecordPairsChunk273
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo022_disjoint_PeriodicMainNonzeroRecordPairsChunk273 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo022 PeriodicMainNonzeroRecordPairsChunk273 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo023_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo023.card = 2400 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo023, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo022_disjoint_PeriodicMainNonzeroRecordPairsChunk273]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo022_card, PeriodicMainNonzeroRecordPairsChunk273_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo023_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo023 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo023] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo022_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk273_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010UpTo024 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroRecordPairsGroup010UpTo023 ∪ PeriodicMainNonzeroRecordPairsChunk274
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo023_disjoint_PeriodicMainNonzeroRecordPairsChunk274 :
+    Disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo023 PeriodicMainNonzeroRecordPairsChunk274 := by
+  native_decide
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo024_card :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo024.card = 2500 := by
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo024, Finset.card_union_of_disjoint PeriodicMainNonzeroRecordPairsGroup010UpTo023_disjoint_PeriodicMainNonzeroRecordPairsChunk274]
+  norm_num [PeriodicMainNonzeroRecordPairsGroup010UpTo023_card, PeriodicMainNonzeroRecordPairsChunk274_card]
+
+theorem PeriodicMainNonzeroRecordPairsGroup010UpTo024_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010UpTo024 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainNonzeroRecordPairsGroup010UpTo024] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonzeroRecordPairsGroup010UpTo023_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainNonzeroRecordPairsChunk274_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainNonzeroRecordPairsGroup010 : Finset (ℕ × ℕ) := PeriodicMainNonzeroRecordPairsGroup010UpTo024
+
+theorem PeriodicMainNonzeroRecordPairsGroup010_card :
+    PeriodicMainNonzeroRecordPairsGroup010.card = 2500 := by
+  simpa [PeriodicMainNonzeroRecordPairsGroup010] using PeriodicMainNonzeroRecordPairsGroup010UpTo024_card
+
+theorem PeriodicMainNonzeroRecordPairsGroup010_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainNonzeroRecordPairsGroup010 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  simpa [PeriodicMainNonzeroRecordPairsGroup010] using PeriodicMainNonzeroRecordPairsGroup010UpTo024_subset_fullBlockSquarefreeExplicit
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

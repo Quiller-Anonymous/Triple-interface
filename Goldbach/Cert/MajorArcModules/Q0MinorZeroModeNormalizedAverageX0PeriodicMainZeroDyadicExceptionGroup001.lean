@@ -1,0 +1,539 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk025
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk026
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk027
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk028
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk029
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk030
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk031
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk032
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk033
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk034
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk035
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk036
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk037
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk038
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk039
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk040
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk041
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk042
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk043
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk044
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk045
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk046
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk047
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk048
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionChunk049
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Generated periodic-main ordered-record union assembly facts for PeriodicMainZeroDyadicExceptionPairsGroup001. -/
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000 : Finset (ℕ × ℕ) := PeriodicMainZeroDyadicExceptionPairsChunk025
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000.card = 100 := by
+  simpa [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000] using PeriodicMainZeroDyadicExceptionPairsChunk025_card
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  simpa [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000] using PeriodicMainZeroDyadicExceptionPairsChunk025_subset_fullBlockSquarefreeExplicit
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000 ∪ PeriodicMainZeroDyadicExceptionPairsChunk026
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk026 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000 PeriodicMainZeroDyadicExceptionPairsChunk026 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001.card = 200 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk026]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000_card, PeriodicMainZeroDyadicExceptionPairsChunk026_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo000_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk026_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001 ∪ PeriodicMainZeroDyadicExceptionPairsChunk027
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk027 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001 PeriodicMainZeroDyadicExceptionPairsChunk027 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002.card = 300 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk027]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001_card, PeriodicMainZeroDyadicExceptionPairsChunk027_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo001_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk027_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002 ∪ PeriodicMainZeroDyadicExceptionPairsChunk028
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk028 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002 PeriodicMainZeroDyadicExceptionPairsChunk028 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003.card = 400 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk028]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002_card, PeriodicMainZeroDyadicExceptionPairsChunk028_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo002_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk028_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003 ∪ PeriodicMainZeroDyadicExceptionPairsChunk029
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk029 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003 PeriodicMainZeroDyadicExceptionPairsChunk029 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004.card = 500 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk029]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003_card, PeriodicMainZeroDyadicExceptionPairsChunk029_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo003_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk029_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004 ∪ PeriodicMainZeroDyadicExceptionPairsChunk030
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk030 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004 PeriodicMainZeroDyadicExceptionPairsChunk030 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005.card = 600 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk030]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004_card, PeriodicMainZeroDyadicExceptionPairsChunk030_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo004_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk030_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005 ∪ PeriodicMainZeroDyadicExceptionPairsChunk031
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk031 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005 PeriodicMainZeroDyadicExceptionPairsChunk031 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006.card = 700 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk031]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005_card, PeriodicMainZeroDyadicExceptionPairsChunk031_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo005_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk031_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006 ∪ PeriodicMainZeroDyadicExceptionPairsChunk032
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk032 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006 PeriodicMainZeroDyadicExceptionPairsChunk032 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007.card = 800 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk032]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006_card, PeriodicMainZeroDyadicExceptionPairsChunk032_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo006_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk032_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007 ∪ PeriodicMainZeroDyadicExceptionPairsChunk033
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk033 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007 PeriodicMainZeroDyadicExceptionPairsChunk033 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008.card = 900 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk033]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007_card, PeriodicMainZeroDyadicExceptionPairsChunk033_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo007_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk033_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008 ∪ PeriodicMainZeroDyadicExceptionPairsChunk034
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk034 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008 PeriodicMainZeroDyadicExceptionPairsChunk034 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009.card = 1000 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk034]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008_card, PeriodicMainZeroDyadicExceptionPairsChunk034_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo008_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk034_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009 ∪ PeriodicMainZeroDyadicExceptionPairsChunk035
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk035 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009 PeriodicMainZeroDyadicExceptionPairsChunk035 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010.card = 1100 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk035]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009_card, PeriodicMainZeroDyadicExceptionPairsChunk035_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo009_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk035_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010 ∪ PeriodicMainZeroDyadicExceptionPairsChunk036
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk036 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010 PeriodicMainZeroDyadicExceptionPairsChunk036 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011.card = 1200 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk036]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010_card, PeriodicMainZeroDyadicExceptionPairsChunk036_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo010_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk036_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011 ∪ PeriodicMainZeroDyadicExceptionPairsChunk037
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk037 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011 PeriodicMainZeroDyadicExceptionPairsChunk037 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012.card = 1300 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk037]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011_card, PeriodicMainZeroDyadicExceptionPairsChunk037_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo011_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk037_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012 ∪ PeriodicMainZeroDyadicExceptionPairsChunk038
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk038 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012 PeriodicMainZeroDyadicExceptionPairsChunk038 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013.card = 1400 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk038]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012_card, PeriodicMainZeroDyadicExceptionPairsChunk038_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo012_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk038_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013 ∪ PeriodicMainZeroDyadicExceptionPairsChunk039
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk039 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013 PeriodicMainZeroDyadicExceptionPairsChunk039 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014.card = 1500 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk039]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013_card, PeriodicMainZeroDyadicExceptionPairsChunk039_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo013_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk039_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014 ∪ PeriodicMainZeroDyadicExceptionPairsChunk040
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk040 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014 PeriodicMainZeroDyadicExceptionPairsChunk040 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015.card = 1600 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk040]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014_card, PeriodicMainZeroDyadicExceptionPairsChunk040_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo014_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk040_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015 ∪ PeriodicMainZeroDyadicExceptionPairsChunk041
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk041 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015 PeriodicMainZeroDyadicExceptionPairsChunk041 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016.card = 1700 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk041]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015_card, PeriodicMainZeroDyadicExceptionPairsChunk041_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo015_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk041_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016 ∪ PeriodicMainZeroDyadicExceptionPairsChunk042
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk042 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016 PeriodicMainZeroDyadicExceptionPairsChunk042 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017.card = 1800 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk042]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016_card, PeriodicMainZeroDyadicExceptionPairsChunk042_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo016_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk042_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017 ∪ PeriodicMainZeroDyadicExceptionPairsChunk043
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk043 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017 PeriodicMainZeroDyadicExceptionPairsChunk043 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018.card = 1900 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk043]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017_card, PeriodicMainZeroDyadicExceptionPairsChunk043_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo017_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk043_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018 ∪ PeriodicMainZeroDyadicExceptionPairsChunk044
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk044 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018 PeriodicMainZeroDyadicExceptionPairsChunk044 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019.card = 2000 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk044]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018_card, PeriodicMainZeroDyadicExceptionPairsChunk044_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo018_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk044_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019 ∪ PeriodicMainZeroDyadicExceptionPairsChunk045
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk045 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019 PeriodicMainZeroDyadicExceptionPairsChunk045 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020.card = 2100 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk045]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019_card, PeriodicMainZeroDyadicExceptionPairsChunk045_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo019_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk045_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020 ∪ PeriodicMainZeroDyadicExceptionPairsChunk046
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk046 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020 PeriodicMainZeroDyadicExceptionPairsChunk046 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021.card = 2200 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk046]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020_card, PeriodicMainZeroDyadicExceptionPairsChunk046_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo020_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk046_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021 ∪ PeriodicMainZeroDyadicExceptionPairsChunk047
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk047 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021 PeriodicMainZeroDyadicExceptionPairsChunk047 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022.card = 2300 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk047]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021_card, PeriodicMainZeroDyadicExceptionPairsChunk047_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo021_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk047_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022 ∪ PeriodicMainZeroDyadicExceptionPairsChunk048
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk048 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022 PeriodicMainZeroDyadicExceptionPairsChunk048 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023.card = 2400 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk048]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022_card, PeriodicMainZeroDyadicExceptionPairsChunk048_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo022_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk048_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024 : Finset (ℕ × ℕ) :=
+  PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023 ∪ PeriodicMainZeroDyadicExceptionPairsChunk049
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk049 :
+    Disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023 PeriodicMainZeroDyadicExceptionPairsChunk049 := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024.card = 2500 := by
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024, Finset.card_union_of_disjoint PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023_disjoint_PeriodicMainZeroDyadicExceptionPairsChunk049]
+  norm_num [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023_card, PeriodicMainZeroDyadicExceptionPairsChunk049_card]
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  intro p hp
+  rw [PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainZeroDyadicExceptionPairsGroup001UpTo023_subset_fullBlockSquarefreeExplicit hp
+  · exact PeriodicMainZeroDyadicExceptionPairsChunk049_subset_fullBlockSquarefreeExplicit hp
+
+def PeriodicMainZeroDyadicExceptionPairsGroup001 : Finset (ℕ × ℕ) := PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001_card :
+    PeriodicMainZeroDyadicExceptionPairsGroup001.card = 2500 := by
+  simpa [PeriodicMainZeroDyadicExceptionPairsGroup001] using PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024_card
+
+theorem PeriodicMainZeroDyadicExceptionPairsGroup001_subset_fullBlockSquarefreeExplicit :
+    PeriodicMainZeroDyadicExceptionPairsGroup001 ⊆ PeriodicMainFullBlockOrderedPairSupportSquarefreeExplicit := by
+  simpa [PeriodicMainZeroDyadicExceptionPairsGroup001] using PeriodicMainZeroDyadicExceptionPairsGroup001UpTo024_subset_fullBlockSquarefreeExplicit
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

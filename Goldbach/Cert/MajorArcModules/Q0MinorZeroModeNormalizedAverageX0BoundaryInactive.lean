@@ -15,12 +15,12 @@ noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryInactiveC
 
 def CenteredNormalizedSigmaTruncBoundaryInactiveCorrectionRatCertificateAtX0 : Prop :=
   surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryInactiveCorrectionRat X0 =
-    surrogateBoundaryX0InactiveCorrectionCert
+    surrogateBoundaryX0InactiveCorrectionExactCert
 
 theorem centeredNormalizedSigmaTruncBoundaryInactiveCorrectionRatCertificateAtX0_of_eq_cert
     (hcert :
       surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryInactiveCorrectionRat X0 =
-        surrogateBoundaryX0InactiveCorrectionCert) :
+        surrogateBoundaryX0InactiveCorrectionExactCert) :
     CenteredNormalizedSigmaTruncBoundaryInactiveCorrectionRatCertificateAtX0 := by
   unfold CenteredNormalizedSigmaTruncBoundaryInactiveCorrectionRatCertificateAtX0
   exact hcert

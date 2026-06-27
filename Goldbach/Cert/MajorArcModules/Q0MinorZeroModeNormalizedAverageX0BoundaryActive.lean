@@ -1,4 +1,4 @@
-import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0BoundaryPayload
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
 
@@ -24,12 +24,12 @@ noncomputable def surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryActiveSig
 
 def CenteredNormalizedSigmaTruncBoundaryActiveSignedRatCertificateAtX0 : Prop :=
   surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryActiveSignedPairSumUpToQ0Rat X0 =
-    surrogateBoundaryX0ActiveSignedCert
+    surrogateBoundaryX0ActiveSignedExactCert
 
 theorem centeredNormalizedSigmaTruncBoundaryActiveSignedRatCertificateAtX0_of_eq_cert
     (hcert :
       surrogateCenteredNormalizedSigmaTruncPeriodicBoundaryActiveSignedPairSumUpToQ0Rat X0 =
-        surrogateBoundaryX0ActiveSignedCert) :
+        surrogateBoundaryX0ActiveSignedExactCert) :
     CenteredNormalizedSigmaTruncBoundaryActiveSignedRatCertificateAtX0 := by
   unfold CenteredNormalizedSigmaTruncBoundaryActiveSignedRatCertificateAtX0
   exact hcert
