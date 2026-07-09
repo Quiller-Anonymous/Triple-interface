@@ -1,0 +1,91 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionSplit
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup000
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup001
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup002
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup003
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup004
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup005
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup006
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup007
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup008
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup009
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup010
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup011
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup012
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup013
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup014
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup015
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup016
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup017
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup018
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup019
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup020
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup021
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup022
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup023
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup024
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup025
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup026
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup027
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup028
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeGroup029
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Generated final grouped assembly for zero-record value-on-record payloads. -/
+
+def PeriodicMainRecordsCoreLeftOnlyThreePayloadPairs : Finset (ℕ × ℕ) :=
+  (((((((((((((((((((((((((((((PeriodicMainRecordsCoreLeftOnlyThreeGroup000Pairs ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup001Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup002Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup003Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup004Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup005Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup006Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup007Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup008Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup009Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup010Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup011Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup012Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup013Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup014Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup015Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup016Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup017Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup018Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup019Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup020Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup021Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup022Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup023Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup024Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup025Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup026Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup027Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup028Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeGroup029Pairs)
+
+theorem PeriodicMainRecordsCoreLeftOnlyThreePayloadPairs_eq_target :
+    PeriodicMainRecordsCoreLeftOnlyThreePayloadPairs = PeriodicMainZeroDyadicExceptionNonCoprimeCoreResidualLeftOnlyThreePairs := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionNonCoprimeCoreResidualLeftOnlyThree_value_on_records :
+    ∀ p ∈ PeriodicMainZeroDyadicExceptionNonCoprimeCoreResidualLeftOnlyThreePairs,
+      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = 0 := by
+  intro p hp
+  have hpPayload : p ∈ PeriodicMainRecordsCoreLeftOnlyThreePayloadPairs := by
+    simpa [PeriodicMainRecordsCoreLeftOnlyThreePayloadPairs_eq_target] using hp
+  simp only [PeriodicMainRecordsCoreLeftOnlyThreePayloadPairs, Finset.mem_union] at hpPayload
+  rcases hpPayload with (((((((((((((((((((((((((((((h0 | h1) | h2) | h3) | h4) | h5) | h6) | h7) | h8) | h9) | h10) | h11) | h12) | h13) | h14) | h15) | h16) | h17) | h18) | h19) | h20) | h21) | h22) | h23) | h24) | h25) | h26) | h27) | h28) | h29)
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup000_value_on_records p h0
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup001_value_on_records p h1
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup002_value_on_records p h2
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup003_value_on_records p h3
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup004_value_on_records p h4
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup005_value_on_records p h5
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup006_value_on_records p h6
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup007_value_on_records p h7
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup008_value_on_records p h8
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup009_value_on_records p h9
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup010_value_on_records p h10
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup011_value_on_records p h11
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup012_value_on_records p h12
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup013_value_on_records p h13
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup014_value_on_records p h14
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup015_value_on_records p h15
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup016_value_on_records p h16
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup017_value_on_records p h17
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup018_value_on_records p h18
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup019_value_on_records p h19
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup020_value_on_records p h20
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup021_value_on_records p h21
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup022_value_on_records p h22
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup023_value_on_records p h23
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup024_value_on_records p h24
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup025_value_on_records p h25
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup026_value_on_records p h26
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup027_value_on_records p h27
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup028_value_on_records p h28
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeGroup029_value_on_records p h29
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

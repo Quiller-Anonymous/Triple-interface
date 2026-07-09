@@ -1,6 +1,11 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0BoundaryFinal
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMain
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainReducedSparse
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainRowAssembly
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidual
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualFinal
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRightThreeSixCertificate
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowThreeSixCertificate
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
 
@@ -177,5 +182,127 @@ theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_generatedTailSubc
     hboundary_active
     hboundary_inactive
     (centeredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0_of_sparseOrderedCertificate hpm)
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_generatedTailSubchunkSums_boundaryActiveInactiveAndPeriodicMainNonzeroReducedSparse
+    (hchunk000_sub000 :
+      (∑ q ∈ TailChunk000Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub000First5000)
+    (hchunk000_sub001 :
+      (∑ q ∈ TailChunk000Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub001First5000)
+    (hchunk001_sub000 :
+      (∑ q ∈ TailChunk001Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub000First5000)
+    (hchunk001_sub001 :
+      (∑ q ∈ TailChunk001Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub001First3211)
+    (hboundary_active :
+      CenteredNormalizedSigmaTruncBoundaryActiveSignedRatCertificateAtX0)
+    (hboundary_inactive :
+      CenteredNormalizedSigmaTruncBoundaryInactiveCorrectionRatCertificateAtX0)
+    (periodicMainValue : ℕ × ℕ → ℚ)
+    (hpm :
+      PeriodicMainNonzeroReducedSparseCertificateAtX0 periodicMainValue) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795 := by
+  exact centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_generatedTailSubchunkSumsAndFinalCertificates
+    hchunk000_sub000
+    hchunk000_sub001
+    hchunk001_sub000
+    hchunk001_sub001
+    hboundary_active
+    hboundary_inactive
+    (centeredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0_of_nonzeroReducedSparse
+      periodicMainValue hpm)
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_generatedTailSubchunkSums_boundaryActiveInactiveAndPeriodicMainCommonFactorSurfaces
+    (hchunk000_sub000 :
+      (∑ q ∈ TailChunk000Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub000First5000)
+    (hchunk000_sub001 :
+      (∑ q ∈ TailChunk000Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub001First5000)
+    (hchunk001_sub000 :
+      (∑ q ∈ TailChunk001Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub000First5000)
+    (hchunk001_sub001 :
+      (∑ q ∈ TailChunk001Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub001First3211)
+    (hboundary_active :
+      CenteredNormalizedSigmaTruncBoundaryActiveSignedRatCertificateAtX0)
+    (hboundary_inactive :
+      CenteredNormalizedSigmaTruncBoundaryInactiveCorrectionRatCertificateAtX0)
+    (periodicMainValue : ℕ × ℕ → ℚ)
+    (hvalue :
+      ∀ p ∈ PeriodicMainNonzeroRecordPairs,
+        surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = periodicMainValue p)
+    (hsum :
+      (∑ p ∈ PeriodicMainNonzeroRecordPairs, periodicMainValue p) =
+        surrogatePeriodicMainX0RatCert)
+    (coreCert : PeriodicMainDyadicExceptionNonCoprimeCoreResidualDivisibilityZeroCertificateAtX0) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795 := by
+  exact centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_generatedTailSubchunkSums_boundaryActiveInactiveAndPeriodicMainNonzeroReducedSparse
+    hchunk000_sub000
+    hchunk000_sub001
+    hchunk001_sub000
+    hchunk001_sub001
+    hboundary_active
+    hboundary_inactive
+    periodicMainValue
+    ⟨hvalue, hsum,
+      PeriodicMainDyadicExceptionReducedZeroCertificateAtX0_of_nonCoprimeReduced
+        (PeriodicMainDyadicExceptionNonCoprimeReducedZeroCertificateAtX0_of_commonFactorSurfaces
+          PeriodicMainDyadicExceptionNonCoprimeRowThreeSixCommonFactorZeroCertificateAtX0_of_remaining
+          PeriodicMainDyadicExceptionNonCoprimeResidualRightThreeSixCommonFactorZeroCertificateAtX0_of_transport
+          coreCert)⟩
+
+theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_generatedTailSubchunkSums_boundaryActiveInactiveAndPeriodicMainCertifiedCommonFactorSurfaces
+    (hchunk000_sub000 :
+      (∑ q ∈ TailChunk000Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub000First5000)
+    (hchunk000_sub001 :
+      (∑ q ∈ TailChunk000Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub001First5000)
+    (hchunk001_sub000 :
+      (∑ q ∈ TailChunk001Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub000First5000)
+    (hchunk001_sub001 :
+      (∑ q ∈ TailChunk001Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub001First3211)
+    (hboundary_active :
+      CenteredNormalizedSigmaTruncBoundaryActiveSignedRatCertificateAtX0)
+    (hboundary_inactive :
+      CenteredNormalizedSigmaTruncBoundaryInactiveCorrectionRatCertificateAtX0)
+    (periodicMainValue : ℕ × ℕ → ℚ)
+    (hvalue :
+      ∀ p ∈ PeriodicMainNonzeroRecordPairs,
+        surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = periodicMainValue p)
+    (hsum :
+      (∑ p ∈ PeriodicMainNonzeroRecordPairs, periodicMainValue p) =
+        surrogatePeriodicMainX0RatCert) :
+    CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795 := by
+  exact
+    centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_generatedTailSubchunkSums_boundaryActiveInactiveAndPeriodicMainCommonFactorSurfaces
+      hchunk000_sub000
+      hchunk000_sub001
+      hchunk001_sub000
+      hchunk001_sub001
+      hboundary_active
+      hboundary_inactive
+      periodicMainValue
+      hvalue
+      hsum
+      PeriodicMainDyadicExceptionNonCoprimeCoreResidualDivisibilityZeroCertificateAtX0_certified
 
 end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

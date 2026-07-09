@@ -1,0 +1,36 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowThreeSix
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowThreeRightOddFinal
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowThreeRightEvenFinal
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddFinal
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoFinal
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonSixTransport
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+theorem PeriodicMainDyadicExceptionNonCoprimeRowThreeSixCommonFactorZeroCertificateAtX0_of_remaining
+    : PeriodicMainDyadicExceptionNonCoprimeRowThreeSixCommonFactorZeroCertificateAtX0 := by
+  refine ⟨?_, ?_, ?_, ?_, ?_⟩
+  intro p hp _hthreeRight
+  exact PeriodicMainZeroDyadicExceptionNonCoprimeRowThreeRightOdd_value_on_records_generated p hp
+  · intro p hp _hthreeRight
+    exact PeriodicMainZeroDyadicExceptionNonCoprimeRowThreeRightEven_value_on_records_generated p hp
+  · intro p hp _hthreeRight
+    exact PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightOdd_value_on_records_generated p hp
+  · intro p hp _hnotThreeRight
+    exact PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightEvenCommonTwo_value_on_records_generated p hp
+  · intro p hp _hthreeRight
+    exact PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightEvenCommonSix_value_on_records_transport p hp
+
+theorem PeriodicMainDyadicExceptionNonCoprimeRowThreeSixParityZeroCertificateAtX0_of_remaining
+    : PeriodicMainDyadicExceptionNonCoprimeRowThreeSixParityZeroCertificateAtX0 := by
+  exact PeriodicMainDyadicExceptionNonCoprimeRowThreeSixParityZeroCertificateAtX0_of_commonFactor
+    PeriodicMainDyadicExceptionNonCoprimeRowThreeSixCommonFactorZeroCertificateAtX0_of_remaining
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

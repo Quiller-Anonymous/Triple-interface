@@ -1,0 +1,53 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionSplit
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup000
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup001
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup002
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup003
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup004
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup005
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup006
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup007
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup008
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup009
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightOddGroup010
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Generated final grouped assembly for zero-record value-on-record payloads. -/
+
+def PeriodicMainZeroNonCoprimeRowSixRightOddPayloadPairs : Finset (ℕ × ℕ) :=
+  ((((((((((PeriodicMainZeroNonCoprimeRowSixRightOddGroup000Pairs ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup001Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup002Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup003Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup004Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup005Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup006Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup007Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup008Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup009Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightOddGroup010Pairs)
+
+theorem PeriodicMainZeroNonCoprimeRowSixRightOddPayloadPairs_eq_target :
+    PeriodicMainZeroNonCoprimeRowSixRightOddPayloadPairs = PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightOddPairs := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightOdd_value_on_records_generated :
+    ∀ p ∈ PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightOddPairs,
+      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = 0 := by
+  intro p hp
+  have hpPayload : p ∈ PeriodicMainZeroNonCoprimeRowSixRightOddPayloadPairs := by
+    simpa [PeriodicMainZeroNonCoprimeRowSixRightOddPayloadPairs_eq_target] using hp
+  simp only [PeriodicMainZeroNonCoprimeRowSixRightOddPayloadPairs, Finset.mem_union] at hpPayload
+  rcases hpPayload with ((((((((((h0 | h1) | h2) | h3) | h4) | h5) | h6) | h7) | h8) | h9) | h10)
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup000_value_on_records p h0
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup001_value_on_records p h1
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup002_value_on_records p h2
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup003_value_on_records p h3
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup004_value_on_records p h4
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup005_value_on_records p h5
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup006_value_on_records p h6
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup007_value_on_records p h7
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup008_value_on_records p h8
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup009_value_on_records p h9
+  · exact PeriodicMainZeroNonCoprimeRowSixRightOddGroup010_value_on_records p h10
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

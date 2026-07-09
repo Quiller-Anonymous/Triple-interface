@@ -1,0 +1,13 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualBothThreeCenteredRaw
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+theorem PeriodicMainZeroDyadicExceptionNonCoprimeCoreResidualBothThreeCenteredRawChunk000_card :
+    (PeriodicMainZeroDyadicExceptionNonCoprimeCoreResidualBothThreeCenteredRawBadPairsInLeftRange
+      15 16).card = 0 := by
+  native_decide
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

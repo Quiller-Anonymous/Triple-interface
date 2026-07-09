@@ -1,0 +1,54 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowThreeSix
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup000
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup001
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup002
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup003
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup004
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup005
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup006
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup007
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup008
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup009
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup010
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Generated final grouped assembly for zero-record value-on-record payloads. -/
+
+def PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoPayloadPairs : Finset (ℕ × ℕ) :=
+  ((((((((((PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup000Pairs ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup001Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup002Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup003Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup004Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup005Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup006Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup007Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup008Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup009Pairs) ∪ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup010Pairs)
+
+theorem PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightEvenCommonTwoPairs_subset_payload :
+    PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightEvenCommonTwoPairs ⊆
+      PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoPayloadPairs := by
+  native_decide
+
+theorem PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightEvenCommonTwo_value_on_records_generated :
+    ∀ p ∈ PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightEvenCommonTwoPairs,
+      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = 0 := by
+  intro p hp
+  have hpPayload : p ∈ PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoPayloadPairs := by
+    exact PeriodicMainZeroDyadicExceptionNonCoprimeRowSixRightEvenCommonTwoPairs_subset_payload hp
+  simp only [PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoPayloadPairs, Finset.mem_union] at hpPayload
+  rcases hpPayload with ((((((((((h0 | h1) | h2) | h3) | h4) | h5) | h6) | h7) | h8) | h9) | h10)
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup000_value_on_records p h0
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup001_value_on_records p h1
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup002_value_on_records p h2
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup003_value_on_records p h3
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup004_value_on_records p h4
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup005_value_on_records p h5
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup006_value_on_records p h6
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup007_value_on_records p h7
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup008_value_on_records p h8
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup009_value_on_records p h9
+  · exact PeriodicMainZeroNonCoprimeRowSixRightEvenCommonTwoGroup010_value_on_records p h10
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

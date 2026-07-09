@@ -31,6 +31,7 @@ the square of the coefficient ratio, because every centered summand is linear in
 from __future__ import annotations
 
 import argparse
+import contextlib
 import heapq
 import json
 import math
@@ -821,7 +822,10 @@ def emit_periodic_main_zero_record_batch_wrapper(
     records: list[dict[str, object]],
 ) -> None:
     pairs_name = f"PeriodicMainRecords{label}Pairs"
+    value_name = f"PeriodicMainRecords{label}Value"
+    total_name = f"PeriodicMainRecords{label}Total"
     value_on_records_name = f"PeriodicMainRecords{label}_value_on_records"
+    records_sum_name = f"PeriodicMainRecords{label}_records_sum"
 
     def pair_term(q: int, q2: int) -> str:
         return f"({q}, {q2})"
@@ -836,6 +840,11 @@ def emit_periodic_main_zero_record_batch_wrapper(
     print(f"def {pairs_name} : Finset (ℕ × ℕ) :=")
     print("  [" + ", ".join(pair_term(int(r["q"]), int(r["q2"])) for r in records) + "].toFinset")
     print()
+    print(f"noncomputable def {value_name} (_p : ℕ × ℕ) : ℚ :=")
+    print("  0")
+    print()
+    print(f"def {total_name} : ℚ := 0")
+    print()
     print(f"theorem {value_on_records_name} :")
     print(f"    ∀ p ∈ {pairs_name},")
     print("      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = 0 := by")
@@ -849,6 +858,897 @@ def emit_periodic_main_zero_record_batch_wrapper(
         print("  · subst p")
         print(f"    simpa using periodicMainPair_{q}_{q2}_X{X}_orderedSummand")
     print()
+    print(f"theorem {records_sum_name} :")
+    print(f"    (∑ p ∈ {pairs_name}, {value_name} p) = {total_name} := by")
+    print(f"  norm_num [{pairs_name}, {value_name}, {total_name}]")
+    print()
+
+
+def left_assoc_or_pattern(names: list[str]) -> str:
+    if not names:
+        raise ValueError("left_assoc_or_pattern requires at least one name")
+    pattern = names[0]
+    for name in names[1:]:
+        pattern = f"({pattern} | {name})"
+    return pattern
+
+
+def emit_periodic_main_pair_record_lean_chunk_files(
+    *,
+    X: int,
+    records: list[dict[str, object]],
+    zero_record_batch: bool,
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    chunk_size: int,
+    index_offset: int = 0,
+    skip_existing: bool = False,
+    force_top_level_helpers: bool = False,
+) -> int:
+    if chunk_size <= 0:
+        raise SystemExit("--periodic-main-record-file-chunk-size must be positive")
+    if not records:
+        raise SystemExit("selected periodic-main record slice is empty")
+
+    os.makedirs(out_dir, exist_ok=True)
+    q_support = sorted(
+        {int(record["q"]) for record in records}
+        | {int(record["q2"]) for record in records}
+    )
+    mu, phi = mobius_phi_sieve(Q0)
+    spf = spf_sieve(Q0)
+    even_card = len(even_window_points(X))
+    exact_ctx = build_surrogate_boundary_exact_context(X, mu, phi, spf, even_card, q_support)
+
+    chunk_count = (len(records) + chunk_size - 1) // chunk_size
+    for chunk_idx in range(chunk_count):
+        start = chunk_idx * chunk_size
+        end = min(len(records), start + chunk_size)
+        global_start = index_offset + start
+        global_end = index_offset + end
+        global_chunk_idx = index_offset // chunk_size + chunk_idx
+        chunk_records = records[start:end]
+        label = f"{label_prefix}{global_chunk_idx:03d}"
+        path = os.path.join(out_dir, f"{file_prefix}{global_chunk_idx:03d}.lean")
+        if skip_existing and os.path.exists(path):
+            print(f"[skip] {path}", file=sys.stderr)
+            continue
+        with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+            emit_periodic_main_pair_primitive_lean_header()
+            record_kind = "zero-record" if zero_record_batch else "nonzero-record"
+            print(
+                f"/- Generated periodic-main {record_kind} proofs for selected JSON indices "
+                f"[{global_start},{global_end}). -/"
+            )
+            print()
+            for record in chunk_records:
+                q = int(record["q"])
+                q2 = int(record["q2"])
+                expected = Fraction(int(record["value_num"]), int(record["value_den"]))
+                emit_periodic_main_pair_primitive_lean_theorems(
+                    X=X,
+                    q=q,
+                    q2=q2,
+                    exact_ctx=exact_ctx,
+                    expected_summand=expected,
+                    force_top_level_helpers=force_top_level_helpers,
+                )
+            if zero_record_batch:
+                emit_periodic_main_zero_record_batch_wrapper(
+                    X=X,
+                    label=label,
+                    records=chunk_records,
+                )
+            else:
+                emit_periodic_main_record_batch_wrapper(
+                    X=X,
+                    label=label,
+                    records=chunk_records,
+                )
+            emit_periodic_main_pair_primitive_lean_footer()
+        print(f"[write] {path} records=[{global_start},{global_end})", file=sys.stderr)
+    return chunk_count
+
+
+def lean_module_name_for_path(path: str) -> str:
+    no_ext = os.path.splitext(path)[0]
+    parts = no_ext.split(os.sep)
+    if "Goldbach" in parts:
+        parts = parts[parts.index("Goldbach"):]
+    return ".".join(parts)
+
+
+def emit_periodic_main_pair_record_split_lean_files(
+    *,
+    X: int,
+    records: list[dict[str, object]],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    index_offset: int = 0,
+    skip_existing: bool = False,
+    row_part_size: int = 8,
+    inline_row_parts: bool = False,
+    disable_q42_cancel: bool = False,
+) -> int:
+    if not records:
+        raise SystemExit("selected periodic-main record slice is empty")
+    if row_part_size <= 0:
+        raise SystemExit("--periodic-main-split-row-part-size must be positive")
+
+    os.makedirs(out_dir, exist_ok=True)
+    q_support = sorted(
+        {int(record["q"]) for record in records}
+        | {int(record["q2"]) for record in records}
+    )
+    mu, phi = mobius_phi_sieve(Q0)
+    spf = spf_sieve(Q0)
+    even_card = len(even_window_points(X))
+    exact_ctx = build_surrogate_boundary_exact_context(X, mu, phi, spf, even_card, q_support)
+
+    def emit_header(fh, imports: list[str]) -> None:
+        with contextlib.redirect_stdout(fh):
+            emit_periodic_main_pair_primitive_lean_header(imports=imports)
+
+    def emit_footer(fh) -> None:
+        with contextlib.redirect_stdout(fh):
+            emit_periodic_main_pair_primitive_lean_footer()
+
+    def term_expr_lines(q: int, q2: int, g: int | str, h: int | str, *, indent: str = "      ") -> list[str]:
+        return [
+            f"{indent}ramanujanGcdClassCoeffRat {q} {g} * ramanujanGcdClassCoeffRat {q2} {h}",
+            f"{indent}  * ((((H + 1) / centeredRamanujanPairBlockPeriod {q} {q2}) : ℕ)",
+            f"{indent}      • (rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} {g} {h}",
+            f"{indent}          - ramanujanGcdClassWindowAverageRat X0 {q2} {h}",
+            f"{indent}              * rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q} {g}",
+            f"{indent}          - ramanujanGcdClassWindowAverageRat X0 {q} {g}",
+            f"{indent}              * rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q2} {h}",
+            f"{indent}          + ramanujanGcdClassWindowAverageRat X0 {q} {g}",
+            f"{indent}              * ramanujanGcdClassWindowAverageRat X0 {q2} {h}",
+            f"{indent}              * evenRamanujanBlockCountRat {q} {q2}))",
+        ]
+
+    def emit_block_periodic_count_proof(
+        *,
+        theorem_name: str,
+        q: int,
+        q2: int,
+        q0: int,
+        g0: int,
+        expected: int,
+        indent: str = "  ",
+    ) -> list[str]:
+        lines = [
+            f"{indent}have {theorem_name} : "
+            f"rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q0} {g0} = ({expected} : ℚ) := by"
+        ]
+        quotient = q0 // g0 if g0 != 0 else 0
+        if g0 % 2 == 0:
+            lines.extend([
+                f"{indent}  rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_even_totient_main_add_remainder]",
+                f"{indent}  all_goals native_decide",
+            ])
+        elif quotient % 2 == 0 and expected == 0:
+            lines.extend([
+                f"{indent}  rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_zero_of_not_isEven_g_of_isEven_quotient]",
+                f"{indent}  all_goals native_decide",
+            ])
+        else:
+            lines.extend([
+                f"{indent}  rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_odd_totient_main_add_remainder]",
+                f"{indent}  all_goals native_decide",
+            ])
+        return lines
+
+    def emit_pair_resolved_count_proof(
+        *,
+        theorem_name: str,
+        q: int,
+        q2: int,
+        g: int,
+        h: int,
+        expected: int,
+        indent: str = "  ",
+    ) -> list[str]:
+        lines = [
+            f"{indent}have {theorem_name} : "
+            f"rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} {g} {h} = ({expected} : ℚ) := by"
+        ]
+        lcm_gh = math.lcm(g, h)
+        compatible = math.gcd(q // g, lcm_gh // g) == 1 and math.gcd(q2 // h, lcm_gh // h) == 1
+        if expected == 0 and not compatible:
+            lines.extend([
+                f"{indent}  have hcompat : ¬ ramanujanGcdClassJointCompatibility {q} {q2} {g} {h} := by",
+                f"{indent}    native_decide",
+                f"{indent}  unfold rawEvenRamanujanGcdClassPairBlockResolvedCountRat",
+                f"{indent}  simp [hcompat]",
+            ])
+        else:
+            joint_modulus = (
+                math.lcm(q // g, q2 // h) if g != 0 and h != 0 else 0
+            )
+            lcm_gh_even = lcm_gh % 2 == 0
+            joint_modulus_even = joint_modulus % 2 == 0
+            lines.extend([
+                f"{indent}  rw [rawEvenRamanujanGcdClassPairBlockResolvedCountRat_eq_periodic_of_compatible]",
+            ])
+            if lcm_gh_even:
+                lines.extend([
+                    f"{indent}  · rw [rawEvenRamanujanGcdClassPairBlockPeriodicCountRat_eq_even_totient_main_add_remainder]",
+                    f"{indent}    all_goals native_decide",
+                ])
+            elif joint_modulus_even and expected == 0:
+                lines.extend([
+                    f"{indent}  · rw [rawEvenRamanujanGcdClassPairBlockPeriodicCountRat_eq_zero_of_not_isEven_lcm_of_isEven_jointModulus]",
+                    f"{indent}    all_goals native_decide",
+                ])
+            else:
+                lines.extend([
+                    f"{indent}  · rw [rawEvenRamanujanGcdClassPairBlockPeriodicCountRat_eq_odd_totient_main_add_remainder]",
+                    f"{indent}    all_goals native_decide",
+                ])
+            lines.append(f"{indent}  · norm_num [ramanujanGcdClassJointCompatibility]")
+        return lines
+
+    def can_use_right_odd_structural_zero(q2: int, g: int, h: int) -> bool:
+        # Existing Lean zero lemmas cover the right-even/right-odd case when
+        # the reduced pair lcm is odd. That is exactly the odd-left/odd-right
+        # divisor case; other parity cases keep the conservative atom proof.
+        return q2 % 2 == 0 and g % 2 == 1 and h % 2 == 1
+
+    def can_use_left_odd_structural_zero(q: int, g: int) -> bool:
+        return q % 2 == 0 and g % 2 == 1
+
+    def emit_right_odd_structural_zero_proofs(
+        *,
+        q: int,
+        q2: int,
+        g: int,
+        h: int,
+        indent: str = "  ",
+    ) -> list[str]:
+        lines = [
+            f"{indent}have hAvgRight : ramanujanGcdClassWindowAverageRat X0 {q2} {h} = (0 : ℚ) / 1 := by",
+            f"{indent}  native_decide",
+            f"{indent}have hBlockRight : rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q2} {h} = (0 : ℚ) := by",
+            f"{indent}  rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_zero_of_not_isEven_g_of_isEven_quotient]",
+            f"{indent}  all_goals native_decide",
+        ]
+        lines.extend(
+            emit_pair_resolved_count_proof(
+                theorem_name="hPair",
+                q=q,
+                q2=q2,
+                g=g,
+                h=h,
+                expected=0,
+                indent=indent,
+            )
+        )
+        return lines
+
+    def emit_left_odd_structural_zero_proofs(
+        *,
+        q: int,
+        q2: int,
+        g: int,
+        h: int,
+        expected_pair: int,
+        indent: str = "  ",
+    ) -> list[str]:
+        lines = [
+            f"{indent}have hAvgLeft : ramanujanGcdClassWindowAverageRat X0 {q} {g} = (0 : ℚ) / 1 := by",
+            f"{indent}  native_decide",
+            f"{indent}have hBlockLeft : rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q} {g} = (0 : ℚ) := by",
+            f"{indent}  rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_zero_of_not_isEven_g_of_isEven_quotient]",
+            f"{indent}  all_goals native_decide",
+        ]
+        lines.extend(
+            emit_pair_resolved_count_proof(
+                theorem_name="hPair",
+                q=q,
+                q2=q2,
+                g=g,
+                h=h,
+                expected=expected_pair,
+                indent=indent,
+            )
+        )
+        return lines
+
+    def split_union_expr(chunk_names: list[str], end: int | None = None) -> str:
+        names = chunk_names if end is None else chunk_names[:end]
+        expr = names[0]
+        for name in names[1:]:
+            expr = f"({expr} ∪ {name})"
+        return expr
+
+    def emit_split_record(record: dict[str, object], record_index: int) -> None:
+        q = int(record["q"])
+        q2 = int(record["q2"])
+        expected = Fraction(int(record["value_num"]), int(record["value_den"]))
+        name = f"periodicMainPair_{q}_{q2}_X{X}"
+        label = f"{label_prefix}{record_index:03d}"
+        stem = f"{file_prefix}{record_index:03d}"
+        wrapper_path = os.path.join(out_dir, f"{stem}.lean")
+        if skip_existing and os.path.exists(wrapper_path):
+            print(f"[skip] {wrapper_path}", file=sys.stderr)
+            return
+
+        divs_q = exact_ctx["divisors_by_q"][q]
+        divs_q2 = exact_ctx["divisors_by_q"][q2]
+        first_even, even_count = full_block_even_progression(X, block_period(q, q2))
+        full_blocks = (H + 1) // block_period(q, q2)
+        even_count_rat = Fraction(even_count, 1)
+        coeff_q = exact_ctx["coeff_rat"][q]
+        coeff_q2 = exact_ctx["coeff_rat"][q2]
+        summand_value = centered_ramanujan_pair_periodic_main_term_rat_cached(X, q, q2, exact_ctx)
+        if summand_value != expected:
+            raise SystemExit(
+                f"record ({q},{q2}) value mismatch: generated {summand_value} but JSON record has {expected}"
+            )
+        centered_term = Fraction(0, 1) if coeff_q == 0 or coeff_q2 == 0 else summand_value / (coeff_q * coeff_q2)
+
+        row_values: dict[int, Fraction] = {g: Fraction(0, 1) for g in divs_q}
+        term_values: dict[tuple[int, int], Fraction] = {}
+        block_left_values = {
+            g: gcd_class_count_in_even_progression(q, g, first_even, even_count, exact_ctx)
+            for g in divs_q
+        }
+        block_right_values = {
+            h: gcd_class_count_in_even_progression(q2, h, first_even, even_count, exact_ctx)
+            for h in divs_q2
+        }
+        pair_values = {
+            (g, h): gcd_class_pair_count_in_even_progression(q, q2, g, h, first_even, even_count, exact_ctx)
+            for g in divs_q
+            for h in divs_q2
+        }
+        for g in divs_q:
+            avg_g = exact_ctx["avg_by_q"][q][g]
+            left = Fraction(block_left_values[g], 1)
+            c_g = exact_ctx["gcd_coeff_by_q"][q][g]
+            for h in divs_q2:
+                avg_h = exact_ctx["avg_by_q"][q2][h]
+                right = Fraction(block_right_values[h], 1)
+                pair = Fraction(pair_values[(g, h)], 1)
+                c_h = exact_ctx["gcd_coeff_by_q"][q2][h]
+                centered_full_block = pair - avg_h * left - avg_g * right + avg_g * avg_h * even_count_rat
+                term_value = c_g * c_h * Fraction(full_blocks, 1) * centered_full_block
+                term_values[(g, h)] = term_value
+                row_values[g] += term_value
+
+        base_import = "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMain"
+
+        def emit_q42_cancel_split_record() -> bool:
+            if q != 42 or expected != 0:
+                return False
+            if divs_q != [1, 2, 3, 6, 7, 14, 21, 42]:
+                return False
+            zero_rows = [1, 3, 7, 21]
+            cancel_pairs = [(2, 6), (14, 42)]
+            if any(row_values[g] != 0 for g in zero_rows):
+                return False
+            if any(row_values[g] + row_values[gp] != 0 for g, gp in cancel_pairs):
+                return False
+            if any(term_values[(g, h)] + term_values[(gp, h)] != 0
+                   for g, gp in cancel_pairs for h in divs_q2):
+                return False
+
+            fact_prefix = f"{name}_q42Facts"
+            fact_stem = f"{stem}Q42Facts"
+            fact_path = os.path.join(out_dir, f"{fact_stem}.lean")
+            fact_module = lean_module_name_for_path(fact_path)
+            paired_rows = sorted({g0 for pair in cancel_pairs for g0 in pair})
+            with open(fact_path, "w", encoding="utf-8") as fh:
+                emit_header(fh, [base_import])
+                for g0 in paired_rows:
+                    print(f"theorem {fact_prefix}_coeffLeft_{g0} : ramanujanGcdClassCoeffRat {q} {g0} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q][g0])} := by", file=fh)
+                    print("  native_decide", file=fh)
+                    print(file=fh)
+                for h in divs_q2:
+                    print(f"theorem {fact_prefix}_coeffRight_{h} : ramanujanGcdClassCoeffRat {q2} {h} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q2][h])} := by", file=fh)
+                    print("  native_decide", file=fh)
+                    print(file=fh)
+                for g0 in paired_rows:
+                    print(f"theorem {fact_prefix}_avgLeft_{g0} : ramanujanGcdClassWindowAverageRat X0 {q} {g0} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q][g0])} := by", file=fh)
+                    print("  native_decide", file=fh)
+                    print(file=fh)
+                for h in divs_q2:
+                    print(f"theorem {fact_prefix}_avgRight_{h} : ramanujanGcdClassWindowAverageRat X0 {q2} {h} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q2][h])} := by", file=fh)
+                    print("  native_decide", file=fh)
+                    print(file=fh)
+                for g0 in paired_rows:
+                    lines = emit_block_periodic_count_proof(
+                        theorem_name=f"{fact_prefix}_blockLeft_{g0}",
+                        q=q,
+                        q2=q2,
+                        q0=q,
+                        g0=g0,
+                        expected=block_left_values[g0],
+                        indent="",
+                    )
+                    lines[0] = lines[0].replace("have ", "theorem ", 1)
+                    for line in lines:
+                        print(line, file=fh)
+                    print(file=fh)
+                for h in divs_q2:
+                    lines = emit_block_periodic_count_proof(
+                        theorem_name=f"{fact_prefix}_blockRight_{h}",
+                        q=q,
+                        q2=q2,
+                        q0=q2,
+                        g0=h,
+                        expected=block_right_values[h],
+                        indent="",
+                    )
+                    lines[0] = lines[0].replace("have ", "theorem ", 1)
+                    for line in lines:
+                        print(line, file=fh)
+                    print(file=fh)
+                for g0 in paired_rows:
+                    for h in divs_q2:
+                        lines = emit_pair_resolved_count_proof(
+                            theorem_name=f"{fact_prefix}_pair_{g0}_{h}",
+                            q=q,
+                            q2=q2,
+                            g=g0,
+                            h=h,
+                            expected=pair_values[(g0, h)],
+                            indent="",
+                        )
+                        lines[0] = lines[0].replace("have ", "theorem ", 1)
+                        for line in lines:
+                            print(line, file=fh)
+                        print(file=fh)
+                emit_footer(fh)
+
+            row_modules: dict[int, str] = {}
+            for g in zero_rows:
+                row_stem = f"{stem}Row_{g}"
+                row_path = os.path.join(out_dir, f"{row_stem}.lean")
+                row_modules[g] = lean_module_name_for_path(row_path)
+                with open(row_path, "w", encoding="utf-8") as fh:
+                    emit_header(fh, [base_import])
+                    print(f"theorem {name}_divRight_for_row_{g} : Nat.divisors {q2} = ({lean_nat_list(divs_q2)} : List ℕ).toFinset := by", file=fh)
+                    print("  decide", file=fh)
+                    print(file=fh)
+                    print(f"def {name}_rowZeroChunk_{g} : Finset ℕ :=", file=fh)
+                    print(f"  ({lean_nat_list(divs_q2)} : List ℕ).toFinset", file=fh)
+                    print(file=fh)
+                    print(f"def {name}_rowZeroValue_{g} : ℕ → ℚ", file=fh)
+                    for h in divs_q2:
+                        print(f"| {h} => (0 : ℚ)", file=fh)
+                    print("| _ => 0", file=fh)
+                    print(file=fh)
+                    print(f"theorem {name}_row_{g} :", file=fh)
+                    print(f"    (∑ h ∈ Nat.divisors {q2},", file=fh)
+                    for line in term_expr_lines(q, q2, g, "h", indent="      "):
+                        print(line, file=fh)
+                    print(f"    ) = (0 : ℚ) := by", file=fh)
+                    print(f"  rw [{name}_divRight_for_row_{g}]", file=fh)
+                    print(f"  have hset : ({lean_nat_list(divs_q2)} : List ℕ).toFinset = {name}_rowZeroChunk_{g} := by", file=fh)
+                    print("    native_decide", file=fh)
+                    print("  rw [hset]", file=fh)
+                    print("  have hsum :", file=fh)
+                    print(f"      (∑ h ∈ {name}_rowZeroChunk_{g},", file=fh)
+                    for line in term_expr_lines(q, q2, g, "h", indent="        "):
+                        print(line, file=fh)
+                    print(f"      ) = (∑ h ∈ {name}_rowZeroChunk_{g}, {name}_rowZeroValue_{g} h) := by", file=fh)
+                    print("    apply Finset.sum_congr rfl", file=fh)
+                    print("    intro h hh", file=fh)
+                    print(f"    simp [{name}_rowZeroChunk_{g}] at hh", file=fh)
+                    print("    rcases hh with " + " | ".join(["rfl"] * len(divs_q2)), file=fh)
+                    for h in divs_q2:
+                        print("    · have hTerm :", file=fh)
+                        for line in term_expr_lines(q, q2, g, h, indent="          "):
+                            print(line, file=fh)
+                        print("          = (0 : ℚ) := by", file=fh)
+                        for line in emit_left_odd_structural_zero_proofs(
+                            q=q,
+                            q2=q2,
+                            g=g,
+                            h=h,
+                            expected_pair=pair_values[(g, h)],
+                            indent="        ",
+                        ):
+                            print(line, file=fh)
+                        print("        rw [hPair, hAvgLeft, hBlockLeft]", file=fh)
+                        print("        simp", file=fh)
+                        print(f"      simpa [{name}_rowZeroValue_{g}] using hTerm", file=fh)
+                    print("  rw [hsum]", file=fh)
+                    print(f"  norm_num [{name}_rowZeroChunk_{g}, {name}_rowZeroValue_{g}]", file=fh)
+                    print(file=fh)
+                    emit_footer(fh)
+
+            row_pair_modules: dict[tuple[int, int], str] = {}
+            for g, gp in cancel_pairs:
+                pair_term_modules: list[str] = []
+                for h in divs_q2:
+                    pair_term_stem = f"{stem}TermPair_{g}_{gp}_{h}"
+                    pair_term_path = os.path.join(out_dir, f"{pair_term_stem}.lean")
+                    pair_term_modules.append(lean_module_name_for_path(pair_term_path))
+                    with open(pair_term_path, "w", encoding="utf-8") as fh:
+                        emit_header(fh, [fact_module])
+                        print(f"theorem {name}_termPair_{g}_{gp}_{h} :", file=fh)
+                        for idx, line in enumerate(term_expr_lines(q, q2, g, h, indent="    ")):
+                            prefix = "    (" if idx == 0 else ""
+                            suffix = "" if idx + 1 < len(term_expr_lines(q, q2, g, h, indent="    ")) else ")"
+                            print(prefix + line.lstrip() + suffix, file=fh)
+                        print("    +", file=fh)
+                        for idx, line in enumerate(term_expr_lines(q, q2, gp, h, indent="    ")):
+                            prefix = "    (" if idx == 0 else ""
+                            suffix = "" if idx + 1 < len(term_expr_lines(q, q2, gp, h, indent="    ")) else ")"
+                            print(prefix + line.lstrip() + suffix, file=fh)
+                        print("      = (0 : ℚ) := by", file=fh)
+                        print("  norm_num [H, centeredRamanujanPairBlockPeriod, evenRamanujanBlockCountRat,", file=fh)
+                        print(f"    {fact_prefix}_coeffLeft_{g}, {fact_prefix}_coeffLeft_{gp}, {fact_prefix}_coeffRight_{h},", file=fh)
+                        print(f"    {fact_prefix}_avgLeft_{g}, {fact_prefix}_avgLeft_{gp}, {fact_prefix}_avgRight_{h},", file=fh)
+                        print(f"    {fact_prefix}_blockLeft_{g}, {fact_prefix}_blockLeft_{gp}, {fact_prefix}_blockRight_{h},", file=fh)
+                        print(f"    {fact_prefix}_pair_{g}_{h}, {fact_prefix}_pair_{gp}_{h}]", file=fh)
+                        print(file=fh)
+                        emit_footer(fh)
+
+                row_pair_stem = f"{stem}Rows_{g}_{gp}"
+                row_pair_path = os.path.join(out_dir, f"{row_pair_stem}.lean")
+                row_pair_modules[(g, gp)] = lean_module_name_for_path(row_pair_path)
+                with open(row_pair_path, "w", encoding="utf-8") as fh:
+                    emit_header(fh, pair_term_modules)
+                    print(f"theorem {name}_divRight_for_rows_{g}_{gp} : Nat.divisors {q2} = ({lean_nat_list(divs_q2)} : List ℕ).toFinset := by", file=fh)
+                    print("  decide", file=fh)
+                    print(file=fh)
+                    print(f"def {name}_rowPairChunk_{g}_{gp} : Finset ℕ :=", file=fh)
+                    print(f"  ({lean_nat_list(divs_q2)} : List ℕ).toFinset", file=fh)
+                    print(file=fh)
+                    print(f"def {name}_rowPairValue_{g}_{gp} : ℕ → ℚ", file=fh)
+                    for h in divs_q2:
+                        print(f"| {h} => (0 : ℚ)", file=fh)
+                    print("| _ => 0", file=fh)
+                    print(file=fh)
+                    print(f"theorem {name}_rows_{g}_{gp} :", file=fh)
+                    print(f"    (∑ h ∈ Nat.divisors {q2},", file=fh)
+                    for line in term_expr_lines(q, q2, g, "h", indent="      "):
+                        print(line, file=fh)
+                    print("    ) +", file=fh)
+                    print(f"    (∑ h ∈ Nat.divisors {q2},", file=fh)
+                    for line in term_expr_lines(q, q2, gp, "h", indent="      "):
+                        print(line, file=fh)
+                    print(f"    ) = (0 : ℚ) := by", file=fh)
+                    print(f"  rw [{name}_divRight_for_rows_{g}_{gp}]", file=fh)
+                    print(f"  have hset : ({lean_nat_list(divs_q2)} : List ℕ).toFinset = {name}_rowPairChunk_{g}_{gp} := by", file=fh)
+                    print("    native_decide", file=fh)
+                    print("  rw [hset]", file=fh)
+                    print("  rw [← Finset.sum_add_distrib]", file=fh)
+                    print("  have hsum :", file=fh)
+                    print(f"      (∑ h ∈ {name}_rowPairChunk_{g}_{gp},", file=fh)
+                    print("        (", file=fh)
+                    for line in term_expr_lines(q, q2, g, "h", indent="          "):
+                        print(line, file=fh)
+                    print("        ) +", file=fh)
+                    print("        (", file=fh)
+                    for line in term_expr_lines(q, q2, gp, "h", indent="          "):
+                        print(line, file=fh)
+                    print(f"        )) = (∑ h ∈ {name}_rowPairChunk_{g}_{gp}, {name}_rowPairValue_{g}_{gp} h) := by", file=fh)
+                    print("    apply Finset.sum_congr rfl", file=fh)
+                    print("    intro h hh", file=fh)
+                    print(f"    simp [{name}_rowPairChunk_{g}_{gp}] at hh", file=fh)
+                    print("    rcases hh with " + " | ".join(["rfl"] * len(divs_q2)), file=fh)
+                    for h in divs_q2:
+                        print(f"    · simpa [{name}_rowPairValue_{g}_{gp}] using {name}_termPair_{g}_{gp}_{h}", file=fh)
+                    print("  rw [hsum]", file=fh)
+                    print(f"  norm_num [{name}_rowPairChunk_{g}_{gp}, {name}_rowPairValue_{g}_{gp}]", file=fh)
+                    print(file=fh)
+                    emit_footer(fh)
+
+            with open(wrapper_path, "w", encoding="utf-8") as fh:
+                imports = [row_modules[g] for g in zero_rows] + [
+                    row_pair_modules[pair] for pair in cancel_pairs
+                ]
+                emit_header(fh, imports)
+                print(f"/- Split generated q=42 cancellation proof for selected JSON index {record_index}. -/", file=fh)
+                print(file=fh)
+                print(f"theorem {name}_divLeft : Nat.divisors {q} = ({lean_nat_list(divs_q)} : List ℕ).toFinset := by", file=fh)
+                print("  decide", file=fh)
+                print(file=fh)
+                print(f"theorem {name}_centeredTerm :", file=fh)
+                print(f"    centeredRamanujanPairPeriodicMainTermRat X0 {q} {q2} = (0 : ℚ) := by", file=fh)
+                print("  unfold centeredRamanujanPairPeriodicMainTermRat", file=fh)
+                print("  let R : ℕ → ℚ := fun g =>", file=fh)
+                print(f"    ∑ h ∈ Nat.divisors {q2},", file=fh)
+                for line in term_expr_lines(q, q2, "g", "h", indent="      "):
+                    print(line, file=fh)
+                print("  change (∑ g ∈ Nat.divisors 42, R g) = (0 : ℚ)", file=fh)
+                print(f"  rw [{name}_divLeft]", file=fh)
+                print("  have hreorder :", file=fh)
+                print(f"      (∑ g ∈ ({lean_nat_list(divs_q)} : List ℕ).toFinset, R g)", file=fh)
+                print("        = R 1 + R 3 + R 7 + R 21 + (R 2 + R 6) + (R 14 + R 42) := by", file=fh)
+                print("    norm_num [Finset.sum_insert]", file=fh)
+                print("    abel", file=fh)
+                print("  rw [hreorder]", file=fh)
+                for g in zero_rows:
+                    print(f"  have hrow{g} : R {g} = (0 : ℚ) := by", file=fh)
+                    print(f"    simpa [R] using {name}_row_{g}", file=fh)
+                for g, gp in cancel_pairs:
+                    print(f"  have hrows{g}_{gp} : R {g} + R {gp} = (0 : ℚ) := by", file=fh)
+                    print(f"    simpa [R] using {name}_rows_{g}_{gp}", file=fh)
+                print("  rw [hrow1, hrow3, hrow7, hrow21, hrows2_6, hrows14_42]", file=fh)
+                print("  norm_num", file=fh)
+                print(file=fh)
+                print(f"theorem {name}_orderedSummand :", file=fh)
+                print(f"    surrogatePeriodicMainActiveOrderedPairSummandRat X0 (Prod.mk {q} {q2}) = (0 : ℚ) := by", file=fh)
+                print(f"  have hneq : {q} ≠ {q2} := by", file=fh)
+                print("    norm_num", file=fh)
+                print(f"  have hCoeffLeft : surrogateNormalizedSigmaTruncSummandCoeffRat {q} = {fraction_to_q_literal(coeff_q)} := by", file=fh)
+                print("    native_decide", file=fh)
+                print(f"  have hCoeffRight : surrogateNormalizedSigmaTruncSummandCoeffRat {q2} = {fraction_to_q_literal(coeff_q2)} := by", file=fh)
+                print("    native_decide", file=fh)
+                print(f"  have hvalue : ({fraction_to_q_literal(coeff_q)}) * ({fraction_to_q_literal(coeff_q2)}) * (0 : ℚ) = (0 : ℚ) := by", file=fh)
+                print("    norm_num", file=fh)
+                print("  exact surrogatePeriodicMainActiveOrderedPairSummandRat_eq_of_pairValue", file=fh)
+                print("    hneq hCoeffLeft hCoeffRight", file=fh)
+                print(f"    {name}_centeredTerm", file=fh)
+                print("    hvalue", file=fh)
+                print(file=fh)
+                with contextlib.redirect_stdout(fh):
+                    emit_periodic_main_zero_record_batch_wrapper(X=X, label=label, records=[record])
+                emit_footer(fh)
+            print(f"[write-split-q42-cancel] {wrapper_path} record={record_index} pair=({q},{q2})", file=sys.stderr)
+            return True
+
+        if not disable_q42_cancel and emit_q42_cancel_split_record():
+            return
+
+        term_modules: dict[tuple[int, int], str] = {}
+        if not inline_row_parts:
+            for g in divs_q:
+                for h in divs_q2:
+                    term_stem = f"{stem}Term_{g}_{h}"
+                    term_path = os.path.join(out_dir, f"{term_stem}.lean")
+                    term_modules[(g, h)] = lean_module_name_for_path(term_path)
+                    with open(term_path, "w", encoding="utf-8") as fh:
+                        emit_header(fh, [base_import])
+                        print(f"theorem {name}_term_{g}_{h} :", file=fh)
+                        for line in term_expr_lines(q, q2, g, h, indent="    "):
+                            print(line, file=fh)
+                        print(f"      = {fraction_to_q_literal(term_values[(g, h)])} := by", file=fh)
+                        if term_values[(g, h)] != 0:
+                            print(f"  have hCoeffLeft : ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q][g])} := by", file=fh)
+                            print("    native_decide", file=fh)
+                            print(f"  have hCoeffRight : ramanujanGcdClassCoeffRat {q2} {h} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q2][h])} := by", file=fh)
+                            print("    native_decide", file=fh)
+                            print(f"  have hAvgLeft : ramanujanGcdClassWindowAverageRat X0 {q} {g} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q][g])} := by", file=fh)
+                            print("    native_decide", file=fh)
+                            print(f"  have hAvgRight : ramanujanGcdClassWindowAverageRat X0 {q2} {h} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q2][h])} := by", file=fh)
+                            print("    native_decide", file=fh)
+                            for line in emit_block_periodic_count_proof(theorem_name="hBlockLeft", q=q, q2=q2, q0=q, g0=g, expected=block_left_values[g]):
+                                print(line, file=fh)
+                            for line in emit_block_periodic_count_proof(theorem_name="hBlockRight", q=q, q2=q2, q0=q2, g0=h, expected=block_right_values[h]):
+                                print(line, file=fh)
+                            for line in emit_pair_resolved_count_proof(theorem_name="hPair", q=q, q2=q2, g=g, h=h, expected=pair_values[(g, h)]):
+                                print(line, file=fh)
+                            print("  norm_num [H, centeredRamanujanPairBlockPeriod, evenRamanujanBlockCountRat,", file=fh)
+                            print("    hCoeffLeft, hCoeffRight, hAvgLeft, hAvgRight,", file=fh)
+                            print("    hBlockLeft, hBlockRight, hPair]", file=fh)
+                        elif can_use_right_odd_structural_zero(q2, g, h):
+                            for line in emit_right_odd_structural_zero_proofs(q=q, q2=q2, g=g, h=h):
+                                print(line, file=fh)
+                            print("  rw [hPair, hAvgRight, hBlockRight]", file=fh)
+                            print("  simp", file=fh)
+                        elif can_use_left_odd_structural_zero(q, g):
+                            for line in emit_left_odd_structural_zero_proofs(q=q, q2=q2, g=g, h=h, expected_pair=pair_values[(g, h)]):
+                                print(line, file=fh)
+                            print("  rw [hPair, hAvgLeft, hBlockLeft]", file=fh)
+                            print("  simp", file=fh)
+                        else:
+                            print(f"  have hCoeffLeft : ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q][g])} := by", file=fh)
+                            print("    native_decide", file=fh)
+                            print(f"  have hCoeffRight : ramanujanGcdClassCoeffRat {q2} {h} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q2][h])} := by", file=fh)
+                            print("    native_decide", file=fh)
+                            print(f"  have hAvgLeft : ramanujanGcdClassWindowAverageRat X0 {q} {g} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q][g])} := by", file=fh)
+                            print("    native_decide", file=fh)
+                            print(f"  have hAvgRight : ramanujanGcdClassWindowAverageRat X0 {q2} {h} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q2][h])} := by", file=fh)
+                            print("    native_decide", file=fh)
+                            for line in emit_block_periodic_count_proof(theorem_name="hBlockLeft", q=q, q2=q2, q0=q, g0=g, expected=block_left_values[g]):
+                                print(line, file=fh)
+                            for line in emit_block_periodic_count_proof(theorem_name="hBlockRight", q=q, q2=q2, q0=q2, g0=h, expected=block_right_values[h]):
+                                print(line, file=fh)
+                            for line in emit_pair_resolved_count_proof(theorem_name="hPair", q=q, q2=q2, g=g, h=h, expected=pair_values[(g, h)]):
+                                print(line, file=fh)
+                            print("  norm_num [H, centeredRamanujanPairBlockPeriod, evenRamanujanBlockCountRat,", file=fh)
+                            print("    hCoeffLeft, hCoeffRight, hAvgLeft, hAvgRight,", file=fh)
+                            print("    hBlockLeft, hBlockRight, hPair]", file=fh)
+                        print(file=fh)
+                        emit_footer(fh)
+
+        row_modules: dict[int, str] = {}
+        for g in divs_q:
+            chunks = [divs_q2[i:i + row_part_size] for i in range(0, len(divs_q2), row_part_size)]
+            chunk_names: list[str] = []
+            part_modules: list[str] = []
+            for part_idx, chunk in enumerate(chunks):
+                part_stem = f"{stem}Row_{g}Part{part_idx}"
+                part_path = os.path.join(out_dir, f"{part_stem}.lean")
+                part_modules.append(lean_module_name_for_path(part_path))
+                chunk_name = f"{name}_rowChunk_{g}_{part_idx}"
+                chunk_names.append(chunk_name)
+                imports = [base_import] if inline_row_parts else [term_modules[(g, h)] for h in chunk]
+                part_total = sum((term_values[(g, h)] for h in chunk), Fraction(0, 1))
+                with open(part_path, "w", encoding="utf-8") as fh:
+                    emit_header(fh, imports)
+                    print(f"def {chunk_name} : Finset ℕ :=", file=fh)
+                    print(f"  ({lean_nat_list(chunk)} : List ℕ).toFinset", file=fh)
+                    print(file=fh)
+                    print(f"def {name}_rowPartValue_{g}_{part_idx} : ℕ → ℚ", file=fh)
+                    for h in chunk:
+                        print(f"| {h} => {fraction_to_q_literal(term_values[(g, h)])}", file=fh)
+                    print("| _ => 0", file=fh)
+                    print(file=fh)
+                    print(f"theorem {name}_rowPart_{g}_{part_idx} :", file=fh)
+                    print(f"    (∑ h ∈ {chunk_name},", file=fh)
+                    for line in term_expr_lines(q, q2, g, "h", indent="      "):
+                        print(line, file=fh)
+                    print(f"    ) = {fraction_to_q_literal(part_total)} := by", file=fh)
+                    print("  have hsum :", file=fh)
+                    print(f"      (∑ h ∈ {chunk_name},", file=fh)
+                    for line in term_expr_lines(q, q2, g, "h", indent="        "):
+                        print(line, file=fh)
+                    print(f"      ) = (∑ h ∈ {chunk_name}, {name}_rowPartValue_{g}_{part_idx} h) := by", file=fh)
+                    print("    apply Finset.sum_congr rfl", file=fh)
+                    print("    intro h hh", file=fh)
+                    print(f"    simp [{chunk_name}] at hh", file=fh)
+                    print("    rcases hh with " + " | ".join(["rfl"] * len(chunk)), file=fh)
+                    for h in chunk:
+                        if inline_row_parts:
+                            print("    · have hTerm :", file=fh)
+                            for line in term_expr_lines(q, q2, g, h, indent="          "):
+                                print(line, file=fh)
+                            print(f"          = {fraction_to_q_literal(term_values[(g, h)])} := by", file=fh)
+                            if term_values[(g, h)] == 0:
+                                if can_use_right_odd_structural_zero(q2, g, h):
+                                    for line in emit_right_odd_structural_zero_proofs(q=q, q2=q2, g=g, h=h, indent="        "):
+                                        print(line, file=fh)
+                                    print("        rw [hPair, hAvgRight, hBlockRight]", file=fh)
+                                    print("        simp", file=fh)
+                                elif can_use_left_odd_structural_zero(q, g):
+                                    for line in emit_left_odd_structural_zero_proofs(q=q, q2=q2, g=g, h=h, expected_pair=pair_values[(g, h)], indent="        "):
+                                        print(line, file=fh)
+                                    print("        rw [hPair, hAvgLeft, hBlockLeft]", file=fh)
+                                    print("        simp", file=fh)
+                                else:
+                                    print(f"        have hCoeffLeft : ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q][g])} := by", file=fh)
+                                    print("          native_decide", file=fh)
+                                    print(f"        have hCoeffRight : ramanujanGcdClassCoeffRat {q2} {h} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q2][h])} := by", file=fh)
+                                    print("          native_decide", file=fh)
+                                    print(f"        have hAvgLeft : ramanujanGcdClassWindowAverageRat X0 {q} {g} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q][g])} := by", file=fh)
+                                    print("          native_decide", file=fh)
+                                    print(f"        have hAvgRight : ramanujanGcdClassWindowAverageRat X0 {q2} {h} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q2][h])} := by", file=fh)
+                                    print("          native_decide", file=fh)
+                                    for line in emit_block_periodic_count_proof(theorem_name="hBlockLeft", q=q, q2=q2, q0=q, g0=g, expected=block_left_values[g], indent="        "):
+                                        print(line, file=fh)
+                                    for line in emit_block_periodic_count_proof(theorem_name="hBlockRight", q=q, q2=q2, q0=q2, g0=h, expected=block_right_values[h], indent="        "):
+                                        print(line, file=fh)
+                                    for line in emit_pair_resolved_count_proof(theorem_name="hPair", q=q, q2=q2, g=g, h=h, expected=pair_values[(g, h)], indent="        "):
+                                        print(line, file=fh)
+                                    print("        norm_num [H, centeredRamanujanPairBlockPeriod, evenRamanujanBlockCountRat,", file=fh)
+                                    print("          hCoeffLeft, hCoeffRight, hAvgLeft, hAvgRight,", file=fh)
+                                    print("          hBlockLeft, hBlockRight, hPair]", file=fh)
+                            else:
+                                print(f"        have hCoeffLeft : ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q][g])} := by", file=fh)
+                                print("          native_decide", file=fh)
+                                print(f"        have hCoeffRight : ramanujanGcdClassCoeffRat {q2} {h} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q2][h])} := by", file=fh)
+                                print("          native_decide", file=fh)
+                                print(f"        have hAvgLeft : ramanujanGcdClassWindowAverageRat X0 {q} {g} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q][g])} := by", file=fh)
+                                print("          native_decide", file=fh)
+                                print(f"        have hAvgRight : ramanujanGcdClassWindowAverageRat X0 {q2} {h} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q2][h])} := by", file=fh)
+                                print("          native_decide", file=fh)
+                                for line in emit_block_periodic_count_proof(theorem_name="hBlockLeft", q=q, q2=q2, q0=q, g0=g, expected=block_left_values[g], indent="        "):
+                                    print(line, file=fh)
+                                for line in emit_block_periodic_count_proof(theorem_name="hBlockRight", q=q, q2=q2, q0=q2, g0=h, expected=block_right_values[h], indent="        "):
+                                    print(line, file=fh)
+                                for line in emit_pair_resolved_count_proof(theorem_name="hPair", q=q, q2=q2, g=g, h=h, expected=pair_values[(g, h)], indent="        "):
+                                    print(line, file=fh)
+                                print("        norm_num [H, centeredRamanujanPairBlockPeriod, evenRamanujanBlockCountRat,", file=fh)
+                                print("          hCoeffLeft, hCoeffRight, hAvgLeft, hAvgRight,", file=fh)
+                                print("          hBlockLeft, hBlockRight, hPair]", file=fh)
+                            print(f"      simpa [{name}_rowPartValue_{g}_{part_idx}] using hTerm", file=fh)
+                        else:
+                            print(f"    · simpa [{name}_rowPartValue_{g}_{part_idx}] using {name}_term_{g}_{h}", file=fh)
+                    print("  rw [hsum]", file=fh)
+                    print(f"  norm_num [{chunk_name}, {name}_rowPartValue_{g}_{part_idx}]", file=fh)
+                    print(file=fh)
+                    emit_footer(fh)
+
+            row_stem = f"{stem}Row_{g}"
+            row_path = os.path.join(out_dir, f"{row_stem}.lean")
+            row_modules[g] = lean_module_name_for_path(row_path)
+            with open(row_path, "w", encoding="utf-8") as fh:
+                emit_header(fh, part_modules)
+                print(f"theorem {name}_divRight_for_row_{g} : Nat.divisors {q2} = ({lean_nat_list(divs_q2)} : List ℕ).toFinset := by", file=fh)
+                print("  decide", file=fh)
+                print(file=fh)
+                print(f"theorem {name}_row_{g} :", file=fh)
+                print(f"    (∑ h ∈ Nat.divisors {q2},", file=fh)
+                for line in term_expr_lines(q, q2, g, "h", indent="      "):
+                    print(line, file=fh)
+                print(f"    ) = {fraction_to_q_literal(row_values[g])} := by", file=fh)
+                print(f"  rw [{name}_divRight_for_row_{g}]", file=fh)
+                union_expr = split_union_expr(chunk_names)
+                print(f"  have hset : ({lean_nat_list(divs_q2)} : List ℕ).toFinset = {union_expr} := by", file=fh)
+                print("    native_decide", file=fh)
+                print("  rw [hset]", file=fh)
+                for split_idx in range(len(chunk_names) - 1, 0, -1):
+                    left = split_union_expr(chunk_names, split_idx)
+                    right = chunk_names[split_idx]
+                    print(f"  rw [Finset.sum_union (by native_decide : Disjoint {left} {right})]", file=fh)
+                part_theorems = [f"{name}_rowPart_{g}_{idx}" for idx in range(len(chunk_names))]
+                print("  rw [" + ", ".join(part_theorems) + "]", file=fh)
+                if len(chunk_names) > 1:
+                    print("  norm_num", file=fh)
+                print(file=fh)
+                emit_footer(fh)
+
+        with open(wrapper_path, "w", encoding="utf-8") as fh:
+            emit_header(fh, [row_modules[g] for g in divs_q])
+            record_kind = "zero-record" if expected == 0 else "nonzero-record"
+            print(f"/- Split generated periodic-main {record_kind} proof for selected JSON index {record_index}. -/", file=fh)
+            print(file=fh)
+            print(f"theorem {name}_divLeft : Nat.divisors {q} = ({lean_nat_list(divs_q)} : List ℕ).toFinset := by", file=fh)
+            print("  decide", file=fh)
+            print(file=fh)
+            print(f"def {name}_rowValue : ℕ → ℚ", file=fh)
+            for g in divs_q:
+                print(f"| {g} => {fraction_to_q_literal(row_values[g])}", file=fh)
+            print("| _ => 0", file=fh)
+            print(file=fh)
+            print(f"theorem {name}_centeredTerm :", file=fh)
+            print(f"    centeredRamanujanPairPeriodicMainTermRat X0 {q} {q2} = {fraction_to_q_literal(centered_term)} := by", file=fh)
+            print("  unfold centeredRamanujanPairPeriodicMainTermRat", file=fh)
+            print("  have hsum :", file=fh)
+            print(f"      (∑ g ∈ Nat.divisors {q}, ∑ h ∈ Nat.divisors {q2},", file=fh)
+            for line in term_expr_lines(q, q2, "g", "h", indent="        "):
+                print(line, file=fh)
+            print(f"      ) = (∑ g ∈ Nat.divisors {q}, {name}_rowValue g) := by", file=fh)
+            print("    apply Finset.sum_congr rfl", file=fh)
+            print("    intro g hg", file=fh)
+            print(f"    rw [{name}_divLeft] at hg", file=fh)
+            print("    simp at hg", file=fh)
+            print("    rcases hg with " + " | ".join(["rfl"] * len(divs_q)), file=fh)
+            for g in divs_q:
+                print(f"    · simpa [{name}_rowValue] using {name}_row_{g}", file=fh)
+            print(f"  rw [hsum, {name}_divLeft]", file=fh)
+            print(f"  norm_num [{name}_rowValue]", file=fh)
+            print(file=fh)
+            print(f"theorem {name}_orderedSummand :", file=fh)
+            print(f"    surrogatePeriodicMainActiveOrderedPairSummandRat X0 (Prod.mk {q} {q2}) = {fraction_to_q_literal(summand_value)} := by", file=fh)
+            print(f"  have hneq : {q} ≠ {q2} := by", file=fh)
+            print("    norm_num", file=fh)
+            print(f"  have hCoeffLeft : surrogateNormalizedSigmaTruncSummandCoeffRat {q} = {fraction_to_q_literal(coeff_q)} := by", file=fh)
+            print("    native_decide", file=fh)
+            print(f"  have hCoeffRight : surrogateNormalizedSigmaTruncSummandCoeffRat {q2} = {fraction_to_q_literal(coeff_q2)} := by", file=fh)
+            print("    native_decide", file=fh)
+            print(
+                f"  have hvalue : ({fraction_to_q_literal(coeff_q)}) * ({fraction_to_q_literal(coeff_q2)}) "
+                f"* ({fraction_to_q_literal(centered_term)}) = {fraction_to_q_literal(summand_value)} := by",
+                file=fh,
+            )
+            print("    norm_num", file=fh)
+            print("  exact surrogatePeriodicMainActiveOrderedPairSummandRat_eq_of_pairValue", file=fh)
+            print("    hneq hCoeffLeft hCoeffRight", file=fh)
+            print(f"    {name}_centeredTerm", file=fh)
+            print("    hvalue", file=fh)
+            print(file=fh)
+            with contextlib.redirect_stdout(fh):
+                if expected == 0:
+                    emit_periodic_main_zero_record_batch_wrapper(X=X, label=label, records=[record])
+                else:
+                    emit_periodic_main_record_batch_wrapper(X=X, label=label, records=[record])
+            emit_footer(fh)
+        print(f"[write-split] {wrapper_path} record={record_index} pair=({q},{q2})", file=sys.stderr)
+
+    for local_index, record in enumerate(records):
+        emit_split_record(record, index_offset + local_index)
+    return len(records)
 
 
 def emit_periodic_main_zero_value_chunk_assembly_lean(
@@ -859,6 +1759,7 @@ def emit_periodic_main_zero_value_chunk_assembly_lean(
     module_prefix: str,
     label_prefix: str,
     chunk_count: int,
+    extra_imports: list[str] | None = None,
 ) -> None:
     if chunk_count <= 0:
         raise SystemExit("--emit-periodic-main-zero-value-chunk-assembly-lean requires CHUNK_COUNT > 0")
@@ -866,6 +1767,7 @@ def emit_periodic_main_zero_value_chunk_assembly_lean(
     modules = [f"{module_prefix}{idx:03d}" for idx in range(chunk_count)]
     imports = [
         "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionSplit",
+        *(extra_imports or []),
         *modules,
     ]
     emit_periodic_main_pair_primitive_lean_header(imports=imports)
@@ -892,10 +1794,469 @@ def emit_periodic_main_zero_value_chunk_assembly_lean(
       print(f"  exact PeriodicMainRecords{labels[0]}_value_on_records p hpPayload")
     else:
       print(f"  simp only [{assembly_set_name}, Finset.mem_union] at hpPayload")
-      rcases_pattern = " | ".join(f"h{idx}" for idx in range(chunk_count))
+      rcases_pattern = left_assoc_or_pattern([f"h{idx}" for idx in range(chunk_count)])
       print(f"  rcases hpPayload with {rcases_pattern}")
       for idx, label in enumerate(labels):
           print(f"  · exact PeriodicMainRecords{label}_value_on_records p h{idx}")
+    print()
+    emit_periodic_main_pair_primitive_lean_footer()
+
+
+def emit_periodic_main_zero_value_chunk_group_lean(
+    *,
+    group_set_name: str,
+    theorem_name: str,
+    module_prefix: str,
+    label_prefix: str,
+    start_index: int,
+    chunk_count: int,
+    extra_imports: list[str] | None = None,
+) -> None:
+    if start_index < 0:
+        raise SystemExit("START_INDEX must be nonnegative")
+    if chunk_count <= 0:
+        raise SystemExit("CHUNK_COUNT must be positive")
+    indices = list(range(start_index, start_index + chunk_count))
+    labels = [f"{label_prefix}{idx:03d}" for idx in indices]
+    modules = [f"{module_prefix}{idx:03d}" for idx in indices]
+    imports = [
+        "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionSplit",
+        *(extra_imports or []),
+        *modules,
+    ]
+    emit_periodic_main_pair_primitive_lean_header(imports=imports)
+    print("/- Generated group assembly for zero-record value-on-record chunk payloads. -/")
+    print()
+    print(f"def {group_set_name} : Finset (ℕ × ℕ) :=")
+    union_expr = f"PeriodicMainRecords{labels[0]}Pairs"
+    for label in labels[1:]:
+        union_expr = f"({union_expr} ∪ PeriodicMainRecords{label}Pairs)"
+    print(f"  {union_expr}")
+    print()
+    print(f"theorem {theorem_name} :")
+    print(f"    ∀ p ∈ {group_set_name},")
+    print("      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = 0 := by")
+    print("  intro p hp")
+    if chunk_count == 1:
+        print(f"  simp only [{group_set_name}] at hp")
+        print(f"  exact PeriodicMainRecords{labels[0]}_value_on_records p hp")
+    else:
+        print(f"  simp only [{group_set_name}, Finset.mem_union] at hp")
+        rcases_pattern = left_assoc_or_pattern([f"h{idx}" for idx in range(chunk_count)])
+        print(f"  rcases hp with {rcases_pattern}")
+        for idx, label in enumerate(labels):
+            print(f"  · exact PeriodicMainRecords{label}_value_on_records p h{idx}")
+    print()
+    emit_periodic_main_pair_primitive_lean_footer()
+
+
+def emit_periodic_main_zero_value_grouped_final_lean(
+    *,
+    target_set_name: str,
+    assembly_set_name: str,
+    theorem_name: str,
+    group_module_prefix: str,
+    group_set_prefix: str,
+    group_set_suffix: str,
+    group_theorem_prefix: str,
+    group_theorem_suffix: str,
+    group_count: int,
+    extra_imports: list[str] | None = None,
+) -> None:
+    if group_count <= 0:
+        raise SystemExit("GROUP_COUNT must be positive")
+    group_sets = [f"{group_set_prefix}{idx:03d}{group_set_suffix}" for idx in range(group_count)]
+    group_theorems = [f"{group_theorem_prefix}{idx:03d}{group_theorem_suffix}" for idx in range(group_count)]
+    group_modules = [f"{group_module_prefix}{idx:03d}" for idx in range(group_count)]
+    imports = [
+        "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionSplit",
+        *(extra_imports or []),
+        *group_modules,
+    ]
+    emit_periodic_main_pair_primitive_lean_header(imports=imports)
+    print("/- Generated final grouped assembly for zero-record value-on-record payloads. -/")
+    print()
+    print(f"def {assembly_set_name} : Finset (ℕ × ℕ) :=")
+    union_expr = group_sets[0]
+    for group_set in group_sets[1:]:
+        union_expr = f"({union_expr} ∪ {group_set})"
+    print(f"  {union_expr}")
+    print()
+    print(f"theorem {assembly_set_name}_eq_target :")
+    print(f"    {assembly_set_name} = {target_set_name} := by")
+    print("  native_decide")
+    print()
+    print(f"theorem {theorem_name} :")
+    print(f"    ∀ p ∈ {target_set_name},")
+    print("      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = 0 := by")
+    print("  intro p hp")
+    print(f"  have hpPayload : p ∈ {assembly_set_name} := by")
+    print(f"    simpa [{assembly_set_name}_eq_target] using hp")
+    if group_count == 1:
+        print(f"  simp only [{assembly_set_name}] at hpPayload")
+        print(f"  exact {group_theorems[0]} p hpPayload")
+    else:
+        print(f"  simp only [{assembly_set_name}, Finset.mem_union] at hpPayload")
+        rcases_pattern = left_assoc_or_pattern([f"h{idx}" for idx in range(group_count)])
+        print(f"  rcases hpPayload with {rcases_pattern}")
+        for idx, group_theorem in enumerate(group_theorems):
+            print(f"  · exact {group_theorem} p h{idx}")
+    print()
+    emit_periodic_main_pair_primitive_lean_footer()
+
+
+def emit_periodic_main_nonzero_value_chunk_group_lean(
+    *,
+    group_set_name: str,
+    group_total_name: str,
+    theorem_name: str,
+    module_prefix: str,
+    label_prefix: str,
+    start_index: int,
+    chunk_count: int,
+    extra_imports: list[str] | None = None,
+) -> None:
+    if start_index < 0:
+        raise SystemExit("START_INDEX must be nonnegative")
+    if chunk_count <= 0:
+        raise SystemExit("CHUNK_COUNT must be positive")
+    indices = list(range(start_index, start_index + chunk_count))
+    labels = [f"{label_prefix}{idx:03d}" for idx in indices]
+    modules = [f"{module_prefix}{idx:03d}" for idx in indices]
+    imports = [
+        "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainReducedSparse",
+        *(extra_imports or []),
+        *modules,
+    ]
+    emit_periodic_main_pair_primitive_lean_header(imports=imports)
+    print("/- Generated group assembly for nonzero-record value chunk payloads. -/")
+    print()
+
+    actual = "surrogatePeriodicMainActiveOrderedPairSummandRat X0"
+    for label in labels:
+        print(f"theorem PeriodicMainRecords{label}_actual_sum :")
+        print(f"    (∑ p ∈ PeriodicMainRecords{label}Pairs, {actual} p) =")
+        print(f"      PeriodicMainRecords{label}Total := by")
+        print("  calc")
+        print(f"    (∑ p ∈ PeriodicMainRecords{label}Pairs, {actual} p)")
+        print(f"        = (∑ p ∈ PeriodicMainRecords{label}Pairs, PeriodicMainRecords{label}Value p) := by")
+        print("          refine Finset.sum_congr rfl ?_")
+        print("          intro p hp")
+        print(f"          simpa [PeriodicMainRecords{label}Value] using PeriodicMainRecords{label}_value_on_records p hp")
+        print(f"    _ = PeriodicMainRecords{label}Total := PeriodicMainRecords{label}_records_sum")
+        print()
+
+    upto_sets = [f"{group_set_name}UpTo{idx:03d}" for idx in range(chunk_count)]
+    upto_totals = [f"{group_total_name}UpTo{idx:03d}" for idx in range(chunk_count)]
+    for local_idx, label in enumerate(labels):
+        set_name = upto_sets[local_idx]
+        total_name = upto_totals[local_idx]
+        if local_idx == 0:
+            print(f"def {set_name} : Finset (ℕ × ℕ) :=")
+            print(f"  PeriodicMainRecords{label}Pairs")
+            print()
+            print(f"def {total_name} : ℚ :=")
+            print(f"  PeriodicMainRecords{label}Total")
+            print()
+            print(f"theorem {set_name}_actual_sum :")
+            print(f"    (∑ p ∈ {set_name}, {actual} p) = {total_name} := by")
+            print(f"  simpa [{set_name}, {total_name}] using PeriodicMainRecords{label}_actual_sum")
+            print()
+        else:
+            prev_set = upto_sets[local_idx - 1]
+            prev_total = upto_totals[local_idx - 1]
+            print(f"def {set_name} : Finset (ℕ × ℕ) :=")
+            print(f"  {prev_set} ∪ PeriodicMainRecords{label}Pairs")
+            print()
+            print(f"def {total_name} : ℚ :=")
+            print(f"  {prev_total} + PeriodicMainRecords{label}Total")
+            print()
+            print(f"theorem {prev_set}_disjoint_PeriodicMainRecords{label}Pairs :")
+            print(f"    Disjoint {prev_set} PeriodicMainRecords{label}Pairs := by")
+            print("  native_decide")
+            print()
+            print(f"theorem {set_name}_actual_sum :")
+            print(f"    (∑ p ∈ {set_name}, {actual} p) = {total_name} := by")
+            print(f"  rw [{set_name}, Finset.sum_union {prev_set}_disjoint_PeriodicMainRecords{label}Pairs]")
+            print(f"  rw [{prev_set}_actual_sum, PeriodicMainRecords{label}_actual_sum]")
+            print(f"  rfl")
+            print()
+
+    print(f"def {group_set_name} : Finset (ℕ × ℕ) :=")
+    print(f"  {upto_sets[-1]}")
+    print()
+    print(f"def {group_total_name} : ℚ :=")
+    print(f"  {upto_totals[-1]}")
+    print()
+    print(f"theorem {theorem_name} :")
+    print(f"    (∑ p ∈ {group_set_name}, {actual} p) = {group_total_name} := by")
+    print(f"  simpa [{group_set_name}, {group_total_name}] using {upto_sets[-1]}_actual_sum")
+    print()
+    emit_periodic_main_pair_primitive_lean_footer()
+
+
+def emit_periodic_main_nonzero_value_grouped_final_lean(
+    *,
+    target_set_name: str,
+    assembly_set_name: str,
+    assembly_total_name: str,
+    theorem_name: str,
+    group_module_prefix: str,
+    group_set_prefix: str,
+    group_total_prefix: str,
+    group_theorem_prefix: str,
+    group_count: int,
+    extra_imports: list[str] | None = None,
+) -> None:
+    if group_count <= 0:
+        raise SystemExit("GROUP_COUNT must be positive")
+    group_sets = [f"{group_set_prefix}{idx:03d}Pairs" for idx in range(group_count)]
+    group_totals = [f"{group_total_prefix}{idx:03d}Total" for idx in range(group_count)]
+    group_theorems = [f"{group_theorem_prefix}{idx:03d}_actual_sum" for idx in range(group_count)]
+    group_modules = [f"{group_module_prefix}{idx:03d}" for idx in range(group_count)]
+    imports = [
+        "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainReducedSparse",
+        *(extra_imports or []),
+        *group_modules,
+    ]
+    emit_periodic_main_pair_primitive_lean_header(imports=imports)
+    print("/- Generated final grouped assembly for nonzero-record value payloads. -/")
+    print()
+
+    actual = "surrogatePeriodicMainActiveOrderedPairSummandRat X0"
+    upto_sets = [f"{assembly_set_name}UpTo{idx:03d}" for idx in range(group_count)]
+    upto_totals = [f"{assembly_total_name}UpTo{idx:03d}" for idx in range(group_count)]
+    for idx in range(group_count):
+        if idx == 0:
+            print(f"def {upto_sets[idx]} : Finset (ℕ × ℕ) :=")
+            print(f"  {group_sets[idx]}")
+            print()
+            print(f"def {upto_totals[idx]} : ℚ :=")
+            print(f"  {group_totals[idx]}")
+            print()
+            print(f"theorem {upto_sets[idx]}_actual_sum :")
+            print(f"    (∑ p ∈ {upto_sets[idx]}, {actual} p) = {upto_totals[idx]} := by")
+            print(f"  simpa [{upto_sets[idx]}, {upto_totals[idx]}] using {group_theorems[idx]}")
+            print()
+        else:
+            prev_set = upto_sets[idx - 1]
+            prev_total = upto_totals[idx - 1]
+            print(f"def {upto_sets[idx]} : Finset (ℕ × ℕ) :=")
+            print(f"  {prev_set} ∪ {group_sets[idx]}")
+            print()
+            print(f"def {upto_totals[idx]} : ℚ :=")
+            print(f"  {prev_total} + {group_totals[idx]}")
+            print()
+            print(f"theorem {prev_set}_disjoint_{group_sets[idx]} :")
+            print(f"    Disjoint {prev_set} {group_sets[idx]} := by")
+            print("  native_decide")
+            print()
+            print(f"theorem {upto_sets[idx]}_actual_sum :")
+            print(f"    (∑ p ∈ {upto_sets[idx]}, {actual} p) = {upto_totals[idx]} := by")
+            print(f"  rw [{upto_sets[idx]}, Finset.sum_union {prev_set}_disjoint_{group_sets[idx]}]")
+            print(f"  rw [{prev_set}_actual_sum, {group_theorems[idx]}]")
+            print(f"  rfl")
+            print()
+
+    print(f"def {assembly_set_name} : Finset (ℕ × ℕ) :=")
+    print(f"  {upto_sets[-1]}")
+    print()
+    print(f"def {assembly_total_name} : ℚ :=")
+    print(f"  {upto_totals[-1]}")
+    print()
+    print(f"theorem {assembly_set_name}_eq_target :")
+    print(f"    {assembly_set_name} = {target_set_name} := by")
+    print("  native_decide")
+    print()
+    print(f"theorem {assembly_set_name}_actual_sum :")
+    print(f"    (∑ p ∈ {assembly_set_name}, {actual} p) = {assembly_total_name} := by")
+    print(f"  simpa [{assembly_set_name}, {assembly_total_name}] using {upto_sets[-1]}_actual_sum")
+    print()
+    print(f"theorem {theorem_name} :")
+    print(f"    (∑ p ∈ {target_set_name}, {actual} p) = surrogatePeriodicMainX0RatCert := by")
+    print(f"  rw [← {assembly_set_name}_eq_target]")
+    print(f"  rw [{assembly_set_name}_actual_sum]")
+    numeric_defs = ", ".join(
+        ["surrogatePeriodicMainX0RatCert", assembly_total_name]
+        + upto_totals
+        + group_totals
+    )
+    print(f"  norm_num [{numeric_defs}]")
+    print()
+    emit_periodic_main_pair_primitive_lean_footer()
+
+
+def emit_periodic_main_row_value_chunk_group_lean(
+    *,
+    group_set_name: str,
+    group_total_name: str,
+    theorem_name: str,
+    module_prefix: str,
+    label_prefix: str,
+    start_index: int,
+    chunk_count: int,
+    extra_imports: list[str] | None = None,
+) -> None:
+    if start_index < 0:
+        raise SystemExit("START_INDEX must be nonnegative")
+    if chunk_count <= 0:
+        raise SystemExit("CHUNK_COUNT must be positive")
+    indices = list(range(start_index, start_index + chunk_count))
+    labels = [f"{label_prefix}{idx:03d}" for idx in indices]
+    modules = [f"{module_prefix}{idx:03d}" for idx in indices]
+    imports = [
+        *(extra_imports or []),
+        *modules,
+    ]
+    emit_periodic_main_pair_primitive_lean_header(imports=imports)
+    print("/- Generated row-local actual-sum theorem over periodic-main record modules. -/")
+    print()
+
+    actual = "surrogatePeriodicMainActiveOrderedPairSummandRat X0"
+    for label in labels:
+        print(f"theorem PeriodicMainRecords{label}_actual_sum :")
+        print(f"    (∑ p ∈ PeriodicMainRecords{label}Pairs, {actual} p) =")
+        print(f"      PeriodicMainRecords{label}Total := by")
+        print("  calc")
+        print(f"    (∑ p ∈ PeriodicMainRecords{label}Pairs, {actual} p)")
+        print(f"        = (∑ p ∈ PeriodicMainRecords{label}Pairs, PeriodicMainRecords{label}Value p) := by")
+        print("          refine Finset.sum_congr rfl ?_")
+        print("          intro p hp")
+        print(f"          simpa [PeriodicMainRecords{label}Value] using PeriodicMainRecords{label}_value_on_records p hp")
+        print(f"    _ = PeriodicMainRecords{label}Total := PeriodicMainRecords{label}_records_sum")
+        print()
+
+    upto_sets = [f"{group_set_name}UpTo{idx:03d}" for idx in range(chunk_count)]
+    upto_totals = [f"{group_total_name}UpTo{idx:03d}" for idx in range(chunk_count)]
+    for local_idx, label in enumerate(labels):
+        set_name = upto_sets[local_idx]
+        total_name = upto_totals[local_idx]
+        if local_idx == 0:
+            print(f"def {set_name} : Finset (ℕ × ℕ) :=")
+            print(f"  PeriodicMainRecords{label}Pairs")
+            print()
+            print(f"def {total_name} : ℚ :=")
+            print(f"  PeriodicMainRecords{label}Total")
+            print()
+            print(f"theorem {set_name}_actual_sum :")
+            print(f"    (∑ p ∈ {set_name}, {actual} p) = {total_name} := by")
+            print(f"  simpa [{set_name}, {total_name}] using PeriodicMainRecords{label}_actual_sum")
+            print()
+        else:
+            prev_set = upto_sets[local_idx - 1]
+            prev_total = upto_totals[local_idx - 1]
+            print(f"def {set_name} : Finset (ℕ × ℕ) :=")
+            print(f"  {prev_set} ∪ PeriodicMainRecords{label}Pairs")
+            print()
+            print(f"def {total_name} : ℚ :=")
+            print(f"  {prev_total} + PeriodicMainRecords{label}Total")
+            print()
+            print(f"theorem {prev_set}_disjoint_PeriodicMainRecords{label}Pairs :")
+            print(f"    Disjoint {prev_set} PeriodicMainRecords{label}Pairs := by")
+            print("  native_decide")
+            print()
+            print(f"theorem {set_name}_actual_sum :")
+            print(f"    (∑ p ∈ {set_name}, {actual} p) = {total_name} := by")
+            print(f"  rw [{set_name}, Finset.sum_union {prev_set}_disjoint_PeriodicMainRecords{label}Pairs]")
+            print(f"  rw [{prev_set}_actual_sum, PeriodicMainRecords{label}_actual_sum]")
+            print(f"  rfl")
+            print()
+
+    print(f"def {group_set_name} : Finset (ℕ × ℕ) :=")
+    print(f"  {upto_sets[-1]}")
+    print()
+    print(f"def {group_total_name} : ℚ :=")
+    print(f"  {upto_totals[-1]}")
+    print()
+    print(f"theorem {theorem_name} :")
+    print(f"    (∑ p ∈ {group_set_name}, {actual} p) = {group_total_name} := by")
+    print(f"  simpa [{group_set_name}, {group_total_name}] using {upto_sets[-1]}_actual_sum")
+    print()
+    emit_periodic_main_pair_primitive_lean_footer()
+
+
+def emit_periodic_main_row_value_grouped_final_lean(
+    *,
+    target_set_name: str,
+    target_total_name: str,
+    assembly_set_name: str,
+    assembly_total_name: str,
+    theorem_name: str,
+    group_module_prefix: str,
+    group_set_prefix: str,
+    group_total_prefix: str,
+    group_theorem_prefix: str,
+    group_count: int,
+    extra_imports: list[str] | None = None,
+) -> None:
+    if group_count <= 0:
+        raise SystemExit("GROUP_COUNT must be positive")
+    group_sets = [f"{group_set_prefix}{idx:03d}Pairs" for idx in range(group_count)]
+    group_totals = [f"{group_total_prefix}{idx:03d}Total" for idx in range(group_count)]
+    group_theorems = [f"{group_theorem_prefix}{idx:03d}_actual_sum" for idx in range(group_count)]
+    group_modules = [f"{group_module_prefix}{idx:03d}" for idx in range(group_count)]
+    imports = [
+        *(extra_imports or []),
+        *group_modules,
+    ]
+    emit_periodic_main_pair_primitive_lean_header(imports=imports)
+    print("/- Generated row-local final actual-sum theorem from grouped record modules. -/")
+    print()
+
+    actual = "surrogatePeriodicMainActiveOrderedPairSummandRat X0"
+    upto_sets = [f"{assembly_set_name}UpTo{idx:03d}" for idx in range(group_count)]
+    upto_totals = [f"{assembly_total_name}UpTo{idx:03d}" for idx in range(group_count)]
+    for idx in range(group_count):
+        if idx == 0:
+            print(f"def {upto_sets[idx]} : Finset (ℕ × ℕ) :=")
+            print(f"  {group_sets[idx]}")
+            print()
+            print(f"def {upto_totals[idx]} : ℚ :=")
+            print(f"  {group_totals[idx]}")
+            print()
+            print(f"theorem {upto_sets[idx]}_actual_sum :")
+            print(f"    (∑ p ∈ {upto_sets[idx]}, {actual} p) = {upto_totals[idx]} := by")
+            print(f"  simpa [{upto_sets[idx]}, {upto_totals[idx]}] using {group_theorems[idx]}")
+            print()
+        else:
+            prev_set = upto_sets[idx - 1]
+            prev_total = upto_totals[idx - 1]
+            print(f"def {upto_sets[idx]} : Finset (ℕ × ℕ) :=")
+            print(f"  {prev_set} ∪ {group_sets[idx]}")
+            print()
+            print(f"def {upto_totals[idx]} : ℚ :=")
+            print(f"  {prev_total} + {group_totals[idx]}")
+            print()
+            print(f"theorem {prev_set}_disjoint_{group_sets[idx]} :")
+            print(f"    Disjoint {prev_set} {group_sets[idx]} := by")
+            print("  native_decide")
+            print()
+            print(f"theorem {upto_sets[idx]}_actual_sum :")
+            print(f"    (∑ p ∈ {upto_sets[idx]}, {actual} p) = {upto_totals[idx]} := by")
+            print(f"  rw [{upto_sets[idx]}, Finset.sum_union {prev_set}_disjoint_{group_sets[idx]}]")
+            print(f"  rw [{prev_set}_actual_sum, {group_theorems[idx]}]")
+            print(f"  rfl")
+            print()
+
+    print(f"def {assembly_set_name} : Finset (ℕ × ℕ) :=")
+    print(f"  {upto_sets[-1]}")
+    print()
+    print(f"def {assembly_total_name} : ℚ :=")
+    print(f"  {upto_totals[-1]}")
+    print()
+    print(f"theorem {assembly_set_name}_eq_target :")
+    print(f"    {assembly_set_name} = {target_set_name} := by")
+    print("  native_decide")
+    print()
+    print(f"theorem {assembly_set_name}_actual_sum :")
+    print(f"    (∑ p ∈ {assembly_set_name}, {actual} p) = {assembly_total_name} := by")
+    print(f"  simpa [{assembly_set_name}, {assembly_total_name}] using {upto_sets[-1]}_actual_sum")
+    print()
+    print(f"theorem {theorem_name} :")
+    print(f"    (∑ p ∈ {target_set_name}, {actual} p) = {target_total_name} := by")
+    print(f"  rw [← {assembly_set_name}_eq_target]")
+    print(f"  rw [{assembly_set_name}_actual_sum]")
+    print("  native_decide")
     print()
     emit_periodic_main_pair_primitive_lean_footer()
 
@@ -904,21 +2265,40 @@ def filter_periodic_main_records_for_lean(
     records: list[dict[str, object]],
     *,
     left_rows: set[int] | None = None,
+    right_rows: set[int] | None = None,
+    gcd_values: set[int] | None = None,
+    left_div3_filter: str = "any",
+    right_div3_filter: str = "any",
     coprime_filter: str = "any",
     exclude_unit_two: bool = False,
 ) -> list[dict[str, object]]:
     selected: list[dict[str, object]] = []
     left_rows = left_rows or set()
+    right_rows = right_rows or set()
+    gcd_values = gcd_values or set()
     for record in records:
         q = int(record["q"])
         q2 = int(record["q2"])
         if left_rows and q not in left_rows:
             continue
+        if right_rows and q2 not in right_rows:
+            continue
+        record_gcd = math.gcd(q, q2)
+        if gcd_values and record_gcd not in gcd_values:
+            continue
+        if left_div3_filter == "yes" and q % 3 != 0:
+            continue
+        if left_div3_filter == "no" and q % 3 == 0:
+            continue
+        if right_div3_filter == "yes" and q2 % 3 != 0:
+            continue
+        if right_div3_filter == "no" and q2 % 3 == 0:
+            continue
         if exclude_unit_two and (q in {1, 2} or q2 in {1, 2}):
             continue
-        if coprime_filter == "coprime" and math.gcd(q, q2) != 1:
+        if coprime_filter == "coprime" and record_gcd != 1:
             continue
-        if coprime_filter == "noncoprime" and math.gcd(q, q2) == 1:
+        if coprime_filter == "noncoprime" and record_gcd == 1:
             continue
         selected.append(record)
     return selected
@@ -1601,6 +2981,90 @@ def make_periodic_main_row_slices(
     return rows
 
 
+def emit_periodic_main_row_exact_json(
+    *,
+    X: int,
+    row: int,
+    active_support: list[int],
+    mu: list[int],
+    phi: list[int],
+    spf: list[int],
+    even_window_card: int,
+    out_path: str,
+    progress: bool = False,
+    progress_every: int = 100,
+) -> None:
+    if row <= 0:
+        raise SystemExit("--emit-periodic-main-row-exact-json expects a positive row")
+    if row not in active_support:
+        raise SystemExit(f"row {row} is not in the active periodic-main support")
+
+    row_pairs = [
+        (row, q2)
+        for q2 in active_support
+        if q2 != row and 2 * math.lcm(row, q2) <= H + 1
+    ]
+    q_needed = sorted({row} | {q2 for _q, q2 in row_pairs})
+    exact_ctx = build_surrogate_boundary_exact_context(
+        X,
+        mu,
+        phi,
+        spf,
+        even_window_card,
+        q_needed,
+        progress=progress,
+        progress_every_q=max(1, progress_every),
+    )
+
+    records: list[dict[str, object]] = []
+    total = Fraction(0, 1)
+    nonzero_count = 0
+    started = time.time()
+    for idx, (q, q2) in enumerate(row_pairs, start=1):
+        value = centered_ramanujan_pair_periodic_main_term_rat_cached(X, q, q2, exact_ctx)
+        if value != 0:
+            nonzero_count += 1
+        total += value
+        records.append({
+            "q": q,
+            "q2": q2,
+            "value_num": value.numerator,
+            "value_den": value.denominator,
+        })
+        if progress and (idx % max(1, progress_every) == 0 or idx == len(row_pairs)):
+            elapsed = time.time() - started
+            print(
+                f"[periodic-main-row-exact-json] row={row} "
+                f"processed={idx}/{len(row_pairs)} elapsed={elapsed:.1f}s",
+                file=sys.stderr,
+                flush=True,
+            )
+
+    payload = {
+        "mode": "periodic-main-ordered-nonzero-records",
+        "submode": "periodic-main-row-exact-all-records",
+        "X": X,
+        "row": row,
+        "active_support_card": len(active_support),
+        "row_record_count": len(records),
+        "row_nonzero_record_count": nonzero_count,
+        "row_zero_record_count": len(records) - nonzero_count,
+        "total_num": total.numerator,
+        "total_den": total.denominator,
+        "records": records,
+    }
+    with open(out_path, "w", encoding="utf-8") as fh:
+        json.dump(payload, fh, indent=2, sort_keys=True)
+    print("Periodic-main row exact JSON report")
+    print(f"  X               = {X}")
+    print(f"  row             = {row}")
+    print(f"  records         = {len(records)}")
+    print(f"  nonzero records = {nonzero_count}")
+    print(f"  zero records    = {len(records) - nonzero_count}")
+    print(f"  total           = {fraction_to_q_literal(total)}")
+    print(f"  wrote           = {out_path}")
+
+
 def emit_periodic_main_row_batch_assembly_lean(
     *,
     nonzero_records: list[dict[str, object]],
@@ -1711,6 +3175,213 @@ def emit_periodic_main_record_set_coverage_lean(
     print()
     emit_periodic_main_record_set_certificate(name, records)
     emit_periodic_main_pair_primitive_lean_footer()
+
+
+def periodic_main_row_record_complexity_report(
+    *,
+    payload_path: str,
+    top: int,
+    group_size: int,
+    completed_records: int,
+    json_out: str = "",
+) -> None:
+    if group_size <= 0:
+        raise SystemExit("--periodic-main-row-record-complexity-group-size must be positive")
+    if top <= 0:
+        raise SystemExit("--periodic-main-row-record-complexity-top must be positive")
+
+    with open(payload_path, "r", encoding="utf-8") as fh:
+        payload = json.load(fh)
+    if payload.get("submode") != "periodic-main-row-exact-all-records":
+        raise SystemExit(f"{payload_path}: not a periodic-main row exact-record payload")
+
+    records = list(payload.get("records", []))
+    row = int(payload.get("row", 0))
+    spf = spf_sieve(Q0)
+    record_rows: list[dict[str, object]] = []
+    group_rows: dict[int, dict[str, object]] = {}
+
+    for idx, record in enumerate(records):
+        q = int(record["q"])
+        q2 = int(record["q2"])
+        value_num = int(record["value_num"])
+        value_den = int(record["value_den"])
+        divs_q = divisors_from_factorization(factorization(q, spf))
+        divs_q2 = divisors_from_factorization(factorization(q2, spf))
+        left_count = len(divs_q)
+        right_count = len(divs_q2)
+        term_atoms = left_count * right_count
+        period = block_period(q, q2)
+        full_blocks = (H + 1) // period
+        joint_moduli = [math.lcm(q // g, q2 // h) for g in divs_q for h in divs_q2]
+        divisor_lcms = [math.lcm(g, h) for g in divs_q for h in divs_q2]
+        max_joint_modulus = max(joint_moduli) if joint_moduli else 0
+        max_divisor_lcm = max(divisor_lcms) if divisor_lcms else 0
+        current_fact_instances = 7 * term_atoms
+        cached_fact_instances = 3 * left_count + 3 * right_count + term_atoms
+        fact_reuse_savings = current_fact_instances - cached_fact_instances
+        value_abs = Fraction(abs(value_num), value_den)
+        row_data = {
+            "index": idx,
+            "q": q,
+            "q2": q2,
+            "zero": value_num == 0,
+            "value_num": str(value_num),
+            "value_den": str(value_den),
+            "left_divisors": left_count,
+            "right_divisors": right_count,
+            "term_atoms": term_atoms,
+            "block_period": period,
+            "full_blocks": full_blocks,
+            "max_joint_modulus": max_joint_modulus,
+            "max_divisor_lcm": max_divisor_lcm,
+            "current_fact_instances_est": current_fact_instances,
+            "cached_fact_instances_est": cached_fact_instances,
+            "fact_reuse_savings_est": fact_reuse_savings,
+            "value_abs_num": str(value_abs.numerator),
+            "value_abs_den": str(value_abs.denominator),
+        }
+        record_rows.append(row_data)
+
+        group_index = idx // group_size
+        group = group_rows.setdefault(
+            group_index,
+            {
+                "group": group_index,
+                "start": group_index * group_size,
+                "end": min(len(records), (group_index + 1) * group_size),
+                "records": 0,
+                "zero_records": 0,
+                "nonzero_records": 0,
+                "term_atoms": 0,
+                "max_term_atoms": 0,
+                "max_joint_modulus": 0,
+                "fact_reuse_savings_est": 0,
+                "abs_value": Fraction(0),
+                "signed_value": Fraction(0),
+            },
+        )
+        group["records"] = int(group["records"]) + 1
+        if value_num == 0:
+            group["zero_records"] = int(group["zero_records"]) + 1
+        else:
+            group["nonzero_records"] = int(group["nonzero_records"]) + 1
+        group["term_atoms"] = int(group["term_atoms"]) + term_atoms
+        group["max_term_atoms"] = max(int(group["max_term_atoms"]), term_atoms)
+        group["max_joint_modulus"] = max(int(group["max_joint_modulus"]), max_joint_modulus)
+        group["fact_reuse_savings_est"] = int(group["fact_reuse_savings_est"]) + fact_reuse_savings
+        group["abs_value"] = group["abs_value"] + value_abs
+        group["signed_value"] = group["signed_value"] + Fraction(value_num, value_den)
+
+    def fraction_decimal(fr: Fraction, places: int = 12) -> str:
+        sign = "-" if fr < 0 else ""
+        fr_abs = abs(fr)
+        scale = 10 ** places
+        scaled = fr_abs.numerator * scale // fr_abs.denominator
+        whole, frac = divmod(scaled, scale)
+        return f"{sign}{whole}.{frac:0{places}d}"
+
+    group_list: list[dict[str, object]] = []
+    for group in sorted(group_rows.values(), key=lambda item: int(item["group"])):
+        abs_value = group.pop("abs_value")
+        signed_value = group.pop("signed_value")
+        assert isinstance(abs_value, Fraction)
+        assert isinstance(signed_value, Fraction)
+        group["abs_value_num"] = str(abs_value.numerator)
+        group["abs_value_den"] = str(abs_value.denominator)
+        group["signed_value_num"] = str(signed_value.numerator)
+        group["signed_value_den"] = str(signed_value.denominator)
+        group["abs_value_decimal"] = fraction_decimal(abs_value, 8)
+        group["signed_value_decimal"] = fraction_decimal(signed_value, 8)
+        group_list.append(group)
+
+    completed_records = max(0, min(completed_records, len(records)))
+    completed_groups = completed_records // group_size
+    total_terms = sum(int(row_data["term_atoms"]) for row_data in record_rows)
+    total_fact_savings = sum(int(row_data["fact_reuse_savings_est"]) for row_data in record_rows)
+    pending_terms = sum(
+        int(row_data["term_atoms"]) for row_data in record_rows[completed_records:]
+    )
+    pending_fact_savings = sum(
+        int(row_data["fact_reuse_savings_est"]) for row_data in record_rows[completed_records:]
+    )
+
+    print("[summary]")
+    print(f"payload: {payload_path}")
+    print(f"row: {row}")
+    print(f"records: {len(records)}")
+    print(f"nonzero records: {payload.get('row_nonzero_record_count')}")
+    print(f"zero records: {payload.get('row_zero_record_count')}")
+    print(f"group size: {group_size}")
+    print(f"completed records checkpoint: {completed_records}")
+    print(f"completed full groups checkpoint: {completed_groups}")
+    print(f"remaining records: {len(records) - completed_records}")
+    print(f"total term atoms: {total_terms}")
+    print(f"remaining term atoms: {pending_terms}")
+    print(f"estimated reusable fact savings, all: {total_fact_savings}")
+    print(f"estimated reusable fact savings, remaining: {pending_fact_savings}")
+    print()
+
+    def print_record_table(title: str, rows: list[dict[str, object]]) -> None:
+        print(title)
+        print("idx\tq\tq2\tzero\tldiv\trdiv\tterms\tperiod\tblocks\tmaxJoint\tfactSavings")
+        for row_data in rows[:top]:
+            print(
+                f"{row_data['index']}\t{row_data['q']}\t{row_data['q2']}\t{row_data['zero']}\t"
+                f"{row_data['left_divisors']}\t{row_data['right_divisors']}\t"
+                f"{row_data['term_atoms']}\t{row_data['block_period']}\t{row_data['full_blocks']}\t"
+                f"{row_data['max_joint_modulus']}\t{row_data['fact_reuse_savings_est']}"
+            )
+        print()
+
+    print_record_table(
+        "[top records by term atoms]",
+        sorted(record_rows, key=lambda item: (-int(item["term_atoms"]), int(item["index"]))),
+    )
+    print_record_table(
+        "[top records by max joint modulus]",
+        sorted(record_rows, key=lambda item: (-int(item["max_joint_modulus"]), int(item["index"]))),
+    )
+    print_record_table(
+        "[top pending records by estimated cached-fact savings]",
+        sorted(
+            record_rows[completed_records:],
+            key=lambda item: (-int(item["fact_reuse_savings_est"]), int(item["index"])),
+        ),
+    )
+
+    print("[top groups by remaining term atoms]")
+    print("group\trange\trecords\tzero\tnonzero\tterms\tmaxTerms\tmaxJoint\tfactSavings\tsigned\tabs")
+    pending_groups = [group for group in group_list if int(group["end"]) > completed_records]
+    for group in sorted(pending_groups, key=lambda item: (-int(item["term_atoms"]), int(item["group"])))[:top]:
+        print(
+            f"{group['group']}\t[{group['start']},{group['end']})\t{group['records']}\t"
+            f"{group['zero_records']}\t{group['nonzero_records']}\t{group['term_atoms']}\t"
+            f"{group['max_term_atoms']}\t{group['max_joint_modulus']}\t"
+            f"{group['fact_reuse_savings_est']}\t{group['signed_value_decimal']}\t"
+            f"{group['abs_value_decimal']}"
+        )
+    print()
+
+    report_json = {
+        "payload": payload_path,
+        "row": row,
+        "record_count": len(records),
+        "group_size": group_size,
+        "completed_records": completed_records,
+        "completed_groups": completed_groups,
+        "total_term_atoms": total_terms,
+        "remaining_term_atoms": pending_terms,
+        "total_fact_reuse_savings_est": total_fact_savings,
+        "remaining_fact_reuse_savings_est": pending_fact_savings,
+        "records": record_rows,
+        "groups": group_list,
+    }
+    if json_out:
+        with open(json_out, "w", encoding="utf-8") as fh:
+            json.dump(report_json, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        print(f"[write] {json_out}", file=sys.stderr)
 
 
 def emit_periodic_main_record_set_coverage_chunk_lean(
@@ -2167,6 +3838,7 @@ def emit_periodic_main_pair_primitive_lean_theorems(
     q2: int,
     exact_ctx: dict[str, object],
     expected_summand: Fraction | None = None,
+    force_top_level_helpers: bool = False,
 ) -> None:
     name = f"periodicMainPair_{q}_{q2}_X{X}"
     if expected_summand == Fraction(0, 1) and (q in {1, 2} or q2 in {1, 2}):
@@ -2209,17 +3881,7 @@ def emit_periodic_main_pair_primitive_lean_theorems(
             f"  have {theorem_name} : "
             f"rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q0} {g0} = ({expected} : ℚ) := by"
         )
-        M = q0 // g0
-        if g0 % 2 == 0:
-            print("    rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_even_totient_main_add_remainder]")
-            print("    all_goals native_decide")
-        elif M % 2 == 0:
-            print("    rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_zero_of_not_isEven_g_of_isEven_quotient]")
-            print("    · norm_num [Goldbach.Windows.IsEven]")
-            print("    · norm_num [Goldbach.Windows.IsEven]")
-        else:
-            print("    rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_odd_totient_main_add_remainder]")
-            print("    all_goals native_decide")
+        print("    native_decide")
 
     def emit_pair_resolved_count_proof(
         *,
@@ -2232,35 +3894,173 @@ def emit_periodic_main_pair_primitive_lean_theorems(
             f"  have {theorem_name} : "
             f"rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} {g} {h} = ({expected} : ℚ) := by"
         )
-        compat = (
-            math.gcd(q // g, math.lcm(g, h) // g) == 1
-            and math.gcd(q2 // h, math.lcm(g, h) // h) == 1
+        print("    native_decide")
+
+    def term_expr_lines(g: int | str, h: int | str, *, indent: str = "      ") -> list[str]:
+        return [
+            f"{indent}ramanujanGcdClassCoeffRat {q} {g} * ramanujanGcdClassCoeffRat {q2} {h}",
+            f"{indent}  * ((((H + 1) / centeredRamanujanPairBlockPeriod {q} {q2}) : ℕ)",
+            f"{indent}      • (rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} {g} {h}",
+            f"{indent}          - ramanujanGcdClassWindowAverageRat X0 {q2} {h}",
+            f"{indent}              * rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q} {g}",
+            f"{indent}          - ramanujanGcdClassWindowAverageRat X0 {q} {g}",
+            f"{indent}              * rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q2} {h}",
+            f"{indent}          + ramanujanGcdClassWindowAverageRat X0 {q} {g}",
+            f"{indent}              * ramanujanGcdClassWindowAverageRat X0 {q2} {h}",
+            f"{indent}              * evenRamanujanBlockCountRat {q} {q2}))",
+        ]
+
+    def emit_large_top_level_pair_proof() -> None:
+        prefix = name
+
+        def support(suffix: str) -> str:
+            return f"{prefix}_{suffix}"
+
+        def emit_block_periodic_count_theorem(
+            *,
+            theorem_name: str,
+            q0: int,
+            g0: int,
+            expected: int,
+        ) -> None:
+            print(
+                f"theorem {theorem_name} : "
+                f"rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q0} {g0} = ({expected} : ℚ) := by"
+            )
+            print("  native_decide")
+            print()
+
+        def emit_pair_resolved_count_theorem(
+            *,
+            theorem_name: str,
+            g: int,
+            h: int,
+            expected: int,
+        ) -> None:
+            print(
+                f"theorem {theorem_name} : "
+                f"rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} {g} {h} = ({expected} : ℚ) := by"
+            )
+            print("  native_decide")
+            print()
+
+        print(f"theorem {support('divLeft')} : Nat.divisors {q} = ({lean_nat_list(divs_q)} : List ℕ).toFinset := by")
+        print("  decide")
+        print()
+        print(f"theorem {support('divRight')} : Nat.divisors {q2} = ({lean_nat_list(divs_q2)} : List ℕ).toFinset := by")
+        print("  decide")
+        print()
+        for g in divs_q:
+            v = exact_ctx["gcd_coeff_by_q"][q][g]
+            print(f"theorem {support(f'coeffLeft_{g}')} : ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(v)} := by")
+            print("  native_decide")
+            print()
+        for h in divs_q2:
+            v = exact_ctx["gcd_coeff_by_q"][q2][h]
+            print(f"theorem {support(f'coeffRight_{h}')} : ramanujanGcdClassCoeffRat {q2} {h} = {fraction_to_q_literal(v)} := by")
+            print("  native_decide")
+            print()
+        for g in divs_q:
+            v = exact_ctx["avg_by_q"][q][g]
+            print(f"theorem {support(f'avgLeft_{g}')} : ramanujanGcdClassWindowAverageRat X0 {q} {g} = {fraction_to_q_literal(v)} := by")
+            print("  native_decide")
+            print()
+        for h in divs_q2:
+            v = exact_ctx["avg_by_q"][q2][h]
+            print(f"theorem {support(f'avgRight_{h}')} : ramanujanGcdClassWindowAverageRat X0 {q2} {h} = {fraction_to_q_literal(v)} := by")
+            print("  native_decide")
+            print()
+        for g in divs_q:
+            v = gcd_class_count_in_even_progression(q, g, first_even, even_count, exact_ctx)
+            emit_block_periodic_count_theorem(theorem_name=support(f"blockLeft_{g}"), q0=q, g0=g, expected=v)
+        for h in divs_q2:
+            v = gcd_class_count_in_even_progression(q2, h, first_even, even_count, exact_ctx)
+            emit_block_periodic_count_theorem(theorem_name=support(f"blockRight_{h}"), q0=q2, g0=h, expected=v)
+        for g in divs_q:
+            for h in divs_q2:
+                v = gcd_class_pair_count_in_even_progression(q, q2, g, h, first_even, even_count, exact_ctx)
+                emit_pair_resolved_count_theorem(theorem_name=support(f"pair_{g}_{h}"), g=g, h=h, expected=v)
+
+        full_blocks = (H + 1) // block_period(q, q2)
+        even_count_rat = Fraction(even_count, 1)
+        row_values: dict[int, Fraction] = {g: Fraction(0, 1) for g in divs_q}
+        for g in divs_q:
+            avg_g = exact_ctx["avg_by_q"][q][g]
+            left = Fraction(gcd_class_count_in_even_progression(q, g, first_even, even_count, exact_ctx), 1)
+            c_g = exact_ctx["gcd_coeff_by_q"][q][g]
+            for h in divs_q2:
+                avg_h = exact_ctx["avg_by_q"][q2][h]
+                right = Fraction(gcd_class_count_in_even_progression(q2, h, first_even, even_count, exact_ctx), 1)
+                pair = Fraction(
+                    gcd_class_pair_count_in_even_progression(q, q2, g, h, first_even, even_count, exact_ctx),
+                    1,
+                )
+                c_h = exact_ctx["gcd_coeff_by_q"][q2][h]
+                centered_full_block = pair - avg_h * left - avg_g * right + avg_g * avg_h * even_count_rat
+                term_value = c_g * c_h * Fraction(full_blocks, 1) * centered_full_block
+                row_values[g] += term_value
+                print(f"theorem {support(f'term_{g}_{h}')} :")
+                for line in term_expr_lines(g, h, indent="    "):
+                    print(line)
+                print(f"      = {fraction_to_q_literal(term_value)} := by")
+                print("  norm_num [H, centeredRamanujanPairBlockPeriod, evenRamanujanBlockCountRat,")
+                print(
+                    f"    {support(f'coeffLeft_{g}')}, {support(f'coeffRight_{h}')}, "
+                    f"{support(f'avgLeft_{g}')}, {support(f'avgRight_{h}')},"
+                )
+                print(
+                    f"    {support(f'blockLeft_{g}')}, {support(f'blockRight_{h}')}, "
+                    f"{support(f'pair_{g}_{h}')}]"
+                )
+                print()
+        for g in divs_q:
+            print(f"theorem {support(f'row_{g}')} :")
+            print(f"    (∑ h ∈ Nat.divisors {q2},")
+            for line in term_expr_lines(g, "h", indent="      "):
+                print(line)
+            print(f"    ) = {fraction_to_q_literal(row_values[g])} := by")
+            term_supports = [support(f"term_{g}_{h}") for h in divs_q2]
+            print("  norm_num [" + ", ".join([support("divRight")] + term_supports) + "]")
+            print()
+
+        print(f"theorem {name}_centeredTerm :")
+        print(f"    centeredRamanujanPairPeriodicMainTermRat X0 {q} {q2} = {fraction_to_q_literal(centered_term)} := by")
+        print("  unfold centeredRamanujanPairPeriodicMainTermRat")
+        row_supports = [support(f"row_{g}") for g in divs_q]
+        print(f"  rw [{support('divLeft')}]")
+        print("  simp [List.toFinset_cons, List.toFinset_nil, Finset.sum_insert,")
+        print("    " + ", ".join(row_supports) + "]")
+        print("  norm_num")
+        print()
+        print(f"theorem {name}_orderedSummand :")
+        print(f"    surrogatePeriodicMainActiveOrderedPairSummandRat X0 (Prod.mk {q} {q2}) = {fraction_to_q_literal(summand_value)} := by")
+        print(f"  have hneq : {q} ≠ {q2} := by")
+        print("    norm_num")
+        print(f"  have hCoeffLeft : surrogateNormalizedSigmaTruncSummandCoeffRat {q} = {fraction_to_q_literal(coeff_q)} := by")
+        print("    native_decide")
+        print(f"  have hCoeffRight : surrogateNormalizedSigmaTruncSummandCoeffRat {q2} = {fraction_to_q_literal(coeff_q2)} := by")
+        print("    native_decide")
+        print(
+            f"  have hvalue : ({fraction_to_q_literal(coeff_q)}) * ({fraction_to_q_literal(coeff_q2)}) "
+            f"* ({fraction_to_q_literal(centered_term)}) = {fraction_to_q_literal(summand_value)} := by"
         )
-        if not compat:
-            print("    rw [rawEvenRamanujanGcdClassPairBlockResolvedCountRat_eq_zero_of_incompatible]")
-            print("    norm_num [ramanujanGcdClassJointCompatibility]")
-            return
-        lcm_gh = math.lcm(g, h)
-        joint_modulus = (q // g) * (q2 // h)
-        print("    rw [rawEvenRamanujanGcdClassPairBlockResolvedCountRat_eq_periodic_of_compatible]")
-        if lcm_gh % 2 == 0:
-            print("    · rw [rawEvenRamanujanGcdClassPairBlockPeriodicCountRat_eq_even_totient_main_add_remainder]")
-            print("      all_goals native_decide")
-        elif joint_modulus % 2 == 0:
-            print("    · rw [rawEvenRamanujanGcdClassPairBlockPeriodicCountRat_eq_zero_of_not_isEven_lcm_of_isEven_jointModulus]")
-            print("      · norm_num [Goldbach.Windows.IsEven]")
-            print("      · norm_num [Goldbach.Windows.IsEven, ramanujanGcdClassJointModulus]")
-        else:
-            print("    · rw [rawEvenRamanujanGcdClassPairBlockPeriodicCountRat_eq_odd_totient_main_add_remainder]")
-            print("      all_goals native_decide")
-        print("    · norm_num [ramanujanGcdClassJointCompatibility]")
+        print("    norm_num")
+        print("  exact surrogatePeriodicMainActiveOrderedPairSummandRat_eq_of_pairValue")
+        print("    hneq hCoeffLeft hCoeffRight")
+        print(f"    {name}_centeredTerm")
+        print("    hvalue")
+        print()
+
+    if force_top_level_helpers or len(divs_q) * len(divs_q2) > 48:
+        emit_large_top_level_pair_proof()
+        return
 
     print(f"theorem {name}_centeredTerm :")
     print(f"    centeredRamanujanPairPeriodicMainTermRat X0 {q} {q2} = {fraction_to_q_literal(centered_term)} := by")
     print(f"  have hDivLeft : Nat.divisors {q} = ({lean_nat_list(divs_q)} : List ℕ).toFinset := by")
-    print("    native_decide")
+    print("    decide")
     print(f"  have hDivRight : Nat.divisors {q2} = ({lean_nat_list(divs_q2)} : List ℕ).toFinset := by")
-    print("    native_decide")
+    print("    decide")
     for g in divs_q:
         v = exact_ctx["gcd_coeff_by_q"][q][g]
         print(f"  have hCoeffLeft_{g} : ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(v)} := by")
@@ -2287,6 +4087,53 @@ def emit_periodic_main_pair_primitive_lean_theorems(
         for h in divs_q2:
             v = gcd_class_pair_count_in_even_progression(q, q2, g, h, first_even, even_count, exact_ctx)
             emit_pair_resolved_count_proof(theorem_name=f"hPair_{g}_{h}", g=g, h=h, expected=v)
+    full_blocks = (H + 1) // block_period(q, q2)
+    even_count_rat = Fraction(even_count, 1)
+    print("  let T : ℕ → ℕ → ℚ := fun g h =>")
+    print(f"    ramanujanGcdClassCoeffRat {q} g * ramanujanGcdClassCoeffRat {q2} h")
+    print(f"      * ((((H + 1) / centeredRamanujanPairBlockPeriod {q} {q2}) : ℕ)")
+    print(f"          • (rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} g h")
+    print(f"              - ramanujanGcdClassWindowAverageRat X0 {q2} h")
+    print(f"                  * rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q} g")
+    print(f"              - ramanujanGcdClassWindowAverageRat X0 {q} g")
+    print(f"                  * rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q2} h")
+    print(f"              + ramanujanGcdClassWindowAverageRat X0 {q} g")
+    print(f"                  * ramanujanGcdClassWindowAverageRat X0 {q2} h")
+    print(f"                  * evenRamanujanBlockCountRat {q} {q2}))")
+    term_names_by_g: dict[int, list[str]] = {g: [] for g in divs_q}
+    row_values: dict[int, Fraction] = {g: Fraction(0, 1) for g in divs_q}
+    for g in divs_q:
+        avg_g = exact_ctx["avg_by_q"][q][g]
+        left = Fraction(gcd_class_count_in_even_progression(q, g, first_even, even_count, exact_ctx), 1)
+        c_g = exact_ctx["gcd_coeff_by_q"][q][g]
+        for h in divs_q2:
+            avg_h = exact_ctx["avg_by_q"][q2][h]
+            right = Fraction(gcd_class_count_in_even_progression(q2, h, first_even, even_count, exact_ctx), 1)
+            pair = Fraction(
+                gcd_class_pair_count_in_even_progression(q, q2, g, h, first_even, even_count, exact_ctx),
+                1,
+            )
+            c_h = exact_ctx["gcd_coeff_by_q"][q2][h]
+            centered_full_block = pair - avg_h * left - avg_g * right + avg_g * avg_h * even_count_rat
+            term_value = c_g * c_h * Fraction(full_blocks, 1) * centered_full_block
+            term_name = f"hTerm_{g}_{h}"
+            term_names_by_g[g].append(term_name)
+            row_values[g] += term_value
+            print(f"  have {term_name} :")
+            print(f"      T {g} {h} = {fraction_to_q_literal(term_value)} := by")
+            print("    dsimp [T]")
+            print("    norm_num [H, centeredRamanujanPairBlockPeriod, evenRamanujanBlockCountRat,")
+            print(
+                f"      hCoeffLeft_{g}, hCoeffRight_{h}, hAvgLeft_{g}, hAvgRight_{h}, "
+                f"hBlockLeft_{g}, hBlockRight_{h}, hPair_{g}_{h}]"
+            )
+    row_names: list[str] = []
+    for g in divs_q:
+        row_name = f"hRow_{g}"
+        row_names.append(row_name)
+        print(f"  have {row_name} :")
+        print(f"      (∑ h ∈ Nat.divisors {q2}, T {g} h) = {fraction_to_q_literal(row_values[g])} := by")
+        print("    norm_num [" + ", ".join(["hDivRight"] + term_names_by_g[g]) + "]")
     simp_args = [
         "centeredRamanujanPairBlockPeriod",
         "evenRamanujanBlockCountRat",
@@ -2302,7 +4149,11 @@ def emit_periodic_main_pair_primitive_lean_theorems(
     simp_args.extend([f"hBlockRight_{h}" for h in divs_q2])
     simp_args.extend([f"hPair_{g}_{h}" for g in divs_q for h in divs_q2])
     print("  unfold centeredRamanujanPairPeriodicMainTermRat")
-    print("  norm_num [" + ", ".join(simp_args) + "]")
+    print(f"  change (∑ g ∈ Nat.divisors {q}, ∑ h ∈ Nat.divisors {q2}, T g h) = {fraction_to_q_literal(centered_term)}")
+    print("  rw [hDivLeft]")
+    print("  simp [List.toFinset_cons, List.toFinset_nil, Finset.sum_insert,")
+    print("    " + ", ".join(row_names) + "]")
+    print("  norm_num")
     print()
     print(f"theorem {name}_orderedSummand :")
     print(f"    surrogatePeriodicMainActiveOrderedPairSummandRat X0 (Prod.mk {q} {q2}) = {fraction_to_q_literal(summand_value)} := by")
@@ -3190,6 +5041,12 @@ def main() -> None:
                     help="Emit a Lean primitive-count proof skeleton for one ordered periodic-main pair.")
     ap.add_argument("--emit-periodic-main-pair-records-lean-json", type=str, default="",
                     help="Emit Lean primitive-count proof skeletons for a slice of ordered periodic-main JSON records.")
+    ap.add_argument("--emit-periodic-main-pair-records-lean-files", nargs=4,
+                    metavar=("JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write numbered Lean primitive-count proof modules for filtered ordered periodic-main JSON records.")
+    ap.add_argument("--emit-periodic-main-pair-records-split-lean-files", nargs=4,
+                    metavar=("JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write numbered split Lean proof modules for filtered ordered periodic-main JSON records.")
     ap.add_argument("--emit-periodic-main-zero-records-json", nargs=2, metavar=("NONZERO_JSON", "OUT_JSON"),
                     help="Write ordered full-block zero records by subtracting ordered nonzero records from the full-block support.")
     ap.add_argument("--periodic-main-zero-classification-report", type=str, default="",
@@ -3225,6 +5082,8 @@ def main() -> None:
                     help="Emit Lean assembly facts importing split nonzero/zero periodic-main coverage modules.")
     ap.add_argument("--emit-periodic-main-row-batch-assembly-lean", nargs=2, metavar=("NONZERO_JSON", "ZERO_JSON"),
                     help="Emit a Lean row-slice assembly theorem for the periodic-main certificate from ordered record JSON payloads.")
+    ap.add_argument("--emit-periodic-main-row-exact-json", nargs=2, metavar=("ROW", "OUT_JSON"),
+                    help="Compute one periodic-main ordered row exactly and write a row-local ordered-record JSON payload.")
     ap.add_argument("--emit-periodic-main-record-set-coverage-chunk-lean", nargs=3, metavar=("JSON", "NAME", "CHUNK_INDEX"),
                     help="Emit one 100-record Lean coverage chunk for a named periodic-main record set.")
     ap.add_argument("--emit-periodic-main-record-set-coverage-chunk-files", nargs=4,
@@ -3242,6 +5101,38 @@ def main() -> None:
     ap.add_argument("--emit-periodic-main-zero-value-chunk-assembly-lean", nargs=6,
                     metavar=("TARGET_SET", "ASSEMBLY_SET", "THEOREM", "MODULE_PREFIX", "LABEL_PREFIX", "CHUNK_COUNT"),
                     help="Emit a value-on-record theorem for a target zero-record set from generated zero-record chunk modules.")
+    ap.add_argument("--emit-periodic-main-zero-value-chunk-group-lean", nargs=6,
+                    metavar=("GROUP_SET", "THEOREM", "MODULE_PREFIX", "LABEL_PREFIX", "START_INDEX", "CHUNK_COUNT"),
+                    help="Emit a group theorem over a consecutive range of generated zero-record chunk modules.")
+    ap.add_argument("--emit-periodic-main-zero-value-grouped-final-lean", nargs=7,
+                    metavar=("TARGET_SET", "ASSEMBLY_SET", "THEOREM", "GROUP_MODULE_PREFIX", "GROUP_SET_PREFIX", "GROUP_THEOREM_PREFIX", "GROUP_COUNT"),
+                    help="Emit a final zero-record theorem from generated group assembly modules.")
+    ap.add_argument("--emit-periodic-main-nonzero-value-chunk-group-lean", nargs=7,
+                    metavar=("GROUP_SET", "GROUP_TOTAL", "THEOREM", "MODULE_PREFIX", "LABEL_PREFIX", "START_INDEX", "CHUNK_COUNT"),
+                    help="Emit a grouped actual-sum theorem over consecutive generated nonzero-record chunk modules.")
+    ap.add_argument("--emit-periodic-main-nonzero-value-grouped-final-lean", nargs=8,
+                    metavar=("TARGET_SET", "ASSEMBLY_SET", "ASSEMBLY_TOTAL", "THEOREM", "GROUP_MODULE_PREFIX", "GROUP_SET_PREFIX", "GROUP_TOTAL_PREFIX", "GROUP_THEOREM_PREFIX"),
+                    help="Emit final actual-sum theorem from generated nonzero value group modules.")
+    ap.add_argument("--periodic-main-nonzero-value-group-count", type=int, default=0,
+                    help="Group count for --emit-periodic-main-nonzero-value-grouped-final-lean.")
+    ap.add_argument("--emit-periodic-main-row-value-chunk-group-lean", nargs=7,
+                    metavar=("GROUP_SET", "GROUP_TOTAL", "THEOREM", "MODULE_PREFIX", "LABEL_PREFIX", "START_INDEX", "CHUNK_COUNT"),
+                    help="Emit a row-local grouped actual-sum theorem over generated record modules.")
+    ap.add_argument("--emit-periodic-main-row-value-grouped-final-lean", nargs=9,
+                    metavar=("TARGET_SET", "TARGET_TOTAL", "ASSEMBLY_SET", "ASSEMBLY_TOTAL", "THEOREM", "GROUP_MODULE_PREFIX", "GROUP_SET_PREFIX", "GROUP_TOTAL_PREFIX", "GROUP_THEOREM_PREFIX"),
+                    help="Emit a row-local final actual-sum theorem from grouped record modules.")
+    ap.add_argument("--periodic-main-row-value-group-count", type=int, default=0,
+                    help="Group count for --emit-periodic-main-row-value-grouped-final-lean.")
+    ap.add_argument("--periodic-main-row-record-complexity-report", type=str, default="",
+                    help="Print a complexity report for a row-local periodic-main exact-record JSON payload.")
+    ap.add_argument("--periodic-main-row-record-complexity-top", type=int, default=30,
+                    help="Number of top records/groups to show in --periodic-main-row-record-complexity-report.")
+    ap.add_argument("--periodic-main-row-record-complexity-group-size", type=int, default=50,
+                    help="Group size used when aggregating row-record complexity.")
+    ap.add_argument("--periodic-main-row-record-complexity-completed-records", type=int, default=0,
+                    help="Record checkpoint used to distinguish pending records in the row-record complexity report.")
+    ap.add_argument("--periodic-main-row-record-complexity-json-out", type=str, default="",
+                    help="Optional JSON output path for --periodic-main-row-record-complexity-report.")
     ap.add_argument("--periodic-main-coverage-chunk-size", type=int, default=100,
                     help="Record count per periodic-main coverage chunk module.")
     ap.add_argument("--periodic-main-coverage-group-chunks", type=int, default=25,
@@ -3262,6 +5153,16 @@ def main() -> None:
                     help="Number of records to emit for --emit-periodic-main-pair-records-lean-json; 0 means all remaining.")
     ap.add_argument("--periodic-main-record-filter-left", nargs="*", type=int, default=[],
                     help="With --emit-periodic-main-pair-records-lean-json, keep only records with q in this left-row list.")
+    ap.add_argument("--periodic-main-record-filter-right", nargs="*", type=int, default=[],
+                    help="With --emit-periodic-main-pair-records-lean-json, keep only records with q' in this right-column list.")
+    ap.add_argument("--periodic-main-record-filter-gcd", nargs="*", type=int, default=[],
+                    help="With --emit-periodic-main-pair-records-lean-json, keep only records with gcd(q,q') in this list.")
+    ap.add_argument("--periodic-main-record-filter-left-div3",
+                    choices=("any", "yes", "no"), default="any",
+                    help="With --emit-periodic-main-pair-records-lean-json, filter by whether 3 divides q.")
+    ap.add_argument("--periodic-main-record-filter-right-div3",
+                    choices=("any", "yes", "no"), default="any",
+                    help="With --emit-periodic-main-pair-records-lean-json, filter by whether 3 divides q'.")
     ap.add_argument("--periodic-main-record-filter-coprime",
                     choices=("any", "coprime", "noncoprime"), default="any",
                     help="With --emit-periodic-main-pair-records-lean-json, filter by gcd(q,q2).")
@@ -3269,11 +5170,39 @@ def main() -> None:
                     help="With --emit-periodic-main-pair-records-lean-json, drop records with q or q2 equal to 1 or 2.")
     ap.add_argument("--periodic-main-record-batch-label", type=str, default="Batch000",
                     help="Stable Lean-name label for --emit-periodic-main-pair-records-lean-json output.")
+    ap.add_argument("--periodic-main-record-file-chunk-size", type=int, default=1,
+                    help="Record count per module for --emit-periodic-main-pair-records-lean-files.")
+    ap.add_argument("--periodic-main-record-file-skip-existing", action="store_true",
+                    help="With --emit-periodic-main-pair-records-lean-files, skip files that already exist.")
+    ap.add_argument("--periodic-main-record-force-top-level-helpers", action="store_true",
+                    help="With --emit-periodic-main-pair-records-lean-files, emit divisor/count/term helpers as top-level theorems even for small records.")
+    ap.add_argument("--periodic-main-split-row-part-size", type=int, default=8,
+                    help="Right-divisor count per row-part helper module for split periodic-main pair records.")
+    ap.add_argument("--periodic-main-split-inline-row-parts", action="store_true",
+                    help="Inline term arithmetic into row-part modules instead of emitting one helper module per term.")
+    ap.add_argument("--periodic-main-disable-q42-cancel", action="store_true",
+                    help="With --emit-periodic-main-pair-records-split-lean-files, use the ordinary split emitter for q=42 zero records instead of the specialized q=42 cancellation emitter.")
+    ap.add_argument("--periodic-main-assembly-extra-imports", nargs="*", default=[],
+                    help="Extra Lean module imports for --emit-periodic-main-zero-value-chunk-assembly-lean.")
+    ap.add_argument("--periodic-main-group-set-suffix", type=str, default="Pairs",
+                    help="Suffix appended after each zero-value group set index in --emit-periodic-main-zero-value-grouped-final-lean.")
+    ap.add_argument("--periodic-main-group-theorem-suffix", type=str, default="_value_on_records",
+                    help="Suffix appended after each zero-value group theorem index in --emit-periodic-main-zero-value-grouped-final-lean.")
     ap.add_argument("--emit-boundary-final-certificate", action="store_true",
                     help="With --combine-boundary-chunks, emit Lean-facing ℚ certificate defs for active signed total, inactive correction, and full boundary.")
     ap.add_argument("--boundary-full-signed-decimal", type=str, default="",
                     help="With --emit-boundary-final-certificate, the full surrogate boundary signed decimal to package as the final full certificate value.")
     args = ap.parse_args()
+
+    if args.periodic_main_row_record_complexity_report:
+        periodic_main_row_record_complexity_report(
+            payload_path=args.periodic_main_row_record_complexity_report,
+            top=args.periodic_main_row_record_complexity_top,
+            group_size=args.periodic_main_row_record_complexity_group_size,
+            completed_records=args.periodic_main_row_record_complexity_completed_records,
+            json_out=args.periodic_main_row_record_complexity_json_out,
+        )
+        return
 
     if args.periodic_main_dyadic_zero_mechanism_report:
         with open(args.periodic_main_dyadic_zero_mechanism_report, "r", encoding="utf-8") as fh:
@@ -3497,6 +5426,152 @@ def main() -> None:
             module_prefix=module_prefix,
             label_prefix=label_prefix,
             chunk_count=int(chunk_count_raw),
+            extra_imports=list(args.periodic_main_assembly_extra_imports),
+        )
+        return
+
+    if args.emit_periodic_main_zero_value_chunk_group_lean:
+        group_set_name, theorem_name, module_prefix, label_prefix, start_index_raw, chunk_count_raw = (
+            args.emit_periodic_main_zero_value_chunk_group_lean
+        )
+        emit_periodic_main_zero_value_chunk_group_lean(
+            group_set_name=group_set_name,
+            theorem_name=theorem_name,
+            module_prefix=module_prefix,
+            label_prefix=label_prefix,
+            start_index=int(start_index_raw),
+            chunk_count=int(chunk_count_raw),
+            extra_imports=list(args.periodic_main_assembly_extra_imports),
+        )
+        return
+
+    if args.emit_periodic_main_zero_value_grouped_final_lean:
+        (
+            target_set_name,
+            assembly_set_name,
+            theorem_name,
+            group_module_prefix,
+            group_set_prefix,
+            group_theorem_prefix,
+            group_count_raw,
+        ) = args.emit_periodic_main_zero_value_grouped_final_lean
+        emit_periodic_main_zero_value_grouped_final_lean(
+            target_set_name=target_set_name,
+            assembly_set_name=assembly_set_name,
+            theorem_name=theorem_name,
+            group_module_prefix=group_module_prefix,
+            group_set_prefix=group_set_prefix,
+            group_set_suffix=args.periodic_main_group_set_suffix,
+            group_theorem_prefix=group_theorem_prefix,
+            group_theorem_suffix=args.periodic_main_group_theorem_suffix,
+            group_count=int(group_count_raw),
+            extra_imports=list(args.periodic_main_assembly_extra_imports),
+        )
+        return
+
+    if args.emit_periodic_main_nonzero_value_chunk_group_lean:
+        (
+            group_set_name,
+            group_total_name,
+            theorem_name,
+            module_prefix,
+            label_prefix,
+            start_index_raw,
+            chunk_count_raw,
+        ) = args.emit_periodic_main_nonzero_value_chunk_group_lean
+        emit_periodic_main_nonzero_value_chunk_group_lean(
+            group_set_name=group_set_name,
+            group_total_name=group_total_name,
+            theorem_name=theorem_name,
+            module_prefix=module_prefix,
+            label_prefix=label_prefix,
+            start_index=int(start_index_raw),
+            chunk_count=int(chunk_count_raw),
+            extra_imports=list(args.periodic_main_assembly_extra_imports),
+        )
+        return
+
+    if args.emit_periodic_main_nonzero_value_grouped_final_lean:
+        (
+            target_set_name,
+            assembly_set_name,
+            assembly_total_name,
+            theorem_name,
+            group_module_prefix,
+            group_set_prefix,
+            group_total_prefix,
+            group_theorem_prefix,
+        ) = args.emit_periodic_main_nonzero_value_grouped_final_lean
+        if args.periodic_main_nonzero_value_group_count <= 0:
+            raise SystemExit(
+                "--emit-periodic-main-nonzero-value-grouped-final-lean requires "
+                "--periodic-main-nonzero-value-group-count N"
+            )
+        emit_periodic_main_nonzero_value_grouped_final_lean(
+            target_set_name=target_set_name,
+            assembly_set_name=assembly_set_name,
+            assembly_total_name=assembly_total_name,
+            theorem_name=theorem_name,
+            group_module_prefix=group_module_prefix,
+            group_set_prefix=group_set_prefix,
+            group_total_prefix=group_total_prefix,
+            group_theorem_prefix=group_theorem_prefix,
+            group_count=args.periodic_main_nonzero_value_group_count,
+            extra_imports=list(args.periodic_main_assembly_extra_imports),
+        )
+        return
+
+    if args.emit_periodic_main_row_value_chunk_group_lean:
+        (
+            group_set_name,
+            group_total_name,
+            theorem_name,
+            module_prefix,
+            label_prefix,
+            start_index_raw,
+            chunk_count_raw,
+        ) = args.emit_periodic_main_row_value_chunk_group_lean
+        emit_periodic_main_row_value_chunk_group_lean(
+            group_set_name=group_set_name,
+            group_total_name=group_total_name,
+            theorem_name=theorem_name,
+            module_prefix=module_prefix,
+            label_prefix=label_prefix,
+            start_index=int(start_index_raw),
+            chunk_count=int(chunk_count_raw),
+            extra_imports=list(args.periodic_main_assembly_extra_imports),
+        )
+        return
+
+    if args.emit_periodic_main_row_value_grouped_final_lean:
+        (
+            target_set_name,
+            target_total_name,
+            assembly_set_name,
+            assembly_total_name,
+            theorem_name,
+            group_module_prefix,
+            group_set_prefix,
+            group_total_prefix,
+            group_theorem_prefix,
+        ) = args.emit_periodic_main_row_value_grouped_final_lean
+        if args.periodic_main_row_value_group_count <= 0:
+            raise SystemExit(
+                "--emit-periodic-main-row-value-grouped-final-lean requires "
+                "--periodic-main-row-value-group-count N"
+            )
+        emit_periodic_main_row_value_grouped_final_lean(
+            target_set_name=target_set_name,
+            target_total_name=target_total_name,
+            assembly_set_name=assembly_set_name,
+            assembly_total_name=assembly_total_name,
+            theorem_name=theorem_name,
+            group_module_prefix=group_module_prefix,
+            group_set_prefix=group_set_prefix,
+            group_total_prefix=group_total_prefix,
+            group_theorem_prefix=group_theorem_prefix,
+            group_count=args.periodic_main_row_value_group_count,
+            extra_imports=list(args.periodic_main_assembly_extra_imports),
         )
         return
 
@@ -3579,6 +5654,110 @@ def main() -> None:
         )
         return
 
+    if args.emit_periodic_main_pair_records_split_lean_files:
+        if args.true_series:
+            raise SystemExit("--emit-periodic-main-pair-records-split-lean-files is only implemented for the surrogate normalization")
+        payload_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_pair_records_split_lean_files
+        X = args.X
+        record_start = max(0, args.periodic_main_record_start)
+        record_count = max(0, args.periodic_main_record_count)
+        with open(payload_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") not in {
+            "periodic-main-ordered-nonzero-records",
+            "periodic-main-ordered-zero-records",
+        }:
+            raise SystemExit(f"{payload_path}: not a periodic-main ordered-record payload")
+        if int(payload.get("X", X)) != X:
+            raise SystemExit(
+                f"{payload_path}: payload X={payload.get('X')} does not match --X {X}"
+            )
+        records_all = filter_periodic_main_records_for_lean(
+            list(payload.get("records", [])),
+            left_rows=set(args.periodic_main_record_filter_left),
+            right_rows=set(args.periodic_main_record_filter_right),
+            gcd_values=set(args.periodic_main_record_filter_gcd),
+            left_div3_filter=args.periodic_main_record_filter_left_div3,
+            right_div3_filter=args.periodic_main_record_filter_right_div3,
+            coprime_filter=args.periodic_main_record_filter_coprime,
+            exclude_unit_two=args.periodic_main_record_filter_exclude_unit_two,
+        )
+        if record_start > len(records_all):
+            raise SystemExit(
+                f"--periodic-main-record-start={record_start} out of range for {len(records_all)} records"
+            )
+        record_end = len(records_all) if record_count == 0 else min(len(records_all), record_start + record_count)
+        records = records_all[record_start:record_end]
+        written_count = emit_periodic_main_pair_record_split_lean_files(
+            X=X,
+            records=records,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            index_offset=record_start,
+            skip_existing=args.periodic_main_record_file_skip_existing,
+            row_part_size=args.periodic_main_split_row_part_size,
+            inline_row_parts=args.periodic_main_split_inline_row_parts,
+            disable_q42_cancel=args.periodic_main_disable_q42_cancel,
+        )
+        print(
+            f"[done] wrote split modules for {written_count} selected records",
+            file=sys.stderr,
+        )
+        return
+
+    if args.emit_periodic_main_pair_records_lean_files:
+        if args.true_series:
+            raise SystemExit("--emit-periodic-main-pair-records-lean-files is only implemented for the surrogate normalization")
+        payload_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_pair_records_lean_files
+        X = args.X
+        record_start = max(0, args.periodic_main_record_start)
+        record_count = max(0, args.periodic_main_record_count)
+        with open(payload_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") not in {
+            "periodic-main-ordered-nonzero-records",
+            "periodic-main-ordered-zero-records",
+        }:
+            raise SystemExit(f"{payload_path}: not a periodic-main ordered-record payload")
+        if int(payload.get("X", X)) != X:
+            raise SystemExit(
+                f"{payload_path}: payload X={payload.get('X')} does not match --X {X}"
+            )
+        records_all = filter_periodic_main_records_for_lean(
+            list(payload.get("records", [])),
+            left_rows=set(args.periodic_main_record_filter_left),
+            right_rows=set(args.periodic_main_record_filter_right),
+            gcd_values=set(args.periodic_main_record_filter_gcd),
+            left_div3_filter=args.periodic_main_record_filter_left_div3,
+            right_div3_filter=args.periodic_main_record_filter_right_div3,
+            coprime_filter=args.periodic_main_record_filter_coprime,
+            exclude_unit_two=args.periodic_main_record_filter_exclude_unit_two,
+        )
+        if record_start > len(records_all):
+            raise SystemExit(
+                f"--periodic-main-record-start={record_start} out of range for {len(records_all)} records"
+            )
+        record_end = len(records_all) if record_count == 0 else min(len(records_all), record_start + record_count)
+        records = records_all[record_start:record_end]
+        chunk_count = emit_periodic_main_pair_record_lean_chunk_files(
+            X=X,
+            records=records,
+            zero_record_batch=payload.get("mode") == "periodic-main-ordered-zero-records",
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            chunk_size=args.periodic_main_record_file_chunk_size,
+            index_offset=record_start,
+            skip_existing=args.periodic_main_record_file_skip_existing,
+            force_top_level_helpers=args.periodic_main_record_force_top_level_helpers,
+        )
+        print(
+            f"[done] wrote {chunk_count} chunk slots for {len(records)} selected records",
+            file=sys.stderr,
+        )
+        return
+
     if args.emit_periodic_main_pair_records_lean_json:
         if args.true_series:
             raise SystemExit("--emit-periodic-main-pair-records-lean-json is only implemented for the surrogate normalization")
@@ -3602,6 +5781,10 @@ def main() -> None:
         records_all = filter_periodic_main_records_for_lean(
             list(payload.get("records", [])),
             left_rows=set(args.periodic_main_record_filter_left),
+            right_rows=set(args.periodic_main_record_filter_right),
+            gcd_values=set(args.periodic_main_record_filter_gcd),
+            left_div3_filter=args.periodic_main_record_filter_left_div3,
+            right_div3_filter=args.periodic_main_record_filter_right_div3,
             coprime_filter=args.periodic_main_record_filter_coprime,
             exclude_unit_two=args.periodic_main_record_filter_exclude_unit_two,
         )
@@ -3637,6 +5820,7 @@ def main() -> None:
                 q2=q2,
                 exact_ctx=exact_ctx,
                 expected_summand=expected,
+                force_top_level_helpers=args.periodic_main_record_force_top_level_helpers,
             )
         if payload.get("mode") == "periodic-main-ordered-zero-records":
             emit_periodic_main_zero_record_batch_wrapper(
@@ -3690,17 +5874,7 @@ def main() -> None:
                 f"  have {theorem_name} : "
                 f"rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q0} {g0} = ({expected} : ℚ) := by"
             )
-            M = q0 // g0
-            if g0 % 2 == 0:
-                print("    rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_even_totient_main_add_remainder]")
-                print("    all_goals native_decide")
-            elif M % 2 == 0:
-                print("    rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_zero_of_not_isEven_g_of_isEven_quotient]")
-                print("    · norm_num [Goldbach.Windows.IsEven]")
-                print("    · norm_num [Goldbach.Windows.IsEven]")
-            else:
-                print("    rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_odd_totient_main_add_remainder]")
-                print("    all_goals native_decide")
+            print("    native_decide")
 
         def emit_pair_resolved_count_proof(
             *,
@@ -3713,28 +5887,7 @@ def main() -> None:
                 f"  have {theorem_name} : "
                 f"rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} {g} {h} = ({expected} : ℚ) := by"
             )
-            compat = (
-                math.gcd(q // g, math.lcm(g, h) // g) == 1
-                and math.gcd(q2 // h, math.lcm(g, h) // h) == 1
-            )
-            if not compat:
-                print("    rw [rawEvenRamanujanGcdClassPairBlockResolvedCountRat_eq_zero_of_incompatible]")
-                print("    norm_num [ramanujanGcdClassJointCompatibility]")
-                return
-            Lcm = math.lcm(g, h)
-            M = (q // g) * (q2 // h)
-            print("    rw [rawEvenRamanujanGcdClassPairBlockResolvedCountRat_eq_periodic_of_compatible]")
-            if Lcm % 2 == 0:
-                print("    · rw [rawEvenRamanujanGcdClassPairBlockPeriodicCountRat_eq_even_totient_main_add_remainder]")
-                print("      all_goals native_decide")
-            elif M % 2 == 0:
-                print("    · rw [rawEvenRamanujanGcdClassPairBlockPeriodicCountRat_eq_zero_of_not_isEven_lcm_of_isEven_jointModulus]")
-                print("      · norm_num [Goldbach.Windows.IsEven]")
-                print("      · norm_num [Goldbach.Windows.IsEven, ramanujanGcdClassJointModulus]")
-            else:
-                print("    · rw [rawEvenRamanujanGcdClassPairBlockPeriodicCountRat_eq_odd_totient_main_add_remainder]")
-                print("      all_goals native_decide")
-            print("    · norm_num [ramanujanGcdClassJointCompatibility]")
+            print("    native_decide")
 
         print("import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMain")
         print()
@@ -3747,9 +5900,9 @@ def main() -> None:
         print(f"theorem {name}_centeredTerm :")
         print(f"    centeredRamanujanPairPeriodicMainTermRat X0 {q} {q2} = {fraction_to_q_literal(centered_term)} := by")
         print(f"  have hDivLeft : Nat.divisors {q} = ({lean_nat_list(divs_q)} : List ℕ).toFinset := by")
-        print("    native_decide")
+        print("    decide")
         print(f"  have hDivRight : Nat.divisors {q2} = ({lean_nat_list(divs_q2)} : List ℕ).toFinset := by")
-        print("    native_decide")
+        print("    decide")
         for g in divs_q:
             v = exact_ctx["gcd_coeff_by_q"][q][g]
             print(f"  have hCoeffLeft_{g} : ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(v)} := by")
@@ -3776,6 +5929,53 @@ def main() -> None:
             for h in divs_q2:
                 v = gcd_class_pair_count_in_even_progression(q, q2, g, h, first_even, even_count, exact_ctx)
                 emit_pair_resolved_count_proof(theorem_name=f"hPair_{g}_{h}", g=g, h=h, expected=v)
+        full_blocks = (H + 1) // block_period(q, q2)
+        even_count_rat = Fraction(even_count, 1)
+        print("  let T : ℕ → ℕ → ℚ := fun g h =>")
+        print(f"    ramanujanGcdClassCoeffRat {q} g * ramanujanGcdClassCoeffRat {q2} h")
+        print(f"      * ((((H + 1) / centeredRamanujanPairBlockPeriod {q} {q2}) : ℕ)")
+        print(f"          • (rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} g h")
+        print(f"              - ramanujanGcdClassWindowAverageRat X0 {q2} h")
+        print(f"                  * rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q} g")
+        print(f"              - ramanujanGcdClassWindowAverageRat X0 {q} g")
+        print(f"                  * rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q2} h")
+        print(f"              + ramanujanGcdClassWindowAverageRat X0 {q} g")
+        print(f"                  * ramanujanGcdClassWindowAverageRat X0 {q2} h")
+        print(f"                  * evenRamanujanBlockCountRat {q} {q2}))")
+        term_names_by_g: dict[int, list[str]] = {g: [] for g in divs_q}
+        row_values: dict[int, Fraction] = {g: Fraction(0, 1) for g in divs_q}
+        for g in divs_q:
+            avg_g = exact_ctx["avg_by_q"][q][g]
+            left = Fraction(gcd_class_count_in_even_progression(q, g, first_even, even_count, exact_ctx), 1)
+            c_g = exact_ctx["gcd_coeff_by_q"][q][g]
+            for h in divs_q2:
+                avg_h = exact_ctx["avg_by_q"][q2][h]
+                right = Fraction(gcd_class_count_in_even_progression(q2, h, first_even, even_count, exact_ctx), 1)
+                pair = Fraction(
+                    gcd_class_pair_count_in_even_progression(q, q2, g, h, first_even, even_count, exact_ctx),
+                    1,
+                )
+                c_h = exact_ctx["gcd_coeff_by_q"][q2][h]
+                centered_full_block = pair - avg_h * left - avg_g * right + avg_g * avg_h * even_count_rat
+                term_value = c_g * c_h * Fraction(full_blocks, 1) * centered_full_block
+                term_name = f"hTerm_{g}_{h}"
+                term_names_by_g[g].append(term_name)
+                row_values[g] += term_value
+                print(f"  have {term_name} :")
+                print(f"      T {g} {h} = {fraction_to_q_literal(term_value)} := by")
+                print("    dsimp [T]")
+                print("    norm_num [H, centeredRamanujanPairBlockPeriod, evenRamanujanBlockCountRat,")
+                print(
+                    f"      hCoeffLeft_{g}, hCoeffRight_{h}, hAvgLeft_{g}, hAvgRight_{h}, "
+                    f"hBlockLeft_{g}, hBlockRight_{h}, hPair_{g}_{h}]"
+                )
+        row_names: list[str] = []
+        for g in divs_q:
+            row_name = f"hRow_{g}"
+            row_names.append(row_name)
+            print(f"  have {row_name} :")
+            print(f"      (∑ h ∈ Nat.divisors {q2}, T {g} h) = {fraction_to_q_literal(row_values[g])} := by")
+            print("    norm_num [" + ", ".join(["hDivRight"] + term_names_by_g[g]) + "]")
         simp_args = [
             "centeredRamanujanPairBlockPeriod",
             "evenRamanujanBlockCountRat",
@@ -3791,7 +5991,11 @@ def main() -> None:
         simp_args.extend([f"hBlockRight_{h}" for h in divs_q2])
         simp_args.extend([f"hPair_{g}_{h}" for g in divs_q for h in divs_q2])
         print("  unfold centeredRamanujanPairPeriodicMainTermRat")
-        print("  norm_num [" + ", ".join(simp_args) + "]")
+        print(f"  change (∑ g ∈ Nat.divisors {q}, ∑ h ∈ Nat.divisors {q2}, T g h) = {fraction_to_q_literal(centered_term)}")
+        print("  rw [hDivLeft]")
+        print("  simp [List.toFinset_cons, List.toFinset_nil, Finset.sum_insert,")
+        print("    " + ", ".join(row_names) + "]")
+        print("  norm_num")
         print()
         print(f"theorem {name}_orderedSummand :")
         print(f"    surrogatePeriodicMainActiveOrderedPairSummandRat X0 (Prod.mk {q} {q2}) = {fraction_to_q_literal(summand_value)} := by")
@@ -4185,6 +6389,24 @@ def main() -> None:
     active_support = [q for q in support if q <= q_active_max]
     even_window = even_window_points(X)
     even_window_card = len(even_window)
+
+    if args.emit_periodic_main_row_exact_json:
+        if args.true_series:
+            raise SystemExit("--emit-periodic-main-row-exact-json is only implemented for the surrogate normalization")
+        row_s, out_path = args.emit_periodic_main_row_exact_json
+        emit_periodic_main_row_exact_json(
+            X=X,
+            row=int(row_s),
+            active_support=active_support,
+            mu=mu,
+            phi=phi,
+            spf=spf,
+            even_window_card=even_window_card,
+            out_path=out_path,
+            progress=args.progress,
+            progress_every=max(1, args.progress_every),
+        )
+        return
 
     if args.emit_periodic_main_zero_records_json:
         if args.true_series:

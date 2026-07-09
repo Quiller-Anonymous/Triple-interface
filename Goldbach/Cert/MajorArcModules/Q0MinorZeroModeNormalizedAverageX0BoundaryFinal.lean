@@ -1,4 +1,4 @@
-import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0BoundaryInactive
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0BoundaryCertificates
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0TailFinal
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
