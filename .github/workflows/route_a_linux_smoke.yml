@@ -1,0 +1,81 @@
+name: Route A Linux Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Lean module to build"
+        required: true
+        default: "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeFinalAcc721"
+      olean_only:
+        description: "Build only the .olean target"
+        required: true
+        default: "true"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.target }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    name: Build selected Route A target on Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache elan toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.elan
+          key: ${{ runner.os }}-elan-${{ hashFiles('lean-toolchain') }}
+          restore-keys: |
+            ${{ runner.os }}-elan-
+
+      - name: Set up Lean
+        uses: leanprover/lean-action@v1
+
+      - name: Environment diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Runner: $(uname -a)"
+          echo "Cores: $(nproc)"
+          free -h || true
+          echo "Stack before:"
+          ulimit -s || true
+          ulimit -s unlimited || true
+          echo "Stack after:"
+          ulimit -s || true
+          elan --version
+          lake --version
+          lean --version
+          git rev-parse HEAD
+
+      - name: Fetch dependencies
+        run: lake update
+
+      - name: Fetch Mathlib cache
+        run: lake exe cache get
+
+      - name: Build selected target
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='${{ github.event.inputs.target }}'
+          if [ '${{ github.event.inputs.olean_only }}' = 'true' ]; then
+            build_target="+${target}:olean"
+          else
+            build_target="${target}"
+          fi
+          echo "Building ${build_target}"
+          lake --log-level=error build "${build_target}" 2>&1 | tee route-a-linux-smoke.log
+
+      - name: Upload smoke log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: route-a-linux-smoke-log
+          path: route-a-linux-smoke.log
+          retention-days: 14
