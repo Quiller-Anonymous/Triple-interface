@@ -1,0 +1,47 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionSplit
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk700
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk701
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk702
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk703
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk704
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk705
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk706
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk707
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk708
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk709
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk710
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk711
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+def PeriodicMainRecordsCoreLeftOnlyThreePayloadPairsPartB2b2a : Finset (ℕ × ℕ) :=
+  (((((((((((PeriodicMainRecordsCoreLeftOnlyThreeChunk700Pairs ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk701Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk702Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk703Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk704Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk705Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk706Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk707Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk708Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk709Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk710Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk711Pairs)
+
+theorem PeriodicMainRecordsCoreLeftOnlyThreePayloadPairsPartB2b2a_value_on_records :
+    ∀ p ∈ PeriodicMainRecordsCoreLeftOnlyThreePayloadPairsPartB2b2a,
+      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = 0 := by
+  intro p hp
+  simp only [PeriodicMainRecordsCoreLeftOnlyThreePayloadPairsPartB2b2a, Finset.mem_union] at hp
+  rcases hp with (((((((((((h700 | h701) | h702) | h703) | h704) | h705) | h706) | h707) | h708) | h709) | h710) | h711)
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk700_value_on_records p h700
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk701_value_on_records p h701
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk702_value_on_records p h702
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk703_value_on_records p h703
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk704_value_on_records p h704
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk705_value_on_records p h705
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk706_value_on_records p h706
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk707_value_on_records p h707
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk708_value_on_records p h708
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk709_value_on_records p h709
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk710_value_on_records p h710
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk711_value_on_records p h711
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

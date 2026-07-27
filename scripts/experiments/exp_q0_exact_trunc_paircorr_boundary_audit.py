@@ -39,6 +39,7 @@ import multiprocessing
 import os
 import sys
 import time
+import typing
 from collections import Counter, defaultdict
 from decimal import Decimal
 from fractions import Fraction
@@ -727,6 +728,8 @@ def emit_periodic_main_record_batch_wrapper(
     X: int,
     label: str,
     records: list[dict[str, object]],
+    summand_proof_pairs: dict[tuple[int, int], tuple[int, int]] | None = None,
+    record_fact_labels: dict[tuple[int, int], str] | None = None,
 ) -> None:
     pairs_name = f"PeriodicMainRecords{label}Pairs"
     value_name = f"PeriodicMainRecords{label}Value"
@@ -740,6 +743,9 @@ def emit_periodic_main_record_batch_wrapper(
 
     def support_theorem_name(q: int, q2: int) -> str:
         return f"PeriodicMainRecords{label}_support_{q}_{q2}"
+
+    def split_support_theorem_name(split_label: str, q: int, q2: int) -> str:
+        return f"PeriodicMainRecords{split_label}_support_{q}_{q2}"
 
     total = Fraction(0, 1)
     print(f"def {pairs_name} : Finset (ℕ × ℕ) :=")
@@ -761,6 +767,11 @@ def emit_periodic_main_record_batch_wrapper(
         q2 = int(record["q2"])
         print(f"theorem {support_theorem_name(q, q2)} :")
         print(f"    {pair_term(q, q2)} ∈ PeriodicMainFullBlockOrderedPairSupportExplicit := by")
+        split_label = (record_fact_labels or {}).get((q, q2))
+        if split_label is not None:
+            print(f"  simpa using {split_support_theorem_name(split_label, q, q2)}")
+            print()
+            continue
         print(f"  have hqCoeff : {q} ∈ PeriodicMainCoeffSupportExplicit := by")
         print("    unfold PeriodicMainCoeffSupportExplicit")
         print("    exact mem_normalizedSigmaTruncSummandCoeffSupportUpToQ0_iff.mpr ⟨by norm_num, by native_decide⟩")
@@ -804,10 +815,25 @@ def emit_periodic_main_record_batch_wrapper(
     for record in records:
         q = int(record["q"])
         q2 = int(record["q2"])
+        proof_q, proof_q2 = (summand_proof_pairs or {}).get((q, q2), (q, q2))
         print("  · subst p")
-        print(
-            f"    simp [{value_name}, periodicMainPair_{q}_{q2}_X{X}_orderedSummand]"
-        )
+        if (proof_q, proof_q2) == (q, q2):
+            print(
+                f"    simp [{value_name}, periodicMainPair_{q}_{q2}_X{X}_orderedSummand]"
+            )
+        elif (proof_q, proof_q2) == (q2, q):
+            print("    calc")
+            print(f"      surrogatePeriodicMainActiveOrderedPairSummandRat X0 ({q}, {q2})")
+            print(f"          = surrogatePeriodicMainActiveOrderedPairSummandRat X0 ({proof_q}, {proof_q2}) := by")
+            print(f"            simpa using (surrogatePeriodicMainActiveOrderedPairSummandRat_swap X0 {q} {q2})")
+            print(f"      _ = {value_name} ({q}, {q2}) := by")
+            print(
+                f"            simp [{value_name}, periodicMainPair_{proof_q}_{proof_q2}_X{X}_orderedSummand]"
+            )
+        else:
+            raise SystemExit(
+                f"unsupported summand proof pair for ({q},{q2}): ({proof_q},{proof_q2})"
+            )
     print()
     print(f"theorem {records_sum_name} :")
     print(f"    (∑ p ∈ {pairs_name}, {value_name} p) = {total_name} := by")
@@ -951,6 +977,285 @@ def emit_periodic_main_pair_record_lean_chunk_files(
     return chunk_count
 
 
+def emit_periodic_main_dyadic_base_pair_lean_files(
+    *,
+    X: int,
+    bases: list[dict[str, object]],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    base_chunk_size: int,
+    base_index_offset: int = 0,
+    skip_existing: bool = False,
+    force_top_level_helpers: bool = False,
+) -> int:
+    if base_chunk_size <= 0:
+        raise SystemExit("--periodic-main-base-file-chunk-size must be positive")
+    if not bases:
+        raise SystemExit("selected periodic-main dyadic base slice is empty")
+
+    os.makedirs(out_dir, exist_ok=True)
+    all_records: list[dict[str, object]] = []
+    for base in bases:
+        all_records.extend(list(base.get("records", [])))
+    q_support = sorted(
+        {int(record["q"]) for record in all_records}
+        | {int(record["q2"]) for record in all_records}
+    )
+    mu, phi = mobius_phi_sieve(Q0)
+    spf = spf_sieve(Q0)
+    even_card = len(even_window_points(X))
+    exact_ctx = build_surrogate_boundary_exact_context(X, mu, phi, spf, even_card, q_support)
+
+    chunk_count = (len(bases) + base_chunk_size - 1) // base_chunk_size
+    for chunk_idx in range(chunk_count):
+        start = chunk_idx * base_chunk_size
+        end = min(len(bases), start + base_chunk_size)
+        global_start = base_index_offset + start
+        global_end = base_index_offset + end
+        global_chunk_idx = base_index_offset // base_chunk_size + chunk_idx
+        chunk_bases = bases[start:end]
+        chunk_records: list[dict[str, object]] = []
+        for base in chunk_bases:
+            chunk_records.extend(list(base.get("records", [])))
+        label = f"{label_prefix}{global_chunk_idx:03d}"
+        path = os.path.join(out_dir, f"{file_prefix}{global_chunk_idx:03d}.lean")
+        if skip_existing and os.path.exists(path):
+            print(f"[skip] {path}", file=sys.stderr)
+            continue
+        with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+            emit_periodic_main_pair_primitive_lean_header()
+            print(
+                f"/- Generated periodic-main dyadic base-pair proofs for base indices "
+                f"[{global_start},{global_end}). -/"
+            )
+            base_summary = ", ".join(str(int(base["base"])) for base in chunk_bases[:20])
+            if len(chunk_bases) > 20:
+                base_summary += ", ..."
+            print(f"/- bases: {base_summary} -/")
+            print()
+            for record in chunk_records:
+                q = int(record["q"])
+                q2 = int(record["q2"])
+                expected = Fraction(int(record["value_num"]), int(record["value_den"]))
+                emit_periodic_main_pair_primitive_lean_theorems(
+                    X=X,
+                    q=q,
+                    q2=q2,
+                    exact_ctx=exact_ctx,
+                    expected_summand=expected,
+                    force_top_level_helpers=force_top_level_helpers,
+                )
+            emit_periodic_main_record_batch_wrapper(
+                X=X,
+                label=label,
+                records=chunk_records,
+            )
+            emit_periodic_main_pair_primitive_lean_footer()
+        print(
+            f"[write] {path} bases=[{global_start},{global_end}) "
+            f"records={len(chunk_records)}",
+            file=sys.stderr,
+        )
+    return chunk_count
+
+
+def emit_periodic_main_unordered_pair_lean_files(
+    *,
+    X: int,
+    classes: list[dict[str, object]],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    class_chunk_size: int,
+    class_index_offset: int = 0,
+    skip_existing: bool = False,
+    force_top_level_helpers: bool = False,
+    use_symmetry: bool = False,
+    split_left_rows: set[int] | None = None,
+    split_min_left_divisors: int = 0,
+    split_min_right_divisors: int = 0,
+    split_file_prefix: str = "",
+    split_out_dir: str = "",
+) -> int:
+    if class_chunk_size <= 0:
+        raise SystemExit("--periodic-main-class-file-chunk-size must be positive")
+    if not classes:
+        raise SystemExit("selected periodic-main unordered class slice is empty")
+
+    os.makedirs(out_dir, exist_ok=True)
+    all_records: list[dict[str, object]] = []
+    for cls in classes:
+        all_records.extend(list(cls.get("records", [])))
+    q_support = sorted(
+        {int(record["q"]) for record in all_records}
+        | {int(record["q2"]) for record in all_records}
+    )
+    mu, phi = mobius_phi_sieve(Q0)
+    spf = spf_sieve(Q0)
+    even_card = len(even_window_points(X))
+    exact_ctx = build_surrogate_boundary_exact_context(X, mu, phi, spf, even_card, q_support)
+    split_left_rows = split_left_rows or set()
+    split_out_dir = split_out_dir or out_dir
+    split_label_prefix = split_file_prefix
+    split_file_prefix_marker = "Q0MinorZeroModeNormalizedAverageX0PeriodicMain"
+    if split_label_prefix.startswith(split_file_prefix_marker):
+        split_label_prefix = split_label_prefix[len(split_file_prefix_marker):]
+
+    def split_module_for_record(record: dict[str, object]) -> str:
+        if not split_file_prefix:
+            raise SystemExit("--periodic-main-unordered-split-file-prefix is required for hard split imports")
+        if "source_index" not in record:
+            raise SystemExit(
+                f"hard split record ({record.get('q')},{record.get('q2')}) has no source_index; "
+                "regenerate the unordered JSON with the current script"
+            )
+        split_index = int(record["source_index"])
+        split_path = os.path.join(split_out_dir, f"{split_file_prefix}{split_index:03d}.lean")
+        return lean_module_name_for_path(split_path)
+
+    def split_label_for_record(record: dict[str, object]) -> str:
+        if not split_file_prefix:
+            raise SystemExit("--periodic-main-unordered-split-file-prefix is required for hard split imports")
+        if "source_index" not in record:
+            raise SystemExit(
+                f"hard split record ({record.get('q')},{record.get('q2')}) has no source_index; "
+                "regenerate the unordered JSON with the current script"
+            )
+        return f"{split_label_prefix}{int(record['source_index']):03d}"
+
+    def should_import_split_record(record: dict[str, object]) -> bool:
+        if (not split_left_rows and split_min_left_divisors <= 0) or split_min_right_divisors <= 0:
+            return False
+        q = int(record["q"])
+        q2 = int(record["q2"])
+        left_matches = q in split_left_rows
+        if split_min_left_divisors > 0 and divisor_count_trial(q) >= split_min_left_divisors:
+            left_matches = True
+        if not left_matches:
+            return False
+        return len(exact_ctx["divisors_by_q"][q2]) >= split_min_right_divisors
+
+    chunk_count = (len(classes) + class_chunk_size - 1) // class_chunk_size
+    for chunk_idx in range(chunk_count):
+        start = chunk_idx * class_chunk_size
+        end = min(len(classes), start + class_chunk_size)
+        global_start = class_index_offset + start
+        global_end = class_index_offset + end
+        global_chunk_idx = class_index_offset // class_chunk_size + chunk_idx
+        chunk_classes = classes[start:end]
+        chunk_records: list[dict[str, object]] = []
+        chunk_primitive_records: list[dict[str, object]] = []
+        chunk_split_imports: list[str] = []
+        chunk_split_fact_labels: dict[tuple[int, int], str] = {}
+        summand_proof_pairs: dict[tuple[int, int], tuple[int, int]] = {}
+        for cls in chunk_classes:
+            class_records = list(cls.get("records", []))
+            chunk_records.extend(class_records)
+            if use_symmetry and len(class_records) == 2:
+                values = {
+                    (int(r["value_num"]), int(r["value_den"]))
+                    for r in class_records
+                }
+                if len(values) != 1:
+                    raise SystemExit(
+                        f"cannot use symmetry for class ({cls.get('q_lo')},{cls.get('q_hi')}) "
+                        "with mismatched orientation values"
+                    )
+                q_lo = int(cls["q_lo"])
+                q_hi = int(cls["q_hi"])
+                canonical = None
+                for record in class_records:
+                    if int(record["q"]) == q_lo and int(record["q2"]) == q_hi:
+                        canonical = record
+                        break
+                if canonical is None:
+                    raise SystemExit(
+                        f"cannot find canonical orientation ({q_lo},{q_hi}) "
+                        f"for class ({cls.get('q_lo')},{cls.get('q_hi')})"
+                    )
+                if should_import_split_record(canonical):
+                    chunk_split_imports.append(split_module_for_record(canonical))
+                    chunk_split_fact_labels[(int(canonical["q"]), int(canonical["q2"]))] = split_label_for_record(canonical)
+                else:
+                    chunk_primitive_records.append(canonical)
+                for record in class_records:
+                    summand_proof_pairs[(int(record["q"]), int(record["q2"]))] = (q_lo, q_hi)
+            else:
+                for record in class_records:
+                    if should_import_split_record(record):
+                        chunk_split_imports.append(split_module_for_record(record))
+                        chunk_split_fact_labels[(int(record["q"]), int(record["q2"]))] = split_label_for_record(record)
+                    else:
+                        chunk_primitive_records.append(record)
+                    summand_proof_pairs[(int(record["q"]), int(record["q2"]))] = (
+                        int(record["q"]),
+                        int(record["q2"]),
+                    )
+        label = f"{label_prefix}{global_chunk_idx:03d}"
+        path = os.path.join(out_dir, f"{file_prefix}{global_chunk_idx:03d}.lean")
+        if skip_existing and os.path.exists(path):
+            print(f"[skip] {path}", file=sys.stderr)
+            continue
+        with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+            imports: list[str] = []
+            if use_symmetry:
+                imports.append(
+                    "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainSymmetry"
+                )
+            imports.extend(sorted(set(chunk_split_imports)))
+            if not imports:
+                imports_arg = None
+            else:
+                imports_arg = imports
+            emit_periodic_main_pair_primitive_lean_header(imports=imports_arg)
+            print(
+                f"/- Generated periodic-main unordered-pair proofs for class indices "
+                f"[{global_start},{global_end}). -/"
+            )
+            class_summary = ", ".join(
+                f"({int(cls['q_lo'])},{int(cls['q_hi'])})"
+                for cls in chunk_classes[:20]
+            )
+            if len(chunk_classes) > 20:
+                class_summary += ", ..."
+            print(f"/- classes: {class_summary} -/")
+            if use_symmetry:
+                print("/- two-sided classes use ordered-pair swap symmetry for the reverse orientation. -/")
+            if chunk_split_imports:
+                print(
+                    f"/- hard canonical records imported from split modules: "
+                    f"{len(set(chunk_split_imports))}. -/"
+                )
+            print()
+            for record in chunk_primitive_records:
+                q = int(record["q"])
+                q2 = int(record["q2"])
+                expected = Fraction(int(record["value_num"]), int(record["value_den"]))
+                emit_periodic_main_pair_primitive_lean_theorems(
+                    X=X,
+                    q=q,
+                    q2=q2,
+                    exact_ctx=exact_ctx,
+                    expected_summand=expected,
+                    force_top_level_helpers=force_top_level_helpers,
+                )
+            emit_periodic_main_record_batch_wrapper(
+                X=X,
+                label=label,
+                records=chunk_records,
+                summand_proof_pairs=summand_proof_pairs,
+                record_fact_labels=chunk_split_fact_labels,
+            )
+            emit_periodic_main_pair_primitive_lean_footer()
+        print(
+            f"[write] {path} classes=[{global_start},{global_end}) "
+            f"records={len(chunk_records)} primitive_records={len(chunk_primitive_records)}",
+            file=sys.stderr,
+        )
+    return chunk_count
+
+
 def lean_module_name_for_path(path: str) -> str:
     no_ext = os.path.splitext(path)[0]
     parts = no_ext.split(os.sep)
@@ -971,6 +1276,9 @@ def emit_periodic_main_pair_record_split_lean_files(
     row_part_size: int = 8,
     inline_row_parts: bool = False,
     disable_q42_cancel: bool = False,
+    cached_facts: bool = False,
+    use_source_index: bool = False,
+    fact_part_size: int = 0,
 ) -> int:
     if not records:
         raise SystemExit("selected periodic-main record slice is empty")
@@ -1039,6 +1347,42 @@ def emit_periodic_main_pair_record_split_lean_files(
                 f"{indent}  rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_odd_totient_main_add_remainder]",
                 f"{indent}  all_goals native_decide",
             ])
+        return lines
+
+    def emit_window_average_proof(
+        *,
+        theorem_name: str,
+        q0: int,
+        g0: int,
+        expected: Fraction,
+        indent: str = "  ",
+    ) -> list[str]:
+        count = expected * Fraction(even_card, 1)
+        if count.denominator != 1:
+            raise ValueError(
+                f"window average for q={q0}, g={g0} is not an integer count over {even_card}: {expected}"
+            )
+        lines = [
+            f"{indent}theorem {theorem_name} : "
+            f"ramanujanGcdClassWindowAverageRat X0 {q0} {g0} = {fraction_to_q_literal(expected)} := by"
+        ]
+        lines.extend(
+            emit_block_periodic_count_proof(
+                theorem_name="hCount",
+                q=5001,
+                q2=1,
+                q0=q0,
+                g0=g0,
+                expected=count.numerator,
+                indent=f"{indent}  ",
+            )
+        )
+        lines.extend([
+            f"{indent}  rw [ramanujanGcdClassWindowAverageRat_X0_eq_rawEvenBlockPeriodicCountRat_5001_one",
+            f"{indent}    (q := {q0}) (g := {g0}) (by native_decide) (by native_decide)]",
+            f"{indent}  rw [hCount]",
+            f"{indent}  try norm_num",
+        ])
         return lines
 
     def emit_pair_resolved_count_proof(
@@ -1192,6 +1536,8 @@ def emit_periodic_main_pair_record_split_lean_files(
 
         row_values: dict[int, Fraction] = {g: Fraction(0, 1) for g in divs_q}
         term_values: dict[tuple[int, int], Fraction] = {}
+        term_values: dict[tuple[int, int], Fraction] = {}
+        term_values: dict[tuple[int, int], Fraction] = {}
         block_left_values = {
             g: gcd_class_count_in_even_progression(q, g, first_even, even_count, exact_ctx)
             for g in divs_q
@@ -1252,12 +1598,24 @@ def emit_periodic_main_pair_record_split_lean_files(
                     print("  native_decide", file=fh)
                     print(file=fh)
                 for g0 in paired_rows:
-                    print(f"theorem {fact_prefix}_avgLeft_{g0} : ramanujanGcdClassWindowAverageRat X0 {q} {g0} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q][g0])} := by", file=fh)
-                    print("  native_decide", file=fh)
+                    for line in emit_window_average_proof(
+                        theorem_name=f"{fact_prefix}_avgLeft_{g0}",
+                        q0=q,
+                        g0=g0,
+                        expected=exact_ctx["avg_by_q"][q][g0],
+                        indent="",
+                    ):
+                        print(line, file=fh)
                     print(file=fh)
                 for h in divs_q2:
-                    print(f"theorem {fact_prefix}_avgRight_{h} : ramanujanGcdClassWindowAverageRat X0 {q2} {h} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q2][h])} := by", file=fh)
-                    print("  native_decide", file=fh)
+                    for line in emit_window_average_proof(
+                        theorem_name=f"{fact_prefix}_avgRight_{h}",
+                        q0=q2,
+                        g0=h,
+                        expected=exact_ctx["avg_by_q"][q2][h],
+                        indent="",
+                    ):
+                        print(line, file=fh)
                     print(file=fh)
                 for g0 in paired_rows:
                     lines = emit_block_periodic_count_proof(
@@ -1499,6 +1857,119 @@ def emit_periodic_main_pair_record_split_lean_files(
         if not disable_q42_cancel and emit_q42_cancel_split_record():
             return
 
+        use_cached_facts = cached_facts and not inline_row_parts
+        fact_prefix = f"{name}_facts"
+        fact_module: str | None = None
+        if use_cached_facts:
+            fact_stem = f"{stem}Facts"
+            fact_path = os.path.join(out_dir, f"{fact_stem}.lean")
+            fact_module = lean_module_name_for_path(fact_path)
+            fact_blocks: list[list[str]] = []
+
+            def add_fact_block(lines: list[str]) -> None:
+                fact_blocks.append(lines)
+
+            def simple_native_fact(theorem: str, statement: str) -> None:
+                add_fact_block([
+                    f"theorem {theorem} : {statement} := by",
+                    "  native_decide",
+                ])
+
+            def count_fact(lines: list[str]) -> None:
+                fact_lines = list(lines)
+                fact_lines[0] = fact_lines[0].replace("have ", "theorem ", 1)
+                add_fact_block(fact_lines)
+
+            def write_fact_blocks(path: str, imports: list[str], blocks: list[list[str]], header: str) -> None:
+                with open(path, "w", encoding="utf-8") as fh:
+                    emit_header(fh, imports)
+                    print(header, file=fh)
+                    print(file=fh)
+                    for block in blocks:
+                        for line in block:
+                            print(line, file=fh)
+                        print(file=fh)
+                    emit_footer(fh)
+
+            fact_header = f"/- Cached arithmetic facts for split periodic-main record ({q}, {q2}). -/"
+            part_modules: list[str] = []
+            part_header = f"/- Cached arithmetic fact part for split periodic-main record ({q}, {q2}). -/"
+            for g in divs_q:
+                simple_native_fact(
+                    f"{fact_prefix}_coeffLeft_{g}",
+                    f"ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q][g])}",
+                )
+            for h in divs_q2:
+                simple_native_fact(
+                    f"{fact_prefix}_coeffRight_{h}",
+                    f"ramanujanGcdClassCoeffRat {q2} {h} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q2][h])}",
+                )
+            for g in divs_q:
+                add_fact_block(
+                    emit_window_average_proof(
+                        theorem_name=f"{fact_prefix}_avgLeft_{g}",
+                        q0=q,
+                        g0=g,
+                        expected=exact_ctx["avg_by_q"][q][g],
+                        indent="",
+                    )
+                )
+            for h in divs_q2:
+                add_fact_block(
+                    emit_window_average_proof(
+                        theorem_name=f"{fact_prefix}_avgRight_{h}",
+                        q0=q2,
+                        g0=h,
+                        expected=exact_ctx["avg_by_q"][q2][h],
+                        indent="",
+                    )
+                )
+            for g in divs_q:
+                count_fact(emit_block_periodic_count_proof(
+                    theorem_name=f"{fact_prefix}_blockLeft_{g}",
+                    q=q,
+                    q2=q2,
+                    q0=q,
+                    g0=g,
+                    expected=block_left_values[g],
+                    indent="",
+                ))
+            for h in divs_q2:
+                count_fact(emit_block_periodic_count_proof(
+                    theorem_name=f"{fact_prefix}_blockRight_{h}",
+                    q=q,
+                    q2=q2,
+                    q0=q2,
+                    g0=h,
+                    expected=block_right_values[h],
+                    indent="",
+                ))
+            for g in divs_q:
+                for h in divs_q2:
+                    count_fact(emit_pair_resolved_count_proof(
+                        theorem_name=f"{fact_prefix}_pair_{g}_{h}",
+                        q=q,
+                        q2=q2,
+                        g=g,
+                        h=h,
+                        expected=pair_values[(g, h)],
+                        indent="",
+                    ))
+            if fact_part_size > 0 and len(fact_blocks) > fact_part_size:
+                for part_idx, start in enumerate(range(0, len(fact_blocks), fact_part_size)):
+                    part_stem = f"{stem}FactsPart{part_idx}"
+                    part_path = os.path.join(out_dir, f"{part_stem}.lean")
+                    part_modules.append(lean_module_name_for_path(part_path))
+                    write_fact_blocks(
+                        part_path,
+                        [base_import],
+                        fact_blocks[start:start + fact_part_size],
+                        part_header,
+                    )
+                write_fact_blocks(fact_path, part_modules, [], fact_header)
+            else:
+                write_fact_blocks(fact_path, [base_import], fact_blocks, fact_header)
+
         term_modules: dict[tuple[int, int], str] = {}
         if not inline_row_parts:
             for g in divs_q:
@@ -1507,12 +1978,23 @@ def emit_periodic_main_pair_record_split_lean_files(
                     term_path = os.path.join(out_dir, f"{term_stem}.lean")
                     term_modules[(g, h)] = lean_module_name_for_path(term_path)
                     with open(term_path, "w", encoding="utf-8") as fh:
-                        emit_header(fh, [base_import])
+                        emit_header(fh, [fact_module if fact_module is not None else base_import])
                         print(f"theorem {name}_term_{g}_{h} :", file=fh)
                         for line in term_expr_lines(q, q2, g, h, indent="    "):
                             print(line, file=fh)
                         print(f"      = {fraction_to_q_literal(term_values[(g, h)])} := by", file=fh)
-                        if term_values[(g, h)] != 0:
+                        if use_cached_facts:
+                            print(f"  have hCoeffLeft : ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q][g])} := {fact_prefix}_coeffLeft_{g}", file=fh)
+                            print(f"  have hCoeffRight : ramanujanGcdClassCoeffRat {q2} {h} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q2][h])} := {fact_prefix}_coeffRight_{h}", file=fh)
+                            print(f"  have hAvgLeft : ramanujanGcdClassWindowAverageRat X0 {q} {g} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q][g])} := {fact_prefix}_avgLeft_{g}", file=fh)
+                            print(f"  have hAvgRight : ramanujanGcdClassWindowAverageRat X0 {q2} {h} = {fraction_to_q_literal(exact_ctx['avg_by_q'][q2][h])} := {fact_prefix}_avgRight_{h}", file=fh)
+                            print(f"  have hBlockLeft : rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q} {g} = ({block_left_values[g]} : ℚ) := {fact_prefix}_blockLeft_{g}", file=fh)
+                            print(f"  have hBlockRight : rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 {q} {q2} {q2} {h} = ({block_right_values[h]} : ℚ) := {fact_prefix}_blockRight_{h}", file=fh)
+                            print(f"  have hPair : rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} {g} {h} = ({pair_values[(g, h)]} : ℚ) := {fact_prefix}_pair_{g}_{h}", file=fh)
+                            print("  norm_num [H, centeredRamanujanPairBlockPeriod, evenRamanujanBlockCountRat,", file=fh)
+                            print("    hCoeffLeft, hCoeffRight, hAvgLeft, hAvgRight,", file=fh)
+                            print("    hBlockLeft, hBlockRight, hPair]", file=fh)
+                        elif term_values[(g, h)] != 0:
                             print(f"  have hCoeffLeft : ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q][g])} := by", file=fh)
                             print("    native_decide", file=fh)
                             print(f"  have hCoeffRight : ramanujanGcdClassCoeffRat {q2} {h} = {fraction_to_q_literal(exact_ctx['gcd_coeff_by_q'][q2][h])} := by", file=fh)
@@ -1701,6 +2183,28 @@ def emit_periodic_main_pair_record_split_lean_files(
                 print(f"| {g} => {fraction_to_q_literal(row_values[g])}", file=fh)
             print("| _ => 0", file=fh)
             print(file=fh)
+            left_row_chunk_size = max(1, row_part_size)
+            left_row_chunks = [
+                divs_q[i:i + left_row_chunk_size]
+                for i in range(0, len(divs_q), left_row_chunk_size)
+            ]
+            left_row_chunk_names: list[str] = []
+            left_row_chunk_sum_theorems: list[str] = []
+            for idx, chunk in enumerate(left_row_chunks):
+                chunk_name = f"{name}_leftRowChunk{idx}"
+                theorem_name = f"{name}_rowValueSumPart{idx}"
+                chunk_total = sum((row_values[g] for g in chunk), Fraction(0, 1))
+                left_row_chunk_names.append(chunk_name)
+                left_row_chunk_sum_theorems.append(theorem_name)
+                print(f"def {chunk_name} : Finset ℕ := ({lean_nat_list(chunk)} : List ℕ).toFinset", file=fh)
+                print(file=fh)
+                print(f"theorem {theorem_name} :", file=fh)
+                print(
+                    f"    (∑ g ∈ {chunk_name}, {name}_rowValue g) = {fraction_to_q_literal(chunk_total)} := by",
+                    file=fh,
+                )
+                print(f"  norm_num [{chunk_name}, {name}_rowValue]", file=fh)
+                print(file=fh)
             print(f"theorem {name}_centeredTerm :", file=fh)
             print(f"    centeredRamanujanPairPeriodicMainTermRat X0 {q} {q2} = {fraction_to_q_literal(centered_term)} := by", file=fh)
             print("  unfold centeredRamanujanPairPeriodicMainTermRat", file=fh)
@@ -1717,7 +2221,15 @@ def emit_periodic_main_pair_record_split_lean_files(
             for g in divs_q:
                 print(f"    · simpa [{name}_rowValue] using {name}_row_{g}", file=fh)
             print(f"  rw [hsum, {name}_divLeft]", file=fh)
-            print(f"  norm_num [{name}_rowValue]", file=fh)
+            print(f"  have hset : ({lean_nat_list(divs_q)} : List ℕ).toFinset = {split_union_expr(left_row_chunk_names)} := by", file=fh)
+            print("    native_decide", file=fh)
+            print("  rw [hset]", file=fh)
+            for split_idx in range(len(left_row_chunk_names) - 1, 0, -1):
+                left = split_union_expr(left_row_chunk_names, split_idx)
+                right = left_row_chunk_names[split_idx]
+                print(f"  rw [Finset.sum_union (by native_decide : Disjoint {left} {right})]", file=fh)
+            print("  rw [" + ", ".join(left_row_chunk_sum_theorems) + "]", file=fh)
+            print("  try norm_num", file=fh)
             print(file=fh)
             print(f"theorem {name}_orderedSummand :", file=fh)
             print(f"    surrogatePeriodicMainActiveOrderedPairSummandRat X0 (Prod.mk {q} {q2}) = {fraction_to_q_literal(summand_value)} := by", file=fh)
@@ -1747,7 +2259,15 @@ def emit_periodic_main_pair_record_split_lean_files(
         print(f"[write-split] {wrapper_path} record={record_index} pair=({q},{q2})", file=sys.stderr)
 
     for local_index, record in enumerate(records):
-        emit_split_record(record, index_offset + local_index)
+        if use_source_index:
+            if "source_index" not in record:
+                raise SystemExit(
+                    f"split record ({record.get('q')},{record.get('q2')}) has no source_index"
+                )
+            record_index = int(record["source_index"])
+        else:
+            record_index = index_offset + local_index
+        emit_split_record(record, record_index)
     return len(records)
 
 
@@ -2402,6 +2922,4093 @@ def periodic_main_zero_classification_report(
         print(f"{lcm_value},{count}")
 
 
+def periodic_main_nondyadic_mean_product_audit(
+    *,
+    X: int,
+    payload_path: str,
+    payload: dict[str, object],
+    top: int,
+) -> None:
+    """
+    Verify the exact non-dyadic mean-product compression against an existing payload.
+
+    The compressed value is:
+
+      coeff(q) * coeff(q') * fullBlocks(q,q') * lcm(q,q') * avg(q) * avg(q')
+
+    where `avg(q)` is the one-variable Ramanujan average over the fixed even window.
+    """
+    classes = list(payload.get("classes", []))
+    records: list[tuple[int, int, Fraction, int]] = []
+    for class_index, cls in enumerate(classes):
+        for rec in cls.get("records", []):
+            records.append((
+                int(rec["q"]),
+                int(rec["q2"]),
+                Fraction(int(rec["value_num"]), int(rec["value_den"])),
+                class_index,
+            ))
+
+    unique_q = sorted({q for q, _, _, _ in records} | {q2 for _, q2, _, _ in records})
+    mu, phi = mobius_phi_sieve(Q0)
+    spf = spf_sieve(Q0)
+    ctx = build_surrogate_diagonal_exact_context(mu, phi, spf, unique_q)
+    even_window_card = even_window_progression(X)[1]
+    avg_by_q = {
+        q: centered_ramanujan_window_average_rat_cached(X, q, even_window_card, ctx)
+        for q in unique_q
+    }
+
+    def compressed_value(q: int, q2: int) -> Fraction:
+        full_blocks = (H + 1) // block_period(q, q2)
+        return (
+            surrogate_coeff_rat(q, mu, phi)
+            * surrogate_coeff_rat(q2, mu, phi)
+            * Fraction(full_blocks, 1)
+            * Fraction(math.lcm(q, q2), 1)
+            * avg_by_q[q]
+            * avg_by_q[q2]
+        )
+
+    mismatches: list[tuple[int, int, int, Fraction, Fraction, Fraction]] = []
+    json_total = Fraction(0, 1)
+    compressed_total = Fraction(0, 1)
+    row_counts: Counter[int] = Counter()
+    divisor_pair_count = 0
+    max_divisor_pair = 0
+    max_divisor_record: tuple[int, int] | None = None
+    nonzero_avg_q = sum(1 for q in unique_q if avg_by_q[q] != 0)
+
+    for record_index, (q, q2, expected, class_index) in enumerate(records):
+        actual = compressed_value(q, q2)
+        json_total += expected
+        compressed_total += actual
+        row_counts[min(q, q2)] += 1
+        div_pairs = len(ctx["divisors_by_q"][q]) * len(ctx["divisors_by_q"][q2])
+        divisor_pair_count += div_pairs
+        if div_pairs > max_divisor_pair:
+            max_divisor_pair = div_pairs
+            max_divisor_record = (q, q2)
+        if actual != expected:
+            mismatches.append((record_index, q, q2, expected, actual, expected - actual))
+
+    print("Periodic-main non-dyadic mean-product audit")
+    print(f"  source                    = {payload_path}")
+    print(f"  X                         = {X}")
+    print(f"  class count               = {len(classes)}")
+    print(f"  ordered record count      = {len(records)}")
+    print(f"  unique moduli             = {len(unique_q)}")
+    print(f"  nonzero one-var averages  = {nonzero_avg_q}")
+    print(f"  old divisor-pair cells    = {divisor_pair_count}")
+    print(f"  max cells in one record   = {max_divisor_pair} at {max_divisor_record}")
+    print(f"  mismatch count            = {len(mismatches)}")
+    print(f"  exact totals match        = {compressed_total == json_total}")
+    print(f"  total numerator           = {compressed_total.numerator}")
+    print(f"  total denominator         = {compressed_total.denominator}")
+    print(f"  total float               = {float(compressed_total): .15f}")
+    print()
+    if mismatches:
+        print("First mismatches")
+        for record_index, q, q2, expected, actual, diff in mismatches[:max(1, top)]:
+            print(
+                f"  record={record_index} pair=({q},{q2}) "
+                f"expected={expected} actual={actual} diff={diff}"
+            )
+    else:
+        print("Compression identity")
+        print("  every record equals coeff(q)*coeff(q')*fullBlocks*lcm(q,q')*avg(q)*avg(q')")
+        print("  this replaces per-record divisor-pair expansion with reusable one-variable averages")
+    print()
+    print("Top rows by ordered record count")
+    for row, count in row_counts.most_common(max(1, top)):
+        print(f"  row {row:<5d} records={count}")
+
+
+def periodic_main_nondyadic_lcm_compression_report(
+    *,
+    X: int,
+    payload_path: str,
+    payload: dict[str, object],
+    top: int,
+    check_components: bool = False,
+) -> None:
+    """Report the next compression after the non-dyadic mean-product collapse.
+
+    Once a record has collapsed to
+
+      coeff(q) * coeff(q') * fullBlocks(q,q') * lcm(q,q') * avg(q) * avg(q'),
+
+    the pair-specific scalar depends only on L = lcm(q,q').  This report checks
+    the exact lcm-fiber totals and measures how much of the payload can be
+    represented by reusable one-variable weights plus lcm-group sums.
+    """
+    classes = list(payload.get("classes", []))
+    records: list[tuple[int, int, Fraction, int]] = []
+    for class_index, cls in enumerate(classes):
+        for rec in cls.get("records", []):
+            records.append((
+                int(rec["q"]),
+                int(rec["q2"]),
+                Fraction(int(rec["value_num"]), int(rec["value_den"])),
+                class_index,
+            ))
+
+    unique_q = sorted({q for q, _, _, _ in records} | {q2 for _, q2, _, _ in records})
+    unique_q_set = set(unique_q)
+    mu, phi = mobius_phi_sieve(Q0)
+    spf = spf_sieve(Q0)
+    ctx = build_surrogate_diagonal_exact_context(mu, phi, spf, unique_q)
+    even_window_card = even_window_progression(X)[1]
+    avg_by_q = {
+        q: centered_ramanujan_window_average_rat_cached(X, q, even_window_card, ctx)
+        for q in unique_q
+    }
+    weight_by_q = {
+        q: surrogate_coeff_rat(q, mu, phi) * avg_by_q[q]
+        for q in unique_q
+    }
+
+    lcm_record_counts: Counter[int] = Counter()
+    lcm_class_counts: Counter[int] = Counter()
+    lcm_json_totals: dict[int, Fraction] = defaultdict(Fraction)
+    lcm_weight_products: dict[int, Fraction] = defaultdict(Fraction)
+    lcm_scalar: dict[int, int] = {}
+    scalar_counts: Counter[int] = Counter()
+    full_block_counts: Counter[int] = Counter()
+    class_lcms: defaultdict[int, set[int]] = defaultdict(set)
+    mismatches: list[tuple[int, int, int, Fraction, Fraction, Fraction]] = []
+
+    json_total = Fraction(0, 1)
+    compressed_total = Fraction(0, 1)
+    payload_pairs: set[tuple[int, int]] = set()
+    for record_index, (q, q2, expected, class_index) in enumerate(records):
+        payload_pairs.add((q, q2))
+        L = math.lcm(q, q2)
+        full_blocks = (H + 1) // block_period(q, q2)
+        scalar = full_blocks * L
+        actual = Fraction(scalar, 1) * weight_by_q[q] * weight_by_q[q2]
+
+        json_total += expected
+        compressed_total += actual
+        lcm_record_counts[L] += 1
+        class_lcms[class_index].add(L)
+        lcm_json_totals[L] += expected
+        lcm_weight_products[L] += weight_by_q[q] * weight_by_q[q2]
+        lcm_scalar.setdefault(L, scalar)
+        scalar_counts[scalar] += 1
+        full_block_counts[full_blocks] += 1
+
+        if actual != expected:
+            mismatches.append((record_index, q, q2, expected, actual, expected - actual))
+
+    for lcms in class_lcms.values():
+        for L in lcms:
+            lcm_class_counts[L] += 1
+
+    lcm_total_mismatches: list[tuple[int, Fraction, Fraction, Fraction]] = []
+    for L, total in lcm_json_totals.items():
+        actual = Fraction(lcm_scalar[L], 1) * lcm_weight_products[L]
+        if actual != total:
+            lcm_total_mismatches.append((L, total, actual, total - actual))
+
+    lcm_fiber_rows: list[tuple[int, int, int, Fraction, int, int]] = []
+    missing_pair_categories: Counter[str] = Counter()
+    missing_pair_examples: dict[str, list[tuple[int, int, int]]] = defaultdict(list)
+
+    def missing_pair_category(q: int, q2: int) -> str:
+        if q == q2:
+            return "diagonal"
+        if q == 5:
+            return "left_row_five"
+        if q2 == 5:
+            return "right_row_five"
+        if q == 2 * q2 or q2 == 2 * q:
+            return "dyadic_double"
+        if q % 5 == 0 and q2 % 5 == 0:
+            return "both_divisible_by_five"
+        if q % 5 == 0:
+            return "left_divisible_by_five"
+        if q2 % 5 == 0:
+            return "right_divisible_by_five"
+        return "other"
+
+    for L, record_count in lcm_record_counts.items():
+        divisors_in_support = [d for d in divisors_from_factorization(factorization(L, spf)) if d in unique_q_set]
+        full_ordered_fiber = 0
+        for q in divisors_in_support:
+            for q2 in divisors_in_support:
+                if math.lcm(q, q2) != L:
+                    continue
+                full_ordered_fiber += 1
+                if (q, q2) not in payload_pairs:
+                    category = missing_pair_category(q, q2)
+                    missing_pair_categories[category] += 1
+                    if len(missing_pair_examples[category]) < 8:
+                        missing_pair_examples[category].append((L, q, q2))
+        lcm_fiber_rows.append((
+            L,
+            record_count,
+            full_ordered_fiber,
+            lcm_json_totals[L],
+            lcm_scalar[L],
+            lcm_class_counts[L],
+        ))
+
+    covered_full_fibers = sum(
+        row[1] for row in lcm_fiber_rows if row[1] == row[2]
+    )
+    near_full_fiber_counts = {
+        missing: sum(row[1] for row in lcm_fiber_rows if 0 <= row[2] - row[1] <= missing)
+        for missing in (0, 1, 2, 5, 10)
+    }
+    missing_fiber_counter: Counter[int] = Counter(row[2] - row[1] for row in lcm_fiber_rows)
+    one_record_lcms = sum(1 for row in lcm_fiber_rows if row[1] == 1)
+    dyadic_orbits: defaultdict[int, list[int]] = defaultdict(list)
+    for q in unique_q:
+        odd_core = q
+        while odd_core % 2 == 0:
+            odd_core //= 2
+        dyadic_orbits[odd_core].append(q)
+    dyadic_weight_mismatches: list[tuple[int, list[int], list[Fraction]]] = []
+    for odd_core, orbit in dyadic_orbits.items():
+        weights = [weight_by_q[q] for q in sorted(orbit)]
+        if len(set(weights)) != 1:
+            dyadic_weight_mismatches.append((odd_core, sorted(orbit), weights))
+    nontrivial_dyadic_orbits = sum(1 for orbit in dyadic_orbits.values() if len(orbit) > 1)
+
+    print("Periodic-main non-dyadic lcm compression report")
+    print(f"  source                       = {payload_path}")
+    print(f"  X                            = {X}")
+    print(f"  unordered class count        = {len(classes)}")
+    print(f"  ordered record count         = {len(records)}")
+    print(f"  unique moduli                = {len(unique_q)}")
+    print(f"  lcm fiber count              = {len(lcm_record_counts)}")
+    print(f"  scalar count                 = {len(scalar_counts)}")
+    print(f"  full-block count             = {len(full_block_counts)}")
+    print(f"  one-record lcm fibers        = {one_record_lcms}")
+    print(f"  records in full lcm fibers   = {covered_full_fibers}")
+    print(
+        "  records in near-full fibers  = "
+        + ", ".join(f"missing<={k}:{v}" for k, v in near_full_fiber_counts.items())
+    )
+    print(f"  dyadic weight orbits         = {len(dyadic_orbits)}")
+    print(f"  nontrivial dyadic orbits     = {nontrivial_dyadic_orbits}")
+    print(f"  dyadic weight mismatches     = {len(dyadic_weight_mismatches)}")
+    print(
+        "  missing pair categories      = "
+        + ", ".join(f"{k}:{v}" for k, v in sorted(missing_pair_categories.items()))
+    )
+    print(f"  record compression ratio     = {len(records) / max(1, len(lcm_record_counts)):.2f} ordered-records/lcm")
+    print(f"  class compression ratio      = {len(classes) / max(1, len(lcm_record_counts)):.2f} classes/lcm")
+    print(f"  mean-product mismatches      = {len(mismatches)}")
+    print(f"  lcm-total mismatches         = {len(lcm_total_mismatches)}")
+    print(f"  exact totals match           = {compressed_total == json_total}")
+    print(f"  total numerator              = {compressed_total.numerator}")
+    print(f"  total denominator            = {compressed_total.denominator}")
+    print(f"  total float                  = {float(compressed_total): .15f}")
+
+    if mismatches:
+        print()
+        print("First mean-product mismatches")
+        for record_index, q, q2, expected, actual, diff in mismatches[:max(1, top)]:
+            print(
+                f"  record={record_index} pair=({q},{q2}) "
+                f"expected={expected} actual={actual} diff={diff}"
+            )
+    if lcm_total_mismatches:
+        print()
+        print("First lcm total mismatches")
+        for L, expected, actual, diff in lcm_total_mismatches[:max(1, top)]:
+            print(f"  L={L} expected={expected} actual={actual} diff={diff}")
+    if dyadic_weight_mismatches:
+        print()
+        print("First dyadic weight mismatches")
+        for odd_core, orbit, weights in dyadic_weight_mismatches[:max(1, top)]:
+            weight_desc = " ".join(f"{w.numerator}/{w.denominator}" for w in weights)
+            print(f"  odd_core={odd_core} orbit={orbit} weights={weight_desc}")
+
+    print()
+    print("Missing-count distribution for lcm fibers")
+    print("  missing_records,lcm_fiber_count")
+    for missing, count in sorted(missing_fiber_counter.items())[:max(1, top)]:
+        print(f"  {missing},{count}")
+
+    print()
+    print("Missing-pair category examples")
+    print("  category:L:q:q2")
+    for category, examples in sorted(missing_pair_examples.items()):
+        desc = " ".join(f"{L}:{q}:{q2}" for L, q, q2 in examples)
+        print(f"  {category}:{desc}")
+
+    print()
+    print("Top lcm fibers by absolute signed total")
+    print("  L,ordered_records,full_ordered_fiber,missing,classes,scalar,total_float,total")
+    for L, record_count, full_fiber, total, scalar, class_count in sorted(
+        lcm_fiber_rows,
+        key=lambda row: abs(row[3]),
+        reverse=True,
+    )[:max(1, top)]:
+        print(
+            f"  {L},{record_count},{full_fiber},{full_fiber - record_count},{class_count},{scalar},"
+            f"{float(total): .15f},{total.numerator}/{total.denominator}"
+        )
+
+    print()
+    print("Top lcm fibers by record count")
+    print("  L,ordered_records,full_ordered_fiber,missing,classes,scalar,total_float")
+    for L, record_count, full_fiber, total, scalar, class_count in sorted(
+        lcm_fiber_rows,
+        key=lambda row: (row[1], abs(row[3])),
+        reverse=True,
+    )[:max(1, top)]:
+        print(
+            f"  {L},{record_count},{full_fiber},{full_fiber - record_count},{class_count},{scalar},"
+            f"{float(total): .15f}"
+        )
+
+    print()
+    print("Top one-variable weights by absolute value")
+    print("  q,avg,coeff,weight_float,weight")
+    for q, weight in sorted(weight_by_q.items(), key=lambda item: abs(item[1]), reverse=True)[:max(1, top)]:
+        print(
+            f"  {q},{avg_by_q[q].numerator}/{avg_by_q[q].denominator},"
+            f"{surrogate_coeff_rat(q, mu, phi).numerator}/{surrogate_coeff_rat(q, mu, phi).denominator},"
+            f"{float(weight): .15f},{weight.numerator}/{weight.denominator}"
+        )
+
+    if check_components:
+        even_card = len(even_window_points(X))
+        component_ctx = build_surrogate_boundary_exact_context(
+            X, mu, phi, spf, even_card, unique_q, progress=True, progress_every_q=500
+        )
+        raw_total = Fraction(0, 1)
+        left_total = Fraction(0, 1)
+        right_total = Fraction(0, 1)
+        mean_total = Fraction(0, 1)
+        nonzero_components: list[tuple[int, int, str, Fraction]] = []
+        component_cells = 0
+        started = time.time()
+        for record_index, (q, q2, _expected, _class_index) in enumerate(records, start=1):
+            P = block_period(q, q2)
+            full_blocks = (H + 1) // P
+            first_even, even_count = full_block_even_progression(X, P)
+            divs_q = component_ctx["divisors_by_q"][q]
+            divs_q2 = component_ctx["divisors_by_q"][q2]
+            avg_q = component_ctx["avg_by_q"][q]
+            avg_q2 = component_ctx["avg_by_q"][q2]
+            coeff_q = component_ctx["gcd_coeff_by_q"][q]
+            coeff_q2 = component_ctx["gcd_coeff_by_q"][q2]
+            coeff_pair = component_ctx["coeff_rat"][q] * component_ctx["coeff_rat"][q2]
+            full_blocks_rat = Fraction(full_blocks, 1)
+            even_count_rat = Fraction(even_count, 1)
+            raw = Fraction(0, 1)
+            left = Fraction(0, 1)
+            right = Fraction(0, 1)
+            mean = Fraction(0, 1)
+            for g in divs_q:
+                avg_g = avg_q[g]
+                c_g = coeff_q[g]
+                left_count = Fraction(
+                    gcd_class_count_in_even_progression(q, g, first_even, even_count, component_ctx),
+                    1,
+                )
+                for h in divs_q2:
+                    avg_h = avg_q2[h]
+                    c_h = coeff_q2[h]
+                    right_count = Fraction(
+                        gcd_class_count_in_even_progression(q2, h, first_even, even_count, component_ctx),
+                        1,
+                    )
+                    pair_count = Fraction(
+                        gcd_class_pair_count_in_even_progression(
+                            q, q2, g, h, first_even, even_count, component_ctx
+                        ),
+                        1,
+                    )
+                    c_pair = coeff_pair * c_g * c_h * full_blocks_rat
+                    raw += c_pair * pair_count
+                    left += c_pair * avg_h * left_count
+                    right += c_pair * avg_g * right_count
+                    mean += c_pair * avg_g * avg_h * even_count_rat
+                    component_cells += 1
+            raw_total += raw
+            left_total += left
+            right_total += right
+            mean_total += mean
+            for name, value in (("raw", raw), ("left", left), ("right", right)):
+                if value != 0 and len(nonzero_components) < max(1, top):
+                    nonzero_components.append((q, q2, name, value))
+            if record_index % 5000 == 0 or record_index == len(records):
+                elapsed = time.time() - started
+                print(
+                    f"[component-check] records={record_index}/{len(records)} "
+                    f"cells={component_cells} elapsed={elapsed:.1f}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+
+        print()
+        print("Component-zero check")
+        print(f"  raw total                  = {raw_total}")
+        print(f"  left correction total      = {left_total}")
+        print(f"  right correction total     = {right_total}")
+        print(f"  mean correction total      = {mean_total}")
+        print(f"  centered recomposed total  = {raw_total - left_total - right_total + mean_total}")
+        print(f"  component divisor cells    = {component_cells}")
+        print(f"  nonzero raw/left/right hits= {len(nonzero_components)}")
+        for q, q2, name, value in nonzero_components:
+            print(f"    pair=({q},{q2}) component={name} value={value}")
+
+
+def periodic_main_nondyadic_lcm_payload(
+    *,
+    X: int,
+    payload_path: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    """Build a durable JSON payload for the non-dyadic lcm-fiber compression.
+
+    This is additive to the older unordered-class certificate path.  It records
+    the reusable one-variable weights, the lcm-fiber product sums, and the small
+    set of missing pairs in each otherwise-full lcm fiber.
+    """
+    classes = list(payload.get("classes", []))
+    records: list[tuple[int, int, Fraction, int, int]] = []
+    for class_index, cls in enumerate(classes):
+        for rec in cls.get("records", []):
+            source_index = int(rec.get("source_index", len(records)))
+            records.append((
+                int(rec["q"]),
+                int(rec["q2"]),
+                Fraction(int(rec["value_num"]), int(rec["value_den"])),
+                class_index,
+                source_index,
+            ))
+
+    unique_q = sorted({q for q, _, _, _, _ in records} | {q2 for _, q2, _, _, _ in records})
+    unique_q_set = set(unique_q)
+    mu, phi = mobius_phi_sieve(Q0)
+    spf = spf_sieve(Q0)
+    ctx = build_surrogate_diagonal_exact_context(mu, phi, spf, unique_q)
+    even_window_card = even_window_progression(X)[1]
+    avg_by_q = {
+        q: centered_ramanujan_window_average_rat_cached(X, q, even_window_card, ctx)
+        for q in unique_q
+    }
+    coeff_by_q = {q: surrogate_coeff_rat(q, mu, phi) for q in unique_q}
+    weight_by_q = {q: coeff_by_q[q] * avg_by_q[q] for q in unique_q}
+
+    def fraction_payload(value: Fraction, prefix: str = "") -> dict[str, int]:
+        return {
+            f"{prefix}num": value.numerator,
+            f"{prefix}den": value.denominator,
+        }
+
+    def odd_core_of(q: int) -> int:
+        out = q
+        while out % 2 == 0 and out > 0:
+            out //= 2
+        return out
+
+    def missing_pair_category(q: int, q2: int) -> str:
+        if q == q2:
+            return "diagonal"
+        if q == 5:
+            return "left_row_five"
+        if q2 == 5:
+            return "right_row_five"
+        if q == 2 * q2 or q2 == 2 * q:
+            return "dyadic_double"
+        if q % 5 == 0 and q2 % 5 == 0:
+            return "both_divisible_by_five"
+        if q % 5 == 0:
+            return "left_divisible_by_five"
+        if q2 % 5 == 0:
+            return "right_divisible_by_five"
+        return "other"
+
+    fiber_data: dict[int, dict[str, object]] = {}
+    payload_pairs: set[tuple[int, int]] = set()
+    class_lcms: defaultdict[int, set[int]] = defaultdict(set)
+    total = Fraction(0, 1)
+    recomposed_total = Fraction(0, 1)
+    mean_product_mismatches: list[dict[str, object]] = []
+    for record_index, (q, q2, expected, class_index, source_index) in enumerate(records):
+        payload_pairs.add((q, q2))
+        L = math.lcm(q, q2)
+        full_blocks = (H + 1) // block_period(q, q2)
+        scalar = full_blocks * L
+        product = weight_by_q[q] * weight_by_q[q2]
+        actual = Fraction(scalar, 1) * product
+
+        total += expected
+        recomposed_total += actual
+        class_lcms[class_index].add(L)
+        info = fiber_data.setdefault(
+            L,
+            {
+                "records": [],
+                "json_total": Fraction(0, 1),
+                "weight_product_sum": Fraction(0, 1),
+                "mean_product_total": Fraction(0, 1),
+                "scalar": scalar,
+                "full_blocks": full_blocks,
+            },
+        )
+        if int(info["scalar"]) != scalar:
+            raise SystemExit(f"nonconstant lcm scalar for L={L}: {info['scalar']} vs {scalar}")
+        info["records"].append({
+            "record_index": record_index,
+            "source_index": source_index,
+            "class_index": class_index,
+            "q": q,
+            "q2": q2,
+            "value_num": expected.numerator,
+            "value_den": expected.denominator,
+            "weight_product_num": product.numerator,
+            "weight_product_den": product.denominator,
+        })
+        info["json_total"] = info["json_total"] + expected
+        info["weight_product_sum"] = info["weight_product_sum"] + product
+        info["mean_product_total"] = info["mean_product_total"] + actual
+
+        if actual != expected and len(mean_product_mismatches) < 20:
+            mean_product_mismatches.append({
+                "record_index": record_index,
+                "q": q,
+                "q2": q2,
+                "expected_num": expected.numerator,
+                "expected_den": expected.denominator,
+                "actual_num": actual.numerator,
+                "actual_den": actual.denominator,
+            })
+
+    lcm_class_counts: Counter[int] = Counter()
+    for lcms in class_lcms.values():
+        for L in lcms:
+            lcm_class_counts[L] += 1
+
+    dyadic_orbits: defaultdict[int, list[int]] = defaultdict(list)
+    for q in unique_q:
+        dyadic_orbits[odd_core_of(q)].append(q)
+
+    missing_category_counts: Counter[str] = Counter()
+    fibers: list[dict[str, object]] = []
+    lcm_total_mismatches: list[dict[str, object]] = []
+    for L in sorted(fiber_data):
+        info = fiber_data[L]
+        divisors_in_support = [
+            d for d in divisors_from_factorization(factorization(L, spf))
+            if d in unique_q_set
+        ]
+        full_ordered_fiber_count = 0
+        missing_pairs: list[dict[str, object]] = []
+        for q in divisors_in_support:
+            for q2 in divisors_in_support:
+                if math.lcm(q, q2) != L:
+                    continue
+                full_ordered_fiber_count += 1
+                if (q, q2) not in payload_pairs:
+                    category = missing_pair_category(q, q2)
+                    missing_category_counts[category] += 1
+                    missing_pairs.append({"q": q, "q2": q2, "category": category})
+
+        json_total: Fraction = info["json_total"]  # type: ignore[assignment]
+        mean_product_total: Fraction = info["mean_product_total"]  # type: ignore[assignment]
+        weight_product_sum: Fraction = info["weight_product_sum"]  # type: ignore[assignment]
+        if json_total != mean_product_total and len(lcm_total_mismatches) < 20:
+            lcm_total_mismatches.append({
+                "lcm": L,
+                "expected_num": json_total.numerator,
+                "expected_den": json_total.denominator,
+                "actual_num": mean_product_total.numerator,
+                "actual_den": mean_product_total.denominator,
+            })
+
+        fibers.append({
+            "lcm": L,
+            "scalar": int(info["scalar"]),
+            "full_blocks": int(info["full_blocks"]),
+            "record_count": len(list(info["records"])),
+            "class_count": lcm_class_counts[L],
+            "full_ordered_fiber_count": full_ordered_fiber_count,
+            "missing_count": len(missing_pairs),
+            **fraction_payload(json_total, "total_"),
+            **fraction_payload(mean_product_total, "mean_product_total_"),
+            **fraction_payload(weight_product_sum, "weight_product_sum_"),
+            "missing_pairs": sorted(missing_pairs, key=lambda r: (str(r["category"]), int(r["q"]), int(r["q2"]))),
+            "records": sorted(
+                list(info["records"]),
+                key=lambda r: (int(r["q"]), int(r["q2"]), int(r["record_index"])),
+            ),
+        })
+
+    weights = []
+    for q in unique_q:
+        weights.append({
+            "q": q,
+            "odd_core": odd_core_of(q),
+            **fraction_payload(avg_by_q[q], "average_"),
+            **fraction_payload(coeff_by_q[q], "coeff_"),
+            **fraction_payload(weight_by_q[q], "weight_"),
+        })
+
+    orbit_payload = []
+    dyadic_weight_mismatches = []
+    for odd_core, orbit in sorted(dyadic_orbits.items()):
+        qs = sorted(orbit)
+        weights_in_orbit = [weight_by_q[q] for q in qs]
+        same_weight = len(set(weights_in_orbit)) == 1
+        if not same_weight:
+            dyadic_weight_mismatches.append({"odd_core": odd_core, "q_values": qs})
+        orbit_payload.append({
+            "odd_core": odd_core,
+            "q_values": qs,
+            "same_weight": same_weight,
+            **fraction_payload(weights_in_orbit[0], "weight_"),
+        })
+
+    return {
+        "mode": "periodic-main-nondyadic-lcm-fiber-payload",
+        "source": payload_path,
+        "X": X,
+        "record_count": len(records),
+        "class_count": len(classes),
+        "unique_modulus_count": len(unique_q),
+        "lcm_fiber_count": len(fibers),
+        "dyadic_orbit_count": len(orbit_payload),
+        "nontrivial_dyadic_orbit_count": sum(1 for orbit in orbit_payload if len(orbit["q_values"]) > 1),
+        "dyadic_weight_mismatch_count": len(dyadic_weight_mismatches),
+        "missing_category_counts": dict(sorted(missing_category_counts.items())),
+        "mean_product_mismatch_count": len(mean_product_mismatches),
+        "mean_product_mismatches": mean_product_mismatches,
+        "lcm_total_mismatch_count": len(lcm_total_mismatches),
+        "lcm_total_mismatches": lcm_total_mismatches,
+        "exact_totals_match": recomposed_total == total,
+        **fraction_payload(total, "total_"),
+        **fraction_payload(recomposed_total, "mean_product_total_"),
+        "weights": weights,
+        "dyadic_orbits": orbit_payload,
+        "lcm_fibers": fibers,
+    }
+
+
+def emit_periodic_main_nondyadic_lcm_prototype_lean_file(
+    *,
+    payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    start: int,
+    count: int,
+    order: str,
+    emit_selected_total: bool,
+) -> str:
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if count <= 0:
+        raise SystemExit("--periodic-main-lcm-count must be positive")
+
+    fibers_all = list(payload.get("lcm_fibers", []))
+    if order == "abs":
+        fibers_all.sort(
+            key=lambda fiber: abs(Fraction(int(fiber["total_num"]), int(fiber["total_den"]))),
+            reverse=True,
+        )
+    elif order != "index":
+        raise SystemExit(f"unknown lcm prototype order: {order}")
+
+    if start < 0 or start > len(fibers_all):
+        raise SystemExit(f"--periodic-main-lcm-start={start} out of range for {len(fibers_all)} fibers")
+    selected = fibers_all[start:min(len(fibers_all), start + count)]
+    if not selected:
+        raise SystemExit("selected lcm prototype slice is empty")
+
+    selected_q = sorted({
+        int(record["q"])
+        for fiber in selected
+        for record in list(fiber.get("records", []))
+    } | {
+        int(record["q2"])
+        for fiber in selected
+        for record in list(fiber.get("records", []))
+    })
+    weight_by_q = {
+        int(weight["q"]): Fraction(int(weight["weight_num"]), int(weight["weight_den"]))
+        for weight in list(payload.get("weights", []))
+        if int(weight["q"]) in selected_q
+    }
+    missing_weights = [q for q in selected_q if q not in weight_by_q]
+    if missing_weights:
+        raise SystemExit(f"payload is missing weights for q values: {missing_weights[:10]}")
+
+    label = f"{label_prefix}{start:04d}_{start + len(selected):04d}"
+    path = os.path.join(out_dir, f"{file_prefix}{start:04d}_{start + len(selected):04d}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    def pair_term(q: int, q2: int) -> str:
+        return f"({q}, {q2})"
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print("import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCM")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/-")
+        print("  Prototype for the Route A-LCM non-dyadic compression surface.")
+        print("  It keeps the fast local arithmetic check and also exposes the")
+        print("  actual active-summand fiber theorem under aggregate-zero assumptions.")
+        print("-/")
+        print()
+        print(f"def PeriodicMainNonDyadicLCM{label}Weight : ℕ → ℚ")
+        for q in selected_q:
+            print(f"  | {q} => {fraction_to_q_literal(weight_by_q[q])}")
+        print("  | _ => 0")
+        print()
+        print(f"def PeriodicMainNonDyadicLCM{label}Scalar : ℕ → ℚ")
+        for fiber in selected:
+            print(f"  | {int(fiber['lcm'])} => ({int(fiber['scalar'])} : ℚ)")
+        print("  | _ => 0")
+        print()
+        pair_scalar_entries: dict[tuple[int, int], int] = {}
+        for fiber in selected:
+            scalar = int(fiber["scalar"])
+            for record in list(fiber.get("records", [])):
+                pair_scalar_entries[(int(record["q"]), int(record["q2"]))] = scalar
+        print(f"def PeriodicMainNonDyadicLCM{label}PairScalar : ℕ × ℕ → ℚ")
+        for (q, q2), scalar in sorted(pair_scalar_entries.items()):
+            print(f"  | ({q}, {q2}) => ({scalar} : ℚ)")
+        print("  | _ => 0")
+        print()
+        print(f"def PeriodicMainNonDyadicLCM{label}PairValue (p : ℕ × ℕ) : ℚ :=")
+        print(f"  PeriodicMainNonDyadicLCM{label}PairScalar p")
+        print(f"    * PeriodicMainNonDyadicLCM{label}Weight p.1")
+        print(f"    * PeriodicMainNonDyadicLCM{label}Weight p.2")
+        print()
+
+        selected_total = Fraction(0, 1)
+        fiber_names: list[str] = []
+        selected_pairs_all: list[tuple[int, int]] = []
+        for local_index, fiber in enumerate(selected):
+            L = int(fiber["lcm"])
+            fiber_name = f"PeriodicMainNonDyadicLCM{label}Fiber{local_index:03d}"
+            fiber_names.append(fiber_name)
+            records = sorted(
+                list(fiber.get("records", [])),
+                key=lambda r: (int(r["q"]), int(r["q2"]), int(r.get("record_index", 0))),
+            )
+            selected_pairs_all.extend((int(r["q"]), int(r["q2"])) for r in records)
+            total = Fraction(int(fiber["total_num"]), int(fiber["total_den"]))
+            selected_total += total
+            print(f"def {fiber_name}RawPairs : Finset (ℕ × ℕ) :=")
+            print("  [" + ", ".join(pair_term(int(r["q"]), int(r["q2"])) for r in records) + "].toFinset")
+            print()
+            print(f"def {fiber_name}Pairs : Finset (ℕ × ℕ) :=")
+            print(f"  {fiber_name}RawPairs.filter (fun p => p.1 ≠ p.2)")
+            print()
+            print(f"def {fiber_name}Total : ℚ := {fraction_to_q_literal(total)}")
+            print()
+            print(f"theorem {fiber_name}_compressed_sum :")
+            print(f"    (∑ p ∈ {fiber_name}Pairs, PeriodicMainNonDyadicLCM{label}PairValue p)")
+            print(f"      = {fiber_name}Total := by")
+            print("  native_decide")
+            print()
+            print(f"theorem {fiber_name}_pair_ne")
+            print(f"    (p : ℕ × ℕ) (hp : p ∈ {fiber_name}Pairs) : p.1 ≠ p.2 := by")
+            print(f"  change p ∈ {fiber_name}RawPairs.filter (fun p => p.1 ≠ p.2) at hp")
+            print("  exact (Finset.mem_filter.mp hp).2")
+            print()
+            print(f"theorem {fiber_name}_lcm_mem")
+            print(f"    (p : ℕ × ℕ) (hp : p ∈ {fiber_name}Pairs) :")
+            print(f"    Nat.lcm p.1 p.2 ∈ ([{L}] : List ℕ).toFinset := by")
+            print(f"  change p ∈ {fiber_name}RawPairs.filter (fun p => p.1 ≠ p.2) at hp")
+            print("  have hraw := (Finset.mem_filter.mp hp).1")
+            print("  fin_cases hraw <;> native_decide")
+            print()
+            print(f"theorem {fiber_name}_value_of_weight_scalar")
+            print(f"    (hscalar : ∀ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainMeanProductPairScalarRat p.1 p.2")
+            print(f"        = PeriodicMainNonDyadicLCM{label}PairScalar p)")
+            print(f"    (hweight : ∀ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainMeanProductWeightRat X0 p.1")
+            print(f"          = PeriodicMainNonDyadicLCM{label}Weight p.1")
+            print("        ∧ surrogatePeriodicMainMeanProductWeightRat X0 p.2")
+            print(f"          = PeriodicMainNonDyadicLCM{label}Weight p.2) :")
+            print(f"    ∀ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainLCMCompressedPairValueRat X0 p")
+            print(f"        = PeriodicMainNonDyadicLCM{label}PairValue p := by")
+            print("  intro p hp")
+            print("  unfold surrogatePeriodicMainLCMCompressedPairValueRat")
+            print(f"  unfold PeriodicMainNonDyadicLCM{label}PairValue")
+            print("  rw [hscalar p hp, (hweight p hp).1, (hweight p hp).2]")
+            print()
+            print(f"theorem {fiber_name}_actual_sum_of_component_zeros")
+            print(f"    (hzero : ∀ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p)")
+            print(f"    (hvalue : ∀ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainLCMCompressedPairValueRat X0 p")
+            print(f"        = PeriodicMainNonDyadicLCM{label}PairValue p) :")
+            print(f"    (∑ p ∈ {fiber_name}Pairs, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p)")
+            print(f"      = {fiber_name}Total := by")
+            print("  exact")
+            print("    surrogatePeriodicMainActiveOrderedPairSummandRat_X0_sum_eq_certifiedTotal_of_componentZeros")
+            print(f"      (pairs := {fiber_name}Pairs)")
+            print(f"      (pairValue := PeriodicMainNonDyadicLCM{label}PairValue)")
+            print(f"      (total := {fiber_name}Total)")
+            print(f"      {fiber_name}_pair_ne")
+            print("      hzero")
+            print("      hvalue")
+            print(f"      {fiber_name}_compressed_sum")
+            print()
+            print(f"theorem {fiber_name}_actual_sum_of_component_zeros_weight_scalar")
+            print(f"    (hzero : ∀ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p)")
+            print(f"    (hscalar : ∀ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainMeanProductPairScalarRat p.1 p.2")
+            print(f"        = PeriodicMainNonDyadicLCM{label}PairScalar p)")
+            print(f"    (hweight : ∀ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainMeanProductWeightRat X0 p.1")
+            print(f"          = PeriodicMainNonDyadicLCM{label}Weight p.1")
+            print("        ∧ surrogatePeriodicMainMeanProductWeightRat X0 p.2")
+            print(f"          = PeriodicMainNonDyadicLCM{label}Weight p.2) :")
+            print(f"    (∑ p ∈ {fiber_name}Pairs, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p)")
+            print(f"      = {fiber_name}Total := by")
+            print(f"  exact {fiber_name}_actual_sum_of_component_zeros")
+            print("    hzero")
+            print(f"    ({fiber_name}_value_of_weight_scalar hscalar hweight)")
+            print()
+            print(f"/- lcm={L}, records={len(records)}, missing={int(fiber['missing_count'])} -/")
+            print()
+
+        if emit_selected_total:
+            print(f"def PeriodicMainNonDyadicLCM{label}SelectedRawPairs : Finset (ℕ × ℕ) :=")
+            print("  [" + ", ".join(pair_term(q, q2) for q, q2 in selected_pairs_all) + "].toFinset")
+            print()
+            print(f"def PeriodicMainNonDyadicLCM{label}SelectedPairs : Finset (ℕ × ℕ) :=")
+            print(f"  PeriodicMainNonDyadicLCM{label}SelectedRawPairs.filter (fun p => p.1 ≠ p.2)")
+            print()
+            print(f"def PeriodicMainNonDyadicLCM{label}SelectedTotal : ℚ :=")
+            print(f"  {fraction_to_q_literal(selected_total)}")
+            print()
+            print(f"theorem PeriodicMainNonDyadicLCM{label}_selected_compressed_sum :")
+            print(f"    (∑ p ∈ PeriodicMainNonDyadicLCM{label}SelectedPairs,")
+            print(f"      PeriodicMainNonDyadicLCM{label}PairValue p)")
+            print(f"      = PeriodicMainNonDyadicLCM{label}SelectedTotal := by")
+            print("  native_decide")
+            print()
+            print(f"theorem PeriodicMainNonDyadicLCM{label}_selected_pair_ne")
+            print(f"    (p : ℕ × ℕ) (hp : p ∈ PeriodicMainNonDyadicLCM{label}SelectedPairs) :")
+            print("    p.1 ≠ p.2 := by")
+            print(f"  change p ∈ PeriodicMainNonDyadicLCM{label}SelectedRawPairs.filter (fun p => p.1 ≠ p.2) at hp")
+            print("  exact (Finset.mem_filter.mp hp).2")
+            print()
+            print(f"theorem PeriodicMainNonDyadicLCM{label}_selected_actual_sum_of_component_zeros")
+            print(f"    (hzero : ∀ p ∈ PeriodicMainNonDyadicLCM{label}SelectedPairs,")
+            print("      surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p)")
+            print(f"    (hvalue : ∀ p ∈ PeriodicMainNonDyadicLCM{label}SelectedPairs,")
+            print("      surrogatePeriodicMainLCMCompressedPairValueRat X0 p")
+            print(f"        = PeriodicMainNonDyadicLCM{label}PairValue p) :")
+            print(f"    (∑ p ∈ PeriodicMainNonDyadicLCM{label}SelectedPairs,")
+            print("      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p)")
+            print(f"      = PeriodicMainNonDyadicLCM{label}SelectedTotal := by")
+            print("  exact")
+            print("    surrogatePeriodicMainActiveOrderedPairSummandRat_X0_sum_eq_certifiedTotal_of_componentZeros")
+            print(f"      (pairs := PeriodicMainNonDyadicLCM{label}SelectedPairs)")
+            print(f"      (pairValue := PeriodicMainNonDyadicLCM{label}PairValue)")
+            print(f"      (total := PeriodicMainNonDyadicLCM{label}SelectedTotal)")
+            print(f"      PeriodicMainNonDyadicLCM{label}_selected_pair_ne")
+            print("      hzero")
+            print("      hvalue")
+            print(f"      PeriodicMainNonDyadicLCM{label}_selected_compressed_sum")
+            print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_weight_lean_file(
+    *,
+    X: int,
+    payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    start: int,
+    count: int,
+) -> str:
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if count <= 0:
+        raise SystemExit("--periodic-main-lcm-weight-count must be positive")
+
+    weights_all = sorted(list(payload.get("weights", [])), key=lambda w: int(w["q"]))
+    if start < 0 or start > len(weights_all):
+        raise SystemExit(f"--periodic-main-lcm-weight-start={start} out of range for {len(weights_all)} weights")
+    selected = weights_all[start:min(len(weights_all), start + count)]
+    if not selected:
+        raise SystemExit("selected lcm weight slice is empty")
+
+    selected_q = [int(weight["q"]) for weight in selected]
+    max_q = max(selected_q)
+    mu, phi = mobius_phi_sieve(max_q)
+    spf = spf_sieve(max_q)
+    exact_ctx = build_surrogate_diagonal_exact_context(mu, phi, spf, selected_q)
+    first_even, even_count = even_window_progression(X)
+    if X != 1_000_000 or even_count != 5001:
+        raise SystemExit(
+            "the generated Lean theorem surface currently targets X0 and the 5001-point even window"
+        )
+
+    weight_by_q = {
+        int(weight["q"]): Fraction(int(weight["weight_num"]), int(weight["weight_den"]))
+        for weight in selected
+    }
+    average_by_q = {
+        int(weight["q"]): Fraction(int(weight["average_num"]), int(weight["average_den"]))
+        for weight in selected
+    }
+    coeff_by_q_payload = {
+        int(weight["q"]): Fraction(int(weight["coeff_num"]), int(weight["coeff_den"]))
+        for weight in selected
+    }
+
+    label = f"{label_prefix}{start:04d}_{start + len(selected):04d}"
+    path = os.path.join(out_dir, f"{file_prefix}{start:04d}_{start + len(selected):04d}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    def theorem_prefix(q: int) -> str:
+        return f"PeriodicMainNonDyadicLCMWeight{label}_{q}"
+
+    def avg_theorem_name(q: int, g: int) -> str:
+        return f"{theorem_prefix(q)}_avg_{g}"
+
+    def gcd_coeff_theorem_name(q: int, g: int) -> str:
+        return f"{theorem_prefix(q)}_gcdCoeff_{g}"
+
+    def emit_block_periodic_count_proof_lines(
+        *,
+        q0: int,
+        g0: int,
+        expected: int,
+        indent: str = "  ",
+    ) -> list[str]:
+        quotient = q0 // g0 if g0 != 0 else 0
+        lines = [
+            f"{indent}have hCount :",
+            f"{indent}    rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 5001 1 {q0} {g0}",
+            f"{indent}      = ({expected} : ℚ) := by",
+        ]
+        if g0 % 2 == 0:
+            lines.extend([
+                f"{indent}  rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_even_totient_main_add_remainder]",
+                f"{indent}  all_goals native_decide",
+            ])
+        elif quotient % 2 == 0:
+            if expected != 0:
+                raise ValueError(
+                    f"expected zero odd-g/even-quotient count for q={q0}, g={g0}; got {expected}"
+                )
+            lines.extend([
+                f"{indent}  rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_zero_of_not_isEven_g_of_isEven_quotient]",
+                f"{indent}  all_goals native_decide",
+            ])
+        else:
+            lines.extend([
+                f"{indent}  rw [rawEvenRamanujanGcdClassBlockPeriodicCountRat_eq_odd_totient_main_add_remainder]",
+                f"{indent}  all_goals native_decide",
+            ])
+        return lines
+
+    def emit_norm_num_fact_list(facts: list[str], *, indent: str = "  ") -> None:
+        if not facts:
+            print(f"{indent}simp [Finset.sum_insert]")
+            print(f"{indent}norm_num")
+            return
+        print(f"{indent}simp [Finset.sum_insert,")
+        for i in range(0, len(facts), 3):
+            suffix = "," if i + 3 < len(facts) else "]"
+            print(f"{indent}  {', '.join(facts[i:i + 3])}{suffix}")
+        print(f"{indent}norm_num")
+
+    selected_weight_values = [weight_by_q[q] for q in selected_q]
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print("import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainMeanProduct")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/-")
+        print("  Public one-variable weight certificates for the Route A-LCM non-dyadic")
+        print("  compression surface. Each weight proof rewrites the window average through")
+        print("  the X0 = 1000000, 5001-point periodic gcd-class count theorem.")
+        print("-/")
+        print()
+        print(f"def PeriodicMainNonDyadicLCMWeight{label}QSet : Finset ℕ :=")
+        print("  " + nat_list_to_lean_finset_literal(selected_q))
+        print()
+        print(f"def PeriodicMainNonDyadicLCMWeight{label}Table : ℕ → ℚ")
+        for q, weight in zip(selected_q, selected_weight_values):
+            print(f"  | {q} => {fraction_to_q_literal(weight)}")
+        print("  | _ => 0")
+        print()
+
+        for q in selected_q:
+            divs_q = list(exact_ctx["divisors_by_q"][q])
+            coeff_q = exact_ctx["coeff_rat"][q]
+            if coeff_q != coeff_by_q_payload[q]:
+                raise ValueError(
+                    f"coefficient mismatch for q={q}: computed {coeff_q}, payload {coeff_by_q_payload[q]}"
+                )
+            gcd_coeff_q = exact_ctx["gcd_coeff_by_q"][q]
+            avg_facts: list[str] = []
+            gcd_coeff_facts: list[str] = []
+            observable_total = Fraction(0, 1)
+
+            for g in divs_q:
+                count_g = gcd_class_count_in_even_progression(q, g, first_even, even_count, exact_ctx)
+                avg = Fraction(count_g, even_count)
+                observable_total += gcd_coeff_q[g] * avg
+                avg_name = avg_theorem_name(q, g)
+                avg_facts.append(avg_name)
+                print(f"theorem {avg_name} :")
+                print(f"    ramanujanGcdClassWindowAverageRat X0 {q} {g}")
+                print(f"      = ({count_g} : ℚ) / 5001 := by")
+                for line in emit_block_periodic_count_proof_lines(q0=q, g0=g, expected=count_g):
+                    print(line)
+                print("  rw [ramanujanGcdClassWindowAverageRat_X0_eq_rawEvenBlockPeriodicCountRat_5001_one")
+                print(f"    (q := {q}) (g := {g}) (by native_decide) (by native_decide)]")
+                print("  rw [hCount]")
+                print()
+
+                coeff_name = gcd_coeff_theorem_name(q, g)
+                gcd_coeff_facts.append(coeff_name)
+                print(f"theorem {coeff_name} :")
+                print(f"    ramanujanGcdClassCoeffRat {q} {g} = {fraction_to_q_literal(gcd_coeff_q[g])} := by")
+                print("  native_decide")
+                print()
+
+            if observable_total != average_by_q[q]:
+                raise ValueError(
+                    f"observable average mismatch for q={q}: computed {observable_total}, payload {average_by_q[q]}"
+                )
+            if coeff_q * observable_total != weight_by_q[q]:
+                raise ValueError(
+                    f"weight mismatch for q={q}: computed {coeff_q * observable_total}, payload {weight_by_q[q]}"
+                )
+
+            print(f"theorem {theorem_prefix(q)}_observableAverage :")
+            print(f"    ramanujanObservableWindowAverageRat X0 {q} = {fraction_to_q_literal(observable_total)} := by")
+            print("  unfold ramanujanObservableWindowAverageRat")
+            print(f"  rw [show Nat.divisors {q} = ({nat_list_to_lean_finset_literal(divs_q)} : Finset ℕ) by native_decide]")
+            emit_norm_num_fact_list(gcd_coeff_facts + avg_facts)
+            print()
+
+            print(f"theorem {theorem_prefix(q)}_coeff :")
+            print(f"    surrogateNormalizedSigmaTruncSummandCoeffRat {q} = {fraction_to_q_literal(coeff_q)} := by")
+            print("  native_decide")
+            print()
+
+            print(f"theorem {theorem_prefix(q)}_weight :")
+            print(f"    surrogatePeriodicMainMeanProductWeightRat X0 {q} = {fraction_to_q_literal(weight_by_q[q])} := by")
+            print("  unfold surrogatePeriodicMainMeanProductWeightRat")
+            print(f"  rw [{theorem_prefix(q)}_coeff, {theorem_prefix(q)}_observableAverage]")
+            print("  norm_num")
+            print()
+
+        print(f"theorem PeriodicMainNonDyadicLCMWeight{label}_weight_eq_on_QSet")
+        print(f"    (q : ℕ) (hq : q ∈ PeriodicMainNonDyadicLCMWeight{label}QSet) :")
+        print("    surrogatePeriodicMainMeanProductWeightRat X0 q")
+        print(f"      = PeriodicMainNonDyadicLCMWeight{label}Table q := by")
+        print("  unfold PeriodicMainNonDyadicLCMWeight" + label + "QSet at hq")
+        print("  fin_cases hq")
+        for q in selected_q:
+            print(f"  · simp [PeriodicMainNonDyadicLCMWeight{label}Table, {theorem_prefix(q)}_weight]")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_wrapper_lean_file(
+    *,
+    payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    start: int,
+    count: int,
+    order: str,
+    fiber_module_prefix: str,
+    fiber_label_prefix: str,
+    fiber_chunk_size: int,
+    weight_module_prefix: str,
+    weight_label_prefix: str,
+    weight_chunk_size: int,
+) -> str:
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if count <= 0:
+        raise SystemExit("--periodic-main-lcm-count must be positive")
+    if weight_chunk_size <= 0:
+        raise SystemExit("--periodic-main-lcm-weight-chunk-size must be positive")
+    if fiber_chunk_size <= 0:
+        raise SystemExit("--periodic-main-lcm-fiber-chunk-size must be positive")
+
+    fibers_all = list(payload.get("lcm_fibers", []))
+    if order == "abs":
+        fibers_all.sort(
+            key=lambda fiber: abs(Fraction(int(fiber["total_num"]), int(fiber["total_den"]))),
+            reverse=True,
+        )
+    elif order != "index":
+        raise SystemExit(f"unknown lcm wrapper order: {order}")
+
+    if start < 0 or start > len(fibers_all):
+        raise SystemExit(f"--periodic-main-lcm-start={start} out of range for {len(fibers_all)} fibers")
+    selected = fibers_all[start:min(len(fibers_all), start + count)]
+    if not selected:
+        raise SystemExit("selected lcm wrapper slice is empty")
+
+    weights_all = sorted(list(payload.get("weights", [])), key=lambda w: int(w["q"]))
+    q_index = {int(weight["q"]): i for i, weight in enumerate(weights_all)}
+
+    selected_q = sorted({
+        int(record["q"])
+        for fiber in selected
+        for record in list(fiber.get("records", []))
+        if int(record["q"]) != int(record["q2"])
+    } | {
+        int(record["q2"])
+        for fiber in selected
+        for record in list(fiber.get("records", []))
+        if int(record["q"]) != int(record["q2"])
+    })
+    missing_q = [q for q in selected_q if q not in q_index]
+    if missing_q:
+        raise SystemExit(f"payload is missing weight indices for q values: {missing_q[:10]}")
+
+    def weight_chunk_bounds(q: int) -> tuple[int, int]:
+        i = q_index[q]
+        chunk_start = (i // weight_chunk_size) * weight_chunk_size
+        chunk_end = min(len(weights_all), chunk_start + weight_chunk_size)
+        return chunk_start, chunk_end
+
+    def weight_theorem(q: int) -> str:
+        chunk_start, chunk_end = weight_chunk_bounds(q)
+        return (
+            f"PeriodicMainNonDyadicLCMWeight{weight_label_prefix}"
+            f"{chunk_start:04d}_{chunk_end:04d}_{q}_weight"
+        )
+
+    weight_imports = []
+    for chunk_start, chunk_end in sorted({weight_chunk_bounds(q) for q in selected_q}):
+        weight_imports.append(f"{weight_module_prefix}{chunk_start:04d}_{chunk_end:04d}")
+
+    end = start + len(selected)
+    fiber_import_start = (start // fiber_chunk_size) * fiber_chunk_size
+    fiber_import_end = min(len(fibers_all), fiber_import_start + fiber_chunk_size)
+    if end > fiber_import_end:
+        raise SystemExit(
+            "LCM wrapper slices may not cross the imported fiber module boundary: "
+            f"slice [{start},{end}) crosses [{fiber_import_start},{fiber_import_end}); "
+            "reduce --periodic-main-lcm-count or align --periodic-main-lcm-start"
+        )
+    label = f"{label_prefix}{start:04d}_{end:04d}"
+    fiber_label = f"{fiber_label_prefix}{fiber_import_start:04d}_{fiber_import_end:04d}"
+    fiber_module = f"{fiber_module_prefix}{fiber_import_start:04d}_{fiber_import_end:04d}"
+    path = os.path.join(out_dir, f"{file_prefix}{start:04d}_{end:04d}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(f"import Goldbach.Cert.MajorArcModules.{fiber_module}")
+        for module in weight_imports:
+            print(f"import Goldbach.Cert.MajorArcModules.{module}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/-")
+        print("  Wrapper layer for the Route A-LCM non-dyadic compression surface.")
+        print("  These theorems discharge the scalar and one-variable weight assumptions")
+        print("  of the arithmetic fiber modules, leaving only aggregate component-zero")
+        print("  assumptions for the periodic-main structural layer.")
+        print("-/")
+        print()
+
+        for local_index, fiber in enumerate(selected):
+            global_fiber_index = start + local_index
+            imported_local_index = global_fiber_index - fiber_import_start
+            fiber_name = f"PeriodicMainNonDyadicLCM{fiber_label}Fiber{imported_local_index:03d}"
+            records = sorted(
+                [
+                    (
+                        int(record["q"]),
+                        int(record["q2"]),
+                        Fraction(int(record["value_num"]), int(record["value_den"])),
+                        int(fiber["scalar"]),
+                    )
+                    for record in list(fiber.get("records", []))
+                    if int(record["q"]) != int(record["q2"])
+                ],
+                key=lambda r: (r[0], r[1]),
+            )
+            fiber_q = sorted({modulus for q, q2, _value, _scalar in records for modulus in (q, q2)})
+
+            pair_value_theorems: list[tuple[str, int, int]] = []
+            for pair_index, (q, q2, value, scalar) in enumerate(records):
+                value_name = f"PeriodicMainNonDyadicLCM{label}Fiber{local_index:03d}_pair{pair_index:03d}_value"
+                pair_value_theorems.append((value_name, q, q2))
+                print(f"theorem {value_name} :")
+                print(f"    surrogatePeriodicMainLCMCompressedPairValueRat X0 ({q}, {q2})")
+                print(f"      = {fraction_to_q_literal(value)} := by")
+                print("  unfold surrogatePeriodicMainLCMCompressedPairValueRat")
+                print("  have hs :")
+                print(f"      surrogatePeriodicMainMeanProductPairScalarRat {q} {q2} = ({scalar} : ℚ) := by")
+                print("    norm_num [surrogatePeriodicMainMeanProductPairScalarRat,")
+                print("      evenRamanujanBlockCountRat, Goldbach.BankParams.H]")
+                print(f"  rw [hs, {weight_theorem(q)},")
+                print(f"    {weight_theorem(q2)}]")
+                print("  norm_num")
+                print()
+
+            print(f"theorem PeriodicMainNonDyadicLCM{label}Fiber{local_index:03d}_actual_sum")
+            print(f"    (hzero : ∀ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p) :")
+            print(f"    (∑ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p)")
+            print(f"      = {fiber_name}Total := by")
+            print("  calc")
+            print(f"    (∑ p ∈ {fiber_name}Pairs,")
+            print("      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p)")
+            print(f"        = (∑ p ∈ {fiber_name}Pairs,")
+            print("          surrogatePeriodicMainLCMCompressedPairValueRat X0 p) := by")
+            print("            exact surrogatePeriodicMainActiveOrderedPairSummandRat_sum_eq_lcmCompressedPairValue_sum_of_componentZeros")
+            print("              (X := X0)")
+            print(f"              (pairs := {fiber_name}Pairs)")
+            print(f"              {fiber_name}_pair_ne")
+            print("              hzero")
+            print(f"    _ = {fiber_name}Total := by")
+            print("      have hsum :")
+            print(f"          (∑ p ∈ {fiber_name}Pairs,")
+            print("            surrogatePeriodicMainLCMCompressedPairValueRat X0 p)")
+            print("            =")
+            if pair_value_theorems:
+                for i, (_value_name, q, q2) in enumerate(pair_value_theorems):
+                    prefix = "          " if i == 0 else "          + "
+                    print(f"{prefix}surrogatePeriodicMainLCMCompressedPairValueRat X0 ({q}, {q2})")
+            else:
+                print("          0")
+            print("            := by")
+            print(f"        simp (config := {{ maxSteps := 1000000 }}) [PeriodicMainNonDyadicLCM{fiber_label}Fiber{imported_local_index:03d}Pairs,")
+            print(f"          PeriodicMainNonDyadicLCM{fiber_label}Fiber{imported_local_index:03d}RawPairs,")
+            print("          Finset.sum_filter]")
+            print("        try ac_rfl")
+            print("      rw [hsum]")
+            for value_name, _q, _q2 in pair_value_theorems:
+                print(f"      rw [{value_name}]")
+            print(f"      unfold {fiber_name}Total")
+            print("      norm_num")
+            print()
+
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_component_zero_lean_file(
+    *,
+    X: int,
+    payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    start: int,
+    count: int,
+    order: str,
+    fiber_module_prefix: str,
+    fiber_label_prefix: str,
+    fiber_chunk_size: int,
+    record_start: int = 0,
+    record_limit: int = 0,
+) -> str:
+    """Emit separated raw/left/right component-zero certificates for LCM fibers.
+
+    This intentionally avoids `native_decide` on the whole component sum, which is
+    too coarse.  It proves small divisor/count facts independently, rewrites the
+    local component sums to explicit rational row totals, and then exposes the
+    fiber-level component-zero hypothesis consumed by the existing LCM wrappers.
+    """
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if count <= 0:
+        raise SystemExit("--periodic-main-lcm-count must be positive")
+    if fiber_chunk_size <= 0:
+        raise SystemExit("--periodic-main-lcm-fiber-chunk-size must be positive")
+    if record_start < 0:
+        raise SystemExit("--periodic-main-lcm-record-start must be nonnegative")
+    if record_limit < 0:
+        raise SystemExit("--periodic-main-lcm-record-limit must be nonnegative")
+
+    fibers_all = list(payload.get("lcm_fibers", []))
+    if order == "abs":
+        fibers_all.sort(
+            key=lambda fiber: abs(Fraction(int(fiber["total_num"]), int(fiber["total_den"]))),
+            reverse=True,
+        )
+    elif order != "index":
+        raise SystemExit(f"unknown lcm component-zero order: {order}")
+
+    if start < 0 or start > len(fibers_all):
+        raise SystemExit(f"--periodic-main-lcm-start={start} out of range for {len(fibers_all)} fibers")
+    selected = fibers_all[start:min(len(fibers_all), start + count)]
+    if not selected:
+        raise SystemExit("selected lcm component-zero slice is empty")
+
+    end = start + len(selected)
+    fiber_import_start = (start // fiber_chunk_size) * fiber_chunk_size
+    fiber_import_end = min(len(fibers_all), fiber_import_start + fiber_chunk_size)
+    if end > fiber_import_end:
+        raise SystemExit(
+            "LCM component-zero slices may not cross the imported fiber module boundary: "
+            f"slice [{start},{end}) crosses [{fiber_import_start},{fiber_import_end}); "
+            "reduce --periodic-main-lcm-count or align --periodic-main-lcm-start"
+        )
+
+    selected_records: list[tuple[int, int]] = []
+    for fiber in selected:
+        raw_records = sorted(
+            [
+                (int(record["q"]), int(record["q2"]))
+                for record in list(fiber.get("records", []))
+                if int(record["q"]) != int(record["q2"])
+            ],
+            key=lambda r: (r[0], r[1]),
+        )
+        if record_start > 0 or record_limit > 0:
+            record_end = None if record_limit == 0 else record_start + record_limit
+            raw_records = raw_records[record_start:record_end]
+        for q, q2 in raw_records:
+            selected_records.append((q, q2))
+    selected_q = sorted({m for pair in selected_records for m in pair})
+
+    mu, phi = mobius_phi_sieve(Q0)
+    spf = spf_sieve(Q0)
+    even_card = len(even_window_points(X))
+    exact_ctx = build_surrogate_boundary_exact_context(X, mu, phi, spf, even_card, selected_q)
+
+    label = f"{label_prefix}{start:04d}_{end:04d}"
+    fiber_label = f"{fiber_label_prefix}{fiber_import_start:04d}_{fiber_import_end:04d}"
+    fiber_module = f"{fiber_module_prefix}{fiber_import_start:04d}_{fiber_import_end:04d}"
+    record_suffix = ""
+    if record_start > 0 or record_limit > 0:
+        record_end = "end" if record_limit == 0 else f"{record_start + record_limit:04d}"
+        record_suffix = f"Records{record_start:04d}_{record_end}"
+    path = os.path.join(out_dir, f"{file_prefix}{start:04d}_{end:04d}{record_suffix}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    def count_theorem_prefix(q: int, q2: int) -> str:
+        return f"PeriodicMainNonDyadicLCM{label}_{q}_{q2}"
+
+    emitted_pair_theorems: dict[tuple[int, int], str] = {}
+
+    def emit_pair_component_zero_theorem(q: int, q2: int) -> str:
+        name = count_theorem_prefix(q, q2)
+        theorem_name = f"{name}_componentZeros"
+        reverse_theorem_name = emitted_pair_theorems.get((q2, q))
+        if reverse_theorem_name is not None:
+            print(f"theorem {theorem_name} :")
+            print(f"    surrogatePeriodicMainAggregateComponentsZeroAtX0Rat ({q}, {q2}) := by")
+            print("  exact surrogatePeriodicMainAggregateComponentsZeroAtX0Rat_swap")
+            print(f"    ({reverse_theorem_name})")
+            print()
+            emitted_pair_theorems[(q, q2)] = theorem_name
+            return theorem_name
+
+        divs_q = exact_ctx["divisors_by_q"][q]
+        divs_q2 = exact_ctx["divisors_by_q"][q2]
+        first_even, even_count = full_block_even_progression(X, block_period(q, q2))
+        full_blocks = (H + 1) // block_period(q, q2)
+        full_blocks_rat = Fraction(full_blocks, 1)
+
+        coeff_left = {g: exact_ctx["gcd_coeff_by_q"][q][g] for g in divs_q}
+        coeff_right = {h: exact_ctx["gcd_coeff_by_q"][q2][h] for h in divs_q2}
+        avg_left = {g: exact_ctx["avg_by_q"][q][g] for g in divs_q}
+        avg_right = {h: exact_ctx["avg_by_q"][q2][h] for h in divs_q2}
+        block_left = {
+            g: Fraction(gcd_class_count_in_even_progression(q, g, first_even, even_count, exact_ctx), 1)
+            for g in divs_q
+        }
+        block_right = {
+            h: Fraction(gcd_class_count_in_even_progression(q2, h, first_even, even_count, exact_ctx), 1)
+            for h in divs_q2
+        }
+        pair_count = {
+            (g, h): Fraction(
+                gcd_class_pair_count_in_even_progression(q, q2, g, h, first_even, even_count, exact_ctx),
+                1,
+            )
+            for g in divs_q
+            for h in divs_q2
+        }
+
+        raw_terms: dict[tuple[int, int], Fraction] = {}
+        left_terms: dict[tuple[int, int], Fraction] = {}
+        right_terms: dict[tuple[int, int], Fraction] = {}
+        raw_rows: dict[int, Fraction] = {g: Fraction(0, 1) for g in divs_q}
+        left_rows: dict[int, Fraction] = {g: Fraction(0, 1) for g in divs_q}
+        right_rows: dict[int, Fraction] = {g: Fraction(0, 1) for g in divs_q}
+        for g in divs_q:
+            for h in divs_q2:
+                coeff = coeff_left[g] * coeff_right[h] * full_blocks_rat
+                raw = coeff * pair_count[(g, h)]
+                left = coeff * avg_right[h] * block_left[g]
+                right = coeff * avg_left[g] * block_right[h]
+                raw_terms[(g, h)] = raw
+                left_terms[(g, h)] = left
+                right_terms[(g, h)] = right
+                raw_rows[g] += raw
+                left_rows[g] += left
+                right_rows[g] += right
+
+        raw_total = sum(raw_rows.values(), Fraction(0, 1))
+        left_total = sum(left_rows.values(), Fraction(0, 1))
+        right_total = sum(right_rows.values(), Fraction(0, 1))
+        block_left_total = sum(
+            (coeff_left[g] * block_left[g] for g in divs_q),
+            Fraction(0, 1),
+        )
+        block_right_total = sum(
+            (coeff_right[h] * block_right[h] for h in divs_q2),
+            Fraction(0, 1),
+        )
+        avg_left_total = sum(
+            (coeff_left[g] * avg_left[g] for g in divs_q),
+            Fraction(0, 1),
+        )
+        avg_right_total = sum(
+            (coeff_right[h] * avg_right[h] for h in divs_q2),
+            Fraction(0, 1),
+        )
+        if raw_total != 0 or left_total != 0 or right_total != 0:
+            raise SystemExit(
+                f"component-zero mismatch for ({q},{q2}): "
+                f"raw={raw_total} left={left_total} right={right_total}"
+            )
+        left_zero_by_block = block_left_total == 0
+        left_zero_by_average = not left_zero_by_block and avg_right_total == 0
+        right_zero_by_block = block_right_total == 0
+        right_zero_by_average = not right_zero_by_block and avg_left_total == 0
+        if not left_zero_by_block and not left_zero_by_average:
+            raise SystemExit(
+                f"left component zero for ({q},{q2}) does not factor through a zero block or average: "
+                f"block={block_left_total} avg={avg_right_total}"
+            )
+        if not right_zero_by_block and not right_zero_by_average:
+            raise SystemExit(
+                f"right component zero for ({q},{q2}) does not factor through a zero block or average: "
+                f"block={block_right_total} avg={avg_left_total}"
+            )
+
+        print(f"theorem {theorem_name} :")
+        print(f"    surrogatePeriodicMainAggregateComponentsZeroAtX0Rat ({q}, {q2}) := by")
+        print(f"  have hDivLeft : Nat.divisors {q} = ({lean_nat_list(divs_q)} : List ℕ).toFinset := by")
+        print("    decide")
+        if left_zero_by_block:
+            print(f"  have hRawBlockLeft : rawRamanujanPeriodicBlockSumRat X0 {q} {q2} {q} = 0 := by")
+            print("    native_decide")
+        if left_zero_by_average:
+            print(f"  have hAverageRight : ramanujanObservableWindowAverageRat X0 {q2} = 0 := by")
+            print("    native_decide")
+        if right_zero_by_block:
+            print(f"  have hRawBlockRight : rawRamanujanPeriodicBlockSumRat X0 {q} {q2} {q2} = 0 := by")
+            print("    native_decide")
+        if right_zero_by_average:
+            print(f"  have hAverageLeft : ramanujanObservableWindowAverageRat X0 {q} = 0 := by")
+            print("    native_decide")
+
+        for g in divs_q:
+            row_value = raw_rows[g]
+            print(f"  have hRawRow_{g} :")
+            print(f"      (∑ h ∈ Nat.divisors {q2},")
+            print(f"        ramanujanGcdClassCoeffRat {q} {g} * ramanujanGcdClassCoeffRat {q2} h")
+            print(f"          * (((H + 1) / centeredRamanujanPairBlockPeriod {q} {q2} : ℕ) : ℚ)")
+            print(f"          * rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} {g} h) = {fraction_to_q_literal(row_value)} := by")
+            print("    native_decide")
+            print(f"  have hRawRow_{g}_lcm :")
+            print(f"      (∑ h ∈ Nat.divisors {q2},")
+            print(f"        ramanujanGcdClassCoeffRat {q} {g} * ramanujanGcdClassCoeffRat {q2} h")
+            print(f"          * (((H + 1) / (2 * Nat.lcm {q} {q2}) : ℕ) : ℚ)")
+            print(f"          * rawEvenRamanujanGcdClassPairBlockResolvedCountRat X0 {q} {q2} {g} h) = {fraction_to_q_literal(row_value)} := by")
+            print("    simpa [centeredRamanujanPairBlockPeriod] using " + f"hRawRow_{g}")
+
+        print(f"  have hRaw : scaledRawRamanujanPeriodicPairBlockSumRat X0 {q} {q2} = 0 := by")
+        print("    unfold scaledRawRamanujanPeriodicPairBlockSumRat")
+        print("    rw [hDivLeft]")
+        print("    simp [" + ", ".join([f"hRawRow_{g}_lcm" for g in divs_q]) + "]")
+        print("    try norm_num")
+        print(f"  have hLeft : scaledRawRamanujanPeriodicLeftCorrectionSumRat X0 {q} {q2} = 0 := by")
+        print("    rw [scaledRawRamanujanPeriodicLeftCorrectionSumRat_eq_block_sum_mul_average]")
+        if left_zero_by_block:
+            print("    rw [hRawBlockLeft]")
+        else:
+            print("    rw [hAverageRight]")
+        print("    ring")
+        print(f"  have hRight : scaledRawRamanujanPeriodicRightCorrectionSumRat X0 {q} {q2} = 0 := by")
+        print("    rw [scaledRawRamanujanPeriodicRightCorrectionSumRat_eq_average_mul_block_sum]")
+        if right_zero_by_block:
+            print("    rw [hRawBlockRight]")
+        else:
+            print("    rw [hAverageLeft]")
+        print("    ring")
+        print("  exact ⟨hRaw, hLeft, hRight⟩")
+        print()
+        emitted_pair_theorems[(q, q2)] = theorem_name
+        return theorem_name
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(f"import Goldbach.Cert.MajorArcModules.{fiber_module}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated component-zero certificates for selected non-dyadic LCM fibers. -/")
+        print()
+
+        for local_index, fiber in enumerate(selected):
+            global_fiber_index = start + local_index
+            imported_local_index = global_fiber_index - fiber_import_start
+            fiber_name = f"PeriodicMainNonDyadicLCM{fiber_label}Fiber{imported_local_index:03d}"
+            records = sorted(
+                [
+                    (int(record["q"]), int(record["q2"]))
+                    for record in list(fiber.get("records", []))
+                    if int(record["q"]) != int(record["q2"])
+                ],
+                key=lambda r: (r[0], r[1]),
+            )
+            if record_start > 0 or record_limit > 0:
+                record_end = None if record_limit == 0 else record_start + record_limit
+                records = records[record_start:record_end]
+            pair_theorems = [emit_pair_component_zero_theorem(q, q2) for q, q2 in records]
+            if record_start == 0 and record_limit == 0:
+                print(f"theorem PeriodicMainNonDyadicLCM{label}Fiber{local_index:03d}_componentZeros")
+                print(f"    (p : ℕ × ℕ) (hp : p ∈ {fiber_name}Pairs) :")
+                print("    surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p := by")
+                print(f"  change p ∈ {fiber_name}RawPairs.filter (fun p => p.1 ≠ p.2) at hp")
+                print("  have hraw := (Finset.mem_filter.mp hp).1")
+                print("  fin_cases hraw")
+                for theorem_name in pair_theorems:
+                    print(f"  · exact {theorem_name}")
+                print()
+
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def parse_lcm_record_ranges(spec: str) -> list[tuple[int, int]]:
+    if not spec:
+        raise SystemExit("--periodic-main-lcm-record-ranges is required")
+    ranges: list[tuple[int, int]] = []
+    for part in spec.split(","):
+        item = part.strip()
+        if not item:
+            continue
+        if ":" not in item:
+            raise SystemExit(f"invalid record range {item!r}; expected START:END")
+        raw_start, raw_end = item.split(":", 1)
+        try:
+            start = int(raw_start)
+            end = int(raw_end)
+        except ValueError as exc:
+            raise SystemExit(f"invalid record range {item!r}; bounds must be integers") from exc
+        if start < 0 or end <= start:
+            raise SystemExit(f"invalid record range {item!r}; require 0 <= START < END")
+        ranges.append((start, end))
+    if not ranges:
+        raise SystemExit("--periodic-main-lcm-record-ranges did not contain any ranges")
+    ranges.sort()
+    for (prev_start, prev_end), (start, end) in zip(ranges, ranges[1:]):
+        if start < prev_end:
+            raise SystemExit(
+                "overlapping record ranges are not allowed: "
+                f"{prev_start}:{prev_end} overlaps {start}:{end}"
+            )
+    return ranges
+
+
+def emit_periodic_main_nondyadic_lcm_component_zero_assembly_lean_file(
+    *,
+    payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    start: int,
+    order: str,
+    fiber_module_prefix: str,
+    fiber_label_prefix: str,
+    fiber_chunk_size: int,
+    record_ranges: list[tuple[int, int]],
+) -> str:
+    """Emit a light component-zero assembly file for one sliced LCM fiber."""
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if fiber_chunk_size <= 0:
+        raise SystemExit("--periodic-main-lcm-fiber-chunk-size must be positive")
+
+    fibers_all = list(payload.get("lcm_fibers", []))
+    if order == "abs":
+        fibers_all.sort(
+            key=lambda fiber: abs(Fraction(int(fiber["total_num"]), int(fiber["total_den"]))),
+            reverse=True,
+        )
+    elif order != "index":
+        raise SystemExit(f"unknown lcm component-zero order: {order}")
+
+    if start < 0 or start >= len(fibers_all):
+        raise SystemExit(f"--periodic-main-lcm-start={start} out of range for {len(fibers_all)} fibers")
+
+    end = start + 1
+    fiber = fibers_all[start]
+    records = sorted(
+        [
+            (int(record["q"]), int(record["q2"]))
+            for record in list(fiber.get("records", []))
+            if int(record["q"]) != int(record["q2"])
+        ],
+        key=lambda r: (r[0], r[1]),
+    )
+    if not records:
+        raise SystemExit(f"selected lcm fiber {start} has no off-diagonal records")
+
+    covered: list[tuple[int, int]] = []
+    for range_start, range_end in record_ranges:
+        if range_end > len(records):
+            raise SystemExit(
+                f"record range {range_start}:{range_end} exceeds fiber record count {len(records)}"
+            )
+        covered.extend(records[range_start:range_end])
+    if covered != records:
+        missing = [idx for idx, record in enumerate(records) if record not in covered]
+        raise SystemExit(
+            "record ranges must cover the selected fiber exactly in sorted order; "
+            f"missing/ordered mismatch near indices {missing[:10]}"
+        )
+
+    label = f"{label_prefix}{start:04d}_{end:04d}"
+    fiber_import_start = (start // fiber_chunk_size) * fiber_chunk_size
+    fiber_import_end = min(len(fibers_all), fiber_import_start + fiber_chunk_size)
+    local_index = start - fiber_import_start
+    fiber_label = f"{fiber_label_prefix}{fiber_import_start:04d}_{fiber_import_end:04d}"
+    fiber_name = f"PeriodicMainNonDyadicLCM{fiber_label}Fiber{local_index:03d}"
+
+    imports = []
+    for range_start, range_end in record_ranges:
+        record_suffix = f"Records{range_start:04d}_{range_end:04d}"
+        imports.append(f"{file_prefix}{start:04d}_{end:04d}{record_suffix}")
+
+    path = os.path.join(out_dir, f"{file_prefix}{start:04d}_{end:04d}Assembly.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    def theorem_name(q: int, q2: int) -> str:
+        return f"PeriodicMainNonDyadicLCM{label}_{q}_{q2}_componentZeros"
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        for module in imports:
+            print(f"import Goldbach.Cert.MajorArcModules.{module}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated component-zero assembly for one sliced non-dyadic LCM fiber. -/")
+        print()
+        print(f"theorem PeriodicMainNonDyadicLCM{label}Fiber000_componentZeros")
+        print(f"    (p : ℕ × ℕ) (hp : p ∈ {fiber_name}Pairs) :")
+        print("    surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p := by")
+        print(f"  change p ∈ {fiber_name}RawPairs.filter (fun p => p.1 ≠ p.2) at hp")
+        print("  have hraw := (Finset.mem_filter.mp hp).1")
+        print("  fin_cases hraw")
+        for q, q2 in records:
+            print(f"  · exact {theorem_name(q, q2)}")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_component_zero_group_bridge_lean_file(
+    *,
+    payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    group_index: int,
+    lcm_order: str,
+    lcm_group_chunk_size: int,
+    component_module_prefix: str,
+    component_label_prefix: str,
+    lcm_group_module_prefix: str,
+    lcm_group_label_prefix: str,
+) -> str:
+    """Emit a group-level bridge from per-fiber component-zero proofs.
+
+    This consumes one-fiber component-zero modules of the form
+    `<component_module_prefix><i>_<i+1>.lean` or their sliced assembly module
+    `<component_module_prefix><i>_<i+1>Assembly.lean`.
+    """
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if group_index < 0:
+        raise SystemExit("--periodic-main-lcm-group-index must be nonnegative")
+    if lcm_group_chunk_size <= 0:
+        raise SystemExit("--periodic-main-lcm-containment-chunk-size must be positive")
+
+    fibers_all = _periodic_main_lcm_sorted_fibers(payload, lcm_order)
+    start = group_index * lcm_group_chunk_size
+    end = min(len(fibers_all), start + lcm_group_chunk_size)
+    if start >= len(fibers_all):
+        raise SystemExit(f"group index {group_index} out of range for {len(fibers_all)} lcm fibers")
+
+    selected = fibers_all[start:end]
+    group_label = f"{lcm_group_label_prefix}{group_index:03d}"
+    path = os.path.join(out_dir, f"{file_prefix}{group_index:03d}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    def component_tag(global_index: int) -> str:
+        return f"{global_index:04d}_{global_index + 1:04d}"
+
+    def component_module(global_index: int) -> str:
+        base = f"{component_module_prefix}{component_tag(global_index)}"
+        assembly_path = os.path.join(out_dir, f"{base}Assembly.lean")
+        if os.path.exists(assembly_path):
+            return f"{base}Assembly"
+        return base
+
+    def component_theorem(global_index: int) -> str:
+        return (
+            f"PeriodicMainNonDyadicLCM{component_label_prefix}"
+            f"{component_tag(global_index)}Fiber000_componentZeros"
+        )
+
+    def upto_name(local_index: int) -> str:
+        return f"{group_label}PairsUpTo{local_index:03d}"
+
+    def upto_component_theorem(local_index: int) -> str:
+        return f"{label_prefix}Group{group_index:03d}PairsUpTo{local_index:03d}_componentZeros"
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(f"import Goldbach.Cert.MajorArcModules.{lcm_group_module_prefix}{group_index:03d}")
+        for global_index in range(start, end):
+            print(f"import Goldbach.Cert.MajorArcModules.{component_module(global_index)}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open scoped BigOperators")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated group bridge from LCM component-zero fibers to actual sums. -/")
+        print()
+
+        for local_index, _fiber in enumerate(selected):
+            global_index = start + local_index
+            theorem_name = upto_component_theorem(local_index)
+            set_name = upto_name(local_index)
+            if local_index == 0:
+                print(f"theorem {theorem_name}")
+                print(f"    (p : ℕ × ℕ) (hp : p ∈ {set_name}) :")
+                print("    surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p := by")
+                print(f"  exact {component_theorem(global_index)} p")
+                print(f"    (by simpa [{set_name}] using hp)")
+            else:
+                prev_theorem = upto_component_theorem(local_index - 1)
+                print(f"theorem {theorem_name}")
+                print(f"    (p : ℕ × ℕ) (hp : p ∈ {set_name}) :")
+                print("    surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p := by")
+                print(f"  rw [{set_name}] at hp")
+                print("  rcases Finset.mem_union.mp hp with hp | hp")
+                print(f"  · exact {prev_theorem} p hp")
+                print(f"  · exact {component_theorem(global_index)} p hp")
+            print()
+
+        final_component = f"{label_prefix}Group{group_index:03d}_componentZeros"
+        print(f"theorem {final_component}")
+        print(f"    (p : ℕ × ℕ) (hp : p ∈ {group_label}Pairs) :")
+        print("    surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p := by")
+        print(f"  exact {upto_component_theorem(len(selected) - 1)} p")
+        print(f"    (by simpa [{group_label}Pairs] using hp)")
+        print()
+        print(f"theorem {label_prefix}Group{group_index:03d}_actual_sum :")
+        print(f"    (∑ p ∈ {group_label}Pairs,")
+        print("      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p)")
+        print(f"      = {group_label}Total := by")
+        print(f"  exact {group_label}_actual_sum {final_component}")
+        print()
+        print(f"/- component-zero bridge group index={group_index}, fiber range=[{start},{end}) -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_group_lean_file(
+    *,
+    payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    group_index: int,
+    start: int,
+    count: int,
+    order: str,
+    wrapper_module_prefix: str,
+    wrapper_label_prefix: str,
+    wrapper_chunk_size: int,
+    fiber_label_prefix: str,
+    fiber_chunk_size: int,
+) -> str:
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if group_index < 0:
+        raise SystemExit("--periodic-main-lcm-group-index must be nonnegative")
+    if start < 0:
+        raise SystemExit("--periodic-main-lcm-start must be nonnegative")
+    if count <= 0:
+        raise SystemExit("--periodic-main-lcm-count must be positive")
+    if wrapper_chunk_size <= 0:
+        raise SystemExit("--periodic-main-lcm-wrapper-chunk-size must be positive")
+    if fiber_chunk_size <= 0:
+        raise SystemExit("--periodic-main-lcm-fiber-chunk-size must be positive")
+
+    fibers_all = list(payload.get("lcm_fibers", []))
+    if order == "abs":
+        fibers_all.sort(
+            key=lambda fiber: abs(Fraction(int(fiber["total_num"]), int(fiber["total_den"]))),
+            reverse=True,
+        )
+    elif order != "index":
+        raise SystemExit(f"unknown lcm group order: {order}")
+    if start > len(fibers_all):
+        raise SystemExit(f"--periodic-main-lcm-start={start} out of range for {len(fibers_all)} fibers")
+    selected = fibers_all[start:min(len(fibers_all), start + count)]
+    if not selected:
+        raise SystemExit("selected lcm group slice is empty")
+
+    end = start + len(selected)
+    label = f"{label_prefix}{group_index:03d}"
+    path = os.path.join(out_dir, f"{file_prefix}{group_index:03d}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    def wrapper_chunk_bounds(global_index: int) -> tuple[int, int]:
+        chunk_start = (global_index // wrapper_chunk_size) * wrapper_chunk_size
+        chunk_end = min(len(fibers_all), chunk_start + wrapper_chunk_size)
+        return chunk_start, chunk_end
+
+    wrapper_imports = []
+    for chunk_start, chunk_end in sorted({wrapper_chunk_bounds(i) for i in range(start, end)}):
+        wrapper_imports.append(f"{wrapper_module_prefix}{chunk_start:04d}_{chunk_end:04d}")
+
+    def fiber_name(global_index: int) -> str:
+        fiber_import_start = (global_index // fiber_chunk_size) * fiber_chunk_size
+        fiber_import_end = min(len(fibers_all), fiber_import_start + fiber_chunk_size)
+        local_index = global_index - fiber_import_start
+        return (
+            f"PeriodicMainNonDyadicLCM{fiber_label_prefix}"
+            f"{fiber_import_start:04d}_{fiber_import_end:04d}Fiber{local_index:03d}"
+        )
+
+    def wrapper_actual_theorem(global_index: int) -> str:
+        chunk_start, chunk_end = wrapper_chunk_bounds(global_index)
+        local_index = global_index - chunk_start
+        return (
+            f"PeriodicMainNonDyadicLCM{wrapper_label_prefix}"
+            f"{chunk_start:04d}_{chunk_end:04d}Fiber{local_index:03d}_actual_sum"
+        )
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        for module in wrapper_imports:
+            print(f"import Goldbach.Cert.MajorArcModules.{module}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated LCM group assembly for non-dyadic periodic-main fibers. -/")
+        print()
+
+        actual = "surrogatePeriodicMainActiveOrderedPairSummandRat X0"
+        zero = "surrogatePeriodicMainAggregateComponentsZeroAtX0Rat"
+        upto_sets = [f"{label}PairsUpTo{idx:03d}" for idx in range(len(selected))]
+        upto_totals = [f"{label}TotalUpTo{idx:03d}" for idx in range(len(selected))]
+        upto_lcms = [f"{label}LCMsUpTo{idx:03d}" for idx in range(len(selected))]
+
+        for local_idx in range(len(selected)):
+            global_index = start + local_idx
+            fname = fiber_name(global_index)
+            fiber_lcm = int(selected[local_idx]["lcm"])
+            set_name = upto_sets[local_idx]
+            total_name = upto_totals[local_idx]
+            lcms_name = upto_lcms[local_idx]
+            if local_idx == 0:
+                print(f"def {set_name} : Finset (ℕ × ℕ) :=")
+                print(f"  {fname}Pairs")
+                print()
+                print(f"def {total_name} : ℚ :=")
+                print(f"  {fname}Total")
+                print()
+                print(f"def {lcms_name} : Finset ℕ :=")
+                print(f"  ([{fiber_lcm}] : List ℕ).toFinset")
+                print()
+                print(f"theorem {set_name}_lcm_mem")
+                print(f"    (p : ℕ × ℕ) (hp : p ∈ {set_name}) :")
+                print(f"    Nat.lcm p.1 p.2 ∈ {lcms_name} := by")
+                print(f"  have h := {fname}_lcm_mem p (by simpa [{set_name}] using hp)")
+                print(f"  simpa [{lcms_name}] using h")
+                print()
+                print(f"theorem {set_name}_actual_sum")
+                print(f"    (hzero : ∀ p ∈ {set_name}, {zero} p) :")
+                print(f"    (∑ p ∈ {set_name}, {actual} p) = {total_name} := by")
+                print(f"  simpa [{set_name}, {total_name}] using")
+                print(f"    {wrapper_actual_theorem(global_index)} (by")
+                print("      intro p hp")
+                print(f"      exact hzero p (by simpa [{set_name}] using hp))")
+                print()
+            else:
+                prev_set = upto_sets[local_idx - 1]
+                prev_total = upto_totals[local_idx - 1]
+                prev_lcms = upto_lcms[local_idx - 1]
+                print(f"def {set_name} : Finset (ℕ × ℕ) :=")
+                print(f"  {prev_set} ∪ {fname}Pairs")
+                print()
+                print(f"def {total_name} : ℚ :=")
+                print(f"  {prev_total} + {fname}Total")
+                print()
+                print(f"def {lcms_name} : Finset ℕ :=")
+                print(f"  {prev_lcms} ∪ ([{fiber_lcm}] : List ℕ).toFinset")
+                print()
+                print(f"theorem {prev_set}_disjoint_{fname}Pairs :")
+                print(f"    Disjoint {prev_set} {fname}Pairs := by")
+                print("  exact Finset.pair_disjoint_of_lcm_mem")
+                print(f"    {prev_set}_lcm_mem")
+                print(f"    {fname}_lcm_mem")
+                print("    (by native_decide)")
+                print()
+                print(f"theorem {set_name}_lcm_mem")
+                print(f"    (p : ℕ × ℕ) (hp : p ∈ {set_name}) :")
+                print(f"    Nat.lcm p.1 p.2 ∈ {lcms_name} := by")
+                print(f"  rw [{set_name}] at hp")
+                print("  rcases Finset.mem_union.mp hp with hp | hp")
+                print(f"  · exact Finset.mem_union.mpr (Or.inl ({prev_set}_lcm_mem p hp))")
+                print("  · exact Finset.mem_union.mpr (Or.inr (by")
+                print(f"      have h := {fname}_lcm_mem p hp")
+                print("      simpa using h))")
+                print()
+                print(f"theorem {set_name}_actual_sum")
+                print(f"    (hzero : ∀ p ∈ {set_name}, {zero} p) :")
+                print(f"    (∑ p ∈ {set_name}, {actual} p) = {total_name} := by")
+                print(f"  rw [{set_name}, Finset.sum_union {prev_set}_disjoint_{fname}Pairs]")
+                print(f"  rw [{prev_set}_actual_sum (by")
+                print("    intro p hp")
+                print(f"    exact hzero p (by")
+                print(f"      rw [{set_name}]")
+                print("      exact Finset.mem_union.mpr (Or.inl hp)))]")
+                print(f"  rw [{wrapper_actual_theorem(global_index)} (by")
+                print("    intro p hp")
+                print(f"    exact hzero p (by")
+                print(f"      rw [{set_name}]")
+                print("      exact Finset.mem_union.mpr (Or.inr hp)))]")
+                print("  rfl")
+                print()
+
+        print(f"def {label}Pairs : Finset (ℕ × ℕ) :=")
+        print(f"  {upto_sets[-1]}")
+        print()
+        print(f"def {label}Total : ℚ :=")
+        print(f"  {upto_totals[-1]}")
+        print()
+        print(f"def {label}LCMs : Finset ℕ :=")
+        print(f"  {upto_lcms[-1]}")
+        print()
+        print(f"theorem {label}_lcm_mem")
+        print(f"    (p : ℕ × ℕ) (hp : p ∈ {label}Pairs) :")
+        print(f"    Nat.lcm p.1 p.2 ∈ {label}LCMs := by")
+        print(f"  have h := {upto_sets[-1]}_lcm_mem p (by simpa [{label}Pairs] using hp)")
+        print(f"  simpa [{label}LCMs] using h")
+        print()
+        print(f"theorem {label}_actual_sum")
+        print(f"    (hzero : ∀ p ∈ {label}Pairs, {zero} p) :")
+        print(f"    (∑ p ∈ {label}Pairs, {actual} p) = {label}Total := by")
+        print(f"  simpa [{label}Pairs, {label}Total] using")
+        print(f"    {upto_sets[-1]}_actual_sum (by")
+        print("      intro p hp")
+        print(f"      exact hzero p (by simpa [{label}Pairs] using hp))")
+        print()
+        print(f"/- lcm fiber group index={group_index}, range=[{start},{end}) -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_grouped_final_lean_file(
+    *,
+    payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    target_set_name: str,
+    group_start: int,
+    group_count: int,
+    group_module_prefix: str,
+    group_label_prefix: str,
+    assume_group_actual_sums: bool = False,
+) -> str:
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if group_start < 0:
+        raise SystemExit("--periodic-main-lcm-group-start must be nonnegative")
+    if group_count <= 0:
+        raise SystemExit("--periodic-main-lcm-group-count must be positive")
+
+    label = label_prefix
+    path = os.path.join(out_dir, f"{file_prefix}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    group_indices = list(range(group_start, group_start + group_count))
+    group_sets = [f"{group_label_prefix}{idx:03d}Pairs" for idx in group_indices]
+    group_totals = [f"{group_label_prefix}{idx:03d}Total" for idx in group_indices]
+    group_lcms = [f"{group_label_prefix}{idx:03d}LCMs" for idx in group_indices]
+    group_theorems = [f"{group_label_prefix}{idx:03d}_actual_sum" for idx in group_indices]
+    group_lcm_theorems = [f"{group_label_prefix}{idx:03d}_lcm_mem" for idx in group_indices]
+    group_modules = [f"{group_module_prefix}{idx:03d}" for idx in group_indices]
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        for module in group_modules:
+            print(f"import Goldbach.Cert.MajorArcModules.{module}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated final LCM assembly for the non-dyadic nonzero periodic-main block. -/")
+        print()
+
+        actual = "surrogatePeriodicMainActiveOrderedPairSummandRat X0"
+        zero = "surrogatePeriodicMainAggregateComponentsZeroAtX0Rat"
+        upto_sets = [f"{label}PairsUpTo{idx:03d}" for idx in range(group_count)]
+        upto_totals = [f"{label}TotalUpTo{idx:03d}" for idx in range(group_count)]
+        upto_lcms = [f"{label}LCMsUpTo{idx:03d}" for idx in range(group_count)]
+
+        def group_sum_hyp(idx: int) -> str:
+            return (
+                f"(h{idx:03d} : (∑ p ∈ {group_sets[idx]}, {actual} p)"
+                f" = {group_totals[idx]})"
+            )
+
+        def group_sum_hyp_names(count: int) -> str:
+            return " ".join(f"h{j:03d}" for j in range(count))
+
+        for idx in range(group_count):
+            if idx == 0:
+                print(f"def {upto_sets[idx]} : Finset (ℕ × ℕ) :=")
+                print(f"  {group_sets[idx]}")
+                print()
+                print(f"def {upto_totals[idx]} : ℚ :=")
+                print(f"  {group_totals[idx]}")
+                print()
+                print(f"def {upto_lcms[idx]} : Finset ℕ :=")
+                print(f"  {group_lcms[idx]}")
+                print()
+                print(f"theorem {upto_sets[idx]}_lcm_mem")
+                print(f"    (p : ℕ × ℕ) (hp : p ∈ {upto_sets[idx]}) :")
+                print(f"    Nat.lcm p.1 p.2 ∈ {upto_lcms[idx]} := by")
+                print(f"  have h := {group_lcm_theorems[idx]} p (by simpa [{upto_sets[idx]}] using hp)")
+                print(f"  simpa [{upto_lcms[idx]}] using h")
+                print()
+                if assume_group_actual_sums:
+                    print(f"theorem {upto_sets[idx]}_actual_sum_of_group_actual_sums")
+                    print(f"    {group_sum_hyp(idx)} :")
+                    print(f"    (∑ p ∈ {upto_sets[idx]}, {actual} p) = {upto_totals[idx]} := by")
+                    print(f"  simpa [{upto_sets[idx]}, {upto_totals[idx]}] using h{idx:03d}")
+                else:
+                    print(f"theorem {upto_sets[idx]}_actual_sum")
+                    print(f"    (hzero : ∀ p ∈ {upto_sets[idx]}, {zero} p) :")
+                    print(f"    (∑ p ∈ {upto_sets[idx]}, {actual} p) = {upto_totals[idx]} := by")
+                    print(f"  simpa [{upto_sets[idx]}, {upto_totals[idx]}] using")
+                    print(f"    {group_theorems[idx]} (by")
+                    print("      intro p hp")
+                    print(f"      exact hzero p (by simpa [{upto_sets[idx]}] using hp))")
+                print()
+            else:
+                prev_set = upto_sets[idx - 1]
+                prev_total = upto_totals[idx - 1]
+                prev_lcms = upto_lcms[idx - 1]
+                print(f"def {upto_sets[idx]} : Finset (ℕ × ℕ) :=")
+                print(f"  {prev_set} ∪ {group_sets[idx]}")
+                print()
+                print(f"def {upto_totals[idx]} : ℚ :=")
+                print(f"  {prev_total} + {group_totals[idx]}")
+                print()
+                print(f"def {upto_lcms[idx]} : Finset ℕ :=")
+                print(f"  {prev_lcms} ∪ {group_lcms[idx]}")
+                print()
+                print(f"theorem {prev_set}_disjoint_{group_sets[idx]} :")
+                print(f"    Disjoint {prev_set} {group_sets[idx]} := by")
+                print("  exact Finset.pair_disjoint_of_lcm_mem")
+                print(f"    {prev_set}_lcm_mem")
+                print(f"    {group_lcm_theorems[idx]}")
+                print("    (by native_decide)")
+                print()
+                print(f"theorem {upto_sets[idx]}_lcm_mem")
+                print(f"    (p : ℕ × ℕ) (hp : p ∈ {upto_sets[idx]}) :")
+                print(f"    Nat.lcm p.1 p.2 ∈ {upto_lcms[idx]} := by")
+                print(f"  rw [{upto_sets[idx]}] at hp")
+                print("  rcases Finset.mem_union.mp hp with hp | hp")
+                print(f"  · exact Finset.mem_union.mpr (Or.inl ({prev_set}_lcm_mem p hp))")
+                print("  · exact Finset.mem_union.mpr (Or.inr (by")
+                print(f"      have h := {group_lcm_theorems[idx]} p hp")
+                print("      simpa using h))")
+                print()
+                if assume_group_actual_sums:
+                    print(f"theorem {upto_sets[idx]}_actual_sum_of_group_actual_sums")
+                    for j in range(idx + 1):
+                        print(f"    {group_sum_hyp(j)}")
+                    print(f"    : (∑ p ∈ {upto_sets[idx]}, {actual} p) = {upto_totals[idx]} := by")
+                    print(f"  rw [{upto_sets[idx]}, Finset.sum_union {prev_set}_disjoint_{group_sets[idx]}]")
+                    print(
+                        f"  rw [{prev_set}_actual_sum_of_group_actual_sums "
+                        f"{group_sum_hyp_names(idx)}]"
+                    )
+                    print(f"  rw [h{idx:03d}]")
+                    print("  rfl")
+                else:
+                    print(f"theorem {upto_sets[idx]}_actual_sum")
+                    print(f"    (hzero : ∀ p ∈ {upto_sets[idx]}, {zero} p) :")
+                    print(f"    (∑ p ∈ {upto_sets[idx]}, {actual} p) = {upto_totals[idx]} := by")
+                    print(f"  rw [{upto_sets[idx]}, Finset.sum_union {prev_set}_disjoint_{group_sets[idx]}]")
+                    print(f"  rw [{prev_set}_actual_sum (by")
+                    print("    intro p hp")
+                    print(f"    exact hzero p (by")
+                    print(f"      rw [{upto_sets[idx]}]")
+                    print("      exact Finset.mem_union.mpr (Or.inl hp)))]")
+                    print(f"  rw [{group_theorems[idx]} (by")
+                    print("    intro p hp")
+                    print(f"    exact hzero p (by")
+                    print(f"      rw [{upto_sets[idx]}]")
+                    print("      exact Finset.mem_union.mpr (Or.inr hp)))]")
+                    print("  rfl")
+                print()
+
+        print(f"def {label}Pairs : Finset (ℕ × ℕ) :=")
+        print(f"  {upto_sets[-1]}")
+        print()
+        print(f"def {label}Total : ℚ :=")
+        print(f"  {upto_totals[-1]}")
+        print()
+        print(f"def {label}LCMs : Finset ℕ :=")
+        print(f"  {upto_lcms[-1]}")
+        print()
+        print(f"theorem {label}_lcm_mem")
+        print(f"    (p : ℕ × ℕ) (hp : p ∈ {label}Pairs) :")
+        print(f"    Nat.lcm p.1 p.2 ∈ {label}LCMs := by")
+        print(f"  have h := {upto_sets[-1]}_lcm_mem p (by simpa [{label}Pairs] using hp)")
+        print(f"  simpa [{label}LCMs] using h")
+        print()
+        if assume_group_actual_sums:
+            print(f"theorem {label}_actual_sum_of_group_actual_sums")
+            for j in range(group_count):
+                print(f"    {group_sum_hyp(j)}")
+            print(f"    : (∑ p ∈ {label}Pairs, {actual} p) = {label}Total := by")
+            print(f"  simpa [{label}Pairs, {label}Total] using")
+            print(
+                f"    {upto_sets[-1]}_actual_sum_of_group_actual_sums "
+                f"{group_sum_hyp_names(group_count)}"
+            )
+        else:
+            print(f"theorem {label}_actual_sum")
+            print(f"    (hzero : ∀ p ∈ {label}Pairs, {zero} p) :")
+            print(f"    (∑ p ∈ {label}Pairs, {actual} p) = {label}Total := by")
+            print(f"  simpa [{label}Pairs, {label}Total] using")
+            print(f"    {upto_sets[-1]}_actual_sum (by")
+            print("      intro p hp")
+            print(f"      exact hzero p (by simpa [{label}Pairs] using hp))")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_containment_lean_file(
+    *,
+    payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    start: int,
+    count: int,
+    order: str,
+    final_module_name: str,
+    fiber_label_prefix: str,
+    fiber_chunk_size: int,
+    group_label_prefix: str,
+    group_chunk_size: int = 20,
+    super_group_label_prefix: str = "PeriodicMainNonDyadicLCMSuperGroup",
+    super_group_size: int = 10,
+    final_label_prefix: str = "PeriodicMainNonDyadicLCM",
+) -> str:
+    """Emit structural subset facts from individual LCM fibers to the final set.
+
+    These facts keep downstream coverage proofs away from the final 27k-pair
+    union.  The generator proves each group-to-final containment once, then
+    proves individual fiber containment only through the short group-local union
+    spine.
+    """
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if start < 0:
+        raise SystemExit("--periodic-main-lcm-start must be nonnegative")
+    if count < 0:
+        raise SystemExit("--periodic-main-lcm-count must be nonnegative")
+    if fiber_chunk_size <= 0:
+        raise SystemExit("--periodic-main-lcm-fiber-chunk-size must be positive")
+    if group_chunk_size <= 0:
+        raise SystemExit("group_chunk_size must be positive")
+    if super_group_size <= 0:
+        raise SystemExit("super_group_size must be positive")
+
+    fibers_all = list(payload.get("lcm_fibers", []))
+    if order == "abs":
+        fibers_all.sort(
+            key=lambda fiber: abs(Fraction(int(fiber["total_num"]), int(fiber["total_den"]))),
+            reverse=True,
+        )
+    elif order != "index":
+        raise SystemExit(f"unknown lcm containment order: {order}")
+    if start > len(fibers_all):
+        raise SystemExit(f"--periodic-main-lcm-start={start} out of range for {len(fibers_all)} fibers")
+    end = len(fibers_all) if count == 0 else min(len(fibers_all), start + count)
+    if start == end:
+        raise SystemExit("selected lcm containment slice is empty")
+
+    group_count = (len(fibers_all) + group_chunk_size - 1) // group_chunk_size
+    super_count = (group_count + super_group_size - 1) // super_group_size
+    final_last = super_count - 1
+
+    def fiber_name(global_index: int) -> str:
+        fiber_import_start = (global_index // fiber_chunk_size) * fiber_chunk_size
+        fiber_import_end = min(len(fibers_all), fiber_import_start + fiber_chunk_size)
+        local_index = global_index - fiber_import_start
+        return (
+            f"PeriodicMainNonDyadicLCM{fiber_label_prefix}"
+            f"{fiber_import_start:04d}_{fiber_import_end:04d}Fiber{local_index:03d}"
+        )
+
+    def chain_expr(*, upto_prefix: str, last: int, target: int, child_expr: str, indent: int) -> str:
+        if not (0 <= target <= last):
+            raise AssertionError((upto_prefix, last, target))
+        sp = " " * indent
+        upto_name = f"{upto_prefix}{last:03d}"
+        if last == 0:
+            return f"(by\n{sp}  simpa [{upto_name}] using {child_expr}\n{sp})"
+        if target == last:
+            return (
+                f"(by\n"
+                f"{sp}  rw [{upto_name}]\n"
+                f"{sp}  exact Finset.mem_union.mpr (Or.inr {child_expr})\n"
+                f"{sp})"
+            )
+        sub = chain_expr(
+            upto_prefix=upto_prefix,
+            last=last - 1,
+            target=target,
+            child_expr=child_expr,
+            indent=indent + 4,
+        )
+        return (
+            f"(by\n"
+            f"{sp}  rw [{upto_name}]\n"
+            f"{sp}  exact Finset.mem_union.mpr (Or.inl {sub})\n"
+            f"{sp})"
+        )
+
+    path = os.path.join(out_dir, f"{file_prefix}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(f"import Goldbach.Cert.MajorArcModules.{final_module_name}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated structural containment facts for LCM fibers. -/")
+        print()
+
+        selected_groups = sorted({global_index // group_chunk_size for global_index in range(start, end)})
+        for group_index in selected_groups:
+            super_index = group_index // super_group_size
+            super_local = group_index - super_index * super_group_size
+            super_last = min(super_group_size, group_count - super_index * super_group_size) - 1
+            theorem_name = f"{label_prefix}Group{group_index:03d}_subset_lcm"
+            group_pairs = f"{group_label_prefix}{group_index:03d}Pairs"
+
+            super_chain = chain_expr(
+                upto_prefix=f"{super_group_label_prefix}{super_index:03d}PairsUpTo",
+                last=super_last,
+                target=super_local,
+                child_expr="hp",
+                indent=4,
+            )
+            super_expr = (
+                f"(by\n"
+                f"    rw [{super_group_label_prefix}{super_index:03d}Pairs]\n"
+                f"    exact {super_chain}\n"
+                f"  )"
+            )
+            final_expr = chain_expr(
+                upto_prefix=f"{final_label_prefix}PairsUpTo",
+                last=final_last,
+                target=super_index,
+                child_expr=super_expr,
+                indent=4,
+            )
+
+            print(f"theorem {theorem_name} :")
+            print(f"    {group_pairs} ⊆ {final_label_prefix}Pairs := by")
+            print("  intro p hp")
+            print(f"  rw [{final_label_prefix}Pairs]")
+            print(f"  exact {final_expr}")
+            print()
+
+        for global_index in range(start, end):
+            group_index = global_index // group_chunk_size
+            group_local = global_index - group_index * group_chunk_size
+            group_last = min(group_chunk_size, len(fibers_all) - group_index * group_chunk_size) - 1
+            fname = fiber_name(global_index)
+            theorem_name = f"{label_prefix}Fiber{global_index:04d}_subset_lcm"
+            group_pairs = f"{group_label_prefix}{group_index:03d}Pairs"
+            group_subset_theorem = f"{label_prefix}Group{group_index:03d}_subset_lcm"
+            group_chain = chain_expr(
+                upto_prefix=f"{group_label_prefix}{group_index:03d}PairsUpTo",
+                last=group_last,
+                target=group_local,
+                child_expr="hp",
+                indent=4,
+            )
+
+            print(f"theorem {theorem_name} :")
+            print(f"    {fname}Pairs ⊆ {final_label_prefix}Pairs := by")
+            print("  intro p hp")
+            print(f"  exact {group_subset_theorem} (by")
+            print(f"    rw [{group_pairs}]")
+            print(f"    exact {group_chain}")
+            print("  )")
+            print()
+
+        print(f"/- lcm containment fiber range=[{start},{end}) -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def _periodic_main_lcm_sorted_fibers(
+    payload: dict[str, object],
+    order: str,
+) -> list[dict[str, object]]:
+    if payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    fibers_all = list(payload.get("lcm_fibers", []))
+    if order == "abs":
+        fibers_all.sort(
+            key=lambda fiber: abs(Fraction(int(fiber["total_num"]), int(fiber["total_den"]))),
+            reverse=True,
+        )
+    elif order != "index":
+        raise SystemExit(f"unknown lcm order: {order}")
+    return fibers_all
+
+
+def emit_periodic_main_nondyadic_lcm_target_chunk_lean_file(
+    *,
+    nonzero_payload: dict[str, object],
+    lcm_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    chunk_index: int,
+    chunk_size: int,
+    lcm_order: str,
+    containment_module_prefix: str,
+    containment_label_prefix: str,
+    containment_chunk_size: int,
+    nonzero_chunk_module_prefix: str,
+    nonzero_chunk_label_prefix: str,
+    row_five_module_name: str,
+    row_five_set_name: str,
+    final_lcm_module_name: str,
+    final_lcm_set_name: str = "PeriodicMainNonDyadicLCMPairs",
+) -> str:
+    if nonzero_payload.get("mode") != "periodic-main-ordered-nonzero-records":
+        raise SystemExit("expected a periodic-main ordered nonzero-record payload")
+    if chunk_index < 0:
+        raise SystemExit("chunk_index must be nonnegative")
+    if chunk_size <= 0:
+        raise SystemExit("--periodic-main-coverage-chunk-size must be positive")
+    if containment_chunk_size <= 0:
+        raise SystemExit("containment_chunk_size must be positive")
+
+    records_all = list(nonzero_payload.get("records", []))
+    start = chunk_index * chunk_size
+    end = min(len(records_all), start + chunk_size)
+    if start >= len(records_all):
+        raise SystemExit(f"chunk index {chunk_index} out of range for {len(records_all)} records")
+    records = records_all[start:end]
+
+    fibers_all = _periodic_main_lcm_sorted_fibers(lcm_payload, lcm_order)
+    pair_to_fiber: dict[tuple[int, int], int] = {}
+    for global_index, fiber in enumerate(fibers_all):
+        for record in list(fiber.get("records", [])):
+            pair = (int(record["q"]), int(record["q2"]))
+            if pair in pair_to_fiber:
+                raise SystemExit(f"duplicate LCM fiber record for pair {pair}")
+            pair_to_fiber[pair] = global_index
+
+    target_fibers: dict[tuple[int, int], int] = {}
+    missing_pairs: list[tuple[int, int]] = []
+    for record in records:
+        q = int(record["q"])
+        q2 = int(record["q2"])
+        if q == 5:
+            continue
+        if q2 == 2 * q or q == 2 * q2:
+            continue
+        fiber_index = pair_to_fiber.get((q, q2))
+        if fiber_index is None:
+            missing_pairs.append((q, q2))
+        else:
+            target_fibers[(q, q2)] = fiber_index
+    if missing_pairs:
+        preview = ", ".join(f"({q},{q2})" for q, q2 in missing_pairs[:20])
+        raise SystemExit(f"target chunk {chunk_index}: missing LCM fibers for {preview}")
+
+    has_row_five_records = any(int(record["q"]) == 5 for record in records)
+    can_filter_row_five = has_row_five_records and 0 <= chunk_index <= 9
+    target_records = [
+        record for record in records
+        if int(record["q"]) != 5
+        and not (
+            int(record["q2"]) == 2 * int(record["q"])
+            or int(record["q"]) == 2 * int(record["q2"])
+        )
+    ]
+
+    containment_imports = sorted({
+        (
+            (fiber_index // containment_chunk_size) * containment_chunk_size,
+            min(len(fibers_all), (fiber_index // containment_chunk_size) * containment_chunk_size + containment_chunk_size),
+        )
+        for fiber_index in target_fibers.values()
+    })
+
+    module_index = f"{chunk_index:03d}"
+    target_subchunk_size = 5
+    use_target_subchunks = len(target_records) > target_subchunk_size and not (
+        has_row_five_records and not can_filter_row_five
+    )
+    path = os.path.join(out_dir, f"{file_prefix}{module_index}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    def emit_target_subchunk_file(sub_index: int, sub_records: list[dict[str, object]]) -> str:
+        sub_module = f"{file_prefix}{module_index}Sub{sub_index:03d}"
+        sub_path = os.path.join(out_dir, f"{sub_module}.lean")
+        sub_pair_set = f"{label_prefix}Chunk{module_index}Sub{sub_index:03d}TargetPairs"
+        sub_theorem = f"{label_prefix}Chunk{module_index}Sub{sub_index:03d}_subset_lcm"
+        sub_containment_imports = sorted({
+            (
+                (target_fibers[(int(record["q"]), int(record["q2"]))] // containment_chunk_size)
+                * containment_chunk_size,
+                min(
+                    len(fibers_all),
+                    (
+                        (target_fibers[(int(record["q"]), int(record["q2"]))] // containment_chunk_size)
+                        * containment_chunk_size
+                    ) + containment_chunk_size,
+                ),
+            )
+            for record in sub_records
+        })
+        with open(sub_path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+            print(f"import Goldbach.Cert.MajorArcModules.{final_lcm_module_name}")
+            for cstart, cend in sub_containment_imports:
+                print(
+                    "import Goldbach.Cert.MajorArcModules."
+                    f"{containment_module_prefix}{cstart:04d}_{cend:04d}"
+                )
+            print()
+            print("set_option maxHeartbeats 0")
+            print("set_option maxRecDepth 100000")
+            print("set_option linter.constructorNameAsVariable false")
+            print()
+            print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+            print()
+            print("open Goldbach")
+            print("open Goldbach.BankParams")
+            print("open Goldbach.Windows")
+            print()
+            print("/- Generated target-to-LCM coverage for one target subchunk. -/")
+            print()
+            print(f"def {sub_pair_set} : Finset (ℕ × ℕ) :=")
+            body = ", ".join(f"({int(record['q'])}, {int(record['q2'])})" for record in sub_records)
+            print(f"  ([{body}] : List (ℕ × ℕ)).toFinset")
+            print()
+            print(f"theorem {sub_theorem}")
+            print("    (p : ℕ × ℕ)")
+            print(f"    (hp : p ∈ {sub_pair_set}) :")
+            print(f"    p ∈ {final_lcm_set_name} := by")
+            print(f"  simp [{sub_pair_set}] at hp")
+            hyp_names = [f"h{i:03d}" for i in range(len(sub_records))]
+            print("  rcases hp with " + " | ".join(hyp_names))
+            for record in sub_records:
+                q = int(record["q"])
+                q2 = int(record["q2"])
+                fiber_index = target_fibers[(q, q2)]
+                print("  · subst p")
+                print(
+                    f"    exact {containment_label_prefix}Fiber{fiber_index:04d}_subset_lcm "
+                    "(by native_decide)"
+                )
+            print()
+            print(
+                f"/- nonzero chunk index={chunk_index}, target subchunk={sub_index}, "
+                f"records={len(sub_records)} -/"
+            )
+            print()
+            print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        return sub_path
+
+    target_subchunks: list[list[dict[str, object]]] = []
+    if use_target_subchunks:
+        for sub_start in range(0, len(target_records), target_subchunk_size):
+            target_subchunks.append(target_records[sub_start:sub_start + target_subchunk_size])
+        for sub_index, sub_records in enumerate(target_subchunks):
+            emit_target_subchunk_file(sub_index, sub_records)
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(
+            "import Goldbach.Cert.MajorArcModules."
+            f"{nonzero_chunk_module_prefix}{module_index}"
+        )
+        print(f"import Goldbach.Cert.MajorArcModules.{row_five_module_name}")
+        if use_target_subchunks:
+            for sub_index in range(len(target_subchunks)):
+                print(
+                    "import Goldbach.Cert.MajorArcModules."
+                    f"{file_prefix}{module_index}Sub{sub_index:03d}"
+                )
+        elif target_fibers:
+            print(f"import Goldbach.Cert.MajorArcModules.{final_lcm_module_name}")
+            for cstart, cend in containment_imports:
+                print(
+                    "import Goldbach.Cert.MajorArcModules."
+                    f"{containment_module_prefix}{cstart:04d}_{cend:04d}"
+                )
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated target-to-LCM coverage for one nonzero coverage chunk. -/")
+        print()
+        theorem_name = f"{label_prefix}Chunk{module_index}_subset_lcm"
+        chunk_set = f"{nonzero_chunk_label_prefix}{module_index}"
+        target_pair_set = f"{label_prefix}Chunk{module_index}TargetPairs"
+        filter_subset_theorem = f"{label_prefix}Chunk{module_index}_filter_subset_target"
+        if not (has_row_five_records and not can_filter_row_five):
+            print(f"def {target_pair_set} : Finset (ℕ × ℕ) :=")
+            if target_records:
+                body = ", ".join(f"({int(record['q'])}, {int(record['q2'])})" for record in target_records)
+                print(f"  ([{body}] : List (ℕ × ℕ)).toFinset")
+            else:
+                print("  ([] : List (ℕ × ℕ)).toFinset")
+            print()
+            print(f"theorem {filter_subset_theorem} :")
+            if can_filter_row_five:
+                print(
+                    f"    ({chunk_set}.filter "
+                    "(fun p : ℕ × ℕ => p.1 ≠ 5 ∧ ¬ (p.2 = 2 * p.1 ∨ p.1 = 2 * p.2))) "
+                    f"⊆ {target_pair_set} := by"
+                )
+            else:
+                print(
+                    f"    ({chunk_set}.filter "
+                    "(fun p : ℕ × ℕ => ¬ (p.2 = 2 * p.1 ∨ p.1 = 2 * p.2))) "
+                    f"⊆ {target_pair_set} := by"
+                )
+            print("  native_decide")
+            print()
+        target_sub_pair_set = f"{label_prefix}Chunk{module_index}TargetSubPairs"
+        target_pair_subset_sub_theorem = f"{label_prefix}Chunk{module_index}_targetPairs_subset_subPairs"
+        target_sub_subset_theorem = f"{label_prefix}Chunk{module_index}_targetSubPairs_subset_lcm"
+        if use_target_subchunks:
+            sub_pair_sets = [
+                f"{label_prefix}Chunk{module_index}Sub{sub_index:03d}TargetPairs"
+                for sub_index in range(len(target_subchunks))
+            ]
+            sub_theorems = [
+                f"{label_prefix}Chunk{module_index}Sub{sub_index:03d}_subset_lcm"
+                for sub_index in range(len(target_subchunks))
+            ]
+            sub_upto_sets = [
+                f"{label_prefix}Chunk{module_index}TargetSubPairsUpTo{sub_index:03d}"
+                for sub_index in range(len(target_subchunks))
+            ]
+            for sub_index, sub_set in enumerate(sub_pair_sets):
+                upto_set = sub_upto_sets[sub_index]
+                if sub_index == 0:
+                    print(f"def {upto_set} : Finset (ℕ × ℕ) :=")
+                    print(f"  {sub_set}")
+                    print()
+                    print(f"theorem {upto_set}_subset_lcm :")
+                    print(f"    {upto_set} ⊆ {final_lcm_set_name} := by")
+                    print("  intro p hp")
+                    print(f"  exact {sub_theorems[sub_index]} p (by simpa [{upto_set}] using hp)")
+                    print()
+                else:
+                    prev_set = sub_upto_sets[sub_index - 1]
+                    print(f"def {upto_set} : Finset (ℕ × ℕ) :=")
+                    print(f"  {prev_set} ∪ {sub_set}")
+                    print()
+                    print(f"theorem {upto_set}_subset_lcm :")
+                    print(f"    {upto_set} ⊆ {final_lcm_set_name} := by")
+                    print("  intro p hp")
+                    print(f"  rw [{upto_set}] at hp")
+                    print("  rcases Finset.mem_union.mp hp with hp | hp")
+                    print(f"  · exact {prev_set}_subset_lcm hp")
+                    print(f"  · exact {sub_theorems[sub_index]} p hp")
+                    print()
+            print(f"def {target_sub_pair_set} : Finset (ℕ × ℕ) :=")
+            print(f"  {sub_upto_sets[-1]}")
+            print()
+            print(f"theorem {target_pair_subset_sub_theorem} :")
+            print(f"    {target_pair_set} ⊆ {target_sub_pair_set} := by")
+            print("  native_decide")
+            print()
+            print(f"theorem {target_sub_subset_theorem} :")
+            print(f"    {target_sub_pair_set} ⊆ {final_lcm_set_name} := by")
+            print("  intro p hp")
+            print(f"  exact {sub_upto_sets[-1]}_subset_lcm (by simpa [{target_sub_pair_set}] using hp)")
+            print()
+        print(f"theorem {theorem_name}")
+        if not target_fibers:
+            print("    {targetSet : Finset (ℕ × ℕ)}")
+        print("    (p : ℕ × ℕ)")
+        print(f"    (hp : p ∈ {chunk_set})")
+        print(f"    (hnotrow : p ∉ {row_five_set_name})")
+        print("    (hnotdyadic : ¬ (p.2 = 2 * p.1 ∨ p.1 = 2 * p.2)) :")
+        if target_fibers:
+            print(f"    p ∈ {final_lcm_set_name} := by")
+        else:
+            print("    p ∈ targetSet := by")
+        if (
+            len(target_fibers) == 0
+            and 1 <= chunk_index <= 8
+            and all(int(record["q"]) == 5 for record in records)
+        ):
+            print("  exfalso")
+            print(
+                "  exact hnotrow "
+                f"({nonzero_chunk_label_prefix}{module_index}_subset_rowFive hp)"
+            )
+            print()
+            print(f"/- nonzero chunk index={chunk_index}, range=[{start},{end}), target records={len(target_fibers)} -/")
+            print()
+            print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+            return path
+        if can_filter_row_five:
+            print("  have hnotleft5 : p.1 ≠ 5 := by")
+            print("    intro hleft")
+            print("    apply hnotrow")
+            print(
+                "    exact "
+                f"{row_five_set_name}_of_mem_chunk{module_index}_filter "
+                "(Finset.mem_filter.mpr ⟨hp, hleft⟩)"
+            )
+            print(
+                f"  have hp_target : p ∈ ({chunk_set}.filter "
+                "(fun p : ℕ × ℕ => p.1 ≠ 5 ∧ ¬ (p.2 = 2 * p.1 ∨ p.1 = 2 * p.2))) := by"
+            )
+            print("    exact Finset.mem_filter.mpr ⟨hp, ⟨hnotleft5, hnotdyadic⟩⟩")
+        else:
+            if has_row_five_records:
+                print(f"  simp [{chunk_set}] at hp")
+                hyp_names = [f"h{i:03d}" for i in range(len(records))]
+                print("  rcases hp with " + " | ".join(hyp_names))
+                for record in records:
+                    q = int(record["q"])
+                    q2 = int(record["q2"])
+                    print("  · subst p")
+                    if q == 5:
+                        print("    exfalso")
+                        print("    exact hnotrow (by native_decide)")
+                    elif q2 == 2 * q or q == 2 * q2:
+                        print("    exfalso")
+                        print("    exact hnotdyadic (by norm_num)")
+                    else:
+                        fiber_index = target_fibers[(q, q2)]
+                        print(
+                            f"    exact {containment_label_prefix}Fiber{fiber_index:04d}_subset_lcm "
+                            "(by native_decide)"
+                        )
+                print()
+                print(f"/- nonzero chunk index={chunk_index}, range=[{start},{end}), target records={len(target_fibers)} -/")
+                print()
+                print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+                return path
+            print(
+                f"  have hp_target : p ∈ ({chunk_set}.filter "
+                "(fun p : ℕ × ℕ => ¬ (p.2 = 2 * p.1 ∨ p.1 = 2 * p.2))) := by"
+            )
+            print("    exact Finset.mem_filter.mpr ⟨hp, hnotdyadic⟩")
+        print(f"  have hp_target' : p ∈ {target_pair_set} := {filter_subset_theorem} hp_target")
+        if len(target_records) == 0:
+            print("  exfalso")
+            print(f"  simpa [{target_pair_set}] using hp_target'")
+        elif use_target_subchunks:
+            print(f"  exact {target_sub_subset_theorem} ({target_pair_subset_sub_theorem} hp_target')")
+        else:
+            print(f"  simp [{target_pair_set}] at hp_target'")
+            hyp_names = [f"h{i:03d}" for i in range(len(target_records))]
+            print("  rcases hp_target' with " + " | ".join(hyp_names))
+            for target_index, record in enumerate(target_records):
+                q = int(record["q"])
+                q2 = int(record["q2"])
+                sub_index = target_index // target_subchunk_size
+                print("  · subst p")
+                if use_target_subchunks:
+                    print(
+                        f"    exact {label_prefix}Chunk{module_index}Sub{sub_index:03d}_subset_lcm "
+                        f"({q}, {q2}) (by native_decide)"
+                    )
+                else:
+                    fiber_index = target_fibers[(q, q2)]
+                    print(
+                        f"    exact {containment_label_prefix}Fiber{fiber_index:04d}_subset_lcm "
+                        "(by native_decide)"
+                    )
+        print()
+        print(f"/- nonzero chunk index={chunk_index}, range=[{start},{end}), target records={len(target_fibers)} -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_target_chunk_lean_files(
+    *,
+    nonzero_payload: dict[str, object],
+    lcm_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    chunk_size: int,
+    lcm_order: str,
+    containment_module_prefix: str,
+    containment_label_prefix: str,
+    containment_chunk_size: int,
+    nonzero_chunk_module_prefix: str,
+    nonzero_chunk_label_prefix: str,
+    row_five_module_name: str,
+    row_five_set_name: str,
+    final_lcm_module_name: str,
+) -> list[str]:
+    records_all = list(nonzero_payload.get("records", []))
+    chunk_count = (len(records_all) + chunk_size - 1) // chunk_size
+    paths: list[str] = []
+    for chunk_index in range(chunk_count):
+        paths.append(emit_periodic_main_nondyadic_lcm_target_chunk_lean_file(
+            nonzero_payload=nonzero_payload,
+            lcm_payload=lcm_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            chunk_index=chunk_index,
+            chunk_size=chunk_size,
+            lcm_order=lcm_order,
+            containment_module_prefix=containment_module_prefix,
+            containment_label_prefix=containment_label_prefix,
+            containment_chunk_size=containment_chunk_size,
+            nonzero_chunk_module_prefix=nonzero_chunk_module_prefix,
+            nonzero_chunk_label_prefix=nonzero_chunk_label_prefix,
+            row_five_module_name=row_five_module_name,
+            row_five_set_name=row_five_set_name,
+            final_lcm_module_name=final_lcm_module_name,
+        ))
+    return paths
+
+
+def emit_periodic_main_nondyadic_lcm_target_group_lean_file(
+    *,
+    nonzero_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    group_index: int,
+    chunk_size: int,
+    group_chunks: int,
+    target_chunk_module_prefix: str,
+    target_chunk_label_prefix: str,
+    nonzero_group_label_prefix: str = "PeriodicMainNonzeroRecordPairsGroup",
+    row_five_set_name: str = "PeriodicMainNonzeroRecordPairsRowFive",
+    final_lcm_set_name: str = "PeriodicMainNonDyadicLCMPairs",
+) -> str:
+    if nonzero_payload.get("mode") != "periodic-main-ordered-nonzero-records":
+        raise SystemExit("expected a periodic-main ordered nonzero-record payload")
+    if chunk_size <= 0:
+        raise SystemExit("--periodic-main-coverage-chunk-size must be positive")
+    if group_chunks <= 0:
+        raise SystemExit("--periodic-main-coverage-group-chunks must be positive")
+    if group_index < 0:
+        raise SystemExit("group_index must be nonnegative")
+
+    records_all = list(nonzero_payload.get("records", []))
+    chunk_count = (len(records_all) + chunk_size - 1) // chunk_size
+    start_chunk = group_index * group_chunks
+    end_chunk = min(chunk_count, start_chunk + group_chunks)
+    if start_chunk >= chunk_count:
+        raise SystemExit(f"group index {group_index} out of range for {chunk_count} chunks")
+
+    group_label = f"{nonzero_group_label_prefix}{group_index:03d}"
+    module_index = f"{group_index:03d}"
+    path = os.path.join(out_dir, f"{file_prefix}{module_index}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        for chunk_index in range(start_chunk, end_chunk):
+            print(
+                "import Goldbach.Cert.MajorArcModules."
+                f"{target_chunk_module_prefix}{chunk_index:03d}"
+            )
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated target-to-LCM coverage assembly for one nonzero coverage group. -/")
+        print()
+
+        for local_index, chunk_index in enumerate(range(start_chunk, end_chunk)):
+            upto_name = f"{group_label}UpTo{local_index:03d}"
+            theorem_name = f"{label_prefix}Group{module_index}UpTo{local_index:03d}_subset_lcm"
+            chunk_set = f"PeriodicMainNonzeroRecordPairsChunk{chunk_index:03d}"
+            chunk_theorem = f"{target_chunk_label_prefix}Chunk{chunk_index:03d}_subset_lcm"
+            print(f"theorem {theorem_name}")
+            print("    (p : ℕ × ℕ)")
+            print(f"    (hp : p ∈ {upto_name})")
+            print(f"    (hnotrow : p ∉ {row_five_set_name})")
+            print("    (hnotdyadic : ¬ (p.2 = 2 * p.1 ∨ p.1 = 2 * p.2)) :")
+            print(f"    p ∈ {final_lcm_set_name} := by")
+            if local_index == 0:
+                print(f"  have hp0 : p ∈ {chunk_set} := by")
+                print(f"    simpa [{upto_name}] using hp")
+                print(f"  exact {chunk_theorem} p hp0 hnotrow hnotdyadic")
+            else:
+                prev_theorem = f"{label_prefix}Group{module_index}UpTo{local_index - 1:03d}_subset_lcm"
+                print(f"  rw [{upto_name}] at hp")
+                print("  rcases Finset.mem_union.mp hp with hp | hp")
+                print(f"  · exact {prev_theorem} p hp hnotrow hnotdyadic")
+                print(f"  · exact {chunk_theorem} p hp hnotrow hnotdyadic")
+            print()
+
+        last_local = end_chunk - start_chunk - 1
+        final_theorem = f"{label_prefix}Group{module_index}_subset_lcm"
+        last_theorem = f"{label_prefix}Group{module_index}UpTo{last_local:03d}_subset_lcm"
+        last_upto = f"{group_label}UpTo{last_local:03d}"
+        print(f"theorem {final_theorem}")
+        print("    (p : ℕ × ℕ)")
+        print(f"    (hp : p ∈ {group_label})")
+        print(f"    (hnotrow : p ∉ {row_five_set_name})")
+        print("    (hnotdyadic : ¬ (p.2 = 2 * p.1 ∨ p.1 = 2 * p.2)) :")
+        print(f"    p ∈ {final_lcm_set_name} := by")
+        print(f"  have hp0 : p ∈ {last_upto} := by")
+        print(f"    simpa [{group_label}] using hp")
+        print(f"  exact {last_theorem} p hp0 hnotrow hnotdyadic")
+        print()
+        print(f"/- nonzero group index={group_index}, chunks=[{start_chunk},{end_chunk}) -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_target_group_lean_files(
+    *,
+    nonzero_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    chunk_size: int,
+    group_chunks: int,
+    target_chunk_module_prefix: str,
+    target_chunk_label_prefix: str,
+    row_five_set_name: str,
+) -> list[str]:
+    records_all = list(nonzero_payload.get("records", []))
+    chunk_count = (len(records_all) + chunk_size - 1) // chunk_size
+    group_count = (chunk_count + group_chunks - 1) // group_chunks
+    paths: list[str] = []
+    for group_index in range(group_count):
+        paths.append(emit_periodic_main_nondyadic_lcm_target_group_lean_file(
+            nonzero_payload=nonzero_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            group_index=group_index,
+            chunk_size=chunk_size,
+            group_chunks=group_chunks,
+            target_chunk_module_prefix=target_chunk_module_prefix,
+            target_chunk_label_prefix=target_chunk_label_prefix,
+            row_five_set_name=row_five_set_name,
+        ))
+    return paths
+
+
+def emit_periodic_main_nondyadic_lcm_target_final_lean_file(
+    *,
+    nonzero_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    chunk_size: int,
+    group_chunks: int,
+    target_group_module_prefix: str,
+    target_group_label_prefix: str,
+    dyadic_bridge_module_name: str,
+    row_five_set_name: str,
+    final_lcm_set_name: str = "PeriodicMainNonDyadicLCMPairs",
+    target_set_name: str = "PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic",
+) -> str:
+    if nonzero_payload.get("mode") != "periodic-main-ordered-nonzero-records":
+        raise SystemExit("expected a periodic-main ordered nonzero-record payload")
+    if chunk_size <= 0:
+        raise SystemExit("--periodic-main-coverage-chunk-size must be positive")
+    if group_chunks <= 0:
+        raise SystemExit("--periodic-main-coverage-group-chunks must be positive")
+
+    records_all = list(nonzero_payload.get("records", []))
+    chunk_count = (len(records_all) + chunk_size - 1) // chunk_size
+    group_count = (chunk_count + group_chunks - 1) // group_chunks
+    if group_count <= 0:
+        raise SystemExit("cannot emit target final bridge for an empty nonzero payload")
+
+    path = os.path.join(out_dir, f"{file_prefix}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(f"import Goldbach.Cert.MajorArcModules.{dyadic_bridge_module_name}")
+        for group_index in range(group_count):
+            print(
+                "import Goldbach.Cert.MajorArcModules."
+                f"{target_group_module_prefix}{group_index:03d}"
+            )
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated final target-to-LCM coverage assembly. -/")
+        print()
+
+        for group_index in range(group_count):
+            upto_name = f"PeriodicMainNonzeroRecordPairsUpTo{group_index:03d}"
+            theorem_name = f"{label_prefix}UpTo{group_index:03d}_subset_lcm"
+            group_set = f"PeriodicMainNonzeroRecordPairsGroup{group_index:03d}"
+            group_theorem = f"{target_group_label_prefix}Group{group_index:03d}_subset_lcm"
+            print(f"theorem {theorem_name}")
+            print("    (p : ℕ × ℕ)")
+            print(f"    (hp : p ∈ {upto_name})")
+            print(f"    (hnotrow : p ∉ {row_five_set_name})")
+            print("    (hnotdyadic : ¬ (p.2 = 2 * p.1 ∨ p.1 = 2 * p.2)) :")
+            print(f"    p ∈ {final_lcm_set_name} := by")
+            if group_index == 0:
+                print(f"  have hp0 : p ∈ {group_set} := by")
+                print(f"    simpa [{upto_name}] using hp")
+                print(f"  exact {group_theorem} p hp0 hnotrow hnotdyadic")
+            else:
+                prev_theorem = f"{label_prefix}UpTo{group_index - 1:03d}_subset_lcm"
+                print(f"  rw [{upto_name}] at hp")
+                print("  rcases Finset.mem_union.mp hp with hp | hp")
+                print(f"  · exact {prev_theorem} p hp hnotrow hnotdyadic")
+                print(f"  · exact {group_theorem} p hp hnotrow hnotdyadic")
+            print()
+
+        last_theorem = f"{label_prefix}UpTo{group_count - 1:03d}_subset_lcm"
+        last_upto = f"PeriodicMainNonzeroRecordPairsUpTo{group_count - 1:03d}"
+        print(f"theorem {target_set_name}_subset_lcm :")
+        print(f"    {target_set_name} ⊆ {final_lcm_set_name} := by")
+        print("  intro p hp")
+        print(f"  rw [{target_set_name}] at hp")
+        print("  rcases Finset.mem_filter.mp hp with ⟨hp_without, hnotdyadic⟩")
+        print("  rw [PeriodicMainNonzeroRecordPairsWithoutRowFive] at hp_without")
+        print("  rcases Finset.mem_sdiff.mp hp_without with ⟨hp_nonzero, hnotrow⟩")
+        print(f"  have hp_nonzero' : p ∈ {last_upto} := by")
+        print("    simpa [PeriodicMainNonzeroRecordPairs] using hp_nonzero")
+        print(f"  exact {last_theorem} p hp_nonzero' hnotrow hnotdyadic")
+        print()
+        print(f"/- nonzero target group count={group_count}, chunk count={chunk_count} -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nonzero_chunk_subset_lean_file(
+    *,
+    nonzero_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    chunk_size: int,
+    group_chunks: int,
+    coverage_module_name: str = "Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzero",
+    nonzero_set_name: str = "PeriodicMainNonzeroRecordPairs",
+) -> str:
+    if nonzero_payload.get("mode") != "periodic-main-ordered-nonzero-records":
+        raise SystemExit("expected a periodic-main ordered nonzero-record payload")
+    if chunk_size <= 0:
+        raise SystemExit("--periodic-main-coverage-chunk-size must be positive")
+    if group_chunks <= 0:
+        raise SystemExit("--periodic-main-coverage-group-chunks must be positive")
+
+    records_all = list(nonzero_payload.get("records", []))
+    chunk_count = (len(records_all) + chunk_size - 1) // chunk_size
+    group_count = (chunk_count + group_chunks - 1) // group_chunks
+    if chunk_count <= 0:
+        raise SystemExit("cannot emit nonzero chunk subset bridge for empty payload")
+
+    def chain_expr(*, upto_prefix: str, last: int, target: int, child_expr: str, indent: int) -> str:
+        if not (0 <= target <= last):
+            raise AssertionError((upto_prefix, last, target))
+        sp = " " * indent
+        upto_name = f"{upto_prefix}{last:03d}"
+        if last == 0:
+            return f"(by\n{sp}  simpa [{upto_name}] using {child_expr}\n{sp})"
+        if target == last:
+            return (
+                f"(by\n"
+                f"{sp}  rw [{upto_name}]\n"
+                f"{sp}  exact Finset.mem_union.mpr (Or.inr {child_expr})\n"
+                f"{sp})"
+            )
+        sub = chain_expr(
+            upto_prefix=upto_prefix,
+            last=last - 1,
+            target=target,
+            child_expr=child_expr,
+            indent=indent + 4,
+        )
+        return (
+            f"(by\n"
+            f"{sp}  rw [{upto_name}]\n"
+            f"{sp}  exact Finset.mem_union.mpr (Or.inl {sub})\n"
+            f"{sp})"
+        )
+
+    path = os.path.join(out_dir, f"{file_prefix}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(f"import Goldbach.Cert.MajorArcModules.{coverage_module_name}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated chunk-to-nonzero coverage bridge for ordered nonzero records. -/")
+        print()
+        for chunk_index in range(chunk_count):
+            group_index = chunk_index // group_chunks
+            local_index = chunk_index - group_index * group_chunks
+            group_last = min(group_chunks, chunk_count - group_index * group_chunks) - 1
+            group_name = f"{nonzero_set_name}Group{group_index:03d}"
+            chunk_name = f"{nonzero_set_name}Chunk{chunk_index:03d}"
+            theorem_name = f"{label_prefix}Chunk{chunk_index:03d}_subset_nonzero"
+            group_expr = chain_expr(
+                upto_prefix=f"{group_name}UpTo",
+                last=group_last,
+                target=local_index,
+                child_expr="hp",
+                indent=4,
+            )
+            final_expr = chain_expr(
+                upto_prefix=f"{nonzero_set_name}UpTo",
+                last=group_count - 1,
+                target=group_index,
+                child_expr="hpGroup",
+                indent=4,
+            )
+            print(f"theorem {theorem_name} :")
+            print(f"    {chunk_name} ⊆ {nonzero_set_name} := by")
+            print("  intro p hp")
+            print(f"  have hpGroup : p ∈ {group_name} := by")
+            print(f"    rw [{group_name}]")
+            print(f"    exact {group_expr}")
+            print(f"  rw [{nonzero_set_name}]")
+            print(f"  exact {final_expr}")
+            print()
+        print(f"/- nonzero chunk subset bridge: chunk count={chunk_count}, group count={group_count} -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nonzero_chunk_subset_group_lean_file(
+    *,
+    nonzero_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    group_index: int,
+    chunk_size: int,
+    group_chunks: int,
+    coverage_module_name: str = "Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzero",
+    nonzero_set_name: str = "PeriodicMainNonzeroRecordPairs",
+) -> str:
+    if nonzero_payload.get("mode") != "periodic-main-ordered-nonzero-records":
+        raise SystemExit("expected a periodic-main ordered nonzero-record payload")
+    if group_index < 0:
+        raise SystemExit("group_index must be nonnegative")
+    records_all = list(nonzero_payload.get("records", []))
+    chunk_count = (len(records_all) + chunk_size - 1) // chunk_size
+    group_count = (chunk_count + group_chunks - 1) // group_chunks
+    start_chunk = group_index * group_chunks
+    end_chunk = min(chunk_count, start_chunk + group_chunks)
+    if start_chunk >= chunk_count:
+        raise SystemExit(f"group index {group_index} out of range for {chunk_count} chunks")
+
+    def chain_expr(*, upto_prefix: str, last: int, target: int, child_expr: str, indent: int) -> str:
+        if not (0 <= target <= last):
+            raise AssertionError((upto_prefix, last, target))
+        sp = " " * indent
+        upto_name = f"{upto_prefix}{last:03d}"
+        if last == 0:
+            return f"(by\n{sp}  simpa [{upto_name}] using {child_expr}\n{sp})"
+        if target == last:
+            return (
+                f"(by\n"
+                f"{sp}  rw [{upto_name}]\n"
+                f"{sp}  exact Finset.mem_union.mpr (Or.inr {child_expr})\n"
+                f"{sp})"
+            )
+        sub = chain_expr(
+            upto_prefix=upto_prefix,
+            last=last - 1,
+            target=target,
+            child_expr=child_expr,
+            indent=indent + 4,
+        )
+        return (
+            f"(by\n"
+            f"{sp}  rw [{upto_name}]\n"
+            f"{sp}  exact Finset.mem_union.mpr (Or.inl {sub})\n"
+            f"{sp})"
+        )
+
+    path = os.path.join(out_dir, f"{file_prefix}Group{group_index:03d}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(f"import Goldbach.Cert.MajorArcModules.{coverage_module_name}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated chunk-to-nonzero coverage bridge for one nonzero record group. -/")
+        print()
+        group_name = f"{nonzero_set_name}Group{group_index:03d}"
+        group_last = end_chunk - start_chunk - 1
+        for chunk_index in range(start_chunk, end_chunk):
+            local_index = chunk_index - start_chunk
+            chunk_name = f"{nonzero_set_name}Chunk{chunk_index:03d}"
+            theorem_name = f"{label_prefix}Chunk{chunk_index:03d}_subset_nonzero"
+            group_expr = chain_expr(
+                upto_prefix=f"{group_name}UpTo",
+                last=group_last,
+                target=local_index,
+                child_expr="hp",
+                indent=4,
+            )
+            final_expr = chain_expr(
+                upto_prefix=f"{nonzero_set_name}UpTo",
+                last=group_count - 1,
+                target=group_index,
+                child_expr="hpGroup",
+                indent=4,
+            )
+            print(f"theorem {theorem_name} :")
+            print(f"    {chunk_name} ⊆ {nonzero_set_name} := by")
+            print("  intro p hp")
+            print(f"  have hpGroup : p ∈ {group_name} := by")
+            print(f"    rw [{group_name}]")
+            print(f"    exact {group_expr}")
+            print(f"  rw [{nonzero_set_name}]")
+            print(f"  exact {final_expr}")
+            print()
+        print(f"/- nonzero chunk subset group={group_index}, chunks=[{start_chunk},{end_chunk}) -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+    return path
+
+
+def emit_periodic_main_nonzero_chunk_subset_group_lean_files(
+    *,
+    nonzero_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    chunk_size: int,
+    group_chunks: int,
+) -> list[str]:
+    records_all = list(nonzero_payload.get("records", []))
+    chunk_count = (len(records_all) + chunk_size - 1) // chunk_size
+    group_count = (chunk_count + group_chunks - 1) // group_chunks
+    paths: list[str] = []
+    for group_index in range(group_count):
+        paths.append(emit_periodic_main_nonzero_chunk_subset_group_lean_file(
+            nonzero_payload=nonzero_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            group_index=group_index,
+            chunk_size=chunk_size,
+            group_chunks=group_chunks,
+        ))
+    return paths
+
+
+def emit_periodic_main_nondyadic_lcm_reverse_target_group_lean_file(
+    *,
+    nonzero_payload: dict[str, object],
+    lcm_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    group_index: int,
+    lcm_order: str,
+    nonzero_chunk_size: int,
+    nonzero_group_chunks: int,
+    lcm_group_chunk_size: int,
+    lcm_fiber_chunk_size: int,
+    lcm_group_module_prefix: str,
+    lcm_group_label_prefix: str,
+    lcm_fiber_label_prefix: str,
+    dyadic_bridge_module_name: str,
+    target_set_name: str = "PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic",
+) -> str:
+    if nonzero_payload.get("mode") != "periodic-main-ordered-nonzero-records":
+        raise SystemExit("expected a periodic-main ordered nonzero-record payload")
+    if lcm_payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if group_index < 0:
+        raise SystemExit("group_index must be nonnegative")
+    if nonzero_chunk_size <= 0:
+        raise SystemExit("--periodic-main-coverage-chunk-size must be positive")
+    if nonzero_group_chunks <= 0:
+        raise SystemExit("--periodic-main-coverage-group-chunks must be positive")
+    if lcm_group_chunk_size <= 0:
+        raise SystemExit("lcm_group_chunk_size must be positive")
+    if lcm_fiber_chunk_size <= 0:
+        raise SystemExit("--periodic-main-lcm-fiber-chunk-size must be positive")
+
+    nonzero_records = list(nonzero_payload.get("records", []))
+    pair_to_nonzero_index: dict[tuple[int, int], int] = {}
+    for index, record in enumerate(nonzero_records):
+        pair = (int(record["q"]), int(record["q2"]))
+        if pair in pair_to_nonzero_index:
+            raise SystemExit(f"duplicate nonzero record for pair {pair}")
+        pair_to_nonzero_index[pair] = index
+
+    fibers_all = _periodic_main_lcm_sorted_fibers(lcm_payload, lcm_order)
+    start = group_index * lcm_group_chunk_size
+    end = min(len(fibers_all), start + lcm_group_chunk_size)
+    if start >= len(fibers_all):
+        raise SystemExit(f"group index {group_index} out of range for {len(fibers_all)} lcm fibers")
+    selected = fibers_all[start:end]
+
+    def fiber_name(global_index: int) -> str:
+        fiber_import_start = (global_index // lcm_fiber_chunk_size) * lcm_fiber_chunk_size
+        fiber_import_end = min(len(fibers_all), fiber_import_start + lcm_fiber_chunk_size)
+        local_index = global_index - fiber_import_start
+        return (
+            f"PeriodicMainNonDyadicLCM{lcm_fiber_label_prefix}"
+            f"{fiber_import_start:04d}_{fiber_import_end:04d}Fiber{local_index:03d}"
+        )
+
+    def pair_target_theorem_name(global_index: int, pair_index: int) -> str:
+        return f"{label_prefix}Group{group_index:03d}Fiber{global_index:04d}Pair{pair_index:03d}_mem_target"
+
+    def fiber_subset_theorem_name(global_index: int) -> str:
+        return f"{label_prefix}Group{group_index:03d}Fiber{global_index:04d}_subset_target"
+
+    def print_nonzero_group_membership_lift(
+        *,
+        fh: typing.TextIO,
+        q: int,
+        q2: int,
+        chunk_index: int,
+        group_index_nonzero: int,
+    ) -> None:
+        local_chunk = chunk_index - group_index_nonzero * nonzero_group_chunks
+        last_local = min(
+            nonzero_group_chunks,
+            (len(nonzero_records) + nonzero_chunk_size - 1) // nonzero_chunk_size
+              - group_index_nonzero * nonzero_group_chunks,
+        ) - 1
+        if not (0 <= local_chunk <= last_local):
+            raise AssertionError((chunk_index, group_index_nonzero, local_chunk, last_local))
+
+        group_name = f"PeriodicMainNonzeroRecordPairsGroup{group_index_nonzero:03d}"
+        print(f"  have hpGroup : ({q}, {q2}) ∈ {group_name} := by", file=fh)
+        print("    simp [", file=fh)
+        print(f"      {group_name},", file=fh)
+        for local in range(last_local, local_chunk - 1, -1):
+            print(f"      {group_name}UpTo{local:03d},", file=fh)
+        print("      hpChunk]", file=fh)
+
+        final_group_count = (len(nonzero_records) + nonzero_chunk_size * nonzero_group_chunks - 1) // (
+            nonzero_chunk_size * nonzero_group_chunks
+        )
+        final_last = final_group_count - 1
+        print(f"  have hpNonzero : ({q}, {q2}) ∈ PeriodicMainNonzeroRecordPairs := by", file=fh)
+        print("    simp [PeriodicMainNonzeroRecordPairs,", file=fh)
+        for idx in range(final_last, group_index_nonzero - 1, -1):
+            print(f"      PeriodicMainNonzeroRecordPairsUpTo{idx:03d},", file=fh)
+        print("      hpGroup]", file=fh)
+
+    module_index = f"{group_index:03d}"
+    path = os.path.join(out_dir, f"{file_prefix}{module_index}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(
+            "import Goldbach.Cert.MajorArcModules."
+            f"{lcm_group_module_prefix}{group_index:03d}"
+        )
+        print(f"import Goldbach.Cert.MajorArcModules.{dyadic_bridge_module_name}")
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated reverse LCM-to-target coverage for one LCM group. -/")
+        print()
+
+        for local_fiber_index, fiber in enumerate(selected):
+            global_fiber_index = start + local_fiber_index
+            records = list(fiber.get("records", []))
+            for pair_index, record in enumerate(records):
+                q = int(record["q"])
+                q2 = int(record["q2"])
+                pair = (q, q2)
+                if q == q2:
+                    continue
+                if q == 5:
+                    raise SystemExit(
+                        f"LCM reverse target group {group_index}: left row-five pair {pair}"
+                    )
+                if q2 == 2 * q or q == 2 * q2:
+                    raise SystemExit(
+                        f"LCM reverse target group {group_index}: dyadic pair {pair}"
+                    )
+                nonzero_index = pair_to_nonzero_index.get(pair)
+                if nonzero_index is None:
+                    raise SystemExit(
+                        f"LCM reverse target group {group_index}: pair {pair} missing from nonzero payload"
+                    )
+                chunk_index = nonzero_index // nonzero_chunk_size
+                nonzero_group_index = chunk_index // nonzero_group_chunks
+
+                print(f"theorem {pair_target_theorem_name(global_fiber_index, pair_index)} :")
+                print(f"    ({q}, {q2}) ∈ {target_set_name} := by")
+                print(f"  have hpChunk : ({q}, {q2}) ∈ PeriodicMainNonzeroRecordPairsChunk{chunk_index:03d} := by")
+                print("    native_decide")
+                print_nonzero_group_membership_lift(
+                    fh=fh,
+                    q=q,
+                    q2=q2,
+                    chunk_index=chunk_index,
+                    group_index_nonzero=nonzero_group_index,
+                )
+                print(f"  have hleft : ({q}, {q2}).1 ≠ 5 := by")
+                print("    norm_num")
+                print(
+                    f"  have hnotDyadic : ¬ (({q}, {q2}).2 = 2 * ({q}, {q2}).1 "
+                    f"∨ ({q}, {q2}).1 = 2 * ({q}, {q2}).2) := by"
+                )
+                print("    norm_num")
+                print("  exact PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic_mem_of_mem_nonzero")
+                print("    hpNonzero")
+                print("    hleft")
+                print("    hnotDyadic")
+                print()
+
+        for local_fiber_index, fiber in enumerate(selected):
+            global_fiber_index = start + local_fiber_index
+            fname = fiber_name(global_fiber_index)
+            records = list(fiber.get("records", []))
+            print(f"theorem {fiber_subset_theorem_name(global_fiber_index)} :")
+            print(f"    {fname}Pairs ⊆ {target_set_name} := by")
+            print("  intro p hp")
+            print(f"  change p ∈ {fname}RawPairs.filter (fun p => p.1 ≠ p.2) at hp")
+            print("  have hraw := (Finset.mem_filter.mp hp).1")
+            print("  have hne := (Finset.mem_filter.mp hp).2")
+            print("  fin_cases hraw")
+            for pair_index, record in enumerate(records):
+                q = int(record["q"])
+                q2 = int(record["q2"])
+                print("  ·")
+                if q == q2:
+                    print("    exfalso")
+                    print("    exact hne rfl")
+                else:
+                    print(f"    exact {pair_target_theorem_name(global_fiber_index, pair_index)}")
+            print()
+
+        group_label = f"{lcm_group_label_prefix}{group_index:03d}"
+        for local_fiber_index, _fiber in enumerate(selected):
+            global_fiber_index = start + local_fiber_index
+            upto_name = f"{group_label}PairsUpTo{local_fiber_index:03d}"
+            theorem_name = f"{label_prefix}Group{group_index:03d}UpTo{local_fiber_index:03d}_subset_target"
+            fiber_theorem = fiber_subset_theorem_name(global_fiber_index)
+            if local_fiber_index == 0:
+                print(f"theorem {theorem_name} :")
+                print(f"    {upto_name} ⊆ {target_set_name} := by")
+                print("  intro p hp")
+                print(f"  exact {fiber_theorem} (by simpa [{upto_name}] using hp)")
+            else:
+                prev_theorem = f"{label_prefix}Group{group_index:03d}UpTo{local_fiber_index - 1:03d}_subset_target"
+                print(f"theorem {theorem_name} :")
+                print(f"    {upto_name} ⊆ {target_set_name} := by")
+                print("  intro p hp")
+                print(f"  rw [{upto_name}] at hp")
+                print("  rcases Finset.mem_union.mp hp with hp | hp")
+                print(f"  · exact {prev_theorem} hp")
+                print(f"  · exact {fiber_theorem} hp")
+            print()
+
+        last_local = len(selected) - 1
+        print(f"theorem {label_prefix}Group{group_index:03d}_subset_target :")
+        print(f"    {group_label}Pairs ⊆ {target_set_name} := by")
+        print("  intro p hp")
+        print(
+            f"  exact {label_prefix}Group{group_index:03d}UpTo{last_local:03d}_subset_target "
+            f"(by simpa [{group_label}Pairs] using hp)"
+        )
+        print()
+        print(f"/- lcm reverse target group index={group_index}, fiber range=[{start},{end}) -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_reverse_target_slice_lean_file(
+    *,
+    nonzero_payload: dict[str, object],
+    lcm_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    start: int,
+    count: int,
+    lcm_order: str,
+    nonzero_chunk_size: int,
+    nonzero_group_chunks: int,
+    lcm_fiber_chunk_size: int,
+    lcm_fiber_module_prefix: str,
+    lcm_fiber_label_prefix: str,
+    dyadic_bridge_module_name: str,
+    target_set_name: str,
+) -> str:
+    if nonzero_payload.get("mode") != "periodic-main-ordered-nonzero-records":
+        raise SystemExit("expected a periodic-main ordered nonzero-record payload")
+    if lcm_payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if start < 0:
+        raise SystemExit("slice start must be nonnegative")
+    if count <= 0:
+        raise SystemExit("slice count must be positive")
+
+    nonzero_records = list(nonzero_payload.get("records", []))
+    pair_to_nonzero_index: dict[tuple[int, int], int] = {}
+    for index, record in enumerate(nonzero_records):
+        pair = (int(record["q"]), int(record["q2"]))
+        if pair in pair_to_nonzero_index:
+            raise SystemExit(f"duplicate nonzero record for pair {pair}")
+        pair_to_nonzero_index[pair] = index
+
+    fibers_all = _periodic_main_lcm_sorted_fibers(lcm_payload, lcm_order)
+    end = min(len(fibers_all), start + count)
+    if start >= len(fibers_all):
+        raise SystemExit(f"slice start {start} out of range for {len(fibers_all)} lcm fibers")
+    selected = fibers_all[start:end]
+    needed_nonzero_subset_groups: set[int] = set()
+    for fiber in selected:
+        for record in list(fiber.get("records", [])):
+            q = int(record["q"])
+            q2 = int(record["q2"])
+            if q == q2:
+                continue
+            nonzero_index = pair_to_nonzero_index.get((q, q2))
+            if nonzero_index is None:
+                raise SystemExit(
+                    f"LCM reverse target slice [{start},{end}): pair {(q, q2)} missing from nonzero payload"
+                )
+            chunk_index = nonzero_index // nonzero_chunk_size
+            needed_nonzero_subset_groups.add(chunk_index // nonzero_group_chunks)
+    slice_tag = f"{start:04d}_{end:04d}"
+    slice_label = f"{label_prefix}Abs{slice_tag}"
+    path = os.path.join(out_dir, f"{file_prefix}Abs{slice_tag}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    def fiber_import_module(global_index: int) -> str:
+        fiber_import_start = (global_index // lcm_fiber_chunk_size) * lcm_fiber_chunk_size
+        fiber_import_end = min(len(fibers_all), fiber_import_start + lcm_fiber_chunk_size)
+        return f"{lcm_fiber_module_prefix}{fiber_import_start:04d}_{fiber_import_end:04d}"
+
+    def fiber_name(global_index: int) -> str:
+        fiber_import_start = (global_index // lcm_fiber_chunk_size) * lcm_fiber_chunk_size
+        fiber_import_end = min(len(fibers_all), fiber_import_start + lcm_fiber_chunk_size)
+        local_index = global_index - fiber_import_start
+        return (
+            f"PeriodicMainNonDyadicLCM{lcm_fiber_label_prefix}"
+            f"{fiber_import_start:04d}_{fiber_import_end:04d}Fiber{local_index:03d}"
+        )
+
+    def pair_target_theorem_name(global_index: int, pair_index: int) -> str:
+        return f"{slice_label}Fiber{global_index:04d}Pair{pair_index:03d}_mem_target"
+
+    def fiber_subset_theorem_name(global_index: int) -> str:
+        return f"{slice_label}Fiber{global_index:04d}_subset_target"
+
+    def print_nonzero_group_membership_lift(
+        *,
+        fh: typing.TextIO,
+        q: int,
+        q2: int,
+        chunk_index: int,
+        group_index_nonzero: int,
+    ) -> None:
+        chunk_count = (len(nonzero_records) + nonzero_chunk_size - 1) // nonzero_chunk_size
+        local_chunk = chunk_index - group_index_nonzero * nonzero_group_chunks
+        last_local = min(nonzero_group_chunks, chunk_count - group_index_nonzero * nonzero_group_chunks) - 1
+        group_name = f"PeriodicMainNonzeroRecordPairsGroup{group_index_nonzero:03d}"
+        print(f"  have hpGroup : ({q}, {q2}) ∈ {group_name} := by", file=fh)
+        print("    simp [", file=fh)
+        print(f"      {group_name},", file=fh)
+        for local in range(last_local, local_chunk - 1, -1):
+            print(f"      {group_name}UpTo{local:03d},", file=fh)
+        print("      hpChunk]", file=fh)
+        final_group_count = (chunk_count + nonzero_group_chunks - 1) // nonzero_group_chunks
+        final_last = final_group_count - 1
+        print(f"  have hpNonzero : ({q}, {q2}) ∈ PeriodicMainNonzeroRecordPairs := by", file=fh)
+        print("    simp [PeriodicMainNonzeroRecordPairs,", file=fh)
+        for idx in range(final_last, group_index_nonzero - 1, -1):
+            print(f"      PeriodicMainNonzeroRecordPairsUpTo{idx:03d},", file=fh)
+        print("      hpGroup]", file=fh)
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        for module in sorted({fiber_import_module(start + idx) for idx in range(len(selected))}):
+            print(f"import Goldbach.Cert.MajorArcModules.{module}")
+        print(f"import Goldbach.Cert.MajorArcModules.{dyadic_bridge_module_name}")
+        for group_index_needed in sorted(needed_nonzero_subset_groups):
+            print(
+                "import Goldbach.Cert.MajorArcModules."
+                "Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunkSubset"
+                f"Group{group_index_needed:03d}"
+            )
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated reverse LCM-to-target coverage for one small LCM fiber slice. -/")
+        print()
+
+        for local_fiber_index, fiber in enumerate(selected):
+            global_fiber_index = start + local_fiber_index
+            for pair_index, record in enumerate(list(fiber.get("records", []))):
+                q = int(record["q"])
+                q2 = int(record["q2"])
+                if q == q2:
+                    continue
+                if q == 5 or q2 == 2 * q or q == 2 * q2:
+                    raise SystemExit(
+                        f"LCM reverse target slice [{start},{end}): unexpected target-excluded pair {(q, q2)}"
+                    )
+                nonzero_index = pair_to_nonzero_index.get((q, q2))
+                if nonzero_index is None:
+                    raise SystemExit(
+                        f"LCM reverse target slice [{start},{end}): pair {(q, q2)} missing from nonzero payload"
+                    )
+                chunk_index = nonzero_index // nonzero_chunk_size
+                nonzero_group_index = chunk_index // nonzero_group_chunks
+                print(f"theorem {pair_target_theorem_name(global_fiber_index, pair_index)} :")
+                print(f"    ({q}, {q2}) ∈ {target_set_name} := by")
+                print(f"  have hpChunk : ({q}, {q2}) ∈ PeriodicMainNonzeroRecordPairsChunk{chunk_index:03d} := by")
+                print("    native_decide")
+                print(f"  have hpNonzero : ({q}, {q2}) ∈ PeriodicMainNonzeroRecordPairs :=")
+                print(f"    PeriodicMainNonzeroRecordPairsChunk{chunk_index:03d}_subset_nonzero hpChunk")
+                print(f"  have hleft : ({q}, {q2}).1 ≠ 5 := by")
+                print("    norm_num")
+                print(
+                    f"  have hnotDyadic : ¬ (({q}, {q2}).2 = 2 * ({q}, {q2}).1 "
+                    f"∨ ({q}, {q2}).1 = 2 * ({q}, {q2}).2) := by"
+                )
+                print("    norm_num")
+                print("  exact PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic_mem_of_mem_nonzero")
+                print("    hpNonzero")
+                print("    hleft")
+                print("    hnotDyadic")
+                print()
+
+        for local_fiber_index, fiber in enumerate(selected):
+            global_fiber_index = start + local_fiber_index
+            fname = fiber_name(global_fiber_index)
+            records = list(fiber.get("records", []))
+            print(f"theorem {fiber_subset_theorem_name(global_fiber_index)} :")
+            print(f"    {fname}Pairs ⊆ {target_set_name} := by")
+            print("  intro p hp")
+            print(f"  change p ∈ {fname}RawPairs.filter (fun p => p.1 ≠ p.2) at hp")
+            print("  have hraw := (Finset.mem_filter.mp hp).1")
+            print("  have hne := (Finset.mem_filter.mp hp).2")
+            print("  fin_cases hraw")
+            for pair_index, record in enumerate(records):
+                q = int(record["q"])
+                q2 = int(record["q2"])
+                print("  ·")
+                if q == q2:
+                    print("    exfalso")
+                    print("    exact hne rfl")
+                else:
+                    print(f"    exact {pair_target_theorem_name(global_fiber_index, pair_index)}")
+            print()
+
+        print(f"/- lcm reverse target slice range=[{start},{end}) -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_reverse_target_group_assembly_lean_file(
+    *,
+    lcm_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    group_index: int,
+    lcm_order: str,
+    lcm_group_chunk_size: int,
+    lcm_slice_chunk_size: int,
+    lcm_group_module_prefix: str,
+    lcm_group_label_prefix: str,
+    reverse_slice_module_prefix: str,
+    reverse_slice_label_prefix: str,
+    target_set_name: str,
+) -> str:
+    fibers_all = _periodic_main_lcm_sorted_fibers(lcm_payload, lcm_order)
+    start = group_index * lcm_group_chunk_size
+    end = min(len(fibers_all), start + lcm_group_chunk_size)
+    if start >= len(fibers_all):
+        raise SystemExit(f"group index {group_index} out of range for {len(fibers_all)} lcm fibers")
+    path = os.path.join(out_dir, f"{file_prefix}{group_index:03d}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    def slice_bounds(global_index: int) -> tuple[int, int]:
+        slice_start = (global_index // lcm_slice_chunk_size) * lcm_slice_chunk_size
+        slice_end = min(len(fibers_all), slice_start + lcm_slice_chunk_size)
+        return slice_start, slice_end
+
+    def fiber_subset_theorem_name(global_index: int) -> str:
+        slice_start, slice_end = slice_bounds(global_index)
+        return (
+            f"{reverse_slice_label_prefix}Abs{slice_start:04d}_{slice_end:04d}"
+            f"Fiber{global_index:04d}_subset_target"
+        )
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(
+            "import Goldbach.Cert.MajorArcModules."
+            f"{lcm_group_module_prefix}{group_index:03d}"
+        )
+        for slice_start in range((start // lcm_slice_chunk_size) * lcm_slice_chunk_size, end, lcm_slice_chunk_size):
+            slice_end = min(len(fibers_all), slice_start + lcm_slice_chunk_size)
+            print(
+                "import Goldbach.Cert.MajorArcModules."
+                f"{reverse_slice_module_prefix}Abs{slice_start:04d}_{slice_end:04d}"
+            )
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated reverse LCM-to-target group assembly from small fiber slices. -/")
+        print()
+
+        group_label = f"{lcm_group_label_prefix}{group_index:03d}"
+        for local_fiber_index in range(end - start):
+            global_fiber_index = start + local_fiber_index
+            upto_name = f"{group_label}PairsUpTo{local_fiber_index:03d}"
+            theorem_name = f"{label_prefix}Group{group_index:03d}UpTo{local_fiber_index:03d}_subset_target"
+            fiber_theorem = fiber_subset_theorem_name(global_fiber_index)
+            if local_fiber_index == 0:
+                print(f"theorem {theorem_name} :")
+                print(f"    {upto_name} ⊆ {target_set_name} := by")
+                print("  intro p hp")
+                print(f"  exact {fiber_theorem} (by simpa [{upto_name}] using hp)")
+            else:
+                prev_theorem = f"{label_prefix}Group{group_index:03d}UpTo{local_fiber_index - 1:03d}_subset_target"
+                print(f"theorem {theorem_name} :")
+                print(f"    {upto_name} ⊆ {target_set_name} := by")
+                print("  intro p hp")
+                print(f"  rw [{upto_name}] at hp")
+                print("  rcases Finset.mem_union.mp hp with hp | hp")
+                print(f"  · exact {prev_theorem} hp")
+                print(f"  · exact {fiber_theorem} hp")
+            print()
+
+        print(f"theorem {label_prefix}Group{group_index:03d}_subset_target :")
+        print(f"    {group_label}Pairs ⊆ {target_set_name} := by")
+        print("  intro p hp")
+        print(
+            f"  exact {label_prefix}Group{group_index:03d}UpTo{end - start - 1:03d}_subset_target "
+            f"(by simpa [{group_label}Pairs] using hp)"
+        )
+        print()
+        print(f"/- lcm reverse target group index={group_index}, fiber range=[{start},{end}) -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
+def emit_periodic_main_nondyadic_lcm_reverse_target_group_lean_files(
+    *,
+    nonzero_payload: dict[str, object],
+    lcm_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    lcm_order: str,
+    nonzero_chunk_size: int,
+    nonzero_group_chunks: int,
+    lcm_group_chunk_size: int,
+    lcm_slice_chunk_size: int,
+    lcm_fiber_chunk_size: int,
+    lcm_fiber_module_prefix: str,
+    lcm_group_module_prefix: str,
+    lcm_group_label_prefix: str,
+    lcm_fiber_label_prefix: str,
+    dyadic_bridge_module_name: str,
+    target_set_name: str,
+) -> list[str]:
+    fibers_all = _periodic_main_lcm_sorted_fibers(lcm_payload, lcm_order)
+    group_count = (len(fibers_all) + lcm_group_chunk_size - 1) // lcm_group_chunk_size
+    slice_count = (len(fibers_all) + lcm_slice_chunk_size - 1) // lcm_slice_chunk_size
+    paths: list[str] = []
+    for slice_index in range(slice_count):
+        start = slice_index * lcm_slice_chunk_size
+        paths.append(emit_periodic_main_nondyadic_lcm_reverse_target_slice_lean_file(
+            nonzero_payload=nonzero_payload,
+            lcm_payload=lcm_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            start=start,
+            count=lcm_slice_chunk_size,
+            lcm_order=lcm_order,
+            nonzero_chunk_size=nonzero_chunk_size,
+            nonzero_group_chunks=nonzero_group_chunks,
+            lcm_fiber_chunk_size=lcm_fiber_chunk_size,
+            lcm_fiber_module_prefix=lcm_fiber_module_prefix,
+            lcm_fiber_label_prefix=lcm_fiber_label_prefix,
+            dyadic_bridge_module_name=dyadic_bridge_module_name,
+            target_set_name=target_set_name,
+        ))
+    for group_index in range(group_count):
+        paths.append(emit_periodic_main_nondyadic_lcm_reverse_target_group_assembly_lean_file(
+            lcm_payload=lcm_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            group_index=group_index,
+            lcm_order=lcm_order,
+            lcm_group_chunk_size=lcm_group_chunk_size,
+            lcm_slice_chunk_size=lcm_slice_chunk_size,
+            lcm_group_module_prefix=lcm_group_module_prefix,
+            lcm_group_label_prefix=lcm_group_label_prefix,
+            reverse_slice_module_prefix=file_prefix,
+            reverse_slice_label_prefix=label_prefix,
+            target_set_name=target_set_name,
+        ))
+    return paths
+
+
+def emit_periodic_main_nondyadic_lcm_reverse_target_final_lean_file(
+    *,
+    lcm_payload: dict[str, object],
+    out_dir: str,
+    file_prefix: str,
+    label_prefix: str,
+    lcm_order: str,
+    lcm_group_chunk_size: int,
+    lcm_super_group_size: int,
+    reverse_group_module_prefix: str,
+    reverse_group_label_prefix: str,
+    final_lcm_module_name: str,
+    target_subset_module_name: str,
+    lcm_target_module_name: str,
+    lcm_group_label_prefix: str,
+    lcm_super_group_label_prefix: str = "PeriodicMainNonDyadicLCMSuperGroup",
+    final_lcm_set_name: str = "PeriodicMainNonDyadicLCMPairs",
+    target_set_name: str = "PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic",
+) -> str:
+    if lcm_payload.get("mode") != "periodic-main-nondyadic-lcm-fiber-payload":
+        raise SystemExit("expected a periodic-main non-dyadic lcm-fiber payload")
+    if lcm_group_chunk_size <= 0:
+        raise SystemExit("lcm_group_chunk_size must be positive")
+    if lcm_super_group_size <= 0:
+        raise SystemExit("lcm_super_group_size must be positive")
+
+    fibers_all = _periodic_main_lcm_sorted_fibers(lcm_payload, lcm_order)
+    group_count = (len(fibers_all) + lcm_group_chunk_size - 1) // lcm_group_chunk_size
+    super_count = (group_count + lcm_super_group_size - 1) // lcm_super_group_size
+    if super_count <= 0:
+        raise SystemExit("cannot emit reverse target final for an empty LCM payload")
+
+    path = os.path.join(out_dir, f"{file_prefix}.lean")
+    os.makedirs(out_dir, exist_ok=True)
+
+    with open(path, "w", encoding="utf-8") as fh, contextlib.redirect_stdout(fh):
+        print(f"import Goldbach.Cert.MajorArcModules.{final_lcm_module_name}")
+        print(f"import Goldbach.Cert.MajorArcModules.{target_subset_module_name}")
+        print(f"import Goldbach.Cert.MajorArcModules.{lcm_target_module_name}")
+        for group_index in range(group_count):
+            print(
+                "import Goldbach.Cert.MajorArcModules."
+                f"{reverse_group_module_prefix}{group_index:03d}"
+            )
+        print()
+        print("set_option maxHeartbeats 0")
+        print("set_option maxRecDepth 100000")
+        print("set_option linter.constructorNameAsVariable false")
+        print()
+        print("namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+        print()
+        print("open Goldbach")
+        print("open Goldbach.BankParams")
+        print("open Goldbach.Windows")
+        print()
+        print("/- Generated final reverse LCM-to-target coverage assembly. -/")
+        print()
+
+        for super_index in range(super_count):
+            start_group = super_index * lcm_super_group_size
+            end_group = min(group_count, start_group + lcm_super_group_size)
+            local_count = end_group - start_group
+            super_label = f"{lcm_super_group_label_prefix}{super_index:03d}"
+            for local_index, group_index in enumerate(range(start_group, end_group)):
+                upto_name = f"{super_label}PairsUpTo{local_index:03d}"
+                theorem_name = (
+                    f"{label_prefix}SuperGroup{super_index:03d}UpTo{local_index:03d}_subset_target"
+                )
+                group_theorem = f"{reverse_group_label_prefix}Group{group_index:03d}_subset_target"
+                if local_index == 0:
+                    print(f"theorem {theorem_name} :")
+                    print(f"    {upto_name} ⊆ {target_set_name} := by")
+                    print("  intro p hp")
+                    print(f"  exact {group_theorem} (by simpa [{upto_name}] using hp)")
+                else:
+                    prev_theorem = (
+                        f"{label_prefix}SuperGroup{super_index:03d}UpTo{local_index - 1:03d}_subset_target"
+                    )
+                    print(f"theorem {theorem_name} :")
+                    print(f"    {upto_name} ⊆ {target_set_name} := by")
+                    print("  intro p hp")
+                    print(f"  rw [{upto_name}] at hp")
+                    print("  rcases Finset.mem_union.mp hp with hp | hp")
+                    print(f"  · exact {prev_theorem} hp")
+                    print(f"  · exact {group_theorem} hp")
+                print()
+
+            print(f"theorem {label_prefix}SuperGroup{super_index:03d}_subset_target :")
+            print(f"    {super_label}Pairs ⊆ {target_set_name} := by")
+            print("  intro p hp")
+            print(
+                f"  exact {label_prefix}SuperGroup{super_index:03d}UpTo{local_count - 1:03d}_subset_target "
+                f"(by simpa [{super_label}Pairs] using hp)"
+            )
+            print()
+
+        for super_index in range(super_count):
+            upto_name = f"PeriodicMainNonDyadicLCMPairsUpTo{super_index:03d}"
+            theorem_name = f"{label_prefix}UpTo{super_index:03d}_subset_target"
+            super_theorem = f"{label_prefix}SuperGroup{super_index:03d}_subset_target"
+            if super_index == 0:
+                print(f"theorem {theorem_name} :")
+                print(f"    {upto_name} ⊆ {target_set_name} := by")
+                print("  intro p hp")
+                print(f"  exact {super_theorem} (by simpa [{upto_name}] using hp)")
+            else:
+                prev_theorem = f"{label_prefix}UpTo{super_index - 1:03d}_subset_target"
+                print(f"theorem {theorem_name} :")
+                print(f"    {upto_name} ⊆ {target_set_name} := by")
+                print("  intro p hp")
+                print(f"  rw [{upto_name}] at hp")
+                print("  rcases Finset.mem_union.mp hp with hp | hp")
+                print(f"  · exact {prev_theorem} hp")
+                print(f"  · exact {super_theorem} hp")
+            print()
+
+        print(f"theorem {final_lcm_set_name}_subset_target :")
+        print(f"    {final_lcm_set_name} ⊆ {target_set_name} := by")
+        print("  intro p hp")
+        print(
+            f"  exact {label_prefix}UpTo{super_count - 1:03d}_subset_target "
+            f"(by simpa [{final_lcm_set_name}] using hp)"
+        )
+        print()
+        print(f"theorem {final_lcm_set_name}_eq_target :")
+        print(f"    {final_lcm_set_name} = {target_set_name} := by")
+        print("  apply Finset.Subset.antisymm")
+        print(f"  · exact {final_lcm_set_name}_subset_target")
+        print(f"  · exact {target_set_name}_subset_lcm")
+        print()
+        print("theorem periodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic_actual_sum_of_lcm_target")
+        print("    (hzero :")
+        print(f"      ∀ p ∈ {target_set_name},")
+        print("        surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p) :")
+        print(f"    (∑ p ∈ {target_set_name},")
+        print("      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p)")
+        print("      = PeriodicMainNonDyadicLCMTotal := by")
+        print("  exact periodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic_actual_sum_of_lcm_target_eq")
+        print(f"    {final_lcm_set_name}_eq_target")
+        print("    hzero")
+        print()
+        print(f"/- lcm reverse target group count={group_count}, supergroup count={super_count} -/")
+        print()
+        print("end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage")
+
+    return path
+
+
 def periodic_main_dyadic_zero_mechanism_report(
     *,
     records: list[dict[str, object]],
@@ -2491,6 +7098,333 @@ def periodic_main_dyadic_zero_mechanism_report(
     for q, q2_values in sorted(residual_by_left.items(), key=lambda item: -len(item[1]))[:top]:
         sample = " ".join(str(q2) for q2 in sorted(q2_values)[:16])
         print(f"{q},{len(q2_values)},{sample}")
+
+
+def periodic_main_dyadic_base_pair_payload(
+    *,
+    source_path: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    records = list(payload.get("records", []))
+    base_data: dict[int, dict[str, object]] = {}
+    orientation_counts: Counter[str] = Counter()
+    bad_records: list[tuple[int, int]] = []
+    for record in records:
+        q = int(record["q"])
+        q2 = int(record["q2"])
+        value = Fraction(int(record["value_num"]), int(record["value_den"]))
+        if q2 == 2 * q:
+            base = q
+            orientation = "right_double"
+        elif q == 2 * q2:
+            base = q2
+            orientation = "left_double"
+        else:
+            bad_records.append((q, q2))
+            continue
+        orientation_counts[orientation] += 1
+        info = base_data.setdefault(base, {"records": [], "total": Fraction(0, 1)})
+        info["records"].append({
+            "q": q,
+            "q2": q2,
+            "orientation": orientation,
+            "value_num": value.numerator,
+            "value_den": value.denominator,
+        })
+        info["total"] += value
+
+    if bad_records:
+        preview = ", ".join(f"({q},{q2})" for q, q2 in bad_records[:10])
+        raise SystemExit(f"{source_path}: found non-dyadic records in dyadic payload: {preview}")
+
+    bases: list[dict[str, object]] = []
+    missing_orientation: list[dict[str, object]] = []
+    mismatched_symmetric_values: list[dict[str, object]] = []
+    for base in sorted(base_data):
+        info = base_data[base]
+        base_records = sorted(info["records"], key=lambda r: (int(r["q"]), int(r["q2"])))
+        orientations = {str(r["orientation"]) for r in base_records}
+        total: Fraction = info["total"]  # type: ignore[assignment]
+        if len(base_records) == 1:
+            missing_orientation.append({"base": base, "records": base_records})
+        elif len(base_records) == 2:
+            values = {
+                (int(r["value_num"]), int(r["value_den"]))
+                for r in base_records
+            }
+            if len(values) != 1:
+                mismatched_symmetric_values.append({"base": base, "records": base_records})
+        else:
+            mismatched_symmetric_values.append({"base": base, "records": base_records})
+        bases.append({
+            "base": base,
+            "orientation_count": len(orientations),
+            "records": base_records,
+            "total_num": total.numerator,
+            "total_den": total.denominator,
+        })
+
+    aggregate = sum(
+        (Fraction(int(base["total_num"]), int(base["total_den"])) for base in bases),
+        Fraction(0, 1),
+    )
+    return {
+        "mode": "periodic-main-dyadic-base-pair-records",
+        "source": source_path,
+        "X": int(payload.get("X", 0)),
+        "record_count": len(records),
+        "base_count": len(bases),
+        "orientation_counts": dict(sorted(orientation_counts.items())),
+        "base_orientation_counts": dict(Counter(int(base["orientation_count"]) for base in bases)),
+        "missing_orientation_count": len(missing_orientation),
+        "missing_orientation": missing_orientation,
+        "mismatched_symmetric_value_count": len(mismatched_symmetric_values),
+        "mismatched_symmetric_values": mismatched_symmetric_values,
+        "total_num": aggregate.numerator,
+        "total_den": aggregate.denominator,
+        "bases": bases,
+    }
+
+
+def periodic_main_dyadic_base_pair_report(
+    *,
+    source_path: str,
+    payload: dict[str, object],
+    top: int,
+) -> None:
+    base_payload = periodic_main_dyadic_base_pair_payload(
+        source_path=source_path,
+        payload=payload,
+    )
+    total = Fraction(int(base_payload["total_num"]), int(base_payload["total_den"]))
+    print("periodic-main nonzero dyadic base-pair report")
+    print(f"source: {source_path}")
+    print(f"record_count: {base_payload['record_count']}")
+    print(f"base_count: {base_payload['base_count']}")
+    print(f"orientation_counts: {base_payload['orientation_counts']}")
+    print(f"base_orientation_counts: {base_payload['base_orientation_counts']}")
+    print(f"missing_orientation_count: {base_payload['missing_orientation_count']}")
+    for missing in list(base_payload["missing_orientation"])[:10]:
+        records_desc = ", ".join(
+            f"({r['q']},{r['q2']},{r['value_num']}/{r['value_den']})"
+            for r in missing["records"]
+        )
+        print(f"missing_orientation: base={missing['base']} records=[{records_desc}]")
+    print(f"mismatched_symmetric_value_count: {base_payload['mismatched_symmetric_value_count']}")
+    print(f"aggregate_total_num: {total.numerator}")
+    print(f"aggregate_total_den: {total.denominator}")
+    print(f"aggregate_total_float: {float(total):.18f}")
+    bases = list(base_payload["bases"])
+    bases.sort(
+        key=lambda base: abs(Fraction(int(base["total_num"]), int(base["total_den"]))),
+        reverse=True,
+    )
+    print("top_base_totals_by_abs:")
+    for base in bases[:top]:
+        value = Fraction(int(base["total_num"]), int(base["total_den"]))
+        print(
+            f"  base={base['base']} orientations={base['orientation_count']} "
+            f"signed={value.numerator}/{value.denominator} float={float(value):.18f}"
+        )
+
+
+def periodic_main_unordered_pair_payload(
+    *,
+    source_path: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    records = list(payload.get("records", []))
+    class_data: dict[tuple[int, int], dict[str, object]] = {}
+    orientation_counts: Counter[str] = Counter()
+    row_counts: Counter[int] = Counter()
+    for source_index, record in enumerate(records):
+        q = int(record["q"])
+        q2 = int(record["q2"])
+        value = Fraction(int(record["value_num"]), int(record["value_den"]))
+        key = (min(q, q2), max(q, q2))
+        if q < q2:
+            orientation = "increasing"
+        elif q > q2:
+            orientation = "decreasing"
+        else:
+            orientation = "diagonal"
+        orientation_counts[orientation] += 1
+        row_counts[q] += 1
+        info = class_data.setdefault(key, {"records": [], "total": Fraction(0, 1)})
+        info["records"].append({
+            "source_index": source_index,
+            "q": q,
+            "q2": q2,
+            "orientation": orientation,
+            "value_num": value.numerator,
+            "value_den": value.denominator,
+        })
+        info["total"] += value
+
+    classes: list[dict[str, object]] = []
+    one_sided_classes: list[dict[str, object]] = []
+    mismatched_symmetric_values: list[dict[str, object]] = []
+    for q_lo, q_hi in sorted(class_data):
+        info = class_data[(q_lo, q_hi)]
+        class_records = sorted(info["records"], key=lambda r: (int(r["q"]), int(r["q2"])))
+        total: Fraction = info["total"]  # type: ignore[assignment]
+        class_payload = {
+            "q_lo": q_lo,
+            "q_hi": q_hi,
+            "records": class_records,
+            "record_count": len(class_records),
+            "total_num": total.numerator,
+            "total_den": total.denominator,
+        }
+        if len(class_records) == 1:
+            one_sided_classes.append(class_payload)
+        elif len(class_records) == 2:
+            values = {
+                (int(r["value_num"]), int(r["value_den"]))
+                for r in class_records
+            }
+            if len(values) != 1:
+                mismatched_symmetric_values.append(class_payload)
+        else:
+            mismatched_symmetric_values.append(class_payload)
+        classes.append(class_payload)
+
+    aggregate = sum(
+        (Fraction(int(cls["total_num"]), int(cls["total_den"])) for cls in classes),
+        Fraction(0, 1),
+    )
+    return {
+        "mode": "periodic-main-unordered-pair-records",
+        "source": source_path,
+        "X": int(payload.get("X", 0)),
+        "record_count": len(records),
+        "class_count": len(classes),
+        "class_size_counts": dict(sorted(Counter(int(cls["record_count"]) for cls in classes).items())),
+        "orientation_counts": dict(sorted(orientation_counts.items())),
+        "row_count": len(row_counts),
+        "top_row_counts": [
+            {"q": q, "count": count}
+            for q, count in row_counts.most_common(30)
+        ],
+        "one_sided_class_count": len(one_sided_classes),
+        "one_sided_classes": one_sided_classes,
+        "mismatched_symmetric_value_count": len(mismatched_symmetric_values),
+        "mismatched_symmetric_values": mismatched_symmetric_values,
+        "total_num": aggregate.numerator,
+        "total_den": aggregate.denominator,
+        "classes": classes,
+    }
+
+
+def divisor_count_trial(n: int) -> int:
+    count = 0
+    d = 1
+    while d * d <= n:
+        if n % d == 0:
+            count += 1 if d * d == n else 2
+        d += 1
+    return count
+
+
+def select_periodic_main_unordered_hard_split_records(
+    *,
+    classes: list[dict[str, object]],
+    left_rows: set[int],
+    min_left_divisors: int,
+    min_right_divisors: int,
+    use_symmetry: bool,
+) -> list[dict[str, object]]:
+    if not left_rows and min_left_divisors <= 0:
+        raise SystemExit(
+            "--periodic-main-unordered-split-left-rows or "
+            "--periodic-main-unordered-split-min-left-divisors is required"
+        )
+    if min_right_divisors <= 0:
+        raise SystemExit("--periodic-main-unordered-split-min-right-divisors must be positive")
+
+    selected: list[dict[str, object]] = []
+    seen: set[tuple[int, int]] = set()
+    for cls in classes:
+        class_records = list(cls.get("records", []))
+        if use_symmetry and len(class_records) == 2:
+            q_lo = int(cls["q_lo"])
+            q_hi = int(cls["q_hi"])
+            candidate = next(
+                (
+                    record for record in class_records
+                    if int(record["q"]) == q_lo and int(record["q2"]) == q_hi
+                ),
+                None,
+            )
+            candidates = [] if candidate is None else [candidate]
+        else:
+            candidates = class_records
+        for record in candidates:
+            q = int(record["q"])
+            q2 = int(record["q2"])
+            left_matches = q in left_rows
+            if min_left_divisors > 0 and divisor_count_trial(q) >= min_left_divisors:
+                left_matches = True
+            if not left_matches:
+                continue
+            if divisor_count_trial(q2) < min_right_divisors:
+                continue
+            key = (q, q2)
+            if key in seen:
+                continue
+            if "source_index" not in record:
+                raise SystemExit(
+                    f"hard split record ({q},{q2}) has no source_index; regenerate the unordered JSON"
+                )
+            selected.append(record)
+            seen.add(key)
+    return selected
+
+
+def periodic_main_unordered_pair_report(
+    *,
+    source_path: str,
+    payload: dict[str, object],
+    top: int,
+) -> None:
+    class_payload = periodic_main_unordered_pair_payload(
+        source_path=source_path,
+        payload=payload,
+    )
+    total = Fraction(int(class_payload["total_num"]), int(class_payload["total_den"]))
+    print("periodic-main unordered-pair report")
+    print(f"source: {source_path}")
+    print(f"record_count: {class_payload['record_count']}")
+    print(f"class_count: {class_payload['class_count']}")
+    print(f"class_size_counts: {class_payload['class_size_counts']}")
+    print(f"orientation_counts: {class_payload['orientation_counts']}")
+    print(f"row_count: {class_payload['row_count']}")
+    print("top_row_counts:")
+    for row in class_payload["top_row_counts"]:
+        print(f"  q={row['q']} count={row['count']}")
+    print(f"one_sided_class_count: {class_payload['one_sided_class_count']}")
+    for cls in list(class_payload["one_sided_classes"])[:10]:
+        records_desc = ", ".join(
+            f"({r['q']},{r['q2']},{r['value_num']}/{r['value_den']})"
+            for r in cls["records"]
+        )
+        print(f"one_sided_class: ({cls['q_lo']},{cls['q_hi']}) records=[{records_desc}]")
+    print(f"mismatched_symmetric_value_count: {class_payload['mismatched_symmetric_value_count']}")
+    print(f"aggregate_total_num: {total.numerator}")
+    print(f"aggregate_total_den: {total.denominator}")
+    print(f"aggregate_total_float: {float(total):.18f}")
+    classes = list(class_payload["classes"])
+    classes.sort(
+        key=lambda cls: abs(Fraction(int(cls["total_num"]), int(cls["total_den"]))),
+        reverse=True,
+    )
+    print("top_class_totals_by_abs:")
+    for cls in classes[:top]:
+        value = Fraction(int(cls["total_num"]), int(cls["total_den"]))
+        print(
+            f"  class=({cls['q_lo']},{cls['q_hi']}) records={cls['record_count']} "
+            f"signed={value.numerator}/{value.denominator} float={float(value):.18f}"
+        )
 
 
 def periodic_main_dyadic_exception_zero_records(
@@ -3984,6 +8918,7 @@ def emit_periodic_main_pair_primitive_lean_theorems(
         full_blocks = (H + 1) // block_period(q, q2)
         even_count_rat = Fraction(even_count, 1)
         row_values: dict[int, Fraction] = {g: Fraction(0, 1) for g in divs_q}
+        term_values: dict[tuple[int, int], Fraction] = {}
         for g in divs_q:
             avg_g = exact_ctx["avg_by_q"][q][g]
             left = Fraction(gcd_class_count_in_even_progression(q, g, first_even, even_count, exact_ctx), 1)
@@ -3998,6 +8933,7 @@ def emit_periodic_main_pair_primitive_lean_theorems(
                 c_h = exact_ctx["gcd_coeff_by_q"][q2][h]
                 centered_full_block = pair - avg_h * left - avg_g * right + avg_g * avg_h * even_count_rat
                 term_value = c_g * c_h * Fraction(full_blocks, 1) * centered_full_block
+                term_values[(g, h)] = term_value
                 row_values[g] += term_value
                 print(f"theorem {support(f'term_{g}_{h}')} :")
                 for line in term_expr_lines(g, h, indent="    "):
@@ -4014,22 +8950,55 @@ def emit_periodic_main_pair_primitive_lean_theorems(
                 )
                 print()
         for g in divs_q:
+            print(f"def {support(f'rowValue_{g}')} : ℕ → ℚ")
+            for h in divs_q2:
+                print(f"| {h} => {fraction_to_q_literal(term_values[(g, h)])}")
+            print("| _ => 0")
+            print()
             print(f"theorem {support(f'row_{g}')} :")
             print(f"    (∑ h ∈ Nat.divisors {q2},")
             for line in term_expr_lines(g, "h", indent="      "):
                 print(line)
             print(f"    ) = {fraction_to_q_literal(row_values[g])} := by")
-            term_supports = [support(f"term_{g}_{h}") for h in divs_q2]
-            print("  norm_num [" + ", ".join([support("divRight")] + term_supports) + "]")
+            print(f"  rw [{support('divRight')}]")
+            print("  have hsum :")
+            print(f"      (∑ h ∈ ({lean_nat_list(divs_q2)} : List ℕ).toFinset,")
+            for line in term_expr_lines(g, "h", indent="        "):
+                print(line)
+            print(f"      ) = (∑ h ∈ ({lean_nat_list(divs_q2)} : List ℕ).toFinset, {support(f'rowValue_{g}')} h) := by")
+            print("    apply Finset.sum_congr rfl")
+            print("    intro h hh")
+            print("    simp at hh")
+            print("    rcases hh with " + " | ".join(["rfl"] * len(divs_q2)))
+            for h in divs_q2:
+                print(f"    · simpa [{support(f'rowValue_{g}')}] using {support(f'term_{g}_{h}')}")
+            print("  rw [hsum]")
+            print(f"  norm_num [{support(f'rowValue_{g}')}]")
             print()
+
+        print(f"def {name}_rowValue : ℕ → ℚ")
+        for g in divs_q:
+            print(f"| {g} => {fraction_to_q_literal(row_values[g])}")
+        print("| _ => 0")
+        print()
 
         print(f"theorem {name}_centeredTerm :")
         print(f"    centeredRamanujanPairPeriodicMainTermRat X0 {q} {q2} = {fraction_to_q_literal(centered_term)} := by")
         print("  unfold centeredRamanujanPairPeriodicMainTermRat")
-        row_supports = [support(f"row_{g}") for g in divs_q]
-        print(f"  rw [{support('divLeft')}]")
-        print("  simp [List.toFinset_cons, List.toFinset_nil, Finset.sum_insert,")
-        print("    " + ", ".join(row_supports) + "]")
+        print("  have hsum :")
+        print(f"      (∑ g ∈ Nat.divisors {q}, ∑ h ∈ Nat.divisors {q2},")
+        for line in term_expr_lines("g", "h", indent="        "):
+            print(line)
+        print(f"      ) = (∑ g ∈ Nat.divisors {q}, {name}_rowValue g) := by")
+        print("    apply Finset.sum_congr rfl")
+        print("    intro g hg")
+        print(f"    rw [{support('divLeft')}] at hg")
+        print("    simp at hg")
+        print("    rcases hg with " + " | ".join(["rfl"] * len(divs_q)))
+        for g in divs_q:
+            print(f"    · simpa [{name}_rowValue] using {support(f'row_{g}')}")
+        print(f"  rw [hsum, {support('divLeft')}]")
+        print(f"  norm_num [{name}_rowValue]")
         print("  norm_num")
         print()
         print(f"theorem {name}_orderedSummand :")
@@ -5053,6 +10022,82 @@ def main() -> None:
                     help="Print a classification report for ordered periodic-main zero-record JSON.")
     ap.add_argument("--periodic-main-dyadic-zero-mechanism-report", type=str, default="",
                     help="Print a structural mechanism report for dyadic-exception ordered zero-record JSON.")
+    ap.add_argument("--periodic-main-dyadic-base-pair-report", type=str, default="",
+                    help="Print a base-pair report for ordered dyadic nonzero periodic-main JSON.")
+    ap.add_argument("--emit-periodic-main-dyadic-base-pair-json", nargs=2,
+                    metavar=("DYADIC_JSON", "OUT_JSON"),
+                    help="Convert ordered dyadic nonzero periodic-main JSON into one base-pair JSON payload.")
+    ap.add_argument("--emit-periodic-main-dyadic-base-pair-lean-files", nargs=4,
+                    metavar=("BASE_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write Lean primitive-count modules over dyadic base-pair JSON chunks.")
+    ap.add_argument("--periodic-main-unordered-pair-report", type=str, default="",
+                    help="Print an unordered-pair compression report for ordered nonzero periodic-main JSON.")
+    ap.add_argument("--periodic-main-nondyadic-mean-product-audit", type=str, default="",
+                    help="Verify the exact mean-product compression against a non-dyadic unordered periodic-main JSON payload.")
+    ap.add_argument("--periodic-main-nondyadic-lcm-compression-report", type=str, default="",
+                    help="Report lcm-fiber compression after the non-dyadic mean-product collapse.")
+    ap.add_argument("--periodic-main-nondyadic-check-components", action="store_true",
+                    help="With --periodic-main-nondyadic-lcm-compression-report, also verify raw/left/right component totals exactly.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-payload", nargs=2,
+                    metavar=("UNORDERED_JSON", "OUT_JSON"),
+                    help="Write a reusable lcm-fiber JSON payload for the non-dyadic mean-product compression.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-prototype-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write a small arithmetic-only Lean prototype over selected non-dyadic lcm fibers.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-weight-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write public one-variable weight certificate modules for non-dyadic lcm compression.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-wrapper-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write wrapper modules that discharge scalar/weight assumptions for lcm fiber modules.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-component-zero-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write component-zero certificate modules for selected non-dyadic lcm fibers.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-component-zero-assembly-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write a light assembly module over sliced component-zero certificates for one LCM fiber.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-component-zero-group-bridge-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write one group bridge from per-fiber LCM component-zero proofs to a group actual-sum theorem.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-group-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write one grouped LCM assembly module over consecutive non-dyadic lcm fibers.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-grouped-final-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write the final grouped LCM assembly module for the non-dyadic periodic-main block.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-containment-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write structural subset facts from generated LCM fibers to the final LCM pair set.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-target-chunk-files", nargs=5,
+                    metavar=("NONZERO_JSON", "LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write target-to-LCM chunk theorems over existing nonzero coverage chunks.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-target-group-files", nargs=4,
+                    metavar=("NONZERO_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write grouped target-to-LCM assembly theorems over generated LCM target chunk modules.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-target-final-lean", nargs=4,
+                    metavar=("NONZERO_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write the final target-to-LCM subset theorem from grouped target assembly modules.")
+    ap.add_argument("--emit-periodic-main-nonzero-chunk-subset-lean", nargs=4,
+                    metavar=("NONZERO_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write chunk-to-final-subset theorems for ordered nonzero periodic-main records.")
+    ap.add_argument("--emit-periodic-main-nonzero-chunk-subset-group-files", nargs=4,
+                    metavar=("NONZERO_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write grouped chunk-to-final-subset theorems for ordered nonzero periodic-main records.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-reverse-target-group-files", nargs=5,
+                    metavar=("NONZERO_JSON", "LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write generated reverse LCM-to-target group subset modules.")
+    ap.add_argument("--emit-periodic-main-nondyadic-lcm-reverse-target-final-lean", nargs=4,
+                    metavar=("LCM_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write the final reverse LCM-to-target equality bridge.")
+    ap.add_argument("--emit-periodic-main-unordered-pair-json", nargs=2,
+                    metavar=("ORDERED_JSON", "OUT_JSON"),
+                    help="Convert ordered nonzero periodic-main JSON into an unordered-pair payload.")
+    ap.add_argument("--emit-periodic-main-unordered-pair-lean-files", nargs=4,
+                    metavar=("UNORDERED_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write Lean primitive-count modules over unordered-pair JSON chunks.")
+    ap.add_argument("--emit-periodic-main-unordered-hard-split-lean-files", nargs=4,
+                    metavar=("UNORDERED_JSON", "OUT_DIR", "FILE_PREFIX", "LABEL_PREFIX"),
+                    help="Write split Lean proof modules for hard canonical records selected from unordered-pair JSON.")
     ap.add_argument("--periodic-main-zero-report-exclude-left", nargs="*", type=int, default=[],
                     help="Left q rows to exclude from --periodic-main-zero-classification-report.")
     ap.add_argument("--periodic-main-zero-report-nonzero-json", type=str, default="",
@@ -5172,6 +10217,30 @@ def main() -> None:
                     help="Stable Lean-name label for --emit-periodic-main-pair-records-lean-json output.")
     ap.add_argument("--periodic-main-record-file-chunk-size", type=int, default=1,
                     help="Record count per module for --emit-periodic-main-pair-records-lean-files.")
+    ap.add_argument("--periodic-main-base-start", type=int, default=0,
+                    help="Starting base index for --emit-periodic-main-dyadic-base-pair-lean-files.")
+    ap.add_argument("--periodic-main-base-count", type=int, default=0,
+                    help="Number of bases to emit for --emit-periodic-main-dyadic-base-pair-lean-files; 0 means all remaining.")
+    ap.add_argument("--periodic-main-base-file-chunk-size", type=int, default=1,
+                    help="Base count per module for --emit-periodic-main-dyadic-base-pair-lean-files.")
+    ap.add_argument("--periodic-main-class-start", type=int, default=0,
+                    help="Starting unordered class index for --emit-periodic-main-unordered-pair-lean-files.")
+    ap.add_argument("--periodic-main-class-count", type=int, default=0,
+                    help="Number of unordered classes to emit for --emit-periodic-main-unordered-pair-lean-files; 0 means all remaining.")
+    ap.add_argument("--periodic-main-class-file-chunk-size", type=int, default=1,
+                    help="Unordered class count per module for --emit-periodic-main-unordered-pair-lean-files.")
+    ap.add_argument("--periodic-main-unordered-use-symmetry", action="store_true",
+                    help="With --emit-periodic-main-unordered-pair-lean-files, prove reverse orientations by ordered-pair symmetry.")
+    ap.add_argument("--periodic-main-unordered-split-left-rows", nargs="*", type=int, default=[],
+                    help="Canonical left rows whose unordered-pair records should be imported from split modules.")
+    ap.add_argument("--periodic-main-unordered-split-min-left-divisors", type=int, default=0,
+                    help="Minimum canonical-left divisor count for unordered-pair records imported/emitted as split modules.")
+    ap.add_argument("--periodic-main-unordered-split-min-right-divisors", type=int, default=0,
+                    help="Minimum right-divisor count for unordered-pair records imported/emitted as split modules.")
+    ap.add_argument("--periodic-main-unordered-split-file-prefix", type=str, default="",
+                    help="Split module file prefix used by hard unordered-pair chunk imports.")
+    ap.add_argument("--periodic-main-unordered-split-out-dir", type=str, default="",
+                    help="Output directory for hard split modules; defaults to the unordered chunk output directory.")
     ap.add_argument("--periodic-main-record-file-skip-existing", action="store_true",
                     help="With --emit-periodic-main-pair-records-lean-files, skip files that already exist.")
     ap.add_argument("--periodic-main-record-force-top-level-helpers", action="store_true",
@@ -5180,6 +10249,10 @@ def main() -> None:
                     help="Right-divisor count per row-part helper module for split periodic-main pair records.")
     ap.add_argument("--periodic-main-split-inline-row-parts", action="store_true",
                     help="Inline term arithmetic into row-part modules instead of emitting one helper module per term.")
+    ap.add_argument("--periodic-main-split-cached-facts", action="store_true",
+                    help="With split periodic-main pair records, emit one record-local facts module and reuse it from term modules.")
+    ap.add_argument("--periodic-main-split-fact-part-size", type=int, default=0,
+                    help="If positive with cached split facts, emit record-local fact modules in parts of this many facts.")
     ap.add_argument("--periodic-main-disable-q42-cancel", action="store_true",
                     help="With --emit-periodic-main-pair-records-split-lean-files, use the ordinary split emitter for q=42 zero records instead of the specialized q=42 cancellation emitter.")
     ap.add_argument("--periodic-main-assembly-extra-imports", nargs="*", default=[],
@@ -5188,6 +10261,111 @@ def main() -> None:
                     help="Suffix appended after each zero-value group set index in --emit-periodic-main-zero-value-grouped-final-lean.")
     ap.add_argument("--periodic-main-group-theorem-suffix", type=str, default="_value_on_records",
                     help="Suffix appended after each zero-value group theorem index in --emit-periodic-main-zero-value-grouped-final-lean.")
+    ap.add_argument("--periodic-main-lcm-start", type=int, default=0,
+                    help="Starting lcm-fiber index for --emit-periodic-main-nondyadic-lcm-prototype-lean.")
+    ap.add_argument("--periodic-main-lcm-count", type=int, default=3,
+                    help="Number of lcm fibers for --emit-periodic-main-nondyadic-lcm-prototype-lean.")
+    ap.add_argument("--periodic-main-lcm-order", choices=("index", "abs"), default="index",
+                    help="LCM fiber order used by --emit-periodic-main-nondyadic-lcm-prototype-lean.")
+    ap.add_argument("--periodic-main-lcm-emit-selected-total", action="store_true",
+                    help="With --emit-periodic-main-nondyadic-lcm-prototype-lean, also emit one selected-union total theorem.")
+    ap.add_argument("--periodic-main-lcm-weight-start", type=int, default=0,
+                    help="Starting weight index for --emit-periodic-main-nondyadic-lcm-weight-lean.")
+    ap.add_argument("--periodic-main-lcm-weight-count", type=int, default=25,
+                    help="Number of weights for --emit-periodic-main-nondyadic-lcm-weight-lean.")
+    ap.add_argument("--periodic-main-lcm-fiber-module-prefix", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMFiberAbs",
+                    help="Fiber module prefix for --emit-periodic-main-nondyadic-lcm-wrapper-lean.")
+    ap.add_argument("--periodic-main-lcm-fiber-label-prefix", type=str, default="LCMAbs",
+                    help="Fiber theorem label prefix for --emit-periodic-main-nondyadic-lcm-wrapper-lean.")
+    ap.add_argument("--periodic-main-lcm-fiber-chunk-size", type=int, default=20,
+                    help="Fiber module chunk size used by generated LCM fiber modules.")
+    ap.add_argument("--periodic-main-lcm-record-start", type=int, default=0,
+                    help="Starting record offset inside selected lcm fibers for component-zero debug/chunk emission.")
+    ap.add_argument("--periodic-main-lcm-record-limit", type=int, default=0,
+                    help="Debug limit for record count inside --emit-periodic-main-nondyadic-lcm-component-zero-lean.")
+    ap.add_argument("--periodic-main-lcm-record-ranges", type=str, default="",
+                    help="Comma-separated START:END record ranges for --emit-periodic-main-nondyadic-lcm-component-zero-assembly-lean.")
+    ap.add_argument("--periodic-main-lcm-weight-module-prefix", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMWeight",
+                    help="Weight module prefix for --emit-periodic-main-nondyadic-lcm-wrapper-lean.")
+    ap.add_argument("--periodic-main-lcm-weight-label-prefix", type=str, default="W",
+                    help="Weight theorem label prefix for --emit-periodic-main-nondyadic-lcm-wrapper-lean.")
+    ap.add_argument("--periodic-main-lcm-weight-chunk-size", type=int, default=10,
+                    help="Weight chunk size used by generated LCM weight modules.")
+    ap.add_argument("--periodic-main-lcm-group-index", type=int, default=0,
+                    help="Group index for --emit-periodic-main-nondyadic-lcm-group-lean.")
+    ap.add_argument("--periodic-main-lcm-group-start", type=int, default=0,
+                    help="Starting group index for --emit-periodic-main-nondyadic-lcm-grouped-final-lean.")
+    ap.add_argument("--periodic-main-lcm-group-count", type=int, default=0,
+                    help="Group count for --emit-periodic-main-nondyadic-lcm-grouped-final-lean.")
+    ap.add_argument("--periodic-main-lcm-wrapper-module-prefix", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMWrapperAbs",
+                    help="Wrapper module prefix for --emit-periodic-main-nondyadic-lcm-group-lean.")
+    ap.add_argument("--periodic-main-lcm-wrapper-label-prefix", type=str, default="LCMWrapAbs",
+                    help="Wrapper theorem label prefix for --emit-periodic-main-nondyadic-lcm-group-lean.")
+    ap.add_argument("--periodic-main-lcm-wrapper-chunk-size", type=int, default=5,
+                    help="Wrapper fiber chunk size used by generated LCM wrapper modules.")
+    ap.add_argument("--periodic-main-lcm-group-module-prefix", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMGroup",
+                    help="Group module prefix for --emit-periodic-main-nondyadic-lcm-grouped-final-lean.")
+    ap.add_argument("--periodic-main-lcm-group-label-prefix", type=str, default="PeriodicMainNonDyadicLCMGroup",
+                    help="Group theorem label prefix for --emit-periodic-main-nondyadic-lcm-grouped-final-lean.")
+    ap.add_argument("--periodic-main-lcm-target-set-name", type=str,
+                    default="PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic",
+                    help="Target set name for --emit-periodic-main-nondyadic-lcm-grouped-final-lean.")
+    ap.add_argument("--periodic-main-lcm-assume-group-actual-sums", action="store_true",
+                    help="With --emit-periodic-main-nondyadic-lcm-grouped-final-lean, emit assembly theorem from group sum hypotheses instead of carrying component-zero assumptions.")
+    ap.add_argument("--periodic-main-lcm-final-module-name", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMFinal",
+                    help="Final LCM module imported by --emit-periodic-main-nondyadic-lcm-containment-lean.")
+    ap.add_argument("--periodic-main-lcm-containment-module-prefix", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMContainmentAbs",
+                    help="Containment module prefix imported by generated LCM target chunk modules.")
+    ap.add_argument("--periodic-main-lcm-containment-label-prefix", type=str,
+                    default="PeriodicMainNonDyadicLCMContainment",
+                    help="Containment theorem prefix imported by generated LCM target chunk modules.")
+    ap.add_argument("--periodic-main-lcm-containment-chunk-size", type=int, default=20,
+                    help="Fiber count per containment chunk imported by generated LCM target modules.")
+    ap.add_argument("--periodic-main-nonzero-chunk-module-prefix", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainCoverageNonzeroChunk",
+                    help="Nonzero coverage chunk module prefix used by LCM target chunk generation.")
+    ap.add_argument("--periodic-main-nonzero-chunk-label-prefix", type=str,
+                    default="PeriodicMainNonzeroRecordPairsChunk",
+                    help="Nonzero coverage chunk set prefix used by LCM target chunk generation.")
+    ap.add_argument("--periodic-main-row-five-module-name", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroRowFiveSurface",
+                    help="Row-five surface module imported by generated LCM target chunk modules.")
+    ap.add_argument("--periodic-main-row-five-set-name", type=str,
+                    default="PeriodicMainNonzeroRecordPairsRowFive",
+                    help="Row-five set name used by generated LCM target chunk modules.")
+    ap.add_argument("--periodic-main-lcm-target-chunk-module-prefix", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMTargetChunk",
+                    help="LCM target chunk module prefix used by generated LCM target group modules.")
+    ap.add_argument("--periodic-main-lcm-target-chunk-label-prefix", type=str,
+                    default="PeriodicMainNonDyadicLCMTarget",
+                    help="LCM target chunk theorem label prefix used by generated LCM target group modules.")
+    ap.add_argument("--periodic-main-lcm-target-group-module-prefix", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMTargetGroup",
+                    help="LCM target group module prefix imported by generated LCM target final module.")
+    ap.add_argument("--periodic-main-lcm-target-group-label-prefix", type=str,
+                    default="PeriodicMainNonDyadicLCMTarget",
+                    help="LCM target group theorem label prefix used by generated LCM target final module.")
+    ap.add_argument("--periodic-main-lcm-reverse-target-group-module-prefix", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup",
+                    help="Reverse target group module prefix used by generated LCM reverse target final module.")
+    ap.add_argument("--periodic-main-lcm-reverse-target-group-label-prefix", type=str,
+                    default="PeriodicMainNonDyadicLCMReverseTarget",
+                    help="Reverse target group theorem label prefix used by generated LCM reverse target modules.")
+    ap.add_argument("--periodic-main-lcm-target-subset-module-name", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMTargetSubset",
+                    help="Module exposing target-to-LCM subset theorem for reverse target equality bridge.")
+    ap.add_argument("--periodic-main-lcm-target-module-name", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMTarget",
+                    help="Module exposing the LCM target actual-sum theorem with an equality assumption.")
+    ap.add_argument("--periodic-main-nondyadic-dyadic-bridge-module-name", type=str,
+                    default="Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveDyadicBridge",
+                    help="Module defining the non-dyadic target set for generated LCM target final modules.")
     ap.add_argument("--emit-boundary-final-certificate", action="store_true",
                     help="With --combine-boundary-chunks, emit Lean-facing ℚ certificate defs for active signed total, inactive correction, and full boundary.")
     ap.add_argument("--boundary-full-signed-decimal", type=str, default="",
@@ -5201,6 +10379,625 @@ def main() -> None:
             group_size=args.periodic_main_row_record_complexity_group_size,
             completed_records=args.periodic_main_row_record_complexity_completed_records,
             json_out=args.periodic_main_row_record_complexity_json_out,
+        )
+        return
+
+    if args.periodic_main_dyadic_base_pair_report:
+        with open(args.periodic_main_dyadic_base_pair_report, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-ordered-nonzero-records":
+            raise SystemExit(
+                f"{args.periodic_main_dyadic_base_pair_report}: not a periodic-main ordered nonzero-record payload"
+            )
+        periodic_main_dyadic_base_pair_report(
+            source_path=args.periodic_main_dyadic_base_pair_report,
+            payload=payload,
+            top=args.periodic_main_zero_report_top,
+        )
+        return
+
+    if args.periodic_main_unordered_pair_report:
+        with open(args.periodic_main_unordered_pair_report, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-ordered-nonzero-records":
+            raise SystemExit(
+                f"{args.periodic_main_unordered_pair_report}: not a periodic-main ordered nonzero-record payload"
+            )
+        periodic_main_unordered_pair_report(
+            source_path=args.periodic_main_unordered_pair_report,
+            payload=payload,
+            top=args.periodic_main_zero_report_top,
+        )
+        return
+
+    if args.periodic_main_nondyadic_mean_product_audit:
+        with open(args.periodic_main_nondyadic_mean_product_audit, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-unordered-pair-records":
+            raise SystemExit(
+                f"{args.periodic_main_nondyadic_mean_product_audit}: "
+                "not a periodic-main unordered-pair payload"
+            )
+        if int(payload.get("X", args.X)) != args.X:
+            raise SystemExit(
+                f"{args.periodic_main_nondyadic_mean_product_audit}: "
+                f"payload X={payload.get('X')} does not match --X {args.X}"
+            )
+        periodic_main_nondyadic_mean_product_audit(
+            X=args.X,
+            payload_path=args.periodic_main_nondyadic_mean_product_audit,
+            payload=payload,
+            top=args.periodic_main_zero_report_top,
+        )
+        return
+
+    if args.periodic_main_nondyadic_lcm_compression_report:
+        with open(args.periodic_main_nondyadic_lcm_compression_report, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-unordered-pair-records":
+            raise SystemExit(
+                f"{args.periodic_main_nondyadic_lcm_compression_report}: "
+                "not a periodic-main unordered-pair payload"
+            )
+        if int(payload.get("X", args.X)) != args.X:
+            raise SystemExit(
+                f"{args.periodic_main_nondyadic_lcm_compression_report}: "
+                f"payload X={payload.get('X')} does not match --X {args.X}"
+            )
+        periodic_main_nondyadic_lcm_compression_report(
+            X=args.X,
+            payload_path=args.periodic_main_nondyadic_lcm_compression_report,
+            payload=payload,
+            top=args.periodic_main_zero_report_top,
+            check_components=args.periodic_main_nondyadic_check_components,
+        )
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_payload:
+        unordered_path, out_path = args.emit_periodic_main_nondyadic_lcm_payload
+        with open(unordered_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-unordered-pair-records":
+            raise SystemExit(f"{unordered_path}: not a periodic-main unordered-pair payload")
+        if int(payload.get("X", args.X)) != args.X:
+            raise SystemExit(f"{unordered_path}: payload X={payload.get('X')} does not match --X {args.X}")
+        lcm_payload = periodic_main_nondyadic_lcm_payload(
+            X=args.X,
+            payload_path=unordered_path,
+            payload=payload,
+        )
+        with open(out_path, "w", encoding="utf-8") as fh:
+            json.dump(lcm_payload, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        total = Fraction(int(lcm_payload["total_num"]), int(lcm_payload["total_den"]))
+        print(
+            f"wrote {lcm_payload['lcm_fiber_count']} lcm fibers / "
+            f"{lcm_payload['record_count']} ordered records to {out_path}",
+            file=sys.stderr,
+        )
+        print(
+            f"total={total.numerator}/{total.denominator} "
+            f"exact_totals_match={lcm_payload['exact_totals_match']}",
+            file=sys.stderr,
+        )
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_prototype_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_nondyadic_lcm_prototype_lean
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_prototype_lean_file(
+            payload=payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            start=args.periodic_main_lcm_start,
+            count=args.periodic_main_lcm_count,
+            order=args.periodic_main_lcm_order,
+            emit_selected_total=args.periodic_main_lcm_emit_selected_total,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_weight_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_nondyadic_lcm_weight_lean
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_weight_lean_file(
+            X=args.X,
+            payload=payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            start=args.periodic_main_lcm_weight_start,
+            count=args.periodic_main_lcm_weight_count,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_wrapper_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_nondyadic_lcm_wrapper_lean
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_wrapper_lean_file(
+            payload=payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            start=args.periodic_main_lcm_start,
+            count=args.periodic_main_lcm_count,
+            order=args.periodic_main_lcm_order,
+            fiber_module_prefix=args.periodic_main_lcm_fiber_module_prefix,
+            fiber_label_prefix=args.periodic_main_lcm_fiber_label_prefix,
+            fiber_chunk_size=args.periodic_main_lcm_fiber_chunk_size,
+            weight_module_prefix=args.periodic_main_lcm_weight_module_prefix,
+            weight_label_prefix=args.periodic_main_lcm_weight_label_prefix,
+            weight_chunk_size=args.periodic_main_lcm_weight_chunk_size,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_component_zero_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_nondyadic_lcm_component_zero_lean
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_component_zero_lean_file(
+            X=args.X,
+            payload=payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            start=args.periodic_main_lcm_start,
+            count=args.periodic_main_lcm_count,
+            order=args.periodic_main_lcm_order,
+            fiber_module_prefix=args.periodic_main_lcm_fiber_module_prefix,
+            fiber_label_prefix=args.periodic_main_lcm_fiber_label_prefix,
+            fiber_chunk_size=args.periodic_main_lcm_fiber_chunk_size,
+            record_start=args.periodic_main_lcm_record_start,
+            record_limit=args.periodic_main_lcm_record_limit,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_component_zero_assembly_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_nondyadic_lcm_component_zero_assembly_lean
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_component_zero_assembly_lean_file(
+            payload=payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            start=args.periodic_main_lcm_start,
+            order=args.periodic_main_lcm_order,
+            fiber_module_prefix=args.periodic_main_lcm_fiber_module_prefix,
+            fiber_label_prefix=args.periodic_main_lcm_fiber_label_prefix,
+            fiber_chunk_size=args.periodic_main_lcm_fiber_chunk_size,
+            record_ranges=parse_lcm_record_ranges(args.periodic_main_lcm_record_ranges),
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_component_zero_group_bridge_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = (
+            args.emit_periodic_main_nondyadic_lcm_component_zero_group_bridge_lean
+        )
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_component_zero_group_bridge_lean_file(
+            payload=payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            group_index=args.periodic_main_lcm_group_index,
+            lcm_order=args.periodic_main_lcm_order,
+            lcm_group_chunk_size=args.periodic_main_lcm_containment_chunk_size,
+            component_module_prefix="Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMComponentZeroAbs",
+            component_label_prefix="LCMComponentZeroAbs",
+            lcm_group_module_prefix=args.periodic_main_lcm_group_module_prefix,
+            lcm_group_label_prefix=args.periodic_main_lcm_group_label_prefix,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_group_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_nondyadic_lcm_group_lean
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_group_lean_file(
+            payload=payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            group_index=args.periodic_main_lcm_group_index,
+            start=args.periodic_main_lcm_start,
+            count=args.periodic_main_lcm_count,
+            order=args.periodic_main_lcm_order,
+            wrapper_module_prefix=args.periodic_main_lcm_wrapper_module_prefix,
+            wrapper_label_prefix=args.periodic_main_lcm_wrapper_label_prefix,
+            wrapper_chunk_size=args.periodic_main_lcm_wrapper_chunk_size,
+            fiber_label_prefix=args.periodic_main_lcm_fiber_label_prefix,
+            fiber_chunk_size=args.periodic_main_lcm_fiber_chunk_size,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_grouped_final_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_nondyadic_lcm_grouped_final_lean
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_grouped_final_lean_file(
+            payload=payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            target_set_name=args.periodic_main_lcm_target_set_name,
+            group_start=args.periodic_main_lcm_group_start,
+            group_count=args.periodic_main_lcm_group_count,
+            group_module_prefix=args.periodic_main_lcm_group_module_prefix,
+            group_label_prefix=args.periodic_main_lcm_group_label_prefix,
+            assume_group_actual_sums=args.periodic_main_lcm_assume_group_actual_sums,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_containment_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_nondyadic_lcm_containment_lean
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_containment_lean_file(
+            payload=payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            start=args.periodic_main_lcm_start,
+            count=args.periodic_main_lcm_count,
+            order=args.periodic_main_lcm_order,
+            final_module_name=args.periodic_main_lcm_final_module_name,
+            fiber_label_prefix=args.periodic_main_lcm_fiber_label_prefix,
+            fiber_chunk_size=args.periodic_main_lcm_fiber_chunk_size,
+            group_label_prefix=args.periodic_main_lcm_group_label_prefix,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_target_chunk_files:
+        nonzero_path, lcm_path, out_dir, file_prefix, label_prefix = (
+            args.emit_periodic_main_nondyadic_lcm_target_chunk_files
+        )
+        with open(nonzero_path, "r", encoding="utf-8") as fh:
+            nonzero_payload = json.load(fh)
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            lcm_payload = json.load(fh)
+        paths = emit_periodic_main_nondyadic_lcm_target_chunk_lean_files(
+            nonzero_payload=nonzero_payload,
+            lcm_payload=lcm_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            chunk_size=args.periodic_main_coverage_chunk_size,
+            lcm_order=args.periodic_main_lcm_order,
+            containment_module_prefix=args.periodic_main_lcm_containment_module_prefix,
+            containment_label_prefix=args.periodic_main_lcm_containment_label_prefix,
+            containment_chunk_size=args.periodic_main_lcm_containment_chunk_size,
+            nonzero_chunk_module_prefix=args.periodic_main_nonzero_chunk_module_prefix,
+            nonzero_chunk_label_prefix=args.periodic_main_nonzero_chunk_label_prefix,
+            row_five_module_name=args.periodic_main_row_five_module_name,
+            row_five_set_name=args.periodic_main_row_five_set_name,
+            final_lcm_module_name=args.periodic_main_lcm_final_module_name,
+        )
+        print(f"[write] {len(paths)} target chunk files", file=sys.stderr)
+        if paths:
+            print(f"[first] {paths[0]}", file=sys.stderr)
+            print(f"[last] {paths[-1]}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_target_group_files:
+        nonzero_path, out_dir, file_prefix, label_prefix = (
+            args.emit_periodic_main_nondyadic_lcm_target_group_files
+        )
+        with open(nonzero_path, "r", encoding="utf-8") as fh:
+            nonzero_payload = json.load(fh)
+        paths = emit_periodic_main_nondyadic_lcm_target_group_lean_files(
+            nonzero_payload=nonzero_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            chunk_size=args.periodic_main_coverage_chunk_size,
+            group_chunks=args.periodic_main_coverage_group_chunks,
+            target_chunk_module_prefix=args.periodic_main_lcm_target_chunk_module_prefix,
+            target_chunk_label_prefix=args.periodic_main_lcm_target_chunk_label_prefix,
+            row_five_set_name=args.periodic_main_row_five_set_name,
+        )
+        print(f"[write] {len(paths)} target group files", file=sys.stderr)
+        if paths:
+            print(f"[first] {paths[0]}", file=sys.stderr)
+            print(f"[last] {paths[-1]}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_target_final_lean:
+        nonzero_path, out_dir, file_prefix, label_prefix = (
+            args.emit_periodic_main_nondyadic_lcm_target_final_lean
+        )
+        with open(nonzero_path, "r", encoding="utf-8") as fh:
+            nonzero_payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_target_final_lean_file(
+            nonzero_payload=nonzero_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            chunk_size=args.periodic_main_coverage_chunk_size,
+            group_chunks=args.periodic_main_coverage_group_chunks,
+            target_group_module_prefix=args.periodic_main_lcm_target_group_module_prefix,
+            target_group_label_prefix=args.periodic_main_lcm_target_group_label_prefix,
+            dyadic_bridge_module_name=args.periodic_main_nondyadic_dyadic_bridge_module_name,
+            row_five_set_name=args.periodic_main_row_five_set_name,
+            target_set_name=args.periodic_main_lcm_target_set_name,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nonzero_chunk_subset_lean:
+        nonzero_path, out_dir, file_prefix, label_prefix = (
+            args.emit_periodic_main_nonzero_chunk_subset_lean
+        )
+        with open(nonzero_path, "r", encoding="utf-8") as fh:
+            nonzero_payload = json.load(fh)
+        out_path = emit_periodic_main_nonzero_chunk_subset_lean_file(
+            nonzero_payload=nonzero_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            chunk_size=args.periodic_main_coverage_chunk_size,
+            group_chunks=args.periodic_main_coverage_group_chunks,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nonzero_chunk_subset_group_files:
+        nonzero_path, out_dir, file_prefix, label_prefix = (
+            args.emit_periodic_main_nonzero_chunk_subset_group_files
+        )
+        with open(nonzero_path, "r", encoding="utf-8") as fh:
+            nonzero_payload = json.load(fh)
+        paths = emit_periodic_main_nonzero_chunk_subset_group_lean_files(
+            nonzero_payload=nonzero_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            chunk_size=args.periodic_main_coverage_chunk_size,
+            group_chunks=args.periodic_main_coverage_group_chunks,
+        )
+        print(f"[write] {len(paths)} nonzero chunk subset group files", file=sys.stderr)
+        if paths:
+            print(f"[first] {paths[0]}", file=sys.stderr)
+            print(f"[last] {paths[-1]}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_reverse_target_group_files:
+        nonzero_path, lcm_path, out_dir, file_prefix, label_prefix = (
+            args.emit_periodic_main_nondyadic_lcm_reverse_target_group_files
+        )
+        with open(nonzero_path, "r", encoding="utf-8") as fh:
+            nonzero_payload = json.load(fh)
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            lcm_payload = json.load(fh)
+        paths = emit_periodic_main_nondyadic_lcm_reverse_target_group_lean_files(
+            nonzero_payload=nonzero_payload,
+            lcm_payload=lcm_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            lcm_order=args.periodic_main_lcm_order,
+            nonzero_chunk_size=args.periodic_main_coverage_chunk_size,
+            nonzero_group_chunks=args.periodic_main_coverage_group_chunks,
+            lcm_group_chunk_size=args.periodic_main_lcm_containment_chunk_size,
+            lcm_slice_chunk_size=args.periodic_main_lcm_wrapper_chunk_size,
+            lcm_fiber_chunk_size=args.periodic_main_lcm_fiber_chunk_size,
+            lcm_fiber_module_prefix=args.periodic_main_lcm_fiber_module_prefix,
+            lcm_group_module_prefix=args.periodic_main_lcm_group_module_prefix,
+            lcm_group_label_prefix=args.periodic_main_lcm_group_label_prefix,
+            lcm_fiber_label_prefix=args.periodic_main_lcm_fiber_label_prefix,
+            dyadic_bridge_module_name=args.periodic_main_nondyadic_dyadic_bridge_module_name,
+            target_set_name=args.periodic_main_lcm_target_set_name,
+        )
+        print(f"[write] {len(paths)} reverse target group files", file=sys.stderr)
+        if paths:
+            print(f"[first] {paths[0]}", file=sys.stderr)
+            print(f"[last] {paths[-1]}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_nondyadic_lcm_reverse_target_final_lean:
+        lcm_path, out_dir, file_prefix, label_prefix = (
+            args.emit_periodic_main_nondyadic_lcm_reverse_target_final_lean
+        )
+        with open(lcm_path, "r", encoding="utf-8") as fh:
+            lcm_payload = json.load(fh)
+        out_path = emit_periodic_main_nondyadic_lcm_reverse_target_final_lean_file(
+            lcm_payload=lcm_payload,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            lcm_order=args.periodic_main_lcm_order,
+            lcm_group_chunk_size=args.periodic_main_lcm_containment_chunk_size,
+            lcm_super_group_size=10,
+            reverse_group_module_prefix=args.periodic_main_lcm_reverse_target_group_module_prefix,
+            reverse_group_label_prefix=args.periodic_main_lcm_reverse_target_group_label_prefix,
+            final_lcm_module_name=args.periodic_main_lcm_final_module_name,
+            target_subset_module_name=args.periodic_main_lcm_target_subset_module_name,
+            lcm_target_module_name=args.periodic_main_lcm_target_module_name,
+            lcm_group_label_prefix=args.periodic_main_lcm_group_label_prefix,
+            target_set_name=args.periodic_main_lcm_target_set_name,
+        )
+        print(f"[write] {out_path}", file=sys.stderr)
+        return
+
+    if args.emit_periodic_main_dyadic_base_pair_json:
+        dyadic_path, out_path = args.emit_periodic_main_dyadic_base_pair_json
+        with open(dyadic_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-ordered-nonzero-records":
+            raise SystemExit(f"{dyadic_path}: not a periodic-main ordered nonzero-record payload")
+        base_payload = periodic_main_dyadic_base_pair_payload(
+            source_path=dyadic_path,
+            payload=payload,
+        )
+        with open(out_path, "w", encoding="utf-8") as fh:
+            json.dump(base_payload, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        print(
+            f"wrote {base_payload['base_count']} dyadic base records "
+            f"from {base_payload['record_count']} ordered records to {out_path}",
+            file=sys.stderr,
+        )
+        return
+
+    if args.emit_periodic_main_unordered_pair_json:
+        ordered_path, out_path = args.emit_periodic_main_unordered_pair_json
+        with open(ordered_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-ordered-nonzero-records":
+            raise SystemExit(f"{ordered_path}: not a periodic-main ordered nonzero-record payload")
+        class_payload = periodic_main_unordered_pair_payload(
+            source_path=ordered_path,
+            payload=payload,
+        )
+        with open(out_path, "w", encoding="utf-8") as fh:
+            json.dump(class_payload, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        print(
+            f"wrote {class_payload['class_count']} unordered classes "
+            f"from {class_payload['record_count']} ordered records to {out_path}",
+            file=sys.stderr,
+        )
+        return
+
+    if args.emit_periodic_main_dyadic_base_pair_lean_files:
+        if args.true_series:
+            raise SystemExit("--emit-periodic-main-dyadic-base-pair-lean-files is only implemented for the surrogate normalization")
+        base_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_dyadic_base_pair_lean_files
+        with open(base_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-dyadic-base-pair-records":
+            raise SystemExit(f"{base_path}: not a periodic-main dyadic base-pair payload")
+        if int(payload.get("X", args.X)) != args.X:
+            raise SystemExit(f"{base_path}: payload X={payload.get('X')} does not match --X {args.X}")
+        bases_all = list(payload.get("bases", []))
+        base_start = max(0, args.periodic_main_base_start)
+        base_count = max(0, args.periodic_main_base_count)
+        if base_start > len(bases_all):
+            raise SystemExit(
+                f"--periodic-main-base-start={base_start} out of range for {len(bases_all)} bases"
+            )
+        base_end = len(bases_all) if base_count == 0 else min(len(bases_all), base_start + base_count)
+        bases = bases_all[base_start:base_end]
+        chunk_count = emit_periodic_main_dyadic_base_pair_lean_files(
+            X=args.X,
+            bases=bases,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            base_chunk_size=args.periodic_main_base_file_chunk_size,
+            base_index_offset=base_start,
+            skip_existing=args.periodic_main_record_file_skip_existing,
+            force_top_level_helpers=args.periodic_main_record_force_top_level_helpers,
+        )
+        selected_record_count = sum(len(list(base.get("records", []))) for base in bases)
+        print(
+            f"[done] wrote {chunk_count} dyadic base chunk slots for "
+            f"{len(bases)} bases / {selected_record_count} ordered records",
+            file=sys.stderr,
+        )
+        return
+
+    if args.emit_periodic_main_unordered_hard_split_lean_files:
+        if args.true_series:
+            raise SystemExit("--emit-periodic-main-unordered-hard-split-lean-files is only implemented for the surrogate normalization")
+        class_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_unordered_hard_split_lean_files
+        with open(class_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-unordered-pair-records":
+            raise SystemExit(f"{class_path}: not a periodic-main unordered-pair payload")
+        if int(payload.get("X", args.X)) != args.X:
+            raise SystemExit(f"{class_path}: payload X={payload.get('X')} does not match --X {args.X}")
+        classes_all = list(payload.get("classes", []))
+        class_start = max(0, args.periodic_main_class_start)
+        class_count = max(0, args.periodic_main_class_count)
+        if class_start > len(classes_all):
+            raise SystemExit(
+                f"--periodic-main-class-start={class_start} out of range for {len(classes_all)} classes"
+            )
+        class_end = len(classes_all) if class_count == 0 else min(len(classes_all), class_start + class_count)
+        classes = classes_all[class_start:class_end]
+        records = select_periodic_main_unordered_hard_split_records(
+            classes=classes,
+            left_rows=set(args.periodic_main_unordered_split_left_rows),
+            min_left_divisors=args.periodic_main_unordered_split_min_left_divisors,
+            min_right_divisors=args.periodic_main_unordered_split_min_right_divisors,
+            use_symmetry=args.periodic_main_unordered_use_symmetry,
+        )
+        written_count = emit_periodic_main_pair_record_split_lean_files(
+            X=args.X,
+            records=records,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            index_offset=0,
+            skip_existing=args.periodic_main_record_file_skip_existing,
+            row_part_size=args.periodic_main_split_row_part_size,
+            inline_row_parts=args.periodic_main_split_inline_row_parts,
+            disable_q42_cancel=args.periodic_main_disable_q42_cancel,
+            cached_facts=args.periodic_main_split_cached_facts,
+            fact_part_size=args.periodic_main_split_fact_part_size,
+            use_source_index=True,
+        )
+        print(
+            f"[done] wrote split modules for {written_count} hard unordered canonical records",
+            file=sys.stderr,
+        )
+        return
+
+    if args.emit_periodic_main_unordered_pair_lean_files:
+        if args.true_series:
+            raise SystemExit("--emit-periodic-main-unordered-pair-lean-files is only implemented for the surrogate normalization")
+        class_path, out_dir, file_prefix, label_prefix = args.emit_periodic_main_unordered_pair_lean_files
+        with open(class_path, "r", encoding="utf-8") as fh:
+            payload = json.load(fh)
+        if payload.get("mode") != "periodic-main-unordered-pair-records":
+            raise SystemExit(f"{class_path}: not a periodic-main unordered-pair payload")
+        if int(payload.get("X", args.X)) != args.X:
+            raise SystemExit(f"{class_path}: payload X={payload.get('X')} does not match --X {args.X}")
+        classes_all = list(payload.get("classes", []))
+        class_start = max(0, args.periodic_main_class_start)
+        class_count = max(0, args.periodic_main_class_count)
+        if class_start > len(classes_all):
+            raise SystemExit(
+                f"--periodic-main-class-start={class_start} out of range for {len(classes_all)} classes"
+            )
+        class_end = len(classes_all) if class_count == 0 else min(len(classes_all), class_start + class_count)
+        classes = classes_all[class_start:class_end]
+        chunk_count = emit_periodic_main_unordered_pair_lean_files(
+            X=args.X,
+            classes=classes,
+            out_dir=out_dir,
+            file_prefix=file_prefix,
+            label_prefix=label_prefix,
+            class_chunk_size=args.periodic_main_class_file_chunk_size,
+            class_index_offset=class_start,
+            skip_existing=args.periodic_main_record_file_skip_existing,
+            force_top_level_helpers=args.periodic_main_record_force_top_level_helpers,
+            use_symmetry=args.periodic_main_unordered_use_symmetry,
+            split_left_rows=set(args.periodic_main_unordered_split_left_rows),
+            split_min_left_divisors=args.periodic_main_unordered_split_min_left_divisors,
+            split_min_right_divisors=args.periodic_main_unordered_split_min_right_divisors,
+            split_file_prefix=args.periodic_main_unordered_split_file_prefix,
+            split_out_dir=args.periodic_main_unordered_split_out_dir or out_dir,
+        )
+        selected_record_count = sum(len(list(cls.get("records", []))) for cls in classes)
+        print(
+            f"[done] wrote {chunk_count} unordered class chunk slots for "
+            f"{len(classes)} classes / {selected_record_count} ordered records",
+            file=sys.stderr,
         )
         return
 
@@ -5699,6 +11496,8 @@ def main() -> None:
             row_part_size=args.periodic_main_split_row_part_size,
             inline_row_parts=args.periodic_main_split_inline_row_parts,
             disable_q42_cancel=args.periodic_main_disable_q42_cancel,
+            cached_facts=args.periodic_main_split_cached_facts,
+            fact_part_size=args.periodic_main_split_fact_part_size,
         )
         print(
             f"[done] wrote split modules for {written_count} selected records",

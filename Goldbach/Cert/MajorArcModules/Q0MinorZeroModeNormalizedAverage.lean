@@ -24340,6 +24340,133 @@ private theorem evenIn_X0_H_card_eq_5001 :
   · intro a b hab
     exact Nat.eq_of_mul_eq_mul_left (by norm_num : 0 < 2) (Nat.add_left_cancel hab)
 
+theorem rawEvenRamanujanGcdClassBlockCount_X0_5001_one_eq_windowFilterCard
+    {q g : ℕ} (hg : g ∈ q.divisors) :
+    rawEvenRamanujanGcdClassBlockCount X0 5001 1 q g
+      =
+    (((EvenIn X0 H).filter (fun N => Nat.gcd q N = g)).card : ℝ) := by
+  classical
+  have hImage :
+      (((Finset.range (centeredRamanujanPairBlockPeriod 5001 1)).filter
+          (rawEvenRamanujanGcdClassBlockHit X0 q g)).image (fun k => X0 + k))
+        =
+      ((EvenIn X0 H).filter (fun N => Nat.gcd q N = g)) := by
+    ext N
+    constructor
+    · intro hN
+      rcases Finset.mem_image.mp hN with ⟨k, hk, rfl⟩
+      rcases Finset.mem_filter.mp hk with ⟨hkRange, hkHit⟩
+      have hklt : k < 10002 := by
+        simpa [centeredRamanujanPairBlockPeriod] using Finset.mem_range.mp hkRange
+      have hkEvenDiv : 2 ∣ k := by
+        have h2sum : 2 ∣ X0 + k :=
+          (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven hkHit.1)
+        have h2X0 : 2 ∣ X0 :=
+          (even_iff_two_dvd).1 (Goldbach.Windows.even_of_isEven X0_isEven)
+        rcases h2sum with ⟨a, ha⟩
+        rcases h2X0 with ⟨b, hb⟩
+        refine ⟨a - b, ?_⟩
+        omega
+      have hkLeH : k ≤ H := by
+        rcases hkEvenDiv with ⟨t, ht⟩
+        norm_num [H] at hklt ⊢
+        omega
+      have hIcc : X0 + k ∈ IccShift X0 H := by
+        unfold IccShift
+        refine Finset.mem_image.mpr ?_
+        exact ⟨k, Finset.mem_range.mpr (Nat.lt_succ_of_le hkLeH), rfl⟩
+      have hEvenIn : X0 + k ∈ EvenIn X0 H := by
+        unfold EvenIn
+        exact Finset.mem_filter.mpr ⟨hIcc, hkHit.1⟩
+      have hgcd : Nat.gcd q (X0 + k) = g :=
+        (gcd_eq_dvd_and_coprime_div_iff_of_mem_divisors (N := X0 + k) hg).2 hkHit.2
+      exact Finset.mem_filter.mpr ⟨hEvenIn, hgcd⟩
+    · intro hN
+      rcases Finset.mem_filter.mp hN with ⟨hEvenIn, hgcd⟩
+      rcases Goldbach.ProofTools.Windows.mem_EvenIn_iff (X := X0) (H := H) (N := N) |>.mp
+          hEvenIn with ⟨hIcc, hNEven⟩
+      unfold IccShift at hIcc
+      rcases Finset.mem_image.mp hIcc with ⟨k, hkRange, hNk⟩
+      subst N
+      have hkRangeBlock : k ∈ Finset.range (centeredRamanujanPairBlockPeriod 5001 1) := by
+        have hkltH : k < H + 1 := Finset.mem_range.mp hkRange
+        refine Finset.mem_range.mpr ?_
+        norm_num [H, centeredRamanujanPairBlockPeriod] at hkltH ⊢
+        omega
+      have hHit : rawEvenRamanujanGcdClassBlockHit X0 q g k := by
+        refine ⟨hNEven, ?_⟩
+        exact (gcd_eq_dvd_and_coprime_div_iff_of_mem_divisors (N := X0 + k) hg).1 hgcd
+      refine Finset.mem_image.mpr ?_
+      exact ⟨k, Finset.mem_filter.mpr ⟨hkRangeBlock, hHit⟩, rfl⟩
+  rw [rawEvenRamanujanGcdClassBlockCount_eq_card_filter]
+  rw [← hImage]
+  rw [Finset.card_image_of_injective]
+  · intro a b hab
+    exact Nat.add_left_cancel hab
+
+theorem rawEvenRamanujanGcdClassBlockCount_X0_5001_one_eq_periodicCount
+    {q g : ℕ} (hg : g ∈ q.divisors) (hMpos : 0 < q / g) :
+    rawEvenRamanujanGcdClassBlockCount X0 5001 1 q g
+      =
+    rawEvenRamanujanGcdClassBlockPeriodicCount X0 5001 1 q g := by
+  have hgpos : 0 < g := Nat.pos_of_mem_divisors hg
+  have hPpos : 0 < centeredRamanujanPairBlockPeriod 5001 1 := by
+    norm_num [centeredRamanujanPairBlockPeriod]
+  by_cases hgEven : Goldbach.Windows.IsEven g
+  · rw [rawEvenRamanujanGcdClassBlockCount_eq_even_g_fullPeriods_add_remainder
+      X0 5001 1 q g hgpos hPpos hgEven hMpos]
+    rw [rawEvenRamanujanGcdClassBlockPeriodicCount, if_pos hgEven]
+  · rw [rawEvenRamanujanGcdClassBlockCount_eq_odd_g_fullPeriods_add_remainder
+      X0 5001 1 q g hgpos hPpos hgEven]
+    rw [rawEvenRamanujanGcdClassBlockPeriodicCount, if_neg hgEven]
+
+theorem ramanujanGcdClassWindowAverageRat_X0_eq_rawEvenBlockPeriodicCountRat_5001_one
+    {q g : ℕ} (hg : g ∈ q.divisors) (hMpos : 0 < q / g) :
+    ramanujanGcdClassWindowAverageRat X0 q g
+      =
+    rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 5001 1 q g / (5001 : ℚ) := by
+  have hsum :
+      ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator q g N
+        =
+      (((EvenIn X0 H).filter (fun N => Nat.gcd q N = g)).card : ℝ) := by
+    calc
+      ∑ N ∈ EvenIn X0 H, ramanujanGcdClassIndicator q g N
+          = ∑ N ∈ EvenIn X0 H, (if Nat.gcd q N = g then (1 : ℝ) else 0) := by
+            rfl
+      _ = Finset.sum ((EvenIn X0 H).filter (fun N => Nat.gcd q N = g))
+            (fun _ => (1 : ℝ)) := by
+            rw [Finset.sum_filter]
+      _ = (((EvenIn X0 H).filter (fun N => Nat.gcd q N = g)).card : ℝ) := by
+            rw [Finset.sum_const, nsmul_eq_mul, mul_one]
+  have hreal :
+      (ramanujanGcdClassWindowAverageRat X0 q g : ℝ)
+        =
+      (((rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 5001 1 q g
+          / (5001 : ℚ)) : ℚ) : ℝ) := by
+    calc
+      (ramanujanGcdClassWindowAverageRat X0 q g : ℝ)
+          = ramanujanGcdClassWindowAverage X0 q g := by
+              rw [ramanujanGcdClassWindowAverage_eq_ratCast]
+      _ = (((EvenIn X0 H).filter (fun N => Nat.gcd q N = g)).card : ℝ)
+            / (5001 : ℝ) := by
+              unfold ramanujanGcdClassWindowAverage
+              rw [hsum, evenIn_X0_H_card_eq_5001]
+              rw [div_eq_inv_mul]
+              ring
+      _ = rawEvenRamanujanGcdClassBlockPeriodicCount X0 5001 1 q g
+            / (5001 : ℝ) := by
+              rw [← rawEvenRamanujanGcdClassBlockCount_X0_5001_one_eq_windowFilterCard
+                (q := q) (g := g) hg]
+              rw [rawEvenRamanujanGcdClassBlockCount_X0_5001_one_eq_periodicCount
+                (q := q) (g := g) hg hMpos]
+      _ = (rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 5001 1 q g : ℝ)
+            / (5001 : ℝ) := by
+              rw [rawEvenRamanujanGcdClassBlockPeriodicCount_eq_ratCast]
+      _ = (((rawEvenRamanujanGcdClassBlockPeriodicCountRat X0 5001 1 q g
+          / (5001 : ℚ)) : ℚ) : ℝ) := by
+              norm_num [Rat.cast_div]
+  exact Rat.cast_inj.mp hreal
+
 private theorem ramanujanGcdClassWindowAverageRat_three_one_X0 :
     ramanujanGcdClassWindowAverageRat X0 3 1 = (2 / 3 : ℚ) := by
   have hreal :

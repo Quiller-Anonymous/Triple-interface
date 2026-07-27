@@ -1,0 +1,37 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroDyadicExceptionSplit
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk712
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk713
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk714
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk715
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk716
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk717
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeChunk718
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+def PeriodicMainRecordsCoreLeftOnlyThreePayloadPairsPartB2b2b1 : Finset (ℕ × ℕ) :=
+  ((((((PeriodicMainRecordsCoreLeftOnlyThreeChunk712Pairs ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk713Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk714Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk715Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk716Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk717Pairs) ∪ PeriodicMainRecordsCoreLeftOnlyThreeChunk718Pairs)
+
+theorem PeriodicMainRecordsCoreLeftOnlyThreePayloadPairsPartB2b2b1_value_on_records :
+    ∀ p ∈ PeriodicMainRecordsCoreLeftOnlyThreePayloadPairsPartB2b2b1,
+      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = 0 := by
+  intro p hp
+  simp only [PeriodicMainRecordsCoreLeftOnlyThreePayloadPairsPartB2b2b1, Finset.mem_union] at hp
+  rcases hp with ((((((h712 | h713) | h714) | h715) | h716) | h717) | h718)
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk712_value_on_records p h712
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk713_value_on_records p h713
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk714_value_on_records p h714
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk715_value_on_records p h715
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk716_value_on_records p h716
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk717_value_on_records p h717
+  · exact PeriodicMainRecordsCoreLeftOnlyThreeChunk718_value_on_records p h718
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

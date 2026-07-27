@@ -1,0 +1,975 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMFinal
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMTargetSubset
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMTarget
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup000
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup001
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup002
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup003
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup004
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup005
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup006
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup007
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup008
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup009
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup010
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup011
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup012
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup013
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup014
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup015
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup016
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup017
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup018
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup019
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup020
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup021
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup022
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup023
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup024
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup025
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup026
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup027
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup028
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup029
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup030
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup031
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup032
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup033
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup034
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup035
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup036
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup037
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup038
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup039
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup040
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup041
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup042
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup043
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup044
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup045
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup046
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup047
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup048
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup049
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup050
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup051
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup052
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup053
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup054
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup055
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup056
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup057
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup058
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup059
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup060
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup061
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup062
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup063
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup064
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup065
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup066
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup067
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup068
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup069
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup070
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup071
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup072
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup073
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup074
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup075
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup076
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup077
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup078
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup079
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup080
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup081
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup082
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup083
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup084
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup085
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup086
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup087
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup088
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup089
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup090
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup091
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainLCMReverseTargetGroup092
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Generated final reverse LCM-to-target coverage assembly. -/
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup000_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup001_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup002_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup003_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup004_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup005_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup006_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup007_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup008_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup000PairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup009_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup000Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000UpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup000Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup010_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup011_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup012_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup013_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup014_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup015_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup016_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup017_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup018_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup001PairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup019_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup001Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001UpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup001Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup020_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup021_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup022_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup023_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup024_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup025_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup026_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup027_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup028_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup002PairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup029_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup002Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002UpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup002Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup030_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup031_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup032_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup033_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup034_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup035_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup036_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup037_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup038_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup003PairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup039_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup003Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003UpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup003Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup040_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup041_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup042_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup043_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup044_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup045_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup046_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup047_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup048_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup004PairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup049_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup004Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004UpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup004Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup050_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup051_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup052_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup053_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup054_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup055_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup056_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup057_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup058_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup005PairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup059_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup005Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005UpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup005Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup060_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup061_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup062_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup063_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup064_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup065_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup066_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup067_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup068_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup006PairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup069_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup006Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006UpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup006Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup070_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup071_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup072_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup073_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup074_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup075_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup076_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup077_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup078_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup007PairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup079_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup007Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007UpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup007Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup080_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup081_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup082_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo003_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup083_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo004_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup084_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo005_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup085_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo006_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup086_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo007_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup087_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup088_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup008PairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup089_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup008_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup008Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008UpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup008Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup009UpTo000_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup009PairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetGroup090_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup009PairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup009UpTo001_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup009PairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup009PairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup009UpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup091_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup009UpTo002_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup009PairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMSuperGroup009PairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup009UpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetGroup092_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetSuperGroup009_subset_target :
+    PeriodicMainNonDyadicLCMSuperGroup009Pairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup009UpTo002_subset_target (by simpa [PeriodicMainNonDyadicLCMSuperGroup009Pairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo000_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo000 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup000_subset_target (by simpa [PeriodicMainNonDyadicLCMPairsUpTo000] using hp)
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo001_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo001 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMPairsUpTo001] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetUpTo000_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup001_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo002_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo002 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMPairsUpTo002] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetUpTo001_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup002_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo003_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo003 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMPairsUpTo003] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetUpTo002_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup003_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo004_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo004 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMPairsUpTo004] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetUpTo003_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup004_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo005_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo005 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMPairsUpTo005] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetUpTo004_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup005_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo006_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo006 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMPairsUpTo006] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetUpTo005_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup006_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo007_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo007 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMPairsUpTo007] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetUpTo006_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup007_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo008_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo008 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMPairsUpTo008] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetUpTo007_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup008_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMReverseTargetUpTo009_subset_target :
+    PeriodicMainNonDyadicLCMPairsUpTo009 ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  rw [PeriodicMainNonDyadicLCMPairsUpTo009] at hp
+  rcases Finset.mem_union.mp hp with hp | hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetUpTo008_subset_target hp
+  · exact PeriodicMainNonDyadicLCMReverseTargetSuperGroup009_subset_target hp
+
+theorem PeriodicMainNonDyadicLCMPairs_subset_target :
+    PeriodicMainNonDyadicLCMPairs ⊆ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  intro p hp
+  exact PeriodicMainNonDyadicLCMReverseTargetUpTo009_subset_target (by simpa [PeriodicMainNonDyadicLCMPairs] using hp)
+
+theorem PeriodicMainNonDyadicLCMPairs_eq_target :
+    PeriodicMainNonDyadicLCMPairs = PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic := by
+  apply Finset.Subset.antisymm
+  · exact PeriodicMainNonDyadicLCMPairs_subset_target
+  · exact PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic_subset_lcm
+
+theorem periodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic_actual_sum_of_lcm_target
+    (hzero :
+      ∀ p ∈ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic,
+        surrogatePeriodicMainAggregateComponentsZeroAtX0Rat p) :
+    (∑ p ∈ PeriodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic,
+      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p)
+      = PeriodicMainNonDyadicLCMTotal := by
+  exact periodicMainNonzeroRecordPairsWithoutRowFiveNonDyadic_actual_sum_of_lcm_target_eq
+    PeriodicMainNonDyadicLCMPairs_eq_target
+    hzero
+
+/- lcm reverse target group count=93, supergroup count=10 -/
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
