@@ -11,6 +11,10 @@ on:
         description: "Build only the .olean target"
         required: true
         default: "true"
+      build_timeout_minutes:
+        description: "Stop the build before GitHub's 6h job limit so cache/artifacts can save"
+        required: true
+        default: "330"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.target }}
@@ -59,7 +63,17 @@ jobs:
       - name: Fetch Mathlib cache
         run: lake exe cache get
 
+      - name: Restore project Lake artifact cache
+        id: route_a_cache_restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .lake/build/lib/lean
+          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-
+
       - name: Build selected target
+        id: build
         shell: bash
         run: |
           set -euo pipefail
@@ -70,7 +84,28 @@ jobs:
             build_target="${target}"
           fi
           echo "Building ${build_target}"
-          lake --log-level=error build "${build_target}" 2>&1 | tee route-a-linux-smoke.log
+          echo "Build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
+          set +e
+          timeout --preserve-status "${{ github.event.inputs.build_timeout_minutes }}m" \
+            lake --log-level=error build "${build_target}" 2>&1 | tee route-a-linux-smoke.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
+          if [ "$status" -eq 0 ]; then
+            echo "Build completed successfully."
+          elif [ "$status" -eq 124 ] || [ "$status" -eq 143 ]; then
+            echo "Build reached the workflow timeout guard; saving cache for a resumed run."
+          else
+            echo "Build failed with exit code ${status}; saving logs/cache for diagnosis."
+          fi
+
+      - name: Save project Lake artifact cache
+        if: always()
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: .lake/build/lib/lean
+          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload smoke log
         if: always()
@@ -79,3 +114,17 @@ jobs:
           name: route-a-linux-smoke-log
           path: route-a-linux-smoke.log
           retention-days: 14
+
+      - name: Report final build status
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          status='${{ steps.build.outputs.exit_code }}'
+          if [ "$status" = "0" ]; then
+            echo "Route A Linux smoke target built successfully."
+            exit 0
+          fi
+          echo "Route A Linux smoke target did not finish in this run. Exit code: ${status}"
+          echo "If this was a timeout guard, rerun the same workflow/input to restore the saved cache and continue."
+          exit "$status"
