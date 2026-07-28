@@ -14,7 +14,7 @@ on:
       build_timeout_minutes:
         description: "Stop the build before GitHub's 6h job limit so cache/artifacts can save"
         required: true
-        default: "330"
+        default: "300"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.target }}
@@ -55,7 +55,10 @@ jobs:
           elan --version
           lake --version
           lean --version
+          timeout --version || true
           git rev-parse HEAD
+          echo "Workflow SHA: ${GITHUB_SHA}"
+          echo "Configured build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
 
       - name: Fetch dependencies
         run: lake update
@@ -67,7 +70,7 @@ jobs:
         id: route_a_cache_restore
         uses: actions/cache/restore@v4
         with:
-          path: .lake/build/lib/lean
+          path: .lake/build/lib/lean/Goldbach
           key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: |
             route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-
@@ -86,25 +89,41 @@ jobs:
           echo "Building ${build_target}"
           echo "Build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
           set +e
-          timeout --preserve-status "${{ github.event.inputs.build_timeout_minutes }}m" \
-            lake --log-level=error build "${build_target}" 2>&1 | tee route-a-linux-smoke.log
+          timeout -k 2m "${{ github.event.inputs.build_timeout_minutes }}m" \
+            bash -lc 'lake --log-level=error build "$1"' _ "${build_target}" \
+            2>&1 | tee route-a-linux-smoke.log
           status=${PIPESTATUS[0]}
           set -e
           echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
+          {
+            echo "target=${target}"
+            echo "build_target=${build_target}"
+            echo "exit_code=${status}"
+            echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
+            echo "workflow_sha=${GITHUB_SHA}"
+            echo "finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > route-a-build-status.txt
           if [ "$status" -eq 0 ]; then
             echo "Build completed successfully."
-          elif [ "$status" -eq 124 ] || [ "$status" -eq 143 ]; then
+          elif [ "$status" -eq 124 ] || [ "$status" -eq 137 ] || [ "$status" -eq 143 ]; then
             echo "Build reached the workflow timeout guard; saving cache for a resumed run."
           else
             echo "Build failed with exit code ${status}; saving logs/cache for diagnosis."
           fi
+
+      - name: Report project artifact size
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          du -sh .lake/build/lib/lean/Goldbach 2>/dev/null || true
 
       - name: Save project Lake artifact cache
         if: always()
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
-          path: .lake/build/lib/lean
+          path: .lake/build/lib/lean/Goldbach
           key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload smoke log
@@ -112,7 +131,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: route-a-linux-smoke-log
-          path: route-a-linux-smoke.log
+          path: |
+            route-a-linux-smoke.log
+            route-a-build-status.txt
           retention-days: 14
 
       - name: Report final build status
