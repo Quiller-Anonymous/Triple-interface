@@ -14,7 +14,7 @@ on:
       build_timeout_minutes:
         description: "Stop the build before GitHub's 6h job limit so cache/artifacts can save"
         required: true
-        default: "300"
+        default: "240"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.target }}
@@ -58,7 +58,7 @@ jobs:
           timeout --version || true
           git rev-parse HEAD
           echo "Workflow SHA: ${GITHUB_SHA}"
-          echo "Configured build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
+          echo "Requested build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
 
       - name: Fetch dependencies
         run: lake update
@@ -101,20 +101,55 @@ jobs:
           else
             build_target="${target}"
           fi
-          echo "Building ${build_target}"
-          echo "Build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
+          requested_timeout='${{ github.event.inputs.build_timeout_minutes }}'
+          if ! [[ "$requested_timeout" =~ ^[0-9]+$ ]]; then
+            echo "Invalid build timeout '${requested_timeout}', using 240 minutes."
+            requested_timeout=240
+          fi
+          actual_timeout="$requested_timeout"
+          if [ "$actual_timeout" -gt 240 ]; then
+            echo "Requested timeout ${actual_timeout} is too close to GitHub's 6h cap; capping at 240 minutes."
+            actual_timeout=240
+          fi
+          : > route-a-linux-smoke.log
+          echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
+          echo "Build timeout guard: ${actual_timeout} minutes" | tee -a route-a-linux-smoke.log
           set +e
-          timeout -k 2m "${{ github.event.inputs.build_timeout_minutes }}m" \
-            bash -lc 'lake --log-level=error build "$1"' _ "${build_target}" \
-            2>&1 | tee route-a-linux-smoke.log
-          status=${PIPESTATUS[0]}
+          setsid bash -lc 'lake --log-level=error build "$1"' _ "${build_target}" \
+            >> route-a-linux-smoke.log 2>&1 &
+          build_pid=$!
+          status=0
+          deadline=$((SECONDS + actual_timeout * 60))
+          while kill -0 "$build_pid" 2>/dev/null; do
+            sleep 60
+            echo "---- heartbeat $(date -u +%Y-%m-%dT%H:%M:%SZ), build pid ${build_pid}, elapsed ${SECONDS}s ----"
+            tail -n 25 route-a-linux-smoke.log || true
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "Build timeout guard reached after ${actual_timeout} minutes; terminating process group ${build_pid}." \
+                | tee -a route-a-linux-smoke.log
+              kill -TERM -- "-${build_pid}" 2>/dev/null || kill -TERM "$build_pid" 2>/dev/null || true
+              sleep 30
+              if kill -0 "$build_pid" 2>/dev/null; then
+                echo "Build process still alive after TERM; sending KILL." | tee -a route-a-linux-smoke.log
+                kill -KILL -- "-${build_pid}" 2>/dev/null || kill -KILL "$build_pid" 2>/dev/null || true
+              fi
+              wait "$build_pid" >/dev/null 2>&1 || true
+              status=124
+              break
+            fi
+          done
+          if [ "$status" -eq 0 ]; then
+            wait "$build_pid"
+            status=$?
+          fi
           set -e
           echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
           {
             echo "target=${target}"
             echo "build_target=${build_target}"
             echo "exit_code=${status}"
-            echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
+            echo "requested_build_timeout_minutes=${requested_timeout}"
+            echo "actual_build_timeout_minutes=${actual_timeout}"
             echo "workflow_sha=${GITHUB_SHA}"
             echo "finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > route-a-build-status.txt
