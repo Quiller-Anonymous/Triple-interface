@@ -66,8 +66,23 @@ jobs:
       - name: Fetch Mathlib cache
         run: lake exe cache get
 
+      - name: Prepare smoke log files
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > route-a-linux-smoke.log
+          {
+            echo "target=${{ github.event.inputs.target }}"
+            echo "exit_code=not_started"
+            echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
+            echo "workflow_sha=${GITHUB_SHA}"
+            echo "prepared_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } > route-a-build-status.txt
+
       - name: Restore project Lake artifact cache
         id: route_a_cache_restore
+        continue-on-error: true
         uses: actions/cache/restore@v4
         with:
           path: .lake/build/lib/lean/Goldbach
@@ -111,15 +126,33 @@ jobs:
             echo "Build failed with exit code ${status}; saving logs/cache for diagnosis."
           fi
 
-      - name: Report project artifact size
+      - name: Stop leftover Lean build processes
         if: always()
         shell: bash
         run: |
           set -euo pipefail
-          du -sh .lake/build/lib/lean/Goldbach 2>/dev/null || true
+          pkill -TERM -f '/lean .*Goldbach' || true
+          pkill -TERM -f 'lake --log-level=error build' || true
+          sleep 5
+          pkill -KILL -f '/lean .*Goldbach' || true
+          pkill -KILL -f 'lake --log-level=error build' || true
+
+      - name: Report project artifact size
+        if: always()
+        id: artifact_size
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d .lake/build/lib/lean/Goldbach ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            du -sh .lake/build/lib/lean/Goldbach || true
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "No Goldbach build artifact directory exists."
+          fi
 
       - name: Save project Lake artifact cache
-        if: always()
+        if: always() && steps.artifact_size.outputs.exists == 'true'
         continue-on-error: true
         uses: actions/cache/save@v4
         with:
@@ -142,6 +175,11 @@ jobs:
         run: |
           set -euo pipefail
           status='${{ steps.build.outputs.exit_code }}'
+          if [ -z "$status" ]; then
+            echo "Route A Linux smoke build step did not produce an exit code."
+            echo "Check earlier setup/cache steps; route-a-build-status.txt should say not_started."
+            exit 1
+          fi
           if [ "$status" = "0" ]; then
             echo "Route A Linux smoke target built successfully."
             exit 0
