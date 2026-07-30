@@ -124,6 +124,20 @@ jobs:
         timeout-minutes: 20
         uses: actions/cache/restore@v4
         with:
+          path: |
+            .lake/build/lib/lean
+            .lake/build/ir
+          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-latest
+          restore-keys: |
+            route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-
+
+      - name: Restore legacy Goldbach-only artifact cache
+        id: route_a_cache_restore_legacy
+        if: steps.route_a_cache_restore.outputs.cache-matched-key == ''
+        continue-on-error: true
+        timeout-minutes: 20
+        uses: actions/cache/restore@v4
+        with:
           path: .lake/build/lib/lean/Goldbach
           key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-latest
           restore-keys: |
@@ -136,6 +150,18 @@ jobs:
         run: |
           set -euo pipefail
           target='${{ github.event.inputs.target }}'
+          case "$target" in
+            Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZero*) ;;
+            *)
+              echo "::error::Route A Linux smoke is restricted to zero-mode Route A targets, got '${target}'."
+              exit 2
+              ;;
+          esac
+          target_path="${target//./\/}.lean"
+          if [ ! -f "$target_path" ]; then
+            echo "::error::Target source file does not exist: ${target_path}"
+            exit 2
+          fi
           if [ '${{ github.event.inputs.olean_only }}' = 'true' ]; then
             build_target="+${target}:olean"
           else
@@ -156,7 +182,7 @@ jobs:
           echo "Build timeout guard: ${actual_timeout} minutes" | tee -a route-a-linux-smoke.log
           echo "Disk before build:" | tee -a route-a-linux-smoke.log
           df -h | tee -a route-a-linux-smoke.log
-          du -sh .lake .lake/build/lib/lean/Goldbach ~/.elan ~/.cache 2>/dev/null \
+          du -sh .lake .lake/build/lib/lean .lake/build/ir ~/.elan ~/.cache 2>/dev/null \
             | tee -a route-a-linux-smoke.log || true
           set +e
           timeout --signal=TERM --kill-after=30s "${actual_timeout}m" \
@@ -202,12 +228,12 @@ jobs:
         run: |
           set -euo pipefail
           df -h
-          if [ -d .lake/build/lib/lean/Goldbach ]; then
+          if [ -d .lake/build/lib/lean ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            du -sh .lake/build/lib/lean/Goldbach || true
+            du -sh .lake/build/lib/lean .lake/build/ir 2>/dev/null || true
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "No Goldbach build artifact directory exists."
+            echo "No Lean build artifact directory exists."
           fi
 
       - name: Save project Lake artifact cache
@@ -217,7 +243,9 @@ jobs:
         timeout-minutes: 45
         uses: actions/cache/save@v4
         with:
-          path: .lake/build/lib/lean/Goldbach
+          path: |
+            .lake/build/lib/lean
+            .lake/build/ir
           key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Record cache checkpoint status
@@ -229,11 +257,22 @@ jobs:
           {
             echo "cache_restore_outcome=${{ steps.route_a_cache_restore.outcome }}"
             echo "cache_restore_conclusion=${{ steps.route_a_cache_restore.conclusion }}"
+            echo "cache_restore_hit=${{ steps.route_a_cache_restore.outputs.cache-hit }}"
+            echo "cache_restore_matched_key=${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
+            echo "legacy_cache_restore_outcome=${{ steps.route_a_cache_restore_legacy.outcome }}"
+            echo "legacy_cache_restore_conclusion=${{ steps.route_a_cache_restore_legacy.conclusion }}"
+            echo "legacy_cache_restore_hit=${{ steps.route_a_cache_restore_legacy.outputs.cache-hit }}"
+            echo "legacy_cache_restore_matched_key=${{ steps.route_a_cache_restore_legacy.outputs.cache-matched-key }}"
             echo "cache_save_outcome=${{ steps.route_a_cache_save.outcome }}"
             echo "cache_save_conclusion=${{ steps.route_a_cache_save.conclusion }}"
             echo "artifact_dir_exists=${{ steps.artifact_size.outputs.exists }}"
           } >> route-a-build-status.txt
           echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
+          echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
+          echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
+          echo "Legacy cache restore outcome: ${{ steps.route_a_cache_restore_legacy.outcome }} / ${{ steps.route_a_cache_restore_legacy.conclusion }}"
+          echo "Legacy cache restore hit: ${{ steps.route_a_cache_restore_legacy.outputs.cache-hit }}"
+          echo "Legacy cache restore matched key: ${{ steps.route_a_cache_restore_legacy.outputs.cache-matched-key }}"
           echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
 
@@ -266,6 +305,11 @@ jobs:
           fi
           echo "Route A Linux smoke target did not finish in this run. Exit code: ${status}"
           echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
+          echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
+          echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
+          echo "Legacy cache restore outcome: ${{ steps.route_a_cache_restore_legacy.outcome }} / ${{ steps.route_a_cache_restore_legacy.conclusion }}"
+          echo "Legacy cache restore hit: ${{ steps.route_a_cache_restore_legacy.outputs.cache-hit }}"
+          echo "Legacy cache restore matched key: ${{ steps.route_a_cache_restore_legacy.outputs.cache-matched-key }}"
           echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
           echo "If this was a timeout guard, rerun the same workflow/input to restore the saved cache and continue."
