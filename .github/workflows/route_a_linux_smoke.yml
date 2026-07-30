@@ -24,7 +24,7 @@ jobs:
   smoke:
     name: Build selected Route A target on Linux
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 270
 
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +72,7 @@ jobs:
           git rev-parse HEAD
           echo "Workflow SHA: ${GITHUB_SHA}"
           echo "Requested build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
+          df -h
 
       - name: Fetch dependencies
         timeout-minutes: 20
@@ -103,14 +104,14 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .lake/build/lib/lean/Goldbach
-          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-latest
           restore-keys: |
             route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-
 
       - name: Build selected target
         id: build
         shell: bash
-        timeout-minutes: 270
+        timeout-minutes: 260
         run: |
           set -euo pipefail
           target='${{ github.event.inputs.target }}'
@@ -132,34 +133,15 @@ jobs:
           : > route-a-linux-smoke.log
           echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
           echo "Build timeout guard: ${actual_timeout} minutes" | tee -a route-a-linux-smoke.log
+          echo "Disk before build:" | tee -a route-a-linux-smoke.log
+          df -h | tee -a route-a-linux-smoke.log
+          du -sh .lake .lake/build/lib/lean/Goldbach ~/.elan ~/.cache 2>/dev/null \
+            | tee -a route-a-linux-smoke.log || true
           set +e
-          setsid bash -lc 'lake --log-level=error build "$1"' _ "${build_target}" \
-            >> route-a-linux-smoke.log 2>&1 &
-          build_pid=$!
-          status=0
-          deadline=$((SECONDS + actual_timeout * 60))
-          while kill -0 "$build_pid" 2>/dev/null; do
-            sleep 60
-            echo "---- heartbeat $(date -u +%Y-%m-%dT%H:%M:%SZ), build pid ${build_pid}, elapsed ${SECONDS}s ----"
-            tail -n 25 route-a-linux-smoke.log || true
-            if [ "$SECONDS" -ge "$deadline" ]; then
-              echo "Build timeout guard reached after ${actual_timeout} minutes; terminating process group ${build_pid}." \
-                | tee -a route-a-linux-smoke.log
-              kill -TERM -- "-${build_pid}" 2>/dev/null || kill -TERM "$build_pid" 2>/dev/null || true
-              sleep 30
-              if kill -0 "$build_pid" 2>/dev/null; then
-                echo "Build process still alive after TERM; sending KILL." | tee -a route-a-linux-smoke.log
-                kill -KILL -- "-${build_pid}" 2>/dev/null || kill -KILL "$build_pid" 2>/dev/null || true
-              fi
-              wait "$build_pid" >/dev/null 2>&1 || true
-              status=124
-              break
-            fi
-          done
-          if [ "$status" -eq 0 ]; then
-            wait "$build_pid"
-            status=$?
-          fi
+          timeout --signal=TERM --kill-after=30s "${actual_timeout}m" \
+            lake --log-level=error build "${build_target}" \
+            2>&1 | tee -a route-a-linux-smoke.log
+          status=${PIPESTATUS[0]}
           set -e
           echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
           {
@@ -198,6 +180,7 @@ jobs:
         timeout-minutes: 5
         run: |
           set -euo pipefail
+          df -h
           if [ -d .lake/build/lib/lean/Goldbach ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
             du -sh .lake/build/lib/lean/Goldbach || true
