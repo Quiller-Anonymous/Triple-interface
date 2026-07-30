@@ -29,6 +29,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore Route A smoke generated sources
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          if [ -f .github/route_a_smoke/acc721_missing_sources.tar.gz ]; then
+            shasum -a 256 -c .github/route_a_smoke/acc721_missing_sources.tar.gz.sha256
+            tar -xzf .github/route_a_smoke/acc721_missing_sources.tar.gz
+            echo "Restored Route A generated smoke-test sources:"
+            tar -tzf .github/route_a_smoke/acc721_missing_sources.tar.gz | wc -l
+          else
+            echo "No Route A smoke source archive found."
+          fi
+
       - name: Workflow input summary
         shell: bash
         timeout-minutes: 2
