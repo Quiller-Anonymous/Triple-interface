@@ -51,6 +51,13 @@ jobs:
       - name: Set up Lean
         timeout-minutes: 20
         uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: false
+          use-github-cache: false
 
       - name: Environment diagnostics
         shell: bash
