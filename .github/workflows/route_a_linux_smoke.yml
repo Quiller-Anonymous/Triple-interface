@@ -29,7 +29,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Workflow input summary
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          echo "Workflow SHA: ${GITHUB_SHA}"
+          echo "target=${{ github.event.inputs.target }}"
+          echo "olean_only=${{ github.event.inputs.olean_only }}"
+          echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
+
       - name: Cache elan toolchain
+        timeout-minutes: 10
         uses: actions/cache@v4
         with:
           path: ~/.elan
@@ -38,10 +49,12 @@ jobs:
             ${{ runner.os }}-elan-
 
       - name: Set up Lean
+        timeout-minutes: 20
         uses: leanprover/lean-action@v1
 
       - name: Environment diagnostics
         shell: bash
+        timeout-minutes: 5
         run: |
           set -euo pipefail
           echo "Runner: $(uname -a)"
@@ -61,14 +74,17 @@ jobs:
           echo "Requested build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
 
       - name: Fetch dependencies
+        timeout-minutes: 20
         run: lake update
 
       - name: Fetch Mathlib cache
+        timeout-minutes: 45
         run: lake exe cache get
 
       - name: Prepare smoke log files
         if: always()
         shell: bash
+        timeout-minutes: 2
         run: |
           set -euo pipefail
           : > route-a-linux-smoke.log
@@ -83,6 +99,7 @@ jobs:
       - name: Restore project Lake artifact cache
         id: route_a_cache_restore
         continue-on-error: true
+        timeout-minutes: 20
         uses: actions/cache/restore@v4
         with:
           path: .lake/build/lib/lean/Goldbach
@@ -93,6 +110,7 @@ jobs:
       - name: Build selected target
         id: build
         shell: bash
+        timeout-minutes: 270
         run: |
           set -euo pipefail
           target='${{ github.event.inputs.target }}'
@@ -164,6 +182,7 @@ jobs:
       - name: Stop leftover Lean build processes
         if: always()
         shell: bash
+        timeout-minutes: 3
         run: |
           set -euo pipefail
           pkill -TERM -f '/lean .*Goldbach' || true
@@ -176,6 +195,7 @@ jobs:
         if: always()
         id: artifact_size
         shell: bash
+        timeout-minutes: 5
         run: |
           set -euo pipefail
           if [ -d .lake/build/lib/lean/Goldbach ]; then
@@ -189,6 +209,7 @@ jobs:
       - name: Save project Lake artifact cache
         if: always() && steps.artifact_size.outputs.exists == 'true'
         continue-on-error: true
+        timeout-minutes: 45
         uses: actions/cache/save@v4
         with:
           path: .lake/build/lib/lean/Goldbach
@@ -196,6 +217,7 @@ jobs:
 
       - name: Upload smoke log
         if: always()
+        timeout-minutes: 10
         uses: actions/upload-artifact@v4
         with:
           name: route-a-linux-smoke-log
@@ -207,6 +229,7 @@ jobs:
       - name: Report final build status
         if: always()
         shell: bash
+        timeout-minutes: 2
         run: |
           set -euo pipefail
           status='${{ steps.build.outputs.exit_code }}'
