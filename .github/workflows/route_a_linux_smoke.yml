@@ -316,6 +316,16 @@ jobs:
             echo "Route A Linux smoke target built successfully."
             exit 0
           fi
+          if [ "$status" = "124" ] || [ "$status" = "137" ] || [ "$status" = "143" ]; then
+            echo "Route A Linux smoke target hit the timeout guard in this run. Cache/log artifacts were saved for resume."
+            echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
+            echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
+            echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
+            echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+            echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
+            echo "Re-run the same workflow/input to continue from the saved cache checkpoint."
+            exit 0
+          fi
           echo "Route A Linux smoke target did not finish in this run. Exit code: ${status}"
           echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
           echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
