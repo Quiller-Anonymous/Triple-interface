@@ -29,6 +29,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Free runner disk space
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          echo "Disk before cleanup:"
+          df -h
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /usr/local/lib/android || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+          sudo rm -rf /usr/local/share/boost || true
+          sudo rm -rf /usr/local/.ghcup || true
+          docker system prune -af || true
+          sudo apt-get clean || true
+          echo "Disk after cleanup:"
+          df -h
+
       - name: Restore Route A smoke generated sources
         shell: bash
         timeout-minutes: 5
@@ -204,6 +222,11 @@ jobs:
           df -h | tee -a route-a-linux-smoke.log
           du -sh .lake .lake/build .lake/packages/*/.lake/build ~/.elan ~/.cache 2>/dev/null \
             | tee -a route-a-linux-smoke.log || true
+          available_kb="$(df --output=avail -k . | tail -n 1 | tr -d ' ')"
+          echo "Available KB before build: ${available_kb}" | tee -a route-a-linux-smoke.log
+          if [ "$available_kb" -lt 8000000 ]; then
+            echo "::warning::Less than 8 GB free before Route A build; runner may still exhaust disk."
+          fi
           set +e
           timeout --signal=TERM --kill-after=30s "${actual_timeout}m" \
             lake --log-level=error build "${build_target}" \
@@ -219,6 +242,7 @@ jobs:
             echo "actual_build_timeout_minutes=${actual_timeout}"
             echo "workflow_sha=${GITHUB_SHA}"
             echo "finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            df -h .
           } > route-a-build-status.txt
           if [ "$status" -eq 0 ]; then
             echo "Build completed successfully."
