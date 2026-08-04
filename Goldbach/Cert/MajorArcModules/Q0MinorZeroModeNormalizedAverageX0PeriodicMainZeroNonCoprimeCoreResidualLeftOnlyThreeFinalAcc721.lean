@@ -10,7 +10,7 @@ open Goldbach
 open Goldbach.BankParams
 open Goldbach.Windows
 
-theorem PeriodicMainZeroDyadicExceptionNonCoprimeCoreResidualLeftOnlyThree_value_on_records_upTo_4746_113 :
+opaque PeriodicMainZeroDyadicExceptionNonCoprimeCoreResidualLeftOnlyThree_value_on_records_upTo_4746_113 :
     ∀ p ∈ PeriodicMainZeroDyadicExceptionNonCoprimeCoreResidualLeftOnlyThreePairs,
       leftOnlyThreeLexLe 4746 113 p →
         surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = 0 := by
