@@ -26,10 +26,41 @@ def module_to_artifact(root: Path, module: str, suffix: str) -> Path:
     )
 
 
+def strip_lean_comments(text: str) -> str:
+    """Remove Lean line and nested block comments before scanning imports."""
+    out: list[str] = []
+    i = 0
+    depth = 0
+    while i < len(text):
+        if depth == 0 and text.startswith("--", i):
+            while i < len(text) and text[i] != "\n":
+                i += 1
+            if i < len(text):
+                out.append("\n")
+                i += 1
+            continue
+        if text.startswith("/-", i):
+            depth += 1
+            i += 2
+            continue
+        if depth > 0 and text.startswith("-/", i):
+            depth -= 1
+            i += 2
+            continue
+        if depth == 0:
+            out.append(text[i])
+        elif text[i] == "\n":
+            # Preserve line boundaries so diagnostics still correspond roughly.
+            out.append("\n")
+        i += 1
+    return "".join(out)
+
+
 def parse_imports(source: Path) -> list[str]:
     imports: list[str] = []
-    for raw_line in source.read_text(errors="ignore").splitlines():
-        line = raw_line.split("--", 1)[0].strip()
+    text = strip_lean_comments(source.read_text(errors="ignore"))
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
         if not line.startswith("import "):
             continue
         imported = line.split(None, 1)[1].strip()
@@ -42,21 +73,27 @@ def local_closure(root: Path, target: str) -> tuple[list[str], list[str]]:
     order: list[str] = []
     missing: list[str] = []
     state: dict[str, int] = {}
+    stack: list[str] = []
 
     def visit(module: str) -> None:
         current = state.get(module, 0)
         if current == 2:
             return
         if current == 1:
-            raise RuntimeError(f"import cycle detected at {module}")
+            cycle_start = stack.index(module)
+            cycle = stack[cycle_start:] + [module]
+            raise RuntimeError("import cycle detected:\n  " + "\n  ".join(cycle))
         state[module] = 1
+        stack.append(module)
         source = module_to_source(root, module)
         if not source.exists():
             missing.append(module)
+            stack.pop()
             state[module] = 2
             return
         for imported in parse_imports(source):
             visit(imported)
+        stack.pop()
         state[module] = 2
         order.append(module)
 
