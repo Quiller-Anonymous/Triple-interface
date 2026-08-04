@@ -15,6 +15,10 @@ on:
         description: "Stop the build before GitHub's 6h job limit so cache/artifacts can save"
         required: true
         default: "240"
+      build_mode:
+        description: "Build mode: direct avoids Lake C/IR artifacts; lake uses Lake's native module builder"
+        required: true
+        default: "direct"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.target }}
@@ -70,6 +74,7 @@ jobs:
           echo "target=${{ github.event.inputs.target }}"
           echo "olean_only=${{ github.event.inputs.olean_only }}"
           echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
+          echo "build_mode=${{ github.event.inputs.build_mode }}"
 
       - name: Cache elan toolchain
         timeout-minutes: 10
@@ -142,10 +147,10 @@ jobs:
         timeout-minutes: 20
         uses: actions/cache/restore@v4
         with:
-          path: .lake/build
-          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-latest
+          path: .lake/build/lib/lean
+          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-latest
           restore-keys: |
-            route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-
+            route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-
 
       - name: Verify isolated Route A target
         shell: bash
@@ -167,7 +172,9 @@ jobs:
           fi
           echo "Target: ${target}"
           echo "Source: ${target_path}"
-          echo "Build command: lake --log-level=error build +${target}:olean"
+          echo "Build mode: ${{ github.event.inputs.build_mode }}"
+          echo "Lake command, if requested: lake --log-level=error build +${target}:olean"
+          echo "Direct command, if requested: lake env python3 -u scripts/ci/route_a_direct_olean_build.py --target ${target}"
           echo "Restored Route A artifacts:"
           find .lake/build -type f \
             \( -name '*Acc719*' -o -name '*Acc720*' -o -name '*Slice720*' \
@@ -216,11 +223,20 @@ jobs:
             actual_timeout=240
           fi
           : > route-a-linux-smoke.log
+          build_mode='${{ github.event.inputs.build_mode }}'
+          case "$build_mode" in
+            direct|lake) ;;
+            *)
+              echo "::error::Unknown build_mode '${build_mode}'; expected direct or lake."
+              exit 2
+              ;;
+          esac
           echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
+          echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
           echo "Build timeout guard: ${actual_timeout} minutes" | tee -a route-a-linux-smoke.log
           echo "Disk before build:" | tee -a route-a-linux-smoke.log
           df -h | tee -a route-a-linux-smoke.log
-          du -sh .lake .lake/build .lake/packages/*/.lake/build ~/.elan ~/.cache 2>/dev/null \
+          du -sh .lake .lake/build/lib/lean .lake/packages/*/.lake/build ~/.elan ~/.cache 2>/dev/null \
             | tee -a route-a-linux-smoke.log || true
           available_kb="$(df --output=avail -k . | tail -n 1 | tr -d ' ')"
           echo "Available KB before build: ${available_kb}" | tee -a route-a-linux-smoke.log
@@ -228,15 +244,25 @@ jobs:
             echo "::warning::Less than 8 GB free before Route A build; runner may still exhaust disk."
           fi
           set +e
-          timeout --signal=TERM --kill-after=30s "${actual_timeout}m" \
-            lake --log-level=error build "${build_target}" \
-            2>&1 | tee -a route-a-linux-smoke.log
-          status=${PIPESTATUS[0]}
+          if [ "$build_mode" = "direct" ]; then
+            timeout --signal=TERM --kill-after=30s "${actual_timeout}m" \
+              lake env python3 -u scripts/ci/route_a_direct_olean_build.py \
+                --target "$target" \
+                --timeout-minutes "$actual_timeout" \
+              2>&1 | tee -a route-a-linux-smoke.log
+            status=${PIPESTATUS[0]}
+          else
+            timeout --signal=TERM --kill-after=30s "${actual_timeout}m" \
+              lake --log-level=error build "${build_target}" \
+              2>&1 | tee -a route-a-linux-smoke.log
+            status=${PIPESTATUS[0]}
+          fi
           set -e
           echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
           {
             echo "target=${target}"
             echo "build_target=${build_target}"
+            echo "build_mode=${build_mode}"
             echo "exit_code=${status}"
             echo "requested_build_timeout_minutes=${requested_timeout}"
             echo "actual_build_timeout_minutes=${actual_timeout}"
@@ -272,12 +298,12 @@ jobs:
         run: |
           set -euo pipefail
           df -h
-          if [ -d .lake/build ]; then
+          if [ -d .lake/build/lib/lean ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            du -sh .lake/build 2>/dev/null || true
+            du -sh .lake/build/lib/lean 2>/dev/null || true
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "No Lake build artifact directory exists."
+            echo "No Lean library build artifact directory exists."
           fi
 
       - name: Save project Lake artifact cache
@@ -287,8 +313,8 @@ jobs:
         timeout-minutes: 45
         uses: actions/cache/save@v4
         with:
-          path: .lake/build
-          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .lake/build/lib/lean
+          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Record cache checkpoint status
         if: always()
@@ -320,6 +346,7 @@ jobs:
           path: |
             route-a-linux-smoke.log
             route-a-build-status.txt
+            route-a-direct-build-status.json
             route-a-restored-artifacts.txt
             route-a-src-deps.txt
           retention-days: 14
