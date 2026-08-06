@@ -19,6 +19,10 @@ on:
         description: "Build mode: direct avoids Lake C/IR artifacts; lake uses Lake's native module builder"
         required: true
         default: "direct"
+      direct_workers:
+        description: "Parallel workers for direct mode"
+        required: true
+        default: "4"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.target }}
@@ -75,6 +79,7 @@ jobs:
           echo "olean_only=${{ github.event.inputs.olean_only }}"
           echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
           echo "build_mode=${{ github.event.inputs.build_mode }}"
+          echo "direct_workers=${{ github.event.inputs.direct_workers }}"
 
       - name: Cache elan toolchain
         timeout-minutes: 10
@@ -148,9 +153,10 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .lake/build/lib/lean
-          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-latest
+          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-latest
           restore-keys: |
-            route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-
+            route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-
+            route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-
 
       - name: Verify isolated Route A target
         shell: bash
@@ -174,7 +180,7 @@ jobs:
           echo "Source: ${target_path}"
           echo "Build mode: ${{ github.event.inputs.build_mode }}"
           echo "Lake command, if requested: lake --log-level=error build +${target}:olean"
-          echo "Direct command, if requested: lake env python3 -u scripts/ci/route_a_direct_olean_build.py --target ${target}"
+          echo "Direct command, if requested: lake env python3 -u scripts/ci/route_a_direct_olean_build.py --target ${target} --workers ${{ github.event.inputs.direct_workers }}"
           echo "Restored Route A artifacts:"
           find .lake/build -type f \
             \( -name '*Acc719*' -o -name '*Acc720*' -o -name '*Slice720*' \
@@ -224,6 +230,7 @@ jobs:
           fi
           : > route-a-linux-smoke.log
           build_mode='${{ github.event.inputs.build_mode }}'
+          direct_workers='${{ github.event.inputs.direct_workers }}'
           case "$build_mode" in
             direct|lake) ;;
             *)
@@ -231,8 +238,20 @@ jobs:
               exit 2
               ;;
           esac
+          if ! [[ "$direct_workers" =~ ^[0-9]+$ ]]; then
+            echo "Invalid direct worker count '${direct_workers}', using 4."
+            direct_workers=4
+          fi
+          if [ "$direct_workers" -lt 1 ]; then
+            direct_workers=1
+          fi
+          if [ "$direct_workers" -gt 4 ]; then
+            echo "Requested direct_workers=${direct_workers}; capping at 4 for ubuntu-latest."
+            direct_workers=4
+          fi
           echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
           echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
+          echo "Direct workers: ${direct_workers}" | tee -a route-a-linux-smoke.log
           echo "Build timeout guard: ${actual_timeout} minutes" | tee -a route-a-linux-smoke.log
           echo "Disk before build:" | tee -a route-a-linux-smoke.log
           df -h | tee -a route-a-linux-smoke.log
@@ -249,6 +268,7 @@ jobs:
               lake env python3 -u scripts/ci/route_a_direct_olean_build.py \
                 --target "$target" \
                 --timeout-minutes "$actual_timeout" \
+                --workers "$direct_workers" \
               2>&1 | tee -a route-a-linux-smoke.log
             status=${PIPESTATUS[0]}
           else
@@ -263,6 +283,7 @@ jobs:
             echo "target=${target}"
             echo "build_target=${build_target}"
             echo "build_mode=${build_mode}"
+            echo "direct_workers=${direct_workers}"
             echo "exit_code=${status}"
             echo "requested_build_timeout_minutes=${requested_timeout}"
             echo "actual_build_timeout_minutes=${actual_timeout}"
@@ -314,7 +335,7 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: .lake/build/lib/lean
-          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Record cache checkpoint status
         if: always()

@@ -9,6 +9,8 @@ under `lake env`, so LEAN_PATH already points at Mathlib and project artifacts.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
+import heapq
 import json
 import subprocess
 import sys
@@ -69,9 +71,10 @@ def parse_imports(source: Path) -> list[str]:
     return imports
 
 
-def local_closure(root: Path, target: str) -> tuple[list[str], list[str]]:
+def local_closure(root: Path, target: str) -> tuple[list[str], list[str], dict[str, list[str]]]:
     order: list[str] = []
     missing: list[str] = []
+    imports_by_module: dict[str, list[str]] = {}
     state: dict[str, int] = {}
     stack: list[str] = []
 
@@ -91,14 +94,16 @@ def local_closure(root: Path, target: str) -> tuple[list[str], list[str]]:
             stack.pop()
             state[module] = 2
             return
-        for imported in parse_imports(source):
+        imports = parse_imports(source)
+        imports_by_module[module] = imports
+        for imported in imports:
             visit(imported)
         stack.pop()
         state[module] = 2
         order.append(module)
 
     visit(target)
-    return order, missing
+    return order, missing, imports_by_module
 
 
 def run_lean(root: Path, module: str, timeout_seconds: float | None) -> int:
@@ -124,12 +129,144 @@ def run_lean(root: Path, module: str, timeout_seconds: float | None) -> int:
     return completed.returncode
 
 
+def build_closure(
+    root: Path,
+    order: list[str],
+    imports_by_module: dict[str, list[str]],
+    *,
+    force: bool,
+    workers: int,
+    progress_every: int,
+    deadline: float,
+) -> tuple[int, int, str | None, int]:
+    """Compile the local module DAG, running independent modules in parallel."""
+    total = len(order)
+    order_index = {module: index for index, module in enumerate(order, start=1)}
+    local_modules = set(order)
+    completed: set[str] = set()
+    skipped = 0
+
+    for module in order:
+        if module_to_artifact(root, module, ".olean").exists() and not force:
+            completed.add(module)
+            skipped += 1
+
+    reverse_deps: dict[str, list[str]] = {module: [] for module in order}
+    remaining_deps: dict[str, int] = {}
+    for module in order:
+        if module in completed:
+            continue
+        count = 0
+        for imported in imports_by_module.get(module, []):
+            if imported not in local_modules:
+                continue
+            reverse_deps.setdefault(imported, []).append(module)
+            if imported not in completed:
+                count += 1
+        remaining_deps[module] = count
+
+    ready: list[tuple[int, str]] = [
+        (order_index[module], module)
+        for module, count in remaining_deps.items()
+        if count == 0
+    ]
+    heapq.heapify(ready)
+
+    built = 0
+    failed_module: str | None = None
+    exit_code = 0
+    started = time.monotonic()
+    worker_count = max(workers, 1)
+    progress_step = max(progress_every, 1)
+
+    print(
+        f"[scheduler] workers={worker_count} initial_skipped={skipped} "
+        f"initial_ready={len(ready)} pending={len(remaining_deps)}",
+        flush=True,
+    )
+
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=worker_count)
+    submitted: dict[concurrent.futures.Future[int], str] = {}
+    try:
+        while ready or submitted:
+            remaining_time = deadline - time.monotonic()
+            if remaining_time <= 0:
+                print("[timeout] build budget exhausted before next module", flush=True)
+                exit_code = 124
+                break
+
+            while ready and len(submitted) < worker_count and remaining_time > 0:
+                index, module = heapq.heappop(ready)
+                if module_to_artifact(root, module, ".olean").exists() and not force:
+                    completed.add(module)
+                    skipped += 1
+                    for dependent in reverse_deps.get(module, []):
+                        if dependent not in remaining_deps:
+                            continue
+                        remaining_deps[dependent] -= 1
+                        if remaining_deps[dependent] == 0:
+                            heapq.heappush(ready, (order_index[dependent], dependent))
+                    continue
+                print(f"[build] {index}/{total} {module}", flush=True)
+                submitted[executor.submit(run_lean, root, module, remaining_time)] = module
+                remaining_time = deadline - time.monotonic()
+
+            if not submitted:
+                continue
+
+            wait_timeout = max(0.1, min(5.0, deadline - time.monotonic()))
+            done, _ = concurrent.futures.wait(
+                submitted,
+                timeout=wait_timeout,
+                return_when=concurrent.futures.FIRST_COMPLETED,
+            )
+            if not done:
+                continue
+
+            for future in done:
+                module = submitted.pop(future)
+                code = future.result()
+                if code != 0:
+                    failed_module = module
+                    exit_code = code
+                    print(f"[failed] code={code} module={module}", flush=True)
+                    break
+
+                built += 1
+                completed.add(module)
+                for dependent in reverse_deps.get(module, []):
+                    if dependent not in remaining_deps:
+                        continue
+                    remaining_deps[dependent] -= 1
+                    if remaining_deps[dependent] == 0:
+                        heapq.heappush(ready, (order_index[dependent], dependent))
+
+                if built % progress_step == 0:
+                    elapsed = time.monotonic() - started
+                    print(
+                        f"[progress] built={built} skipped={skipped} "
+                        f"running={len(submitted)} ready={len(ready)} elapsed_s={elapsed:.1f}",
+                        flush=True,
+                    )
+
+            if exit_code != 0:
+                break
+    finally:
+        executor.shutdown(wait=(exit_code == 0), cancel_futures=True)
+
+    if exit_code == 0 and ready:
+        exit_code = 124
+
+    return built, skipped, failed_module, exit_code
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", required=True)
     parser.add_argument("--root", default=".")
     parser.add_argument("--timeout-minutes", type=float, default=240.0)
     parser.add_argument("--progress-every", type=int, default=25)
+    parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
         "--status-file",
@@ -141,7 +278,7 @@ def main() -> int:
     started = time.monotonic()
     deadline = started + args.timeout_minutes * 60.0
 
-    order, missing = local_closure(root, args.target)
+    order, missing, imports_by_module = local_closure(root, args.target)
     local_missing = [m for m in missing if module_to_source(root, m).exists()]
     external_missing = [m for m in missing if not module_to_source(root, m).exists()]
     if local_missing:
@@ -159,37 +296,15 @@ def main() -> int:
     exit_code = 0
 
     try:
-        for index, module in enumerate(order, start=1):
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                print("[timeout] build budget exhausted before next module", flush=True)
-                exit_code = 124
-                break
-
-            olean = module_to_artifact(root, module, ".olean")
-            if olean.exists() and not args.force:
-                skipped += 1
-                if skipped % max(args.progress_every, 1) == 0:
-                    print(
-                        f"[skip] {index}/{len(order)} skipped={skipped} built={built} {module}",
-                        flush=True,
-                    )
-                continue
-
-            print(f"[build] {index}/{len(order)} {module}", flush=True)
-            code = run_lean(root, module, remaining)
-            if code != 0:
-                failed_module = module
-                exit_code = code
-                print(f"[failed] code={code} module={module}", flush=True)
-                break
-            built += 1
-            if built % max(args.progress_every, 1) == 0:
-                elapsed = time.monotonic() - started
-                print(
-                    f"[progress] built={built} skipped={skipped} elapsed_s={elapsed:.1f}",
-                    flush=True,
-                )
+        built, skipped, failed_module, exit_code = build_closure(
+            root,
+            order,
+            imports_by_module,
+            force=args.force,
+            workers=args.workers,
+            progress_every=args.progress_every,
+            deadline=deadline,
+        )
     finally:
         elapsed = time.monotonic() - started
         status = {
@@ -198,6 +313,7 @@ def main() -> int:
             "external_imports": len(external_missing),
             "built": built,
             "skipped": skipped,
+            "workers": max(args.workers, 1),
             "failed_module": failed_module,
             "exit_code": exit_code,
             "elapsed_seconds": elapsed,
