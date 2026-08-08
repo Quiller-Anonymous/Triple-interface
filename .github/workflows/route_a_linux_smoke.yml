@@ -245,9 +245,9 @@ jobs:
           if [ "$direct_workers" -lt 1 ]; then
             direct_workers=1
           fi
-          if [ "$direct_workers" -gt 6 ]; then
-            echo "Requested direct_workers=${direct_workers}; capping at 6 for ubuntu-latest."
-            direct_workers=6
+          if [ "$direct_workers" -gt 8 ]; then
+            echo "Requested direct_workers=${direct_workers}; capping at 8 for ubuntu-latest."
+            direct_workers=8
           fi
           echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
           echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
