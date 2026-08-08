@@ -22,7 +22,7 @@ on:
       direct_workers:
         description: "Parallel workers for direct mode"
         required: true
-        default: "4"
+        default: "6"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.target }}
@@ -239,15 +239,15 @@ jobs:
               ;;
           esac
           if ! [[ "$direct_workers" =~ ^[0-9]+$ ]]; then
-            echo "Invalid direct worker count '${direct_workers}', using 4."
-            direct_workers=4
+            echo "Invalid direct worker count '${direct_workers}', using 6."
+            direct_workers=6
           fi
           if [ "$direct_workers" -lt 1 ]; then
             direct_workers=1
           fi
-          if [ "$direct_workers" -gt 4 ]; then
-            echo "Requested direct_workers=${direct_workers}; capping at 4 for ubuntu-latest."
-            direct_workers=4
+          if [ "$direct_workers" -gt 6 ]; then
+            echo "Requested direct_workers=${direct_workers}; capping at 6 for ubuntu-latest."
+            direct_workers=6
           fi
           echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
           echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
