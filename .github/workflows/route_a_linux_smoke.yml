@@ -60,13 +60,21 @@ jobs:
         timeout-minutes: 5
         run: |
           set -euo pipefail
-          if [ -f .github/route_a_smoke/acc721_missing_sources.tar.gz ]; then
-            shasum -a 256 -c .github/route_a_smoke/acc721_missing_sources.tar.gz.sha256
-            tar -xzf .github/route_a_smoke/acc721_missing_sources.tar.gz
-            echo "Restored Route A generated smoke-test sources:"
-            tar -tzf .github/route_a_smoke/acc721_missing_sources.tar.gz | wc -l
+          shopt -s nullglob
+          archives=(.github/route_a_smoke/*.tar.gz)
+          if [ "${#archives[@]}" -gt 0 ]; then
+            for archive in "${archives[@]}"; do
+              if [ -f "${archive}.sha256" ]; then
+                shasum -a 256 -c "${archive}.sha256"
+              else
+                echo "::warning::No checksum file found for ${archive}."
+              fi
+              tar -xzf "${archive}"
+              restored_count="$(tar -tzf "${archive}" | wc -l | tr -d ' ')"
+              echo "Restored ${restored_count} Route A generated sources from ${archive}."
+            done
           else
-            echo "No Route A smoke source archive found."
+            echo "No Route A smoke source archives found."
           fi
 
       - name: Workflow input summary
