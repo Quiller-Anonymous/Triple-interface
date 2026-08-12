@@ -6,7 +6,7 @@ on:
       target:
         description: "Lean module to build"
         required: true
-        default: "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeFinalAcc721"
+        default: "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeFinalAcc5"
       olean_only:
         description: "Build only the .olean target"
         required: true
@@ -22,7 +22,7 @@ on:
       direct_workers:
         description: "Parallel workers for direct mode"
         required: true
-        default: "6"
+        default: "8"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.target }}
