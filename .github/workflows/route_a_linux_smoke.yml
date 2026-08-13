@@ -6,7 +6,7 @@ on:
       target:
         description: "Lean module to build"
         required: true
-        default: "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeFinalAcc5"
+        default: "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualFinal"
       olean_only:
         description: "Build only the .olean target"
         required: true

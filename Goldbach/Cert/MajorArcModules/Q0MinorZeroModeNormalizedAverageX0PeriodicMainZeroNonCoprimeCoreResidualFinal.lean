@@ -41,7 +41,7 @@ theorem PeriodicMainDyadicExceptionNonCoprimeCoreResidualDivisibilityZeroCertifi
     calc
       surrogatePeriodicMainActiveOrderedPairSummandRat X0 (q, q')
           = surrogatePeriodicMainActiveOrderedPairSummandRat X0 (q', q) := by
-            exact surrogatePeriodicMainActiveOrderedPairSummandRat_comm X0 q q'
+            exact surrogatePeriodicMainActiveOrderedPairSummandRat_swap X0 q q'
       _ = 0 := hleft
   bothThree_value_on_records := by
     intro p hp _ _
