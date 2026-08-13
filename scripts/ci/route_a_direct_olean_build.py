@@ -280,11 +280,23 @@ def main() -> int:
 
     order, missing, imports_by_module = local_closure(root, args.target)
     local_missing = [m for m in missing if module_to_source(root, m).exists()]
-    external_missing = [m for m in missing if not module_to_source(root, m).exists()]
+    project_missing = [
+        m for m in missing
+        if m.startswith("Goldbach.") and not module_to_source(root, m).exists()
+    ]
+    external_missing = [
+        m for m in missing
+        if not module_to_source(root, m).exists() and not m.startswith("Goldbach.")
+    ]
     if local_missing:
         print("[error] local imports reported missing unexpectedly:", flush=True)
         for module in local_missing[:50]:
             print(f"  {module}", flush=True)
+        return 2
+    if project_missing:
+        print("[error] missing project source imports:", flush=True)
+        for module in project_missing[:50]:
+            print(f"  {module_to_source(root, module).relative_to(root)}", flush=True)
         return 2
 
     print(f"[closure] local_modules={len(order)} external_imports={len(external_missing)}")
