@@ -23,6 +23,14 @@ on:
         description: "Parallel workers for direct mode"
         required: true
         default: "8"
+      auto_continue:
+        description: "Automatically dispatch another run after a resumable timeout"
+        required: true
+        default: "true"
+
+permissions:
+  contents: read
+  actions: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event.inputs.target }}
@@ -88,6 +96,7 @@ jobs:
           echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
           echo "build_mode=${{ github.event.inputs.build_mode }}"
           echo "direct_workers=${{ github.event.inputs.direct_workers }}"
+          echo "auto_continue=${{ github.event.inputs.auto_continue }}"
 
       - name: Cache elan toolchain
         timeout-minutes: 10
@@ -150,6 +159,7 @@ jobs:
             echo "target=${{ github.event.inputs.target }}"
             echo "exit_code=not_started"
             echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
+            echo "auto_continue=${{ github.event.inputs.auto_continue }}"
             echo "workflow_sha=${GITHUB_SHA}"
             echo "prepared_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
           } > route-a-build-status.txt
@@ -367,6 +377,64 @@ jobs:
           echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
           echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
+
+      - name: Dispatch continuation run after checkpoint timeout
+        if: >-
+          always() &&
+          github.event.inputs.auto_continue == 'true' &&
+          (steps.build.outputs.exit_code == '124' ||
+           steps.build.outputs.exit_code == '137' ||
+           steps.build.outputs.exit_code == '143') &&
+          steps.artifact_size.outputs.exists == 'true'
+        shell: bash
+        timeout-minutes: 3
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET: ${{ github.event.inputs.target }}
+          OLEAN_ONLY: ${{ github.event.inputs.olean_only }}
+          BUILD_TIMEOUT_MINUTES: ${{ github.event.inputs.build_timeout_minutes }}
+          BUILD_MODE: ${{ github.event.inputs.build_mode }}
+          DIRECT_WORKERS: ${{ github.event.inputs.direct_workers }}
+          REF_NAME: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          echo "Checkpoint timeout detected; dispatching continuation run for ${TARGET} on ${REF_NAME}."
+          sleep 30
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          repo = os.environ["REPOSITORY"]
+          workflow_id = "route_a_linux_smoke.yml"
+          url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/dispatches"
+          payload = {
+              "ref": os.environ["REF_NAME"],
+              "inputs": {
+                  "target": os.environ["TARGET"],
+                  "olean_only": os.environ["OLEAN_ONLY"],
+                  "build_timeout_minutes": os.environ["BUILD_TIMEOUT_MINUTES"],
+                  "build_mode": os.environ["BUILD_MODE"],
+                  "direct_workers": os.environ["DIRECT_WORKERS"],
+                  "auto_continue": "true",
+              },
+          }
+          data = json.dumps(payload).encode()
+          request = urllib.request.Request(
+              url,
+              data=data,
+              method="POST",
+              headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                  "X-GitHub-Api-Version": "2022-11-28",
+                  "Content-Type": "application/json",
+              },
+          )
+          with urllib.request.urlopen(request) as response:
+              print(f"Dispatched continuation run: HTTP {response.status}")
+          PY
 
       - name: Upload smoke log
         if: always()
