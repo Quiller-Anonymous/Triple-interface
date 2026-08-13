@@ -174,8 +174,9 @@ jobs:
           target='${{ github.event.inputs.target }}'
           case "$target" in
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZero*) ;;
+            Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal) ;;
             *)
-              echo "::error::Route A Linux smoke is restricted to zero-mode Route A targets, got '${target}'."
+              echo "::error::Route A Linux smoke is restricted to Route A periodic-main targets, got '${target}'."
               exit 2
               ;;
           esac
@@ -211,8 +212,9 @@ jobs:
           target='${{ github.event.inputs.target }}'
           case "$target" in
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZero*) ;;
+            Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal) ;;
             *)
-              echo "::error::Route A Linux smoke is restricted to zero-mode Route A targets, got '${target}'."
+              echo "::error::Route A Linux smoke is restricted to Route A periodic-main targets, got '${target}'."
               exit 2
               ;;
           esac
