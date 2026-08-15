@@ -1,5 +1,6 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0BoundaryFinal
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMain
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroFinal
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainReducedSparse
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainRowAssembly
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidual
@@ -304,5 +305,29 @@ theorem centeredNormalizedSigmaTruncWindowEnergyTargetAt_X0_of_generatedTailSubc
       hvalue
       hsum
       PeriodicMainDyadicExceptionNonCoprimeCoreResidualDivisibilityZeroCertificateAtX0_certified
+
+theorem periodicMainNonzeroReducedSparseCertificateAtX0_certified :
+    PeriodicMainNonzeroReducedSparseCertificateAtX0 periodicMainNonzeroActualValue := by
+  refine ⟨periodicMainNonzeroActualValue_on_records,
+    periodicMainNonzeroActualValue_sum_eq_cert, ?_⟩
+  exact
+    PeriodicMainDyadicExceptionReducedZeroCertificateAtX0_of_nonCoprimeReduced
+      (PeriodicMainDyadicExceptionNonCoprimeReducedZeroCertificateAtX0_of_commonFactorSurfaces
+        PeriodicMainDyadicExceptionNonCoprimeRowThreeSixCommonFactorZeroCertificateAtX0_of_remaining
+        PeriodicMainDyadicExceptionNonCoprimeResidualRightThreeSixCommonFactorZeroCertificateAtX0_of_transport
+        PeriodicMainDyadicExceptionNonCoprimeCoreResidualDivisibilityZeroCertificateAtX0_certified)
+
+theorem periodicMainCert_true_of_nonzeroFinal :
+    surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat X0 =
+      surrogatePeriodicMainX0RatCert := by
+  exact periodicMainCert_true_of_nonzeroReducedSparseCertificate
+    periodicMainNonzeroActualValue
+    periodicMainNonzeroReducedSparseCertificateAtX0_certified
+
+theorem centeredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0_certified :
+    CenteredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0 := by
+  exact centeredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0_of_nonzeroReducedSparse
+    periodicMainNonzeroActualValue
+    periodicMainNonzeroReducedSparseCertificateAtX0_certified
 
 end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

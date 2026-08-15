@@ -6,7 +6,7 @@ on:
       target:
         description: "Lean module to build"
         required: true
-        default: "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal"
+        default: "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert"
       olean_only:
         description: "Build only the .olean target"
         required: true
@@ -185,8 +185,9 @@ jobs:
           case "$target" in
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZero*) ;;
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal) ;;
+            Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert) ;;
             *)
-              echo "::error::Route A Linux smoke is restricted to Route A periodic-main targets, got '${target}'."
+              echo "::error::Route A Linux smoke is restricted to Route A periodic-main/top-level targets, got '${target}'."
               exit 2
               ;;
           esac
@@ -223,8 +224,9 @@ jobs:
           case "$target" in
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZero*) ;;
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal) ;;
+            Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert) ;;
             *)
-              echo "::error::Route A Linux smoke is restricted to Route A periodic-main targets, got '${target}'."
+              echo "::error::Route A Linux smoke is restricted to Route A periodic-main/top-level targets, got '${target}'."
               exit 2
               ;;
           esac
