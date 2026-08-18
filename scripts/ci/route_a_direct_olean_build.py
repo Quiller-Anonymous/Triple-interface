@@ -12,10 +12,17 @@ import argparse
 import concurrent.futures
 import heapq
 import json
+import os
+import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
+
+
+_ACTIVE_PROCESSES: dict[int, tuple[str, subprocess.Popen]] = {}
+_ACTIVE_PROCESS_LOCK = threading.Lock()
 
 
 def module_to_source(root: Path, module: str) -> Path:
@@ -106,7 +113,44 @@ def local_closure(root: Path, target: str) -> tuple[list[str], list[str], dict[s
     return order, missing, imports_by_module
 
 
+def terminate_process(module: str, process: subprocess.Popen, reason: str) -> None:
+    """Terminate one Lean process group, escalating if needed."""
+    if process.poll() is not None:
+        return
+    print(f"[terminate] {module}: {reason}", flush=True)
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except Exception:
+        process.terminate()
+    try:
+        process.wait(timeout=10.0)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    if process.poll() is not None:
+        return
+    print(f"[kill] {module}: did not terminate after SIGTERM", flush=True)
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except Exception:
+        process.kill()
+    try:
+        process.wait(timeout=10.0)
+    except subprocess.TimeoutExpired:
+        pass
+
+
+def terminate_active_processes(reason: str) -> None:
+    with _ACTIVE_PROCESS_LOCK:
+        active = list(_ACTIVE_PROCESSES.values())
+    for module, process in active:
+        terminate_process(module, process, reason)
+
+
 def run_lean(root: Path, module: str, timeout_seconds: float | None) -> int:
+    if timeout_seconds is not None and timeout_seconds <= 0:
+        print(f"[timeout] {module}", flush=True)
+        return 124
     source = module_to_source(root, module)
     olean = module_to_artifact(root, module, ".olean")
     ilean = module_to_artifact(root, module, ".ilean")
@@ -121,12 +165,21 @@ def run_lean(root: Path, module: str, timeout_seconds: float | None) -> int:
         str(ilean),
         str(source),
     ]
+    process: subprocess.Popen | None = None
     try:
-        completed = subprocess.run(cmd, cwd=root, timeout=timeout_seconds)
+        process = subprocess.Popen(cmd, cwd=root, start_new_session=True)
+        with _ACTIVE_PROCESS_LOCK:
+            _ACTIVE_PROCESSES[process.pid] = (module, process)
+        return process.wait(timeout=timeout_seconds)
     except subprocess.TimeoutExpired:
         print(f"[timeout] {module}", flush=True)
+        if process is not None:
+            terminate_process(module, process, "module timeout")
         return 124
-    return completed.returncode
+    finally:
+        if process is not None:
+            with _ACTIVE_PROCESS_LOCK:
+                _ACTIVE_PROCESSES.pop(process.pid, None)
 
 
 def build_closure(
@@ -252,7 +305,9 @@ def build_closure(
             if exit_code != 0:
                 break
     finally:
-        executor.shutdown(wait=(exit_code == 0), cancel_futures=True)
+        if exit_code != 0:
+            terminate_active_processes("build exiting after failure/timeout")
+        executor.shutdown(wait=True, cancel_futures=True)
 
     if exit_code == 0 and ready:
         exit_code = 124

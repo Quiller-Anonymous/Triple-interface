@@ -22,7 +22,7 @@ on:
       direct_workers:
         description: "Parallel workers for direct mode"
         required: true
-        default: "8"
+        default: "4"
       auto_continue:
         description: "Automatically dispatch another run after a resumable timeout"
         required: true
