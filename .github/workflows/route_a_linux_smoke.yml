@@ -14,7 +14,7 @@ on:
       build_timeout_minutes:
         description: "Stop the build before GitHub's 6h job limit so cache/artifacts can save"
         required: true
-        default: "240"
+        default: "200"
       build_mode:
         description: "Build mode: direct avoids Lake C/IR artifacts; lake uses Lake's native module builder"
         required: true
@@ -242,13 +242,13 @@ jobs:
           fi
           requested_timeout='${{ github.event.inputs.build_timeout_minutes }}'
           if ! [[ "$requested_timeout" =~ ^[0-9]+$ ]]; then
-            echo "Invalid build timeout '${requested_timeout}', using 240 minutes."
-            requested_timeout=240
+            echo "Invalid build timeout '${requested_timeout}', using 200 minutes."
+            requested_timeout=200
           fi
           actual_timeout="$requested_timeout"
-          if [ "$actual_timeout" -gt 240 ]; then
-            echo "Requested timeout ${actual_timeout} is too close to GitHub's 6h cap; capping at 240 minutes."
-            actual_timeout=240
+          if [ "$actual_timeout" -gt 200 ]; then
+            echo "Requested timeout ${actual_timeout} leaves too little checkpoint time; capping at 200 minutes."
+            actual_timeout=200
           fi
           : > route-a-linux-smoke.log
           build_mode='${{ github.event.inputs.build_mode }}'
@@ -275,6 +275,13 @@ jobs:
           echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
           echo "Direct workers: ${direct_workers}" | tee -a route-a-linux-smoke.log
           echo "Build timeout guard: ${actual_timeout} minutes" | tee -a route-a-linux-smoke.log
+          direct_timeout="$actual_timeout"
+          if [ "$build_mode" = "direct" ] && [ "$direct_timeout" -gt 5 ]; then
+            direct_timeout=$((direct_timeout - 5))
+          fi
+          if [ "$build_mode" = "direct" ]; then
+            echo "Direct builder self-timeout: ${direct_timeout} minutes" | tee -a route-a-linux-smoke.log
+          fi
           echo "Disk before build:" | tee -a route-a-linux-smoke.log
           df -h | tee -a route-a-linux-smoke.log
           du -sh .lake .lake/build/lib/lean .lake/packages/*/.lake/build ~/.elan ~/.cache 2>/dev/null \
@@ -289,7 +296,7 @@ jobs:
             timeout --signal=TERM --kill-after=30s "${actual_timeout}m" \
               lake env python3 -u scripts/ci/route_a_direct_olean_build.py \
                 --target "$target" \
-                --timeout-minutes "$actual_timeout" \
+                --timeout-minutes "$direct_timeout" \
                 --workers "$direct_workers" \
               2>&1 | tee -a route-a-linux-smoke.log
             status=${PIPESTATUS[0]}
@@ -309,6 +316,7 @@ jobs:
             echo "exit_code=${status}"
             echo "requested_build_timeout_minutes=${requested_timeout}"
             echo "actual_build_timeout_minutes=${actual_timeout}"
+            echo "direct_build_timeout_minutes=${direct_timeout}"
             echo "workflow_sha=${GITHUB_SHA}"
             echo "finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             df -h .
