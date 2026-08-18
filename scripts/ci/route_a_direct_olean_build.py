@@ -191,6 +191,7 @@ def build_closure(
     workers: int,
     progress_every: int,
     deadline: float,
+    module_timeout_seconds: float | None,
 ) -> tuple[int, int, str | None, int]:
     """Compile the local module DAG, running independent modules in parallel."""
     total = len(order)
@@ -261,7 +262,10 @@ def build_closure(
                             heapq.heappush(ready, (order_index[dependent], dependent))
                     continue
                 print(f"[build] {index}/{total} {module}", flush=True)
-                submitted[executor.submit(run_lean, root, module, remaining_time)] = module
+                timeout_seconds = remaining_time
+                if module_timeout_seconds is not None:
+                    timeout_seconds = min(timeout_seconds, module_timeout_seconds)
+                submitted[executor.submit(run_lean, root, module, timeout_seconds)] = module
                 remaining_time = deadline - time.monotonic()
 
             if not submitted:
@@ -324,6 +328,12 @@ def main() -> int:
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
+        "--module-timeout-minutes",
+        type=float,
+        default=150.0,
+        help="Maximum time to spend on one Lean module before checkpointing.",
+    )
+    parser.add_argument(
         "--status-file",
         default="route-a-direct-build-status.json",
     )
@@ -332,6 +342,9 @@ def main() -> int:
     root = Path(args.root).resolve()
     started = time.monotonic()
     deadline = started + args.timeout_minutes * 60.0
+    module_timeout_seconds = None
+    if args.module_timeout_minutes > 0:
+        module_timeout_seconds = args.module_timeout_minutes * 60.0
 
     order, missing, imports_by_module = local_closure(root, args.target)
     local_missing = [m for m in missing if module_to_source(root, m).exists()]
@@ -371,6 +384,7 @@ def main() -> int:
             workers=args.workers,
             progress_every=args.progress_every,
             deadline=deadline,
+            module_timeout_seconds=module_timeout_seconds,
         )
     finally:
         elapsed = time.monotonic() - started
@@ -381,6 +395,7 @@ def main() -> int:
             "built": built,
             "skipped": skipped,
             "workers": max(args.workers, 1),
+            "module_timeout_minutes": args.module_timeout_minutes,
             "failed_module": failed_module,
             "exit_code": exit_code,
             "elapsed_seconds": elapsed,

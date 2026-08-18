@@ -22,7 +22,11 @@ on:
       direct_workers:
         description: "Parallel workers for direct mode"
         required: true
-        default: "4"
+        default: "2"
+      module_timeout_minutes:
+        description: "Stop and checkpoint if one direct-mode module runs too long"
+        required: true
+        default: "150"
       auto_continue:
         description: "Automatically dispatch another run after a resumable timeout"
         required: true
@@ -96,6 +100,7 @@ jobs:
           echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
           echo "build_mode=${{ github.event.inputs.build_mode }}"
           echo "direct_workers=${{ github.event.inputs.direct_workers }}"
+          echo "module_timeout_minutes=${{ github.event.inputs.module_timeout_minutes }}"
           echo "auto_continue=${{ github.event.inputs.auto_continue }}"
 
       - name: Cache elan toolchain
@@ -253,6 +258,7 @@ jobs:
           : > route-a-linux-smoke.log
           build_mode='${{ github.event.inputs.build_mode }}'
           direct_workers='${{ github.event.inputs.direct_workers }}'
+          module_timeout_minutes='${{ github.event.inputs.module_timeout_minutes }}'
           case "$build_mode" in
             direct|lake) ;;
             *)
@@ -271,16 +277,27 @@ jobs:
             echo "Requested direct_workers=${direct_workers}; capping at 8 for ubuntu-latest."
             direct_workers=8
           fi
-          echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
-          echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
-          echo "Direct workers: ${direct_workers}" | tee -a route-a-linux-smoke.log
-          echo "Build timeout guard: ${actual_timeout} minutes" | tee -a route-a-linux-smoke.log
           direct_timeout="$actual_timeout"
           if [ "$build_mode" = "direct" ] && [ "$direct_timeout" -gt 5 ]; then
             direct_timeout=$((direct_timeout - 5))
           fi
+          if ! [[ "$module_timeout_minutes" =~ ^[0-9]+$ ]]; then
+            echo "Invalid module_timeout_minutes='${module_timeout_minutes}', using 150."
+            module_timeout_minutes=150
+          fi
+          if [ "$module_timeout_minutes" -lt 10 ]; then
+            module_timeout_minutes=10
+          fi
+          if [ "$module_timeout_minutes" -gt "$direct_timeout" ]; then
+            module_timeout_minutes="$direct_timeout"
+          fi
+          echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
+          echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
+          echo "Direct workers: ${direct_workers}" | tee -a route-a-linux-smoke.log
+          echo "Build timeout guard: ${actual_timeout} minutes" | tee -a route-a-linux-smoke.log
           if [ "$build_mode" = "direct" ]; then
             echo "Direct builder self-timeout: ${direct_timeout} minutes" | tee -a route-a-linux-smoke.log
+            echo "Direct module timeout: ${module_timeout_minutes} minutes" | tee -a route-a-linux-smoke.log
           fi
           echo "Disk before build:" | tee -a route-a-linux-smoke.log
           df -h | tee -a route-a-linux-smoke.log
@@ -297,6 +314,7 @@ jobs:
               lake env python3 -u scripts/ci/route_a_direct_olean_build.py \
                 --target "$target" \
                 --timeout-minutes "$direct_timeout" \
+                --module-timeout-minutes "$module_timeout_minutes" \
                 --workers "$direct_workers" \
               2>&1 | tee -a route-a-linux-smoke.log
             status=${PIPESTATUS[0]}
@@ -317,6 +335,7 @@ jobs:
             echo "requested_build_timeout_minutes=${requested_timeout}"
             echo "actual_build_timeout_minutes=${actual_timeout}"
             echo "direct_build_timeout_minutes=${direct_timeout}"
+            echo "module_timeout_minutes=${module_timeout_minutes}"
             echo "workflow_sha=${GITHUB_SHA}"
             echo "finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             df -h .
@@ -405,6 +424,7 @@ jobs:
           BUILD_TIMEOUT_MINUTES: ${{ github.event.inputs.build_timeout_minutes }}
           BUILD_MODE: ${{ github.event.inputs.build_mode }}
           DIRECT_WORKERS: ${{ github.event.inputs.direct_workers }}
+          MODULE_TIMEOUT_MINUTES: ${{ github.event.inputs.module_timeout_minutes }}
           REF_NAME: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -427,6 +447,7 @@ jobs:
                   "build_timeout_minutes": os.environ["BUILD_TIMEOUT_MINUTES"],
                   "build_mode": os.environ["BUILD_MODE"],
                   "direct_workers": os.environ["DIRECT_WORKERS"],
+                  "module_timeout_minutes": os.environ["MODULE_TIMEOUT_MINUTES"],
                   "auto_continue": "true",
               },
           }
