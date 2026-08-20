@@ -8973,7 +8973,7 @@ def emit_periodic_main_pair_primitive_lean_theorems(
             for h in divs_q2:
                 print(f"    · simpa [{support(f'rowValue_{g}')}] using {support(f'term_{g}_{h}')}")
             print("  rw [hsum]")
-            print(f"  norm_num [{support(f'rowValue_{g}')}]")
+            print("  native_decide")
             print()
 
         print(f"def {name}_rowValue : ℕ → ℚ")
@@ -8998,7 +8998,7 @@ def emit_periodic_main_pair_primitive_lean_theorems(
         for g in divs_q:
             print(f"    · simpa [{name}_rowValue] using {support(f'row_{g}')}")
         print(f"  rw [hsum, {support('divLeft')}]")
-        print(f"  norm_num [{name}_rowValue]")
+        print("  native_decide")
         print()
         print(f"theorem {name}_orderedSummand :")
         print(f"    surrogatePeriodicMainActiveOrderedPairSummandRat X0 (Prod.mk {q} {q2}) = {fraction_to_q_literal(summand_value)} := by")
