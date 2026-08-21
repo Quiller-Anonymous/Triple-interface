@@ -839,6 +839,31 @@ def emit_periodic_main_record_batch_wrapper(
     print(f"    (∑ p ∈ {pairs_name}, {value_name} p) = {total_name} := by")
     print(f"  norm_num [{pairs_name}, {value_name}, {total_name}]")
     print()
+    if label.startswith("PeriodicMainNonzeroWithoutRowFiveDyadicBase"):
+        alias_label = label.removeprefix("PeriodicMain")
+        alias_pairs_name = f"PeriodicMainRecords{alias_label}Pairs"
+        alias_value_name = f"PeriodicMainRecords{alias_label}Value"
+        alias_total_name = f"PeriodicMainRecords{alias_label}Total"
+        alias_value_on_records_name = f"PeriodicMainRecords{alias_label}_value_on_records"
+        alias_records_sum_name = f"PeriodicMainRecords{alias_label}_records_sum"
+        print(f"abbrev {alias_pairs_name} : Finset (ℕ × ℕ) :=")
+        print(f"  {pairs_name}")
+        print()
+        print(f"noncomputable abbrev {alias_value_name} (p : ℕ × ℕ) : ℚ :=")
+        print(f"  {value_name} p")
+        print()
+        print(f"abbrev {alias_total_name} : ℚ :=")
+        print(f"  {total_name}")
+        print()
+        print(f"theorem {alias_value_on_records_name} :")
+        print(f"    ∀ p ∈ {alias_pairs_name},")
+        print(f"      surrogatePeriodicMainActiveOrderedPairSummandRat X0 p = {alias_value_name} p := by")
+        print(f"  exact {value_on_records_name}")
+        print()
+        print(f"theorem {alias_records_sum_name} :")
+        print(f"    (∑ p ∈ {alias_pairs_name}, {alias_value_name} p) = {alias_total_name} := by")
+        print(f"  exact {records_sum_name}")
+        print()
 
 
 def emit_periodic_main_zero_record_batch_wrapper(
