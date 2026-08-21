@@ -291,6 +291,12 @@ jobs:
           if [ "$module_timeout_minutes" -gt "$direct_timeout" ]; then
             module_timeout_minutes="$direct_timeout"
           fi
+          direct_force_args=()
+          if [ -f .github/route_a_smoke/q0cert_force_rebuild_modules.txt ]; then
+            direct_force_args+=(--force-module-list .github/route_a_smoke/q0cert_force_rebuild_modules.txt)
+            echo "Direct force module list: .github/route_a_smoke/q0cert_force_rebuild_modules.txt" \
+              | tee -a route-a-linux-smoke.log
+          fi
           echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
           echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
           echo "Direct workers: ${direct_workers}" | tee -a route-a-linux-smoke.log
@@ -316,6 +322,7 @@ jobs:
                 --timeout-minutes "$direct_timeout" \
                 --module-timeout-minutes "$module_timeout_minutes" \
                 --workers "$direct_workers" \
+                "${direct_force_args[@]}" \
               2>&1 | tee -a route-a-linux-smoke.log
             status=${PIPESTATUS[0]}
           else

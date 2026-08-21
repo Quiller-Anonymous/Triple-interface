@@ -188,6 +188,7 @@ def build_closure(
     imports_by_module: dict[str, list[str]],
     *,
     force: bool,
+    force_modules: set[str],
     workers: int,
     progress_every: int,
     deadline: float,
@@ -197,11 +198,39 @@ def build_closure(
     total = len(order)
     order_index = {module: index for index, module in enumerate(order, start=1)}
     local_modules = set(order)
+
+    reverse_deps_all: dict[str, list[str]] = {module: [] for module in order}
+    for module in order:
+        for imported in imports_by_module.get(module, []):
+            if imported in local_modules:
+                reverse_deps_all.setdefault(imported, []).append(module)
+
+    dirty_modules: set[str] = set()
+    dirty_stack = [module for module in force_modules if module in local_modules]
+    while dirty_stack:
+        module = dirty_stack.pop()
+        if module in dirty_modules:
+            continue
+        dirty_modules.add(module)
+        dirty_stack.extend(reverse_deps_all.get(module, []))
+
+    missing_forced = sorted(module for module in force_modules if module not in local_modules)
+    if missing_forced:
+        print(
+            "[force] ignored modules outside target closure: "
+            + ", ".join(missing_forced[:20]),
+            flush=True,
+        )
+
     completed: set[str] = set()
     skipped = 0
 
     for module in order:
-        if module_to_artifact(root, module, ".olean").exists() and not force:
+        if (
+            module_to_artifact(root, module, ".olean").exists()
+            and not force
+            and module not in dirty_modules
+        ):
             completed.add(module)
             skipped += 1
 
@@ -235,7 +264,8 @@ def build_closure(
 
     print(
         f"[scheduler] workers={worker_count} initial_skipped={skipped} "
-        f"initial_ready={len(ready)} pending={len(remaining_deps)}",
+        f"initial_ready={len(ready)} pending={len(remaining_deps)} "
+        f"dirty={len(dirty_modules)}",
         flush=True,
     )
 
@@ -251,7 +281,11 @@ def build_closure(
 
             while ready and len(submitted) < worker_count and remaining_time > 0:
                 index, module = heapq.heappop(ready)
-                if module_to_artifact(root, module, ".olean").exists() and not force:
+                if (
+                    module_to_artifact(root, module, ".olean").exists()
+                    and not force
+                    and module not in dirty_modules
+                ):
                     completed.add(module)
                     skipped += 1
                     for dependent in reverse_deps.get(module, []):
@@ -328,6 +362,18 @@ def main() -> int:
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--force", action="store_true")
     parser.add_argument(
+        "--force-module",
+        action="append",
+        default=[],
+        help="Rebuild this local module and every local dependent in the target closure.",
+    )
+    parser.add_argument(
+        "--force-module-list",
+        action="append",
+        default=[],
+        help="File containing local module names to rebuild, one per line.",
+    )
+    parser.add_argument(
         "--module-timeout-minutes",
         type=float,
         default=150.0,
@@ -345,6 +391,20 @@ def main() -> int:
     module_timeout_seconds = None
     if args.module_timeout_minutes > 0:
         module_timeout_seconds = args.module_timeout_minutes * 60.0
+
+    force_modules = set(args.force_module or [])
+    for raw_path in args.force_module_list or []:
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = root / path
+        if not path.exists():
+            print(f"[force] module list not found: {path}", flush=True)
+            continue
+        for raw_line in path.read_text().splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            force_modules.add(line)
 
     order, missing, imports_by_module = local_closure(root, args.target)
     local_missing = [m for m in missing if module_to_source(root, m).exists()]
@@ -381,6 +441,7 @@ def main() -> int:
             order,
             imports_by_module,
             force=args.force,
+            force_modules=force_modules,
             workers=args.workers,
             progress_every=args.progress_every,
             deadline=deadline,
