@@ -49,6 +49,49 @@ separate those cases clearly.
 Build note: “it builds” means it builds locally. The finite-base chunks are too large for the
 current GitHub setup, so local builds are the authoritative check here.
 
+## August 2026 Route A / Q0 certificate update
+
+This month has been dominated by turning the Route A/Q0 workbench from a proof-design problem into
+a concrete certificate-integration and CI-resumption problem. This does **not** yet change the
+overall Goldbach status above: Route A is still not closed, and the canonical endpoint is still
+conditional on the listed analytic/budget hypotheses. It does, however, clarify the live remaining
+work.
+
+Main progress:
+- Route A theorem surfaces were stabilized for the major remaining aggregate pieces, especially the
+  zero-mode/periodic-main certificate chain and the boundary/periodic-main equality wrappers.
+- The noncoprime periodic-main zero certificates were pushed substantially forward. In particular,
+  the row-three/six work was reorganized into structural and generated buckets, with common-two and
+  common-six transport/compression investigated and the left-only-three path built through the large
+  `FinalAcc721` style target.
+- The large generated periodic-main nonzero proof was moved onto a resumable GitHub direct-build
+  path. The target currently being driven is
+  `Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert`.
+- The direct CI builder now compiles local Lean module closures directly to `.olean` files, skips
+  cached artifacts where safe, records progress/status JSON, and supports targeted force rebuilds
+  for stale interfaces.
+- A separate Route A source archive is now used for generated files that are too large or numerous
+  to keep as ordinary tracked source. This made it possible to resume GitHub builds across runs, but
+  also exposed the need to keep the manifest, archive, checksum, and force-rebuild list synchronized.
+- Several CI failure modes were diagnosed and fixed: stale `.olean` interfaces after source changes,
+  source/archive mismatches, GitHub disk/time limits, and monolithic generated modules that must be
+  split before CI can handle them.
+- The dyadic nonzero base proofs now have a reusable splitting path. `Base042` and `Base077` were
+  split into term/row/pair/wrapper modules, and `Base066` received compatibility aliases after a
+  generated-name mismatch was exposed downstream.
+
+Current practical state:
+- The Route A/Q0 certificate path is making real checked progress, but the work is still in the
+  generated-certificate integration phase rather than the final theorem-wrapper phase.
+- The most common current blocker is not a new mathematical objection; it is a generated module that
+  is too large, stale, or misnamed for the current incremental CI cache. The response pattern is now
+  clear: inspect the failed module, distinguish interface/cache errors from real Lean errors, split
+  large modules where needed, update the source archive, and force-rebuild only the affected closure.
+- More large dyadic base modules may still need splitting before the full
+  `Q0MinorZeroModeNormalizedAverageX0Cert` target finishes. Once that target builds, the next step is
+  to rebuild the periodic-main certificate chain and then the Route A umbrella/final module to expose
+  any remaining integration seams.
+
 ## Local hiccups
 See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are present or missing.
 
@@ -377,3 +420,4 @@ This section lists (1) the hypothesis surface of the gold entrypoint(s), and (2)
 - Mar 28: Claude Opus makes overconfident mistakes that could be prevented by having more context. I'm switching back to MathGPT, which seems to have a better sense of the background. The search for a new "subspace" object became a diagnostic tool instead of a bridge (the two were conflated because Opus mixed witnesses). We've learned more though. Now we are trying to build a Vaughan bridge with a better sense of the gap.
 - In April the main project was clarity about the math we're missing. The code now separates checked reductions, conventional axiom boundaries, pinned workbenches, and the true remaining obstructions. The project is not platinum or gold, it is silver, but with a much cleaner map of what has to be proved next. Maybe this is all a waste of time after all.
 - April-July 2026: The Route A push turned into a more serious diagnosis. We spent a lot of time tuning constants, chunking large certificate files, and trying to make the Q0/Route A certification route small enough and honest enough to check. That produced useful machinery, but it also made clear that the remaining loss was structural rather than just a bad downstream estimate. By late June and early July the live program had shifted to a singularity-first decomposition: expose a better major structured block (`R23-S7`), isolate the route-visible minor object, split it into zero mode + mean channel + residual, and test frozen geometric and singular-series witnesses against the exact scalar target. The main progress is that the route-visible object is now much better understood; the main challenge is that we still need a theorem-ready decomposition `R₂ = major singular block + minor singular block + small residual`, rather than another layer of bookkeeping around the old Route A/B closure.
+- August 2026: The project returned to Route A as a concrete certificate build. The important shift was operational: the remaining work stopped looking like a vague proof-design gap and started looking like a sequence of generated Lean certificate closures that can be built, cached, repaired, and resumed. We stabilized the periodic-main/zero-mode surfaces, pushed the noncoprime zero certificates through large generated targets, built a direct GitHub `.olean` closure builder, and started forcing the full `Q0MinorZeroModeNormalizedAverageX0Cert` target through CI. The main new lesson is that the hard errors are now usually engineering errors in the certificate pipeline: stale `.olean` caches, source-archive mismatches, naming aliases, or monolithic generated files that must be split. `Base042` and `Base077` are now split into term/row/pair wrappers, `Base066` has compatibility aliases, and the direct builder can force-rebuild stale interfaces. Route A is not closed yet, but the process is now a resumable certificate grind with known failure patterns rather than an open-ended search for a new mathematical object.
