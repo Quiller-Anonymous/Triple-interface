@@ -32,6 +32,7 @@ BASE_IMPORT = (
     "Goldbach.Cert.MajorArcModules."
     "Q0MinorZeroModeNormalizedAverageX0PeriodicMain"
 )
+COMMON_DECLS_PER_CHUNK = 64
 PAIR_RE = re.compile(r"^(periodicMainPair_(\d+)_(\d+)_X(\d+))_")
 DECL_RE = re.compile(
     r"^(?:noncomputable\s+)?(?:theorem|def|abbrev)\s+([A-Za-z0-9_']+)\b"
@@ -212,6 +213,10 @@ def write_module(out_dir: Path, stem: str, suffix: str, imports: list[str], body
     return path
 
 
+def chunks(values: list[Decl], size: int) -> list[list[Decl]]:
+    return [values[idx : idx + size] for idx in range(0, len(values), size)]
+
+
 def split_module(path: Path, out_dir: Path) -> list[Path]:
     stem = path.stem
     stem_match = STEM_RE.match(stem)
@@ -267,16 +272,42 @@ def split_module(path: Path, out_dir: Path) -> list[Path]:
             else:
                 common_decls.append(decl)
 
-        written.append(
-            write_module(
-                out_dir,
-                stem,
-                common_suffix,
-                [BASE_IMPORT],
-                "\n".join(decl.text for decl in common_decls),
-                f"/- Common facts for {prefix}. -/",
+        if len(common_decls) > COMMON_DECLS_PER_CHUNK:
+            common_imports: list[str] = []
+            for idx, chunk_decls in enumerate(chunks(common_decls, COMMON_DECLS_PER_CHUNK)):
+                chunk_suffix = f"{common_suffix}Part{idx:03d}"
+                written.append(
+                    write_module(
+                        out_dir,
+                        stem,
+                        chunk_suffix,
+                        [BASE_IMPORT],
+                        "\n".join(decl.text for decl in chunk_decls),
+                        f"/- Common fact chunk {idx} for {prefix}. -/",
+                    )
+                )
+                common_imports.append(f"{MODULE_PREFIX}.{stem}{chunk_suffix}")
+            written.append(
+                write_module(
+                    out_dir,
+                    stem,
+                    common_suffix,
+                    common_imports,
+                    "",
+                    f"/- Common fact imports for {prefix}. -/",
+                )
             )
-        )
+        else:
+            written.append(
+                write_module(
+                    out_dir,
+                    stem,
+                    common_suffix,
+                    [BASE_IMPORT],
+                    "\n".join(decl.text for decl in common_decls),
+                    f"/- Common facts for {prefix}. -/",
+                )
+            )
 
         row_names = sorted(set(row_names))
         row_values: dict[int, str] = {}

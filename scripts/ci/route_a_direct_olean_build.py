@@ -35,6 +35,16 @@ def module_to_artifact(root: Path, module: str, suffix: str) -> Path:
     )
 
 
+def module_artifact_is_fresh(root: Path, module: str) -> bool:
+    source = module_to_source(root, module)
+    olean = module_to_artifact(root, module, ".olean")
+    if not olean.exists():
+        return False
+    if not source.exists():
+        return True
+    return olean.stat().st_mtime >= source.stat().st_mtime
+
+
 def strip_lean_comments(text: str) -> str:
     """Remove Lean line and nested block comments before scanning imports."""
     out: list[str] = []
@@ -226,11 +236,7 @@ def build_closure(
     skipped = 0
 
     for module in order:
-        if (
-            module_to_artifact(root, module, ".olean").exists()
-            and not force
-            and module not in dirty_modules
-        ):
+        if module_artifact_is_fresh(root, module) and not force and module not in dirty_modules:
             completed.add(module)
             skipped += 1
 
@@ -281,11 +287,7 @@ def build_closure(
 
             while ready and len(submitted) < worker_count and remaining_time > 0:
                 index, module = heapq.heappop(ready)
-                if (
-                    module_to_artifact(root, module, ".olean").exists()
-                    and not force
-                    and module not in dirty_modules
-                ):
+                if module_artifact_is_fresh(root, module) and not force and module not in dirty_modules:
                     completed.add(module)
                     skipped += 1
                     for dependent in reverse_deps.get(module, []):
