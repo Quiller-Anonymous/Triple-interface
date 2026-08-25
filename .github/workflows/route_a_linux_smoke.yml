@@ -322,6 +322,7 @@ jobs:
                 --timeout-minutes "$direct_timeout" \
                 --module-timeout-minutes "$module_timeout_minutes" \
                 --workers "$direct_workers" \
+                --trust-unstamped-cache \
                 "${direct_force_args[@]}" \
               2>&1 | tee -a route-a-linux-smoke.log
             status=${PIPESTATUS[0]}

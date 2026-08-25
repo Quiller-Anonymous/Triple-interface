@@ -37,12 +37,23 @@ def module_to_artifact(root: Path, module: str, suffix: str) -> Path:
     )
 
 
-def module_artifact_is_fresh(root: Path, module: str) -> bool:
+def module_artifact_is_fresh(
+    root: Path,
+    module: str,
+    *,
+    trust_unstamped_cache: bool = False,
+) -> bool:
     source = module_to_source(root, module)
     olean = module_to_artifact(root, module, ".olean")
     if not olean.exists():
         return False
     if not source.exists():
+        return True
+    stamp = module_to_artifact(root, module, SOURCE_HASH_STAMP_SUFFIX)
+    if stamp.exists():
+        source_hash = module_source_hash(root, module)
+        return source_hash is not None and stamp.read_text(errors="ignore").strip() == source_hash
+    if trust_unstamped_cache:
         return True
     return olean.stat().st_mtime >= source.stat().st_mtime
 
@@ -60,7 +71,7 @@ def module_source_hash(root: Path, module: str) -> str | None:
 
 def module_force_stamp_matches(root: Path, module: str) -> bool:
     """Whether a force-listed module has already been rebuilt for this source content."""
-    if not module_artifact_is_fresh(root, module):
+    if not module_artifact_is_fresh(root, module, trust_unstamped_cache=False):
         return False
     source_hash = module_source_hash(root, module)
     if source_hash is None:
@@ -238,6 +249,7 @@ def build_closure(
     progress_every: int,
     deadline: float,
     module_timeout_seconds: float | None,
+    trust_unstamped_cache: bool,
 ) -> tuple[int, int, str | None, int]:
     """Compile the local module DAG, running independent modules in parallel."""
     total = len(order)
@@ -255,7 +267,9 @@ def build_closure(
     if not force:
         stale_roots = {
             module for module in order
-            if not module_artifact_is_fresh(root, module)
+            if not module_artifact_is_fresh(
+                root, module, trust_unstamped_cache=trust_unstamped_cache
+            )
         }
         force_roots_pending = {
             module for module in force_modules
@@ -283,7 +297,13 @@ def build_closure(
     skipped = 0
 
     for module in order:
-        if module_artifact_is_fresh(root, module) and not force and module not in dirty_modules:
+        if (
+            module_artifact_is_fresh(
+                root, module, trust_unstamped_cache=trust_unstamped_cache
+            )
+            and not force
+            and module not in dirty_modules
+        ):
             completed.add(module)
             skipped += 1
 
@@ -320,7 +340,8 @@ def build_closure(
         f"initial_ready={len(ready)} pending={len(remaining_deps)} "
         f"dirty={len(dirty_modules)} stale_roots={len(stale_roots)} "
         f"force_pending={len(force_roots_pending)} force_satisfied="
-        f"{len(force_modules & local_modules) - len(force_roots_pending)}",
+        f"{len(force_modules & local_modules) - len(force_roots_pending)} "
+        f"trust_unstamped_cache={trust_unstamped_cache}",
         flush=True,
     )
 
@@ -336,7 +357,13 @@ def build_closure(
 
             while ready and len(submitted) < worker_count and remaining_time > 0:
                 index, module = heapq.heappop(ready)
-                if module_artifact_is_fresh(root, module) and not force and module not in dirty_modules:
+                if (
+                    module_artifact_is_fresh(
+                        root, module, trust_unstamped_cache=trust_unstamped_cache
+                    )
+                    and not force
+                    and module not in dirty_modules
+                ):
                     completed.add(module)
                     skipped += 1
                     for dependent in reverse_deps.get(module, []):
@@ -435,6 +462,14 @@ def main() -> int:
         "--status-file",
         default="route-a-direct-build-status.json",
     )
+    parser.add_argument(
+        "--trust-unstamped-cache",
+        action="store_true",
+        help=(
+            "Treat existing .olean artifacts without source-hash stamps as usable. "
+            "Use with a force-module list for source changes; newly rebuilt modules get stamps."
+        ),
+    )
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -498,6 +533,7 @@ def main() -> int:
             progress_every=args.progress_every,
             deadline=deadline,
             module_timeout_seconds=module_timeout_seconds,
+            trust_unstamped_cache=args.trust_unstamped_cache,
         )
     finally:
         elapsed = time.monotonic() - started
@@ -509,6 +545,7 @@ def main() -> int:
             "skipped": skipped,
             "workers": max(args.workers, 1),
             "module_timeout_minutes": args.module_timeout_minutes,
+            "trust_unstamped_cache": args.trust_unstamped_cache,
             "failed_module": failed_module,
             "exit_code": exit_code,
             "elapsed_seconds": elapsed,
