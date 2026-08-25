@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import hashlib
 import heapq
 import json
 import os
@@ -23,6 +24,7 @@ from pathlib import Path
 
 _ACTIVE_PROCESSES: dict[int, tuple[str, subprocess.Popen]] = {}
 _ACTIVE_PROCESS_LOCK = threading.Lock()
+SOURCE_HASH_STAMP_SUFFIX = ".route_a_source.sha256"
 
 
 def module_to_source(root: Path, module: str) -> Path:
@@ -43,6 +45,39 @@ def module_artifact_is_fresh(root: Path, module: str) -> bool:
     if not source.exists():
         return True
     return olean.stat().st_mtime >= source.stat().st_mtime
+
+
+def module_source_hash(root: Path, module: str) -> str | None:
+    source = module_to_source(root, module)
+    if not source.exists():
+        return None
+    digest = hashlib.sha256()
+    with source.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def module_force_stamp_matches(root: Path, module: str) -> bool:
+    """Whether a force-listed module has already been rebuilt for this source content."""
+    if not module_artifact_is_fresh(root, module):
+        return False
+    source_hash = module_source_hash(root, module)
+    if source_hash is None:
+        return True
+    stamp = module_to_artifact(root, module, SOURCE_HASH_STAMP_SUFFIX)
+    if not stamp.exists():
+        return False
+    return stamp.read_text(errors="ignore").strip() == source_hash
+
+
+def write_module_force_stamp(root: Path, module: str) -> None:
+    source_hash = module_source_hash(root, module)
+    if source_hash is None:
+        return
+    stamp = module_to_artifact(root, module, SOURCE_HASH_STAMP_SUFFIX)
+    stamp.parent.mkdir(parents=True, exist_ok=True)
+    stamp.write_text(source_hash + "\n")
 
 
 def strip_lean_comments(text: str) -> str:
@@ -215,8 +250,20 @@ def build_closure(
             if imported in local_modules:
                 reverse_deps_all.setdefault(imported, []).append(module)
 
+    stale_roots: set[str] = set()
+    force_roots_pending: set[str] = set()
+    if not force:
+        stale_roots = {
+            module for module in order
+            if not module_artifact_is_fresh(root, module)
+        }
+        force_roots_pending = {
+            module for module in force_modules
+            if module in local_modules and not module_force_stamp_matches(root, module)
+        }
+
     dirty_modules: set[str] = set()
-    dirty_stack = [module for module in force_modules if module in local_modules]
+    dirty_stack = list(stale_roots | force_roots_pending)
     while dirty_stack:
         module = dirty_stack.pop()
         if module in dirty_modules:
@@ -271,7 +318,9 @@ def build_closure(
     print(
         f"[scheduler] workers={worker_count} initial_skipped={skipped} "
         f"initial_ready={len(ready)} pending={len(remaining_deps)} "
-        f"dirty={len(dirty_modules)}",
+        f"dirty={len(dirty_modules)} stale_roots={len(stale_roots)} "
+        f"force_pending={len(force_roots_pending)} force_satisfied="
+        f"{len(force_modules & local_modules) - len(force_roots_pending)}",
         flush=True,
     )
 
@@ -327,6 +376,7 @@ def build_closure(
 
                 built += 1
                 completed.add(module)
+                write_module_force_stamp(root, module)
                 for dependent in reverse_deps.get(module, []):
                     if dependent not in remaining_deps:
                         continue
