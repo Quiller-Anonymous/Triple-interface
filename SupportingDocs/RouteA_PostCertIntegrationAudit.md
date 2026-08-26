@@ -137,3 +137,28 @@ of:
 When the current CI target succeeds, do not immediately start a broad final build. First create the
 small bridge target and test only that bridge. The highest-value next build target should be the
 new bridge module, followed by `Q0TwoBoundsSpec`, not the full `Goldbach` target.
+
+## Prepared Bridge Probe
+
+Prepared module:
+
+`Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe`
+
+This module imports the current Route A cert surface and the existing Q0 turnkey route, then names
+the exact post-cert bridge surfaces:
+
+- `RouteAWindowEnergyCertificateAtX0`
+- `RouteAWindowEnergyToQ0MinorEnergy`
+- `RouteAWindowEnergyToQ0MinorDeviation`
+
+It also contains sanity wrappers for:
+
+- the existing coarse provider:
+  `current_provider_q0Minor_energyBound16`
+- the existing turnkey route:
+  `current_q0TwoBounds_turnkey`
+- the current Route A window-energy theorem:
+  `routeA_windowEnergy_from_tail_boundary_certificates`
+
+After the current cert target succeeds, this should be the first narrow target to build before
+patching `Q0MinorEnergyBoundProvider` or attempting any broad final build.

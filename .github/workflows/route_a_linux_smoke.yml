@@ -191,8 +191,9 @@ jobs:
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZero*) ;;
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal) ;;
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert) ;;
+            Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe) ;;
             *)
-              echo "::error::Route A Linux smoke is restricted to Route A periodic-main/top-level targets, got '${target}'."
+              echo "::error::Route A Linux smoke is restricted to Route A periodic-main/top-level/bridge targets, got '${target}'."
               exit 2
               ;;
           esac
@@ -205,7 +206,7 @@ jobs:
           echo "Source: ${target_path}"
           echo "Build mode: ${{ github.event.inputs.build_mode }}"
           echo "Lake command, if requested: lake --log-level=error build +${target}:olean"
-          echo "Direct command, if requested: lake env python3 -u scripts/ci/route_a_direct_olean_build.py --target ${target} --workers ${{ github.event.inputs.direct_workers }}"
+          echo "Direct command, if requested: lake env python3 -u scripts/ci/route_a_direct_olean_build.py --target ${target} --workers ${{ github.event.inputs.direct_workers }} --trust-unstamped-cache"
           echo "Restored Route A artifacts:"
           find .lake/build -type f \
             \( -name '*Acc719*' -o -name '*Acc720*' -o -name '*Slice720*' \
@@ -230,8 +231,9 @@ jobs:
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZero*) ;;
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal) ;;
             Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert) ;;
+            Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe) ;;
             *)
-              echo "::error::Route A Linux smoke is restricted to Route A periodic-main/top-level targets, got '${target}'."
+              echo "::error::Route A Linux smoke is restricted to Route A periodic-main/top-level/bridge targets, got '${target}'."
               exit 2
               ;;
           esac
