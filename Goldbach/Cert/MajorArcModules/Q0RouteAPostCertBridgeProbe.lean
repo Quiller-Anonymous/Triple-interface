@@ -67,6 +67,31 @@ theorem current_q0TwoBounds_turnkey :
   Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec.turnkeyMajorArcCanon
 
 /--
+If the post-cert bridge is supplied, the Route A window-energy certificate gives the exact
+minor-energy provider surface currently consumed by `Q0TwoBoundsSpec`.
+-/
+theorem routeA_q0Minor_energyBound16_from_windowEnergy
+    (hbridge : RouteAWindowEnergyToQ0MinorEnergy)
+    (hrouteA : RouteAWindowEnergyCertificateAtX0) :
+    Q0MinorEnergyBound Δ_canon 16 :=
+  hbridge hrouteA
+
+/--
+The energy provider surface immediately implies the pointwise `ε₁ = 4` minor-deviation surface
+used by the turnkey route.
+-/
+theorem routeA_q0Minor_deviationBound4_from_windowEnergy
+    (hbridge : RouteAWindowEnergyToQ0MinorEnergy)
+    (hrouteA : RouteAWindowEnergyCertificateAtX0) :
+    Q0MinorDeviationBound Δ_canon 4 := by
+  exact
+    q0MinorDeviationBound_of_energy_bound
+      (Δ := Δ_canon) (E := (16 : ℝ)) (ε₁ := (4 : ℝ))
+      (by norm_num)
+      (routeA_q0Minor_energyBound16_from_windowEnergy hbridge hrouteA)
+      (by norm_num)
+
+/--
 Route A already has a theorem producing the pinned window-energy surface, assuming only the still
 external tail and boundary certificates.  This wrapper locks the exact theorem name and argument
 shape for the post-cert bridge target.
@@ -100,6 +125,79 @@ theorem routeA_windowEnergy_from_tail_boundary_certificates
     hchunk001_sub001
     hboundary_active
     hboundary_inactive
+
+/--
+Full conditional post-cert minor-energy provider: once the four tail facts, the two boundary facts,
+and the window-energy-to-minor-energy bridge are available, Route A has the exact energy surface
+that the current turnkey route consumes.
+-/
+theorem routeA_q0Minor_energyBound16_from_tail_boundary_certificates
+    (hbridge : RouteAWindowEnergyToQ0MinorEnergy)
+    (hchunk000_sub000 :
+      (∑ q ∈ TailChunk000Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub000First5000)
+    (hchunk000_sub001 :
+      (∑ q ∈ TailChunk000Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub001First5000)
+    (hchunk001_sub000 :
+      (∑ q ∈ TailChunk001Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub000First5000)
+    (hchunk001_sub001 :
+      (∑ q ∈ TailChunk001Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub001First3211)
+    (hboundary_active :
+      CenteredNormalizedSigmaTruncBoundaryActiveSignedRatCertificateAtX0)
+    (hboundary_inactive :
+      CenteredNormalizedSigmaTruncBoundaryInactiveCorrectionRatCertificateAtX0) :
+    Q0MinorEnergyBound Δ_canon 16 :=
+  routeA_q0Minor_energyBound16_from_windowEnergy hbridge
+    (routeA_windowEnergy_from_tail_boundary_certificates
+      hchunk000_sub000
+      hchunk000_sub001
+      hchunk001_sub000
+      hchunk001_sub001
+      hboundary_active
+      hboundary_inactive)
+
+/--
+Full conditional post-cert minor-deviation provider: this is the `ε₁ = 4` surface needed by
+`TurnkeyRouteQ0.TwoBounds`.
+-/
+theorem routeA_q0Minor_deviationBound4_from_tail_boundary_certificates
+    (hbridge : RouteAWindowEnergyToQ0MinorEnergy)
+    (hchunk000_sub000 :
+      (∑ q ∈ TailChunk000Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub000First5000)
+    (hchunk000_sub001 :
+      (∑ q ∈ TailChunk000Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk000Sub001First5000)
+    (hchunk001_sub000 :
+      (∑ q ∈ TailChunk001Sub000SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub000First5000)
+    (hchunk001_sub001 :
+      (∑ q ∈ TailChunk001Sub001SupportExplicit,
+          surrogateCenteredNormalizedSigmaTruncSummandWindowEnergyRat X0 q) =
+        surrogateDiagTailX0RatChunk001Sub001First3211)
+    (hboundary_active :
+      CenteredNormalizedSigmaTruncBoundaryActiveSignedRatCertificateAtX0)
+    (hboundary_inactive :
+      CenteredNormalizedSigmaTruncBoundaryInactiveCorrectionRatCertificateAtX0) :
+    Q0MinorDeviationBound Δ_canon 4 :=
+  routeA_q0Minor_deviationBound4_from_windowEnergy hbridge
+    (routeA_windowEnergy_from_tail_boundary_certificates
+      hchunk000_sub000
+      hchunk000_sub001
+      hchunk001_sub000
+      hchunk001_sub001
+      hboundary_active
+      hboundary_inactive)
 
 end
 

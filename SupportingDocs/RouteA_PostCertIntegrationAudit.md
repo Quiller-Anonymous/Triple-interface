@@ -160,5 +160,13 @@ It also contains sanity wrappers for:
 - the current Route A window-energy theorem:
   `routeA_windowEnergy_from_tail_boundary_certificates`
 
+It now also locks the conditional downstream surfaces that should become the replacement minor
+provider path once the post-cert bridge is proved:
+
+- `routeA_q0Minor_energyBound16_from_windowEnergy`
+- `routeA_q0Minor_deviationBound4_from_windowEnergy`
+- `routeA_q0Minor_energyBound16_from_tail_boundary_certificates`
+- `routeA_q0Minor_deviationBound4_from_tail_boundary_certificates`
+
 After the current cert target succeeds, this should be the first narrow target to build before
 patching `Q0MinorEnergyBoundProvider` or attempting any broad final build.
