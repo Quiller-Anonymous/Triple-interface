@@ -721,6 +721,5 @@ theorem periodicMainNonzeroRecordPairsWithoutRowFiveDyadic_actual_sum :
     (∑ p ∈ PeriodicMainNonzeroRecordPairsWithoutRowFiveDyadic, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p) = PeriodicMainNonzeroWithoutRowFiveDyadicBaseTotal := by
   rw [← PeriodicMainNonzeroWithoutRowFiveDyadicBasePairs_eq_target]
   rw [PeriodicMainNonzeroWithoutRowFiveDyadicBasePairs_actual_sum]
-  native_decide
 
 end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
