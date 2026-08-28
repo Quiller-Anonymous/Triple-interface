@@ -38,7 +38,7 @@ DECL_RE = re.compile(
     r"^(?:noncomputable\s+)?(?:theorem|def|abbrev)\s+([A-Za-z0-9_']+)\b"
 )
 STEM_RE = re.compile(
-    r"^(Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveDyadicBase)(\d{3})$"
+    r"^(Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveDyadicBase)(\d+)$"
 )
 
 
