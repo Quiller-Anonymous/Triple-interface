@@ -250,6 +250,8 @@ def build_closure(
     deadline: float,
     module_timeout_seconds: float | None,
     trust_unstamped_cache: bool,
+    heartbeat_seconds: float,
+    slow_module_log_seconds: float,
 ) -> tuple[int, int, str | None, int]:
     """Compile the local module DAG, running independent modules in parallel."""
     total = len(order)
@@ -332,6 +334,7 @@ def build_closure(
     failed_module: str | None = None
     exit_code = 0
     started = time.monotonic()
+    last_heartbeat = started
     worker_count = max(workers, 1)
     progress_step = max(progress_every, 1)
 
@@ -346,7 +349,7 @@ def build_closure(
     )
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=worker_count)
-    submitted: dict[concurrent.futures.Future[int], str] = {}
+    submitted: dict[concurrent.futures.Future[int], tuple[str, float]] = {}
     try:
         while ready or submitted:
             remaining_time = deadline - time.monotonic()
@@ -377,7 +380,10 @@ def build_closure(
                 timeout_seconds = remaining_time
                 if module_timeout_seconds is not None:
                     timeout_seconds = min(timeout_seconds, module_timeout_seconds)
-                submitted[executor.submit(run_lean, root, module, timeout_seconds)] = module
+                submitted[executor.submit(run_lean, root, module, timeout_seconds)] = (
+                    module,
+                    time.monotonic(),
+                )
                 remaining_time = deadline - time.monotonic()
 
             if not submitted:
@@ -390,20 +396,46 @@ def build_closure(
                 return_when=concurrent.futures.FIRST_COMPLETED,
             )
             if not done:
+                now = time.monotonic()
+                if heartbeat_seconds > 0 and now - last_heartbeat >= heartbeat_seconds:
+                    active = sorted(
+                        ((now - module_started, module) for module, module_started in submitted.values()),
+                        reverse=True,
+                    )
+                    active_text = " | ".join(
+                        f"{module} elapsed_s={module_elapsed:.1f}"
+                        for module_elapsed, module in active[:worker_count]
+                    )
+                    print(
+                        f"[active] running={len(submitted)} ready={len(ready)} "
+                        f"elapsed_s={now - started:.1f} {active_text}",
+                        flush=True,
+                    )
+                    last_heartbeat = now
                 continue
 
             for future in done:
-                module = submitted.pop(future)
+                module, module_started = submitted.pop(future)
+                module_elapsed = time.monotonic() - module_started
                 code = future.result()
                 if code != 0:
                     failed_module = module
                     exit_code = code
-                    print(f"[failed] code={code} module={module}", flush=True)
+                    print(
+                        f"[failed] code={code} module={module} "
+                        f"elapsed_s={module_elapsed:.1f}",
+                        flush=True,
+                    )
                     break
 
                 built += 1
                 completed.add(module)
                 write_module_force_stamp(root, module)
+                if slow_module_log_seconds >= 0 and module_elapsed >= slow_module_log_seconds:
+                    print(
+                        f"[slow-built] module={module} elapsed_s={module_elapsed:.1f}",
+                        flush=True,
+                    )
                 for dependent in reverse_deps.get(module, []):
                     if dependent not in remaining_deps:
                         continue
@@ -470,6 +502,18 @@ def main() -> int:
             "Use with a force-module list for source changes; newly rebuilt modules get stamps."
         ),
     )
+    parser.add_argument(
+        "--heartbeat-seconds",
+        type=float,
+        default=120.0,
+        help="Print currently running modules after this many seconds without a completion.",
+    )
+    parser.add_argument(
+        "--slow-module-log-seconds",
+        type=float,
+        default=30.0,
+        help="Print a timing line for modules taking at least this many seconds.",
+    )
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -534,6 +578,8 @@ def main() -> int:
             deadline=deadline,
             module_timeout_seconds=module_timeout_seconds,
             trust_unstamped_cache=args.trust_unstamped_cache,
+            heartbeat_seconds=args.heartbeat_seconds,
+            slow_module_log_seconds=args.slow_module_log_seconds,
         )
     finally:
         elapsed = time.monotonic() - started
@@ -546,6 +592,8 @@ def main() -> int:
             "workers": max(args.workers, 1),
             "module_timeout_minutes": args.module_timeout_minutes,
             "trust_unstamped_cache": args.trust_unstamped_cache,
+            "heartbeat_seconds": args.heartbeat_seconds,
+            "slow_module_log_seconds": args.slow_module_log_seconds,
             "failed_module": failed_module,
             "exit_code": exit_code,
             "elapsed_seconds": elapsed,
