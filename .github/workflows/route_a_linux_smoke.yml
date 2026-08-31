@@ -103,6 +103,17 @@ jobs:
           echo "module_timeout_minutes=${{ github.event.inputs.module_timeout_minutes }}"
           echo "auto_continue=${{ github.event.inputs.auto_continue }}"
 
+      - name: Audit Route A generated source archive
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/route_a_source_archive_audit.py \
+            --target '${{ github.event.inputs.target }}' \
+            --manifest .github/route_a_smoke/*_missing_sources.txt \
+            --archive .github/route_a_smoke/*.tar.gz \
+            --json-output route-a-source-archive-audit.json
+
       - name: Cache elan toolchain
         timeout-minutes: 10
         uses: actions/cache@v4
@@ -489,6 +500,7 @@ jobs:
             route-a-direct-build-status.json
             route-a-restored-artifacts.txt
             route-a-src-deps.txt
+            route-a-source-archive-audit.json
           retention-days: 14
 
       - name: Report final build status

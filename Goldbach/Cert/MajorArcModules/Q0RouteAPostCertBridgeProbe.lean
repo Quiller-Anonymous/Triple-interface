@@ -66,6 +66,17 @@ theorem current_q0TwoBounds_turnkey :
     Goldbach.Cert.MajorArcModules.TurnkeyCanon.TurnkeyMajorArcCanon :=
   Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec.turnkeyMajorArcCanon
 
+/-- Sanity check: the periodic-main exact-checked certificate has a no-argument certified surface. -/
+theorem routeA_periodicMain_exactChecked_certificate_surface :
+    CenteredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0 :=
+  centeredNormalizedSigmaTruncSurrogatePeriodicMainExactCheckedRatCertificateAtX0_certified
+
+/-- Sanity check: the periodic-main equality theorem has the expected final wrapper shape. -/
+theorem routeA_periodicMain_eq_cert_surface :
+    surrogateCenteredNormalizedSigmaTruncPeriodicMainPairSumUpToQ0Rat X0 =
+      surrogatePeriodicMainX0RatCert :=
+  periodicMainCert_true_of_nonzeroFinal
+
 /--
 If the post-cert bridge is supplied, the Route A window-energy certificate gives the exact
 minor-energy provider surface currently consumed by `Q0TwoBoundsSpec`.
