@@ -304,6 +304,28 @@ jobs:
           if [ "$module_timeout_minutes" -gt "$direct_timeout" ]; then
             module_timeout_minutes="$direct_timeout"
           fi
+          build_status_recorded=0
+          write_build_status() {
+            local code="$1"
+            local phase="$2"
+            {
+              echo "target=${target}"
+              echo "build_target=${build_target}"
+              echo "build_mode=${build_mode}"
+              echo "direct_workers=${direct_workers}"
+              echo "exit_code=${code}"
+              echo "phase=${phase}"
+              echo "requested_build_timeout_minutes=${requested_timeout}"
+              echo "actual_build_timeout_minutes=${actual_timeout}"
+              echo "direct_build_timeout_minutes=${direct_timeout}"
+              echo "module_timeout_minutes=${module_timeout_minutes}"
+              echo "workflow_sha=${GITHUB_SHA}"
+              echo "updated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              df -h .
+            } > route-a-build-status.txt
+          }
+          trap 'rc=$?; if [ "$build_status_recorded" -ne 1 ]; then write_build_status "$rc" "shell_exit_before_final_status"; echo "exit_code=$rc" >> "$GITHUB_OUTPUT" || true; fi' EXIT
+          trap 'write_build_status 143 "terminated_before_final_status"; echo "exit_code=143" >> "$GITHUB_OUTPUT" || true; build_status_recorded=1; exit 143' TERM INT
           direct_force_args=()
           if [ -f .github/route_a_smoke/q0cert_force_rebuild_modules.txt ]; then
             direct_force_args+=(--force-module-list .github/route_a_smoke/q0cert_force_rebuild_modules.txt)
@@ -327,6 +349,7 @@ jobs:
           if [ "$available_kb" -lt 8000000 ]; then
             echo "::warning::Less than 8 GB free before Route A build; runner may still exhaust disk."
           fi
+          write_build_status "running" "build_started"
           set +e
           if [ "$build_mode" = "direct" ]; then
             timeout --signal=TERM --kill-after=30s "${actual_timeout}m" \
@@ -347,20 +370,8 @@ jobs:
           fi
           set -e
           echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
-          {
-            echo "target=${target}"
-            echo "build_target=${build_target}"
-            echo "build_mode=${build_mode}"
-            echo "direct_workers=${direct_workers}"
-            echo "exit_code=${status}"
-            echo "requested_build_timeout_minutes=${requested_timeout}"
-            echo "actual_build_timeout_minutes=${actual_timeout}"
-            echo "direct_build_timeout_minutes=${direct_timeout}"
-            echo "module_timeout_minutes=${module_timeout_minutes}"
-            echo "workflow_sha=${GITHUB_SHA}"
-            echo "finished_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            df -h .
-          } > route-a-build-status.txt
+          write_build_status "${status}" "build_finished"
+          build_status_recorded=1
           if [ "$status" -eq 0 ]; then
             echo "Build completed successfully."
           elif [ "$status" -eq 124 ] || [ "$status" -eq 137 ] || [ "$status" -eq 143 ]; then
@@ -432,13 +443,11 @@ jobs:
         if: >-
           always() &&
           github.event.inputs.auto_continue == 'true' &&
-          (steps.build.outputs.exit_code == '124' ||
-           steps.build.outputs.exit_code == '137' ||
-           steps.build.outputs.exit_code == '143') &&
           steps.artifact_size.outputs.exists == 'true'
         shell: bash
         timeout-minutes: 3
         env:
+          BUILD_EXIT_CODE: ${{ steps.build.outputs.exit_code }}
           GH_TOKEN: ${{ github.token }}
           TARGET: ${{ github.event.inputs.target }}
           OLEAN_ONLY: ${{ github.event.inputs.olean_only }}
@@ -450,6 +459,11 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
+          eval "$(python3 scripts/ci/route_a_resolve_build_status.py --shell)"
+          if [ "$status" != "124" ] && [ "$status" != "137" ] && [ "$status" != "143" ]; then
+            echo "No checkpoint continuation needed; build status '${status:-missing}' from ${source}."
+            exit 0
+          fi
           echo "Checkpoint timeout detected; dispatching continuation run for ${TARGET} on ${REF_NAME}."
           sleep 30
           python3 - <<'PY'
@@ -509,12 +523,15 @@ jobs:
         timeout-minutes: 2
         run: |
           set -euo pipefail
-          status='${{ steps.build.outputs.exit_code }}'
+          BUILD_EXIT_CODE='${{ steps.build.outputs.exit_code }}'
+          export BUILD_EXIT_CODE
+          eval "$(python3 scripts/ci/route_a_resolve_build_status.py --shell)"
           if [ -z "$status" ]; then
             echo "Route A Linux smoke build step did not produce an exit code."
-            echo "Check earlier setup/cache steps; route-a-build-status.txt should say not_started."
+            echo "No fallback status was found in route-a-build-status.txt or route-a-direct-build-status.json."
             exit 1
           fi
+          echo "Resolved build status: ${status} (${source})"
           if [ "$status" = "0" ]; then
             echo "Route A Linux smoke target built successfully."
             exit 0
@@ -536,4 +553,8 @@ jobs:
           echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
           echo "If this was a timeout guard, rerun the same workflow/input to restore the saved cache and continue."
+          if ! [[ "$status" =~ ^[0-9]+$ ]]; then
+            echo "Resolved status is nonnumeric; treating this as an infrastructure/setup failure."
+            exit 1
+          fi
           exit "$status"
