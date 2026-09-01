@@ -78,7 +78,10 @@ jobs:
           if [ "${#archives[@]}" -gt 0 ]; then
             for archive in "${archives[@]}"; do
               if [ -f "${archive}.sha256" ]; then
-                shasum -a 256 -c "${archive}.sha256"
+                (
+                  cd "$(dirname "${archive}")"
+                  shasum -a 256 -c "$(basename "${archive}.sha256")"
+                )
               else
                 echo "::warning::No checksum file found for ${archive}."
               fi
