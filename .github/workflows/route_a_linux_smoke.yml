@@ -384,6 +384,7 @@ jobs:
           write_build_status "running" "build_started"
           set +e
           if [ "$build_mode" = "direct" ]; then
+            echo "Invoking direct Route A builder..." | tee -a route-a-linux-smoke.log
             timeout --signal=TERM --kill-after=30s "${actual_timeout}m" \
               lake env python3 -u scripts/ci/route_a_direct_olean_build.py \
                 --target "$target" \

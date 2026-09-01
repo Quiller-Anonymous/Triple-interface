@@ -134,14 +134,21 @@ def parse_imports(source: Path) -> list[str]:
     return imports
 
 
-def local_closure(root: Path, target: str) -> tuple[list[str], list[str], dict[str, list[str]]]:
+def local_closure(
+    root: Path,
+    target: str,
+    *,
+    progress_every: int = 0,
+) -> tuple[list[str], list[str], dict[str, list[str]]]:
     order: list[str] = []
     missing: list[str] = []
     imports_by_module: dict[str, list[str]] = {}
     state: dict[str, int] = {}
     stack: list[str] = []
+    parsed = 0
 
     def visit(module: str) -> None:
+        nonlocal parsed
         current = state.get(module, 0)
         if current == 2:
             return
@@ -158,6 +165,9 @@ def local_closure(root: Path, target: str) -> tuple[list[str], list[str], dict[s
             state[module] = 2
             return
         imports = parse_imports(source)
+        parsed += 1
+        if progress_every > 0 and parsed % progress_every == 0:
+            print(f"[closure-scan] parsed={parsed} module={module}", flush=True)
         imports_by_module[module] = imports
         for imported in imports:
             visit(imported)
@@ -537,7 +547,12 @@ def main() -> int:
                 continue
             force_modules.add(line)
 
-    order, missing, imports_by_module = local_closure(root, args.target)
+    print(f"[closure-scan] start target={args.target}", flush=True)
+    order, missing, imports_by_module = local_closure(
+        root,
+        args.target,
+        progress_every=max(args.progress_every * 100, 1000),
+    )
     local_missing = [m for m in missing if module_to_source(root, m).exists()]
     project_missing = [
         m for m in missing
