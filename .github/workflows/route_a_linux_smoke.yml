@@ -68,8 +68,9 @@ jobs:
           df -h
 
       - name: Restore Route A smoke generated sources
+        id: restore_sources
         shell: bash
-        timeout-minutes: 5
+        timeout-minutes: 25
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -82,7 +83,12 @@ jobs:
                 echo "::warning::No checksum file found for ${archive}."
               fi
               tar -xzf "${archive}"
-              restored_count="$(tar -tzf "${archive}" | wc -l | tr -d ' ')"
+              manifest="${archive%.tar.gz}.txt"
+              if [ -f "${manifest}" ]; then
+                restored_count="$(wc -l < "${manifest}" | tr -d ' ')"
+              else
+                restored_count="unknown"
+              fi
               echo "Restored ${restored_count} Route A generated sources from ${archive}."
             done
           else
@@ -104,8 +110,9 @@ jobs:
           echo "auto_continue=${{ github.event.inputs.auto_continue }}"
 
       - name: Audit Route A generated source archive
+        id: archive_audit
         shell: bash
-        timeout-minutes: 10
+        timeout-minutes: 25
         run: |
           set -euo pipefail
           python3 scripts/ci/route_a_source_archive_audit.py \
@@ -115,6 +122,7 @@ jobs:
             --json-output route-a-source-archive-audit.json
 
       - name: Cache elan toolchain
+        id: cache_elan
         timeout-minutes: 10
         uses: actions/cache@v4
         with:
@@ -124,6 +132,7 @@ jobs:
             ${{ runner.os }}-elan-
 
       - name: Set up Lean
+        id: setup_lean
         timeout-minutes: 20
         uses: leanprover/lean-action@v1
         with:
@@ -157,14 +166,17 @@ jobs:
           df -h
 
       - name: Fetch dependencies
+        id: fetch_deps
         timeout-minutes: 20
         run: lake update
 
       - name: Fetch Mathlib cache
+        id: fetch_mathlib
         timeout-minutes: 45
         run: lake exe cache get
 
       - name: Prepare smoke log files
+        id: prepare_logs
         if: always()
         shell: bash
         timeout-minutes: 2
@@ -193,6 +205,7 @@ jobs:
             route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-
 
       - name: Verify isolated Route A target
+        id: verify_target
         shell: bash
         timeout-minutes: 5
         run: |
@@ -425,6 +438,20 @@ jobs:
         run: |
           set -euo pipefail
           {
+            echo "restore_sources_outcome=${{ steps.restore_sources.outcome }}"
+            echo "restore_sources_conclusion=${{ steps.restore_sources.conclusion }}"
+            echo "archive_audit_outcome=${{ steps.archive_audit.outcome }}"
+            echo "archive_audit_conclusion=${{ steps.archive_audit.conclusion }}"
+            echo "cache_elan_outcome=${{ steps.cache_elan.outcome }}"
+            echo "cache_elan_conclusion=${{ steps.cache_elan.conclusion }}"
+            echo "setup_lean_outcome=${{ steps.setup_lean.outcome }}"
+            echo "setup_lean_conclusion=${{ steps.setup_lean.conclusion }}"
+            echo "fetch_deps_outcome=${{ steps.fetch_deps.outcome }}"
+            echo "fetch_deps_conclusion=${{ steps.fetch_deps.conclusion }}"
+            echo "fetch_mathlib_outcome=${{ steps.fetch_mathlib.outcome }}"
+            echo "fetch_mathlib_conclusion=${{ steps.fetch_mathlib.conclusion }}"
+            echo "verify_target_outcome=${{ steps.verify_target.outcome }}"
+            echo "verify_target_conclusion=${{ steps.verify_target.conclusion }}"
             echo "cache_restore_outcome=${{ steps.route_a_cache_restore.outcome }}"
             echo "cache_restore_conclusion=${{ steps.route_a_cache_restore.conclusion }}"
             echo "cache_restore_hit=${{ steps.route_a_cache_restore.outputs.cache-hit }}"
@@ -433,6 +460,14 @@ jobs:
             echo "cache_save_conclusion=${{ steps.route_a_cache_save.conclusion }}"
             echo "artifact_dir_exists=${{ steps.artifact_size.outputs.exists }}"
           } >> route-a-build-status.txt
+          echo "Setup outcomes:"
+          echo "Restore generated sources: ${{ steps.restore_sources.outcome }} / ${{ steps.restore_sources.conclusion }}"
+          echo "Archive audit: ${{ steps.archive_audit.outcome }} / ${{ steps.archive_audit.conclusion }}"
+          echo "Cache elan: ${{ steps.cache_elan.outcome }} / ${{ steps.cache_elan.conclusion }}"
+          echo "Set up Lean: ${{ steps.setup_lean.outcome }} / ${{ steps.setup_lean.conclusion }}"
+          echo "Fetch dependencies: ${{ steps.fetch_deps.outcome }} / ${{ steps.fetch_deps.conclusion }}"
+          echo "Fetch Mathlib cache: ${{ steps.fetch_mathlib.outcome }} / ${{ steps.fetch_mathlib.conclusion }}"
+          echo "Verify target: ${{ steps.verify_target.outcome }} / ${{ steps.verify_target.conclusion }}"
           echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
           echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
           echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
@@ -547,14 +582,23 @@ jobs:
             exit 0
           fi
           echo "Route A Linux smoke target did not finish in this run. Exit code: ${status}"
+          echo "Setup outcomes:"
+          echo "Restore generated sources: ${{ steps.restore_sources.outcome }} / ${{ steps.restore_sources.conclusion }}"
+          echo "Archive audit: ${{ steps.archive_audit.outcome }} / ${{ steps.archive_audit.conclusion }}"
+          echo "Cache elan: ${{ steps.cache_elan.outcome }} / ${{ steps.cache_elan.conclusion }}"
+          echo "Set up Lean: ${{ steps.setup_lean.outcome }} / ${{ steps.setup_lean.conclusion }}"
+          echo "Fetch dependencies: ${{ steps.fetch_deps.outcome }} / ${{ steps.fetch_deps.conclusion }}"
+          echo "Fetch Mathlib cache: ${{ steps.fetch_mathlib.outcome }} / ${{ steps.fetch_mathlib.conclusion }}"
+          echo "Verify target: ${{ steps.verify_target.outcome }} / ${{ steps.verify_target.conclusion }}"
           echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
           echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
           echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
           echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
-          echo "If this was a timeout guard, rerun the same workflow/input to restore the saved cache and continue."
           if ! [[ "$status" =~ ^[0-9]+$ ]]; then
             echo "Resolved status is nonnumeric; treating this as an infrastructure/setup failure."
+            echo "This is not a resumable Lean checkpoint. Fix the failed setup step reported above, then start a new run."
             exit 1
           fi
+          echo "If this was a timeout guard, rerun the same workflow/input to restore the saved cache and continue."
           exit "$status"
