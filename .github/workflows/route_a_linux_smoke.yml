@@ -73,18 +73,27 @@ jobs:
         timeout-minutes: 25
         run: |
           set -euo pipefail
+          failed_archive="none"
+          restore_phase="start"
+          trap 'rc=$?; if [ "$rc" -ne 0 ]; then { echo "target=${{ github.event.inputs.target }}"; echo "exit_code=restore_sources_failed"; echo "phase=${restore_phase}"; echo "failed_archive=${failed_archive}"; echo "restore_exit_code=${rc}"; echo "workflow_sha=${GITHUB_SHA}"; echo "updated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"; df -h .; } > route-a-build-status.txt; fi' EXIT
           shopt -s nullglob
           archives=(.github/route_a_smoke/*.tar.gz)
           if [ "${#archives[@]}" -gt 0 ]; then
             for archive in "${archives[@]}"; do
+              failed_archive="${archive}"
+              restore_phase="checksum:${archive}"
               if [ -f "${archive}.sha256" ]; then
-                (
-                  cd "$(dirname "${archive}")"
-                  shasum -a 256 -c "$(basename "${archive}.sha256")"
-                )
+                expected_sha="$(awk '{ print $1; exit }' "${archive}.sha256")"
+                actual_sha="$(python3 -c 'import hashlib, sys; digest = hashlib.sha256(); handle = open(sys.argv[1], "rb"); list(map(digest.update, iter(lambda: handle.read(1024 * 1024), b""))); handle.close(); print(digest.hexdigest())' "${archive}")"
+                if [ "${actual_sha}" != "${expected_sha}" ]; then
+                  echo "::error::Checksum mismatch for ${archive}: expected ${expected_sha}, got ${actual_sha}."
+                  exit 2
+                fi
+                echo "Checksum OK for ${archive}."
               else
                 echo "::warning::No checksum file found for ${archive}."
               fi
+              restore_phase="extract:${archive}"
               tar -xzf "${archive}"
               manifest="${archive%.tar.gz}.txt"
               if [ -f "${manifest}" ]; then
@@ -97,6 +106,7 @@ jobs:
           else
             echo "No Route A smoke source archives found."
           fi
+          restore_phase="done"
 
       - name: Workflow input summary
         shell: bash
@@ -186,14 +196,20 @@ jobs:
         run: |
           set -euo pipefail
           : > route-a-linux-smoke.log
-          {
-            echo "target=${{ github.event.inputs.target }}"
-            echo "exit_code=not_started"
-            echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
-            echo "auto_continue=${{ github.event.inputs.auto_continue }}"
-            echo "workflow_sha=${GITHUB_SHA}"
-            echo "prepared_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          } > route-a-build-status.txt
+          if [ -f route-a-build-status.txt ]; then
+            {
+              echo "prepared_log_files_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            } >> route-a-build-status.txt
+          else
+            {
+              echo "target=${{ github.event.inputs.target }}"
+              echo "exit_code=not_started"
+              echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
+              echo "auto_continue=${{ github.event.inputs.auto_continue }}"
+              echo "workflow_sha=${GITHUB_SHA}"
+              echo "prepared_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            } > route-a-build-status.txt
+          fi
 
       - name: Restore project Lake artifact cache
         id: route_a_cache_restore
