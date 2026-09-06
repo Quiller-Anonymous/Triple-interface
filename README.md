@@ -79,6 +79,13 @@ Main progress:
 - The dyadic nonzero base proofs now have a reusable splitting path. `Base042` and `Base077` were
   split into term/row/pair/wrapper modules, and `Base066` received compatibility aliases after a
   generated-name mismatch was exposed downstream.
+- By early September, the active CI closure had grown to about `203062` local Lean modules, with
+  `201630` ignored/generated Route A sources carried by a single `q0cert` source archive. Older
+  Route A smoke archives were removed after confirming that `q0cert` alone covers the main cert
+  target, the bridge probe, periodic-main final, core-residual final, and the old Acc721 target.
+- The GitHub smoke workflow now distinguishes setup failures from resumable Lean checkpoints,
+  reports source-restore/archive-audit/setup/cache outcomes, and prints direct-builder closure-scan
+  progress before the scheduler starts.
 
 Current practical state:
 - The Route A/Q0 certificate path is making real checked progress, but the work is still in the
@@ -89,8 +96,8 @@ Current practical state:
   large modules where needed, update the source archive, and force-rebuild only the affected closure.
 - More large dyadic base modules may still need splitting before the full
   `Q0MinorZeroModeNormalizedAverageX0Cert` target finishes. Once that target builds, the next step is
-  to rebuild the periodic-main certificate chain and then the Route A umbrella/final module to expose
-  any remaining integration seams.
+  to build the narrow `Q0RouteAPostCertBridgeProbe`, then the periodic-main/final certificate
+  wrappers, before attempting broader turnkey or final Goldbach targets.
 
 ## Local hiccups
 See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are present or missing.

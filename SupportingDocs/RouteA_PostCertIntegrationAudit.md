@@ -1,6 +1,6 @@
 # Route A Post-Cert Integration Audit
 
-Date: 2026-08-24
+Date: 2026-09-06
 
 ## Current Build Target
 
@@ -31,9 +31,9 @@ A local source-level import-closure scan of
 - No import cycles.
 - The current source-archive audit command is:
   `python3 scripts/ci/route_a_source_archive_audit.py --target Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert --manifest .github/route_a_smoke/*_missing_sources.txt --archive .github/route_a_smoke/*.tar.gz`
-- As of 2026-08-30, that audit reports:
-  `local_modules=170423`, `external_imports=89`, `required_untracked_sources=168991`,
-  `archive_entries=168991`, and `ok=true`.
+- As of 2026-09-06, after the row-front split/archive refresh, that audit reports:
+  `local_modules=203062`, `external_imports=89`, `required_untracked_sources=201630`,
+  `manifest_entries=201630`, `archive_entries=201630`, and `ok=true`.
 
 This removes the most common avoidable CI failure class: missing generated sources or local import
 cycles inside the current Route A target.
@@ -154,14 +154,41 @@ The periodic-main equality itself is intended to be discharged inside
 
 The current workflow now performs these cheap checks before spending hours in Lean compilation:
 
-- Restores all Route A generated-source tarballs and verifies their checksums.
+- Restores the current Route A `q0cert` generated-source tarball and verifies its checksum.
 - Runs `route_a_source_archive_audit.py` against the selected target.
 - Verifies that every required untracked/generated source in the target import closure is present
   in the restored source archives.
+- Prints source-restore, archive-audit, Lean setup, dependency-fetch, cache-restore, and
+  target-verification outcomes if a run fails before the build starts.
+- Resolves final build status from `route-a-build-status.txt` or
+  `route-a-direct-build-status.json` if GitHub loses the build step output.
 - Uploads `route-a-source-archive-audit.json` with the normal smoke-log artifact.
 
 This does not prove the target, but it should prevent another delayed failure caused by a missing
 ignored source file.
+
+## Source Archive Policy
+
+Only these Route A smoke support files should remain under `.github/route_a_smoke/`:
+
+- `q0cert_extra_missing_sources.tar.gz`
+- `q0cert_extra_missing_sources.tar.gz.sha256`
+- `q0cert_extra_missing_sources.txt`
+- `q0cert_force_rebuild_modules.txt`
+
+The older `acc5`, `acc721`, `core_residual`, and `periodic_main_final` source archives were
+superseded by the current `q0cert` archive.  On 2026-09-06, the `q0cert` archive alone was audited
+successfully against these targets:
+
+- `Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert`
+- `Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe`
+- `Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal`
+- `Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualFinal`
+- `Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainZeroNonCoprimeCoreResidualLeftOnlyThreeFinalAcc721`
+
+Do not reintroduce the older archives unless a target outside the current Route A closure actually
+requires them.  Restoring stale archives slows CI and can obscure which generated-source bundle is
+authoritative.
 
 ## Risk Register
 
@@ -179,6 +206,18 @@ ignored source file.
 When the current CI target succeeds, do not immediately start a broad final build. First create the
 small bridge target and test only that bridge. The highest-value next build target should be the
 new bridge module, followed by `Q0TwoBoundsSpec`, not the full `Goldbach` target.
+
+The recommended post-cert build order is:
+
+1. `Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe`
+2. `Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal`
+3. `Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundProvider`, only after a real Route A bridge is
+   available or an explicit replacement theorem has been written.
+4. `Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec`
+5. `Goldbach.Cert.TurnkeyMajorArcCanonSpec`
+
+If step 1 fails after the cert target succeeds, treat it as an integration/name-surface bug first,
+not as evidence that the certificate payload failed.
 
 ## Prepared Bridge Probe
 
