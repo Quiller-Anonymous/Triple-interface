@@ -627,6 +627,7 @@ def main() -> int:
             "workers": max(args.workers, 1),
             "module_timeout_minutes": args.module_timeout_minutes,
             "trust_unstamped_cache": args.trust_unstamped_cache,
+            "min_initial_skipped": max(args.min_initial_skipped, 0),
             "heartbeat_seconds": args.heartbeat_seconds,
             "slow_module_log_seconds": args.slow_module_log_seconds,
             "failed_module": failed_module,
