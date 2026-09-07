@@ -262,6 +262,7 @@ def build_closure(
     trust_unstamped_cache: bool,
     heartbeat_seconds: float,
     slow_module_log_seconds: float,
+    min_initial_skipped: int,
 ) -> tuple[int, int, str | None, int]:
     """Compile the local module DAG, running independent modules in parallel."""
     total = len(order)
@@ -357,6 +358,14 @@ def build_closure(
         f"trust_unstamped_cache={trust_unstamped_cache}",
         flush=True,
     )
+
+    if min_initial_skipped > 0 and skipped < min_initial_skipped:
+        print(
+            f"[cache-health] initial_skipped={skipped} below "
+            f"min_initial_skipped={min_initial_skipped}; aborting before build",
+            flush=True,
+        )
+        return 0, skipped, None, 86
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=worker_count)
     submitted: dict[concurrent.futures.Future[int], tuple[str, float]] = {}
@@ -524,6 +533,16 @@ def main() -> int:
         default=30.0,
         help="Print a timing line for modules taking at least this many seconds.",
     )
+    parser.add_argument(
+        "--min-initial-skipped",
+        type=int,
+        default=0,
+        help=(
+            "Abort before compiling if the restored artifact cache accounts for "
+            "fewer than this many local modules.  Exit code 86 indicates a cold "
+            "or poisoned cache, not a Lean theorem failure."
+        ),
+    )
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -595,6 +614,7 @@ def main() -> int:
             trust_unstamped_cache=args.trust_unstamped_cache,
             heartbeat_seconds=args.heartbeat_seconds,
             slow_module_log_seconds=args.slow_module_log_seconds,
+            min_initial_skipped=max(args.min_initial_skipped, 0),
         )
     finally:
         elapsed = time.monotonic() - started

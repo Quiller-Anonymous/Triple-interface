@@ -27,6 +27,18 @@ on:
         description: "Stop and checkpoint if one direct-mode module runs too long"
         required: true
         default: "150"
+      use_force_rebuild_list:
+        description: "Apply q0cert_force_rebuild_modules.txt; normally leave false unless repairing stale interfaces"
+        required: true
+        default: "false"
+      min_initial_skipped:
+        description: "Abort before build if direct-mode cache restores fewer modules than this; use 0 to disable"
+        required: true
+        default: "100000"
+      cache_restore_key:
+        description: "Optional exact project artifact cache key to restore; leave blank to use latest matching cache"
+        required: false
+        default: ""
       auto_continue:
         description: "Automatically dispatch another run after a resumable timeout"
         required: true
@@ -120,6 +132,9 @@ jobs:
           echo "build_mode=${{ github.event.inputs.build_mode }}"
           echo "direct_workers=${{ github.event.inputs.direct_workers }}"
           echo "module_timeout_minutes=${{ github.event.inputs.module_timeout_minutes }}"
+          echo "use_force_rebuild_list=${{ github.event.inputs.use_force_rebuild_list }}"
+          echo "min_initial_skipped=${{ github.event.inputs.min_initial_skipped }}"
+          echo "cache_restore_key=${{ github.event.inputs.cache_restore_key }}"
           echo "auto_continue=${{ github.event.inputs.auto_continue }}"
 
       - name: Audit Route A generated source archive
@@ -218,7 +233,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .lake/build/lib/lean
-          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-latest
+          key: ${{ github.event.inputs.cache_restore_key != '' && github.event.inputs.cache_restore_key || format('route-a-linux-smoke-{0}-{1}-{2}-{3}-latest', runner.os, hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json'), github.event.inputs.build_mode, github.event.inputs.target) }}
           restore-keys: |
             route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-
             route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-
@@ -304,6 +319,8 @@ jobs:
           build_mode='${{ github.event.inputs.build_mode }}'
           direct_workers='${{ github.event.inputs.direct_workers }}'
           module_timeout_minutes='${{ github.event.inputs.module_timeout_minutes }}'
+          use_force_rebuild_list='${{ github.event.inputs.use_force_rebuild_list }}'
+          min_initial_skipped='${{ github.event.inputs.min_initial_skipped }}'
           case "$build_mode" in
             direct|lake) ;;
             *)
@@ -336,6 +353,17 @@ jobs:
           if [ "$module_timeout_minutes" -gt "$direct_timeout" ]; then
             module_timeout_minutes="$direct_timeout"
           fi
+          case "$use_force_rebuild_list" in
+            true|false) ;;
+            *)
+              echo "Invalid use_force_rebuild_list='${use_force_rebuild_list}', using false."
+              use_force_rebuild_list=false
+              ;;
+          esac
+          if ! [[ "$min_initial_skipped" =~ ^[0-9]+$ ]]; then
+            echo "Invalid min_initial_skipped='${min_initial_skipped}', using 100000."
+            min_initial_skipped=100000
+          fi
           build_status_recorded=0
           write_build_status() {
             local code="$1"
@@ -351,18 +379,22 @@ jobs:
               echo "actual_build_timeout_minutes=${actual_timeout}"
               echo "direct_build_timeout_minutes=${direct_timeout}"
               echo "module_timeout_minutes=${module_timeout_minutes}"
+              echo "use_force_rebuild_list=${use_force_rebuild_list}"
+              echo "min_initial_skipped=${min_initial_skipped}"
               echo "workflow_sha=${GITHUB_SHA}"
               echo "updated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
               df -h .
             } > route-a-build-status.txt
           }
-          trap 'rc=$?; if [ "$build_status_recorded" -ne 1 ]; then write_build_status "$rc" "shell_exit_before_final_status"; echo "exit_code=$rc" >> "$GITHUB_OUTPUT" || true; fi' EXIT
-          trap 'write_build_status 143 "terminated_before_final_status"; echo "exit_code=143" >> "$GITHUB_OUTPUT" || true; build_status_recorded=1; exit 143' TERM INT
+          trap 'rc=$?; if [ "$build_status_recorded" -ne 1 ]; then write_build_status "$rc" "shell_exit_before_final_status"; echo "exit_code=$rc" >> "$GITHUB_OUTPUT" || true; echo "save_cache=false" >> "$GITHUB_OUTPUT" || true; fi' EXIT
+          trap 'write_build_status 143 "terminated_before_final_status"; echo "exit_code=143" >> "$GITHUB_OUTPUT" || true; echo "save_cache=true" >> "$GITHUB_OUTPUT" || true; build_status_recorded=1; exit 143' TERM INT
           direct_force_args=()
-          if [ -f .github/route_a_smoke/q0cert_force_rebuild_modules.txt ]; then
+          if [ "$use_force_rebuild_list" = "true" ] && [ -f .github/route_a_smoke/q0cert_force_rebuild_modules.txt ]; then
             direct_force_args+=(--force-module-list .github/route_a_smoke/q0cert_force_rebuild_modules.txt)
             echo "Direct force module list: .github/route_a_smoke/q0cert_force_rebuild_modules.txt" \
               | tee -a route-a-linux-smoke.log
+          else
+            echo "Direct force module list disabled." | tee -a route-a-linux-smoke.log
           fi
           echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
           echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
@@ -372,6 +404,8 @@ jobs:
             echo "Direct builder self-timeout: ${direct_timeout} minutes" | tee -a route-a-linux-smoke.log
             echo "Direct module timeout: ${module_timeout_minutes} minutes" | tee -a route-a-linux-smoke.log
           fi
+          echo "Use force rebuild list: ${use_force_rebuild_list}" | tee -a route-a-linux-smoke.log
+          echo "Minimum initial skipped: ${min_initial_skipped}" | tee -a route-a-linux-smoke.log
           echo "Disk before build:" | tee -a route-a-linux-smoke.log
           df -h | tee -a route-a-linux-smoke.log
           du -sh .lake .lake/build/lib/lean .lake/packages/*/.lake/build ~/.elan ~/.cache 2>/dev/null \
@@ -392,6 +426,7 @@ jobs:
                 --module-timeout-minutes "$module_timeout_minutes" \
                 --workers "$direct_workers" \
                 --trust-unstamped-cache \
+                --min-initial-skipped "$min_initial_skipped" \
                 "${direct_force_args[@]}" \
               2>&1 | tee -a route-a-linux-smoke.log
             status=${PIPESTATUS[0]}
@@ -403,12 +438,19 @@ jobs:
           fi
           set -e
           echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
+          if [ "$status" -eq 0 ] || [ "$status" -eq 124 ] || [ "$status" -eq 137 ] || [ "$status" -eq 143 ]; then
+            echo "save_cache=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "save_cache=false" >> "$GITHUB_OUTPUT"
+          fi
           write_build_status "${status}" "build_finished"
           build_status_recorded=1
           if [ "$status" -eq 0 ]; then
             echo "Build completed successfully."
           elif [ "$status" -eq 124 ] || [ "$status" -eq 137 ] || [ "$status" -eq 143 ]; then
             echo "Build reached the workflow timeout guard; saving cache for a resumed run."
+          elif [ "$status" -eq 86 ]; then
+            echo "Build aborted before compilation because the restored cache was too cold."
           else
             echo "Build failed with exit code ${status}; saving logs/cache for diagnosis."
           fi
@@ -443,7 +485,7 @@ jobs:
 
       - name: Save project Lake artifact cache
         id: route_a_cache_save
-        if: always() && steps.artifact_size.outputs.exists == 'true'
+        if: always() && steps.artifact_size.outputs.exists == 'true' && steps.build.outputs.save_cache == 'true'
         continue-on-error: true
         timeout-minutes: 45
         uses: actions/cache/save@v4
@@ -510,6 +552,9 @@ jobs:
           BUILD_MODE: ${{ github.event.inputs.build_mode }}
           DIRECT_WORKERS: ${{ github.event.inputs.direct_workers }}
           MODULE_TIMEOUT_MINUTES: ${{ github.event.inputs.module_timeout_minutes }}
+          USE_FORCE_REBUILD_LIST: ${{ github.event.inputs.use_force_rebuild_list }}
+          MIN_INITIAL_SKIPPED: ${{ github.event.inputs.min_initial_skipped }}
+          CACHE_RESTORE_KEY: ${{ github.event.inputs.cache_restore_key }}
           REF_NAME: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -538,6 +583,9 @@ jobs:
                   "build_mode": os.environ["BUILD_MODE"],
                   "direct_workers": os.environ["DIRECT_WORKERS"],
                   "module_timeout_minutes": os.environ["MODULE_TIMEOUT_MINUTES"],
+                  "use_force_rebuild_list": os.environ["USE_FORCE_REBUILD_LIST"],
+                  "min_initial_skipped": os.environ["MIN_INITIAL_SKIPPED"],
+                  "cache_restore_key": os.environ["CACHE_RESTORE_KEY"],
                   "auto_continue": "true",
               },
           }
@@ -600,6 +648,11 @@ jobs:
             echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
             echo "Re-run the same workflow/input to continue from the saved cache checkpoint."
             exit 0
+          fi
+          if [ "$status" = "86" ]; then
+            echo "Route A Linux smoke build aborted because the restored artifact cache was too cold."
+            echo "Do not rerun blindly; inspect cache restore matched key or use a different cache/force setting."
+            exit 1
           fi
           echo "Route A Linux smoke target did not finish in this run. Exit code: ${status}"
           echo "Setup outcomes:"

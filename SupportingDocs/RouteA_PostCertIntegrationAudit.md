@@ -162,6 +162,16 @@ The current workflow now performs these cheap checks before spending hours in Le
   target-verification outcomes if a run fails before the build starts.
 - Resolves final build status from `route-a-build-status.txt` or
   `route-a-direct-build-status.json` if GitHub loses the build step output.
+- Runs direct mode with `use_force_rebuild_list=false` by default.  The historical force list is now
+  opt-in because applying it against an old unstamped artifact cache can mark most of the target
+  closure dirty.
+- Aborts before compilation with exit code `86` if direct mode sees fewer than
+  `min_initial_skipped` restored modules.  For the full
+  `Q0MinorZeroModeNormalizedAverageX0Cert` target, the default floor is `100000`, which prevents a
+  nearly cold or poisoned cache from becoming the new baseline.
+- Provides an optional `cache_restore_key` workflow input.  Leave it blank for normal continuation,
+  but paste a known-good `Cache restore matched key` from an earlier high-skip run if GitHub keeps
+  selecting a newer weak cache.
 - Uploads `route-a-source-archive-audit.json` with the normal smoke-log artifact.
 
 This does not prove the target, but it should prevent another delayed failure caused by a missing
@@ -206,6 +216,21 @@ authoritative.
 When the current CI target succeeds, do not immediately start a broad final build. First create the
 small bridge target and test only that bridge. The highest-value next build target should be the
 new bridge module, followed by `Q0TwoBoundsSpec`, not the full `Goldbach` target.
+
+For the ongoing full-cert CI run, use these default settings unless debugging a specific stale
+interface:
+
+- `target=Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert`
+- `build_mode=direct`
+- `direct_workers=4`
+- `use_force_rebuild_list=false`
+- `min_initial_skipped=100000`
+- `cache_restore_key=` blank unless recovering from a known bad latest cache
+
+If the run aborts with exit code `86`, inspect the cache restore key before rerunning.  That means
+the restored artifact cache is too cold for productive continuation.  If the log shows a weak latest
+cache was selected, either delete that cache in GitHub Actions or rerun with `cache_restore_key`
+set to a prior known-good matched key.
 
 The recommended post-cert build order is:
 
