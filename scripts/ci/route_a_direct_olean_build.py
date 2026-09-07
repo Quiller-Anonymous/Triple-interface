@@ -237,14 +237,16 @@ def run_lean(root: Path, module: str, timeout_seconds: float | None) -> int:
     olean = module_to_artifact(root, module, ".olean")
     ilean = module_to_artifact(root, module, ".ilean")
     olean.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        ilean.unlink()
+    except FileNotFoundError:
+        pass
 
     cmd = [
         "lean",
         "--root=.",
         "-o",
         str(olean),
-        "-i",
-        str(ilean),
         str(source),
     ]
     process: subprocess.Popen | None = None

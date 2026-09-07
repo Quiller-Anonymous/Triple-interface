@@ -567,6 +567,21 @@ jobs:
           pkill -KILL -f '/lean .*Goldbach' || true
           pkill -KILL -f 'lake --log-level=error build' || true
 
+      - name: Prune nonessential project artifacts
+        if: always()
+        shell: bash
+        timeout-minutes: 10
+        run: |
+          set -euo pipefail
+          if [ -d .lake/build/lib/lean ]; then
+            before="$(find .lake/build/lib/lean -type f -name '*.ilean' | wc -l | tr -d ' ')"
+            find .lake/build/lib/lean -type f -name '*.ilean' -delete
+            after="$(find .lake/build/lib/lean -type f -name '*.ilean' | wc -l | tr -d ' ')"
+            echo "Pruned project .ilean files before cache save: before=${before} after=${after}"
+          else
+            echo "No project Lean artifact directory exists; nothing to prune."
+          fi
+
       - name: Report project artifact size
         if: always()
         id: artifact_size

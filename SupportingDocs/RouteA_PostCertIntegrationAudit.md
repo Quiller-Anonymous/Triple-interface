@@ -177,6 +177,9 @@ The current workflow now performs these cheap checks before spending hours in Le
   build with only a few thousand skipped modules.
 - Lists matching project artifact cache candidates before restore, including cache ID, size, creation
   time, last access time, and key.
+- The direct builder writes only `.olean` artifacts; `.ilean` files are not needed for this CI
+  import-chain build and are pruned before cache save.  This is intended to keep checkpoints below
+  the GitHub Actions cache eviction threshold.
 - Uploads `route-a-source-archive-audit.json` with the normal smoke-log artifact.
 
 This does not prove the target, but it should prevent another delayed failure caused by a missing
@@ -238,6 +241,11 @@ the restored artifact cache is too cold for productive continuation.  If the log
 cache was selected, either delete that cache in GitHub Actions or rerun with `cache_restore_key`
 set to a prior known-good matched key.  The `[freshness]` line distinguishes missing artifacts from
 stamp mismatches, which decides whether the cache is absent/partial or merely stale.
+
+Run `196` was the observed flip point.  Run `195` saved a roughly 10 GB project artifact cache and
+run `196` then failed to restore that cache, effectively restarting from a much smaller checkpoint.
+That is consistent with GitHub cache thrashing at the default repository cache limit rather than a
+Lean theorem failure.
 
 The recommended post-cert build order is:
 
