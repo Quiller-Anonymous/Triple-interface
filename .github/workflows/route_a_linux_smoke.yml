@@ -39,6 +39,10 @@ on:
         description: "Optional exact project artifact cache key to restore; leave blank to use latest matching cache"
         required: false
         default: ""
+      allow_broad_cache_restore:
+        description: "Allow fallback to any Route A cache with the same toolchain; normally false for full Q0Cert"
+        required: true
+        default: "false"
       auto_continue:
         description: "Automatically dispatch another run after a resumable timeout"
         required: true
@@ -135,6 +139,7 @@ jobs:
           echo "use_force_rebuild_list=${{ github.event.inputs.use_force_rebuild_list }}"
           echo "min_initial_skipped=${{ github.event.inputs.min_initial_skipped }}"
           echo "cache_restore_key=${{ github.event.inputs.cache_restore_key }}"
+          echo "allow_broad_cache_restore=${{ github.event.inputs.allow_broad_cache_restore }}"
           echo "auto_continue=${{ github.event.inputs.auto_continue }}"
 
       - name: Audit Route A generated source archive
@@ -226,6 +231,43 @@ jobs:
             } > route-a-build-status.txt
           fi
 
+      - name: Compute project Lake artifact cache keys
+        id: route_a_cache_keys
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          exact_key='${{ github.event.inputs.cache_restore_key }}'
+          allow_broad='${{ github.event.inputs.allow_broad_cache_restore }}'
+          case "$allow_broad" in
+            true|false) ;;
+            *)
+              echo "Invalid allow_broad_cache_restore='${allow_broad}', using false."
+              allow_broad=false
+              ;;
+          esac
+          base_key='route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}'
+          if [ -n "$exact_key" ]; then
+            primary_key="$exact_key"
+            restore_keys=""
+          else
+            primary_key="${base_key}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-latest"
+            restore_keys="${base_key}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-"
+            if [ "$allow_broad" = "true" ]; then
+              restore_keys="${restore_keys}"$'\n'"${base_key}-"
+            fi
+          fi
+          {
+            echo "primary_key=${primary_key}"
+            echo "restore_keys<<EOF"
+            printf '%s\n' "$restore_keys"
+            echo "EOF"
+            echo "allow_broad=${allow_broad}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Project cache primary key: ${primary_key}"
+          echo "Project cache restore keys:"
+          printf '%s\n' "$restore_keys"
+
       - name: Restore project Lake artifact cache
         id: route_a_cache_restore
         continue-on-error: true
@@ -233,10 +275,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .lake/build/lib/lean
-          key: ${{ github.event.inputs.cache_restore_key != '' && github.event.inputs.cache_restore_key || format('route-a-linux-smoke-{0}-{1}-{2}-{3}-latest', runner.os, hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json'), github.event.inputs.build_mode, github.event.inputs.target) }}
-          restore-keys: |
-            route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-
-            route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-
+          key: ${{ steps.route_a_cache_keys.outputs.primary_key }}
+          restore-keys: ${{ steps.route_a_cache_keys.outputs.restore_keys }}
 
       - name: Verify isolated Route A target
         id: verify_target
@@ -555,6 +595,7 @@ jobs:
           USE_FORCE_REBUILD_LIST: ${{ github.event.inputs.use_force_rebuild_list }}
           MIN_INITIAL_SKIPPED: ${{ github.event.inputs.min_initial_skipped }}
           CACHE_RESTORE_KEY: ${{ github.event.inputs.cache_restore_key }}
+          ALLOW_BROAD_CACHE_RESTORE: ${{ github.event.inputs.allow_broad_cache_restore }}
           REF_NAME: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -586,6 +627,7 @@ jobs:
                   "use_force_rebuild_list": os.environ["USE_FORCE_REBUILD_LIST"],
                   "min_initial_skipped": os.environ["MIN_INITIAL_SKIPPED"],
                   "cache_restore_key": os.environ["CACHE_RESTORE_KEY"],
+                  "allow_broad_cache_restore": os.environ["ALLOW_BROAD_CACHE_RESTORE"],
                   "auto_continue": "true",
               },
           }

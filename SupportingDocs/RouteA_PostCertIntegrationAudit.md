@@ -172,6 +172,9 @@ The current workflow now performs these cheap checks before spending hours in Le
 - Provides an optional `cache_restore_key` workflow input.  Leave it blank for normal continuation,
   but paste a known-good `Cache restore matched key` from an earlier high-skip run if GitHub keeps
   selecting a newer weak cache.
+- Keeps broad same-toolchain cache fallback off by default via `allow_broad_cache_restore=false`.
+  A broad fallback can restore a small cache from another Route A target and leave the full Q0Cert
+  build with only a few thousand skipped modules.
 - Uploads `route-a-source-archive-audit.json` with the normal smoke-log artifact.
 
 This does not prove the target, but it should prevent another delayed failure caused by a missing
@@ -226,6 +229,7 @@ interface:
 - `use_force_rebuild_list=false`
 - `min_initial_skipped=100000`
 - `cache_restore_key=` blank unless recovering from a known bad latest cache
+- `allow_broad_cache_restore=false`
 
 If the run aborts with exit code `86`, inspect the cache restore key before rerunning.  That means
 the restored artifact cache is too cold for productive continuation.  If the log shows a weak latest
