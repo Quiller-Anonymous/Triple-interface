@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+from collections import Counter
 from pathlib import Path
 
 
@@ -43,19 +44,34 @@ def module_artifact_is_fresh(
     *,
     trust_unstamped_cache: bool = False,
 ) -> bool:
+    return module_artifact_freshness(
+        root, module, trust_unstamped_cache=trust_unstamped_cache
+    )[0]
+
+
+def module_artifact_freshness(
+    root: Path,
+    module: str,
+    *,
+    trust_unstamped_cache: bool = False,
+) -> tuple[bool, str]:
     source = module_to_source(root, module)
     olean = module_to_artifact(root, module, ".olean")
     if not olean.exists():
-        return False
+        return False, "missing_olean"
     if not source.exists():
-        return True
+        return True, "source_missing"
     stamp = module_to_artifact(root, module, SOURCE_HASH_STAMP_SUFFIX)
     if stamp.exists():
         source_hash = module_source_hash(root, module)
-        return source_hash is not None and stamp.read_text(errors="ignore").strip() == source_hash
+        if source_hash is not None and stamp.read_text(errors="ignore").strip() == source_hash:
+            return True, "stamp_match"
+        return False, "stamp_mismatch"
     if trust_unstamped_cache:
-        return True
-    return olean.stat().st_mtime >= source.stat().st_mtime
+        return True, "unstamped_trusted"
+    if olean.stat().st_mtime >= source.stat().st_mtime:
+        return True, "mtime_fresh"
+    return False, "mtime_stale"
 
 
 def module_source_hash(root: Path, module: str) -> str | None:
@@ -277,13 +293,15 @@ def build_closure(
 
     stale_roots: set[str] = set()
     force_roots_pending: set[str] = set()
+    freshness_counts: Counter[str] = Counter()
     if not force:
-        stale_roots = {
-            module for module in order
-            if not module_artifact_is_fresh(
+        for module in order:
+            is_fresh, freshness_reason = module_artifact_freshness(
                 root, module, trust_unstamped_cache=trust_unstamped_cache
             )
-        }
+            freshness_counts[freshness_reason] += 1
+            if not is_fresh:
+                stale_roots.add(module)
         force_roots_pending = {
             module for module in force_modules
             if module in local_modules and not module_force_stamp_matches(root, module)
@@ -358,6 +376,11 @@ def build_closure(
         f"trust_unstamped_cache={trust_unstamped_cache}",
         flush=True,
     )
+    if freshness_counts:
+        freshness_summary = " ".join(
+            f"{key}={freshness_counts[key]}" for key in sorted(freshness_counts)
+        )
+        print(f"[freshness] {freshness_summary}", flush=True)
 
     if min_initial_skipped > 0 and skipped < min_initial_skipped:
         print(

@@ -175,6 +175,8 @@ The current workflow now performs these cheap checks before spending hours in Le
 - Keeps broad same-toolchain cache fallback off by default via `allow_broad_cache_restore=false`.
   A broad fallback can restore a small cache from another Route A target and leave the full Q0Cert
   build with only a few thousand skipped modules.
+- Lists matching project artifact cache candidates before restore, including cache ID, size, creation
+  time, last access time, and key.
 - Uploads `route-a-source-archive-audit.json` with the normal smoke-log artifact.
 
 This does not prove the target, but it should prevent another delayed failure caused by a missing
@@ -234,7 +236,8 @@ interface:
 If the run aborts with exit code `86`, inspect the cache restore key before rerunning.  That means
 the restored artifact cache is too cold for productive continuation.  If the log shows a weak latest
 cache was selected, either delete that cache in GitHub Actions or rerun with `cache_restore_key`
-set to a prior known-good matched key.
+set to a prior known-good matched key.  The `[freshness]` line distinguishes missing artifacts from
+stamp mismatches, which decides whether the cache is absent/partial or merely stale.
 
 The recommended post-cert build order is:
 
