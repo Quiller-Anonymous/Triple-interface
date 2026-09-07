@@ -38,7 +38,7 @@ on:
       cache_restore_key:
         description: "Optional exact project artifact cache key to restore; leave blank to use latest matching cache"
         required: false
-        default: ""
+        default: "route-a-linux-smoke-Linux-542ef6914af28568f183d7b7808a0500a47f7f691cafe291b52adacbe9b9fee1-direct-Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert-34062099165-1"
       allow_broad_cache_restore:
         description: "Allow fallback to any Route A cache with the same toolchain; normally false for full Q0Cert"
         required: true
