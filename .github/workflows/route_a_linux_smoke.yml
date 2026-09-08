@@ -655,7 +655,8 @@ jobs:
         if: >-
           always() &&
           github.event.inputs.auto_continue == 'true' &&
-          steps.artifact_size.outputs.exists == 'true'
+          steps.artifact_size.outputs.exists == 'true' &&
+          steps.route_a_cache_save.outcome == 'success'
         shell: bash
         timeout-minutes: 3
         env:
@@ -690,6 +691,38 @@ jobs:
           repo = os.environ["REPOSITORY"]
           workflow_id = "route_a_linux_smoke.yml"
           url = f"https://api.github.com/repos/{repo}/actions/workflows/{workflow_id}/dispatches"
+
+          def next_min_initial_skipped() -> str:
+              current = int(os.environ.get("MIN_INITIAL_SKIPPED") or "0")
+              try:
+                  with open("route-a-direct-build-status.json", encoding="utf-8") as handle:
+                      status = json.load(handle)
+              except Exception as exc:
+                  print(
+                      "Could not read direct build status for continuation guard; "
+                      f"keeping min_initial_skipped={current}: {exc}"
+                  )
+                  return str(current)
+              try:
+                  built = int(status.get("built") or 0)
+                  skipped = int(status.get("skipped") or 0)
+              except Exception as exc:
+                  print(
+                      "Could not parse direct build counts for continuation guard; "
+                      f"keeping min_initial_skipped={current}: {exc}"
+                  )
+                  return str(current)
+              expected = skipped + built
+              if expected <= 0:
+                  return str(current)
+              next_min = max(current, expected)
+              print(
+                  "Continuation cache guard: "
+                  f"current_min_initial_skipped={current} skipped={skipped} "
+                  f"built={built} next_min_initial_skipped={next_min}"
+              )
+              return str(next_min)
+
           payload = {
               "ref": os.environ["REF_NAME"],
               "inputs": {
@@ -700,7 +733,7 @@ jobs:
                   "direct_workers": os.environ["DIRECT_WORKERS"],
                   "module_timeout_minutes": os.environ["MODULE_TIMEOUT_MINUTES"],
                   "use_force_rebuild_list": os.environ["USE_FORCE_REBUILD_LIST"],
-                  "min_initial_skipped": os.environ["MIN_INITIAL_SKIPPED"],
+                  "min_initial_skipped": next_min_initial_skipped(),
                   "cache_restore_key": os.environ["CACHE_RESTORE_KEY"],
                   "allow_broad_cache_restore": os.environ["ALLOW_BROAD_CACHE_RESTORE"],
                   "auto_continue": "true",

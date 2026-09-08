@@ -281,7 +281,7 @@ def build_closure(
     heartbeat_seconds: float,
     slow_module_log_seconds: float,
     min_initial_skipped: int,
-) -> tuple[int, int, str | None, int]:
+) -> tuple[int, int, str | None, int, dict[str, int]]:
     """Compile the local module DAG, running independent modules in parallel."""
     total = len(order)
     order_index = {module: index for index, module in enumerate(order, start=1)}
@@ -390,7 +390,7 @@ def build_closure(
             f"min_initial_skipped={min_initial_skipped}; aborting before build",
             flush=True,
         )
-        return 0, skipped, None, 86
+        return 0, skipped, None, 86, dict(freshness_counts)
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=worker_count)
     submitted: dict[concurrent.futures.Future[int], tuple[str, float]] = {}
@@ -505,7 +505,7 @@ def build_closure(
     if exit_code == 0 and ready:
         exit_code = 124
 
-    return built, skipped, failed_module, exit_code
+    return built, skipped, failed_module, exit_code, dict(freshness_counts)
 
 
 def main() -> int:
@@ -624,9 +624,10 @@ def main() -> int:
     skipped = 0
     failed_module: str | None = None
     exit_code = 0
+    freshness_counts: dict[str, int] = {}
 
     try:
-        built, skipped, failed_module, exit_code = build_closure(
+        built, skipped, failed_module, exit_code, freshness_counts = build_closure(
             root,
             order,
             imports_by_module,
@@ -655,6 +656,7 @@ def main() -> int:
             "min_initial_skipped": max(args.min_initial_skipped, 0),
             "heartbeat_seconds": args.heartbeat_seconds,
             "slow_module_log_seconds": args.slow_module_log_seconds,
+            "freshness_counts": freshness_counts,
             "failed_module": failed_module,
             "exit_code": exit_code,
             "elapsed_seconds": elapsed,
