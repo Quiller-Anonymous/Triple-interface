@@ -230,11 +230,16 @@ interface:
 
 - `target=Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert`
 - `build_mode=direct`
-- `direct_workers=4`
+- `direct_workers=8` by workflow default; use a lower manual value if GitHub runner termination
+  errors recur.
 - `use_force_rebuild_list=false`
-- `min_initial_skipped=100000`
+- `min_initial_skipped=0` only for the current controlled rebuild from a weak cache baseline.  Once
+  a run times out after useful progress, the workflow's auto-continuation should raise the next
+  `min_initial_skipped` floor to at least `skipped + built` from
+  `route-a-direct-build-status.json`.
 - `cache_restore_key=` blank unless recovering from a known bad latest cache
 - `allow_broad_cache_restore=false`
+- `run_post_success_probe=true`
 
 If the run aborts with exit code `86`, inspect the cache restore key before rerunning.  That means
 the restored artifact cache is too cold for productive continuation.  If the log shows a weak latest
@@ -246,6 +251,10 @@ Run `196` was the observed flip point.  Run `195` saved a roughly 10 GB project 
 run `196` then failed to restore that cache, effectively restarting from a much smaller checkpoint.
 That is consistent with GitHub cache thrashing at the default repository cache limit rather than a
 Lean theorem failure.
+
+During the controlled rebuild, monitor the cache lineage by comparing `skipped + built` at the end
+of a run with the next run's `initial_skipped`.  If the next run starts far below that number, treat
+it as a cache-continuation failure rather than a mathematical failure.
 
 The recommended post-cert build order is:
 
@@ -295,3 +304,9 @@ provider path once the post-cert bridge is proved:
 
 After the current cert target succeeds, this should be the first narrow target to build before
 patching `Q0MinorEnergyBoundProvider` or attempting any broad final build.
+
+The GitHub smoke workflow now has `run_post_success_probe=true` by default.  If the selected target
+finishes with exit code `0`, the workflow immediately attempts a short direct build of
+`Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe` while the restored artifact cache is
+hot.  This is diagnostic only: a probe failure should be treated as a post-cert integration/name
+surface bug, not as evidence that the main certificate target failed.

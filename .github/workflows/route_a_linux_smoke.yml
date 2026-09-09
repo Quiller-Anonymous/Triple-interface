@@ -47,6 +47,10 @@ on:
         description: "Automatically dispatch another run after a resumable timeout"
         required: true
         default: "true"
+      run_post_success_probe:
+        description: "After the selected target succeeds, also smoke-build the narrow Route A post-cert bridge probe"
+        required: true
+        default: "true"
 
 permissions:
   contents: read
@@ -141,6 +145,7 @@ jobs:
           echo "cache_restore_key=${{ github.event.inputs.cache_restore_key }}"
           echo "allow_broad_cache_restore=${{ github.event.inputs.allow_broad_cache_restore }}"
           echo "auto_continue=${{ github.event.inputs.auto_continue }}"
+          echo "run_post_success_probe=${{ github.event.inputs.run_post_success_probe }}"
 
       - name: Audit Route A generated source archive
         id: archive_audit
@@ -555,6 +560,44 @@ jobs:
             echo "Build failed with exit code ${status}; saving logs/cache for diagnosis."
           fi
 
+      - name: Run post-success Route A bridge probe
+        id: post_success_probe
+        if: >-
+          always() &&
+          steps.build.outputs.exit_code == '0' &&
+          github.event.inputs.run_post_success_probe == 'true' &&
+          github.event.inputs.target != 'Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe'
+        continue-on-error: true
+        shell: bash
+        timeout-minutes: 35
+        run: |
+          set -euo pipefail
+          probe_target='Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe'
+          echo "Main Route A target succeeded; smoke-building post-cert bridge probe ${probe_target}."
+          set +e
+          lake env python3 -u scripts/ci/route_a_direct_olean_build.py \
+            --target "${probe_target}" \
+            --timeout-minutes 30 \
+            --module-timeout-minutes 30 \
+            --workers 2 \
+            --trust-unstamped-cache \
+            --status-file route-a-post-cert-bridge-probe-status.json \
+            2>&1 | tee route-a-post-cert-bridge-probe.log
+          status=${PIPESTATUS[0]}
+          set -e
+          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
+          {
+            echo "post_success_probe_target=${probe_target}"
+            echo "post_success_probe_exit_code=${status}"
+            echo "post_success_probe_updated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          } >> route-a-build-status.txt
+          if [ "$status" -eq 0 ]; then
+            echo "Post-success bridge probe built successfully."
+          else
+            echo "::warning::Post-success bridge probe did not build; inspect route-a-post-cert-bridge-probe.log."
+          fi
+          exit "$status"
+
       - name: Stop leftover Lean build processes
         if: always()
         shell: bash
@@ -636,6 +679,8 @@ jobs:
             echo "cache_save_outcome=${{ steps.route_a_cache_save.outcome }}"
             echo "cache_save_conclusion=${{ steps.route_a_cache_save.conclusion }}"
             echo "artifact_dir_exists=${{ steps.artifact_size.outputs.exists }}"
+            echo "post_success_probe_outcome=${{ steps.post_success_probe.outcome }}"
+            echo "post_success_probe_conclusion=${{ steps.post_success_probe.conclusion }}"
           } >> route-a-build-status.txt
           echo "Setup outcomes:"
           echo "Restore generated sources: ${{ steps.restore_sources.outcome }} / ${{ steps.restore_sources.conclusion }}"
@@ -650,6 +695,7 @@ jobs:
           echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
           echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
+          echo "Post-success probe: ${{ steps.post_success_probe.outcome }} / ${{ steps.post_success_probe.conclusion }}"
 
       - name: Dispatch continuation run after checkpoint timeout
         if: >-
@@ -672,6 +718,7 @@ jobs:
           MIN_INITIAL_SKIPPED: ${{ github.event.inputs.min_initial_skipped }}
           CACHE_RESTORE_KEY: ${{ github.event.inputs.cache_restore_key }}
           ALLOW_BROAD_CACHE_RESTORE: ${{ github.event.inputs.allow_broad_cache_restore }}
+          RUN_POST_SUCCESS_PROBE: ${{ github.event.inputs.run_post_success_probe }}
           REF_NAME: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -737,6 +784,7 @@ jobs:
                   "cache_restore_key": os.environ["CACHE_RESTORE_KEY"],
                   "allow_broad_cache_restore": os.environ["ALLOW_BROAD_CACHE_RESTORE"],
                   "auto_continue": "true",
+                  "run_post_success_probe": os.environ.get("RUN_POST_SUCCESS_PROBE", "true"),
               },
           }
           data = json.dumps(payload).encode()
@@ -768,6 +816,8 @@ jobs:
             route-a-restored-artifacts.txt
             route-a-src-deps.txt
             route-a-source-archive-audit.json
+            route-a-post-cert-bridge-probe.log
+            route-a-post-cert-bridge-probe-status.json
           retention-days: 14
 
       - name: Report final build status
@@ -787,6 +837,7 @@ jobs:
           echo "Resolved build status: ${status} (${source})"
           if [ "$status" = "0" ]; then
             echo "Route A Linux smoke target built successfully."
+            echo "Post-success probe: ${{ steps.post_success_probe.outcome }} / ${{ steps.post_success_probe.conclusion }}"
             exit 0
           fi
           if [ "$status" = "124" ] || [ "$status" = "137" ] || [ "$status" = "143" ]; then
