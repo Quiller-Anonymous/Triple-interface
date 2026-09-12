@@ -27,6 +27,10 @@ on:
         description: "Stop and checkpoint if one direct-mode module runs too long"
         required: true
         default: "150"
+      direct_checkpoint_margin_minutes:
+        description: "Minutes reserved between the direct builder self-timeout and the outer timeout guard"
+        required: true
+        default: "35"
       use_force_rebuild_list:
         description: "Apply q0cert_force_rebuild_modules.txt; normally leave false unless repairing stale interfaces"
         required: true
@@ -140,6 +144,7 @@ jobs:
           echo "build_mode=${{ github.event.inputs.build_mode }}"
           echo "direct_workers=${{ github.event.inputs.direct_workers }}"
           echo "module_timeout_minutes=${{ github.event.inputs.module_timeout_minutes }}"
+          echo "direct_checkpoint_margin_minutes=${{ github.event.inputs.direct_checkpoint_margin_minutes }}"
           echo "use_force_rebuild_list=${{ github.event.inputs.use_force_rebuild_list }}"
           echo "min_initial_skipped=${{ github.event.inputs.min_initial_skipped }}"
           echo "cache_restore_key=${{ github.event.inputs.cache_restore_key }}"
@@ -424,6 +429,7 @@ jobs:
           build_mode='${{ github.event.inputs.build_mode }}'
           direct_workers='${{ github.event.inputs.direct_workers }}'
           module_timeout_minutes='${{ github.event.inputs.module_timeout_minutes }}'
+          direct_checkpoint_margin_minutes='${{ github.event.inputs.direct_checkpoint_margin_minutes }}'
           use_force_rebuild_list='${{ github.event.inputs.use_force_rebuild_list }}'
           min_initial_skipped='${{ github.event.inputs.min_initial_skipped }}'
           case "$build_mode" in
@@ -444,9 +450,20 @@ jobs:
             echo "Requested direct_workers=${direct_workers}; capping at 8 for ubuntu-latest."
             direct_workers=8
           fi
+          if ! [[ "$direct_checkpoint_margin_minutes" =~ ^[0-9]+$ ]]; then
+            echo "Invalid direct_checkpoint_margin_minutes='${direct_checkpoint_margin_minutes}', using 35."
+            direct_checkpoint_margin_minutes=35
+          fi
+          if [ "$direct_checkpoint_margin_minutes" -lt 10 ]; then
+            direct_checkpoint_margin_minutes=10
+          fi
           direct_timeout="$actual_timeout"
-          if [ "$build_mode" = "direct" ] && [ "$direct_timeout" -gt 5 ]; then
-            direct_timeout=$((direct_timeout - 5))
+          if [ "$build_mode" = "direct" ]; then
+            if [ "$actual_timeout" -gt "$direct_checkpoint_margin_minutes" ]; then
+              direct_timeout=$((actual_timeout - direct_checkpoint_margin_minutes))
+            elif [ "$actual_timeout" -gt 10 ]; then
+              direct_timeout=$((actual_timeout - 10))
+            fi
           fi
           if ! [[ "$module_timeout_minutes" =~ ^[0-9]+$ ]]; then
             echo "Invalid module_timeout_minutes='${module_timeout_minutes}', using 150."
@@ -455,8 +472,15 @@ jobs:
           if [ "$module_timeout_minutes" -lt 10 ]; then
             module_timeout_minutes=10
           fi
-          if [ "$module_timeout_minutes" -gt "$direct_timeout" ]; then
-            module_timeout_minutes="$direct_timeout"
+          if [ "$build_mode" = "direct" ]; then
+            max_module_timeout="$direct_timeout"
+            if [ "$max_module_timeout" -gt 5 ]; then
+              max_module_timeout=$((max_module_timeout - 5))
+            fi
+            if [ "$module_timeout_minutes" -gt "$max_module_timeout" ]; then
+              echo "Reducing module_timeout_minutes from ${module_timeout_minutes} to ${max_module_timeout} so the direct builder can checkpoint before the outer timeout."
+              module_timeout_minutes="$max_module_timeout"
+            fi
           fi
           case "$use_force_rebuild_list" in
             true|false) ;;
@@ -484,6 +508,7 @@ jobs:
               echo "actual_build_timeout_minutes=${actual_timeout}"
               echo "direct_build_timeout_minutes=${direct_timeout}"
               echo "module_timeout_minutes=${module_timeout_minutes}"
+              echo "direct_checkpoint_margin_minutes=${direct_checkpoint_margin_minutes}"
               echo "use_force_rebuild_list=${use_force_rebuild_list}"
               echo "min_initial_skipped=${min_initial_skipped}"
               echo "workflow_sha=${GITHUB_SHA}"
@@ -508,6 +533,7 @@ jobs:
           if [ "$build_mode" = "direct" ]; then
             echo "Direct builder self-timeout: ${direct_timeout} minutes" | tee -a route-a-linux-smoke.log
             echo "Direct module timeout: ${module_timeout_minutes} minutes" | tee -a route-a-linux-smoke.log
+            echo "Direct checkpoint margin: ${direct_checkpoint_margin_minutes} minutes" | tee -a route-a-linux-smoke.log
           fi
           echo "Use force rebuild list: ${use_force_rebuild_list}" | tee -a route-a-linux-smoke.log
           echo "Minimum initial skipped: ${min_initial_skipped}" | tee -a route-a-linux-smoke.log
@@ -714,6 +740,7 @@ jobs:
           BUILD_MODE: ${{ github.event.inputs.build_mode }}
           DIRECT_WORKERS: ${{ github.event.inputs.direct_workers }}
           MODULE_TIMEOUT_MINUTES: ${{ github.event.inputs.module_timeout_minutes }}
+          DIRECT_CHECKPOINT_MARGIN_MINUTES: ${{ github.event.inputs.direct_checkpoint_margin_minutes }}
           USE_FORCE_REBUILD_LIST: ${{ github.event.inputs.use_force_rebuild_list }}
           MIN_INITIAL_SKIPPED: ${{ github.event.inputs.min_initial_skipped }}
           CACHE_RESTORE_KEY: ${{ github.event.inputs.cache_restore_key }}
@@ -779,6 +806,7 @@ jobs:
                   "build_mode": os.environ["BUILD_MODE"],
                   "direct_workers": os.environ["DIRECT_WORKERS"],
                   "module_timeout_minutes": os.environ["MODULE_TIMEOUT_MINUTES"],
+                  "direct_checkpoint_margin_minutes": os.environ["DIRECT_CHECKPOINT_MARGIN_MINUTES"],
                   "use_force_rebuild_list": os.environ["USE_FORCE_REBUILD_LIST"],
                   "min_initial_skipped": next_min_initial_skipped(),
                   "cache_restore_key": os.environ["CACHE_RESTORE_KEY"],

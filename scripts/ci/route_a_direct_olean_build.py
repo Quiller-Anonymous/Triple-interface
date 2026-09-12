@@ -25,6 +25,7 @@ from pathlib import Path
 
 _ACTIVE_PROCESSES: dict[int, tuple[str, subprocess.Popen]] = {}
 _ACTIVE_PROCESS_LOCK = threading.Lock()
+_TERMINATION_REQUESTED = threading.Event()
 SOURCE_HASH_STAMP_SUFFIX = ".route_a_source.sha256"
 
 
@@ -229,6 +230,12 @@ def terminate_active_processes(reason: str) -> None:
         terminate_process(module, process, reason)
 
 
+def request_termination(signum: int, _frame: object) -> None:
+    """Ask the scheduler to checkpoint instead of letting SIGTERM kill Python."""
+    print(f"[signal] received={signum}; requesting checkpoint shutdown", flush=True)
+    _TERMINATION_REQUESTED.set()
+
+
 def run_lean(root: Path, module: str, timeout_seconds: float | None) -> int:
     if timeout_seconds is not None and timeout_seconds <= 0:
         print(f"[timeout] {module}", flush=True)
@@ -396,6 +403,10 @@ def build_closure(
     submitted: dict[concurrent.futures.Future[int], tuple[str, float]] = {}
     try:
         while ready or submitted:
+            if _TERMINATION_REQUESTED.is_set():
+                print("[terminated] termination requested before next scheduler step", flush=True)
+                exit_code = 143
+                break
             remaining_time = deadline - time.monotonic()
             if remaining_time <= 0:
                 print("[timeout] build budget exhausted before next module", flush=True)
@@ -441,6 +452,10 @@ def build_closure(
             )
             if not done:
                 now = time.monotonic()
+                if _TERMINATION_REQUESTED.is_set():
+                    print("[terminated] termination requested while modules were running", flush=True)
+                    exit_code = 143
+                    break
                 if heartbeat_seconds > 0 and now - last_heartbeat >= heartbeat_seconds:
                     active = sorted(
                         ((now - module_started, module) for module, module_started in submitted.values()),
@@ -509,6 +524,9 @@ def build_closure(
 
 
 def main() -> int:
+    signal.signal(signal.SIGTERM, request_termination)
+    signal.signal(signal.SIGINT, request_termination)
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", required=True)
     parser.add_argument("--root", default=".")

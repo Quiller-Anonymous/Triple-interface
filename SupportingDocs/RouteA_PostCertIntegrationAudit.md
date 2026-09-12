@@ -232,6 +232,9 @@ interface:
 - `build_mode=direct`
 - `direct_workers=8` by workflow default; use a lower manual value if GitHub runner termination
   errors recur.
+- `direct_checkpoint_margin_minutes=35`.  This is intentionally larger than the old five-minute
+  margin so the direct builder can stop, terminate Lean children, write status, prune artifacts, and
+  reach cache-save steps before GitHub's outer timeout kills the job.
 - `use_force_rebuild_list=false`
 - `min_initial_skipped=0` only for the current controlled rebuild from a weak cache baseline.  Once
   a run times out after useful progress, the workflow's auto-continuation should raise the next
@@ -255,6 +258,11 @@ Lean theorem failure.
 During the controlled rebuild, monitor the cache lineage by comparing `skipped + built` at the end
 of a run with the next run's `initial_skipped`.  If the next run starts far below that number, treat
 it as a cache-continuation failure rather than a mathematical failure.
+
+If the log ends with `Terminated` / exit code `143` but does not print cache-save or final-status
+lines, the build step was killed too close to the outer timeout.  Do not rerun with the same timing
+inputs.  Use the patched workflow with the larger direct checkpoint margin, or manually set
+`build_timeout_minutes=200` and keep `direct_checkpoint_margin_minutes=35`.
 
 The recommended post-cert build order is:
 
