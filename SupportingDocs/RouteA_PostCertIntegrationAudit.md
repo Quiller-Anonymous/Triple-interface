@@ -264,6 +264,12 @@ lines, the build step was killed too close to the outer timeout.  Do not rerun w
 inputs.  Use the patched workflow with the larger direct checkpoint margin, or manually set
 `build_timeout_minutes=200` and keep `direct_checkpoint_margin_minutes=35`.
 
+If the cache save succeeds but the automatic continuation dispatch fails with a GitHub API `500`,
+that is an infrastructure failure after the checkpoint accounting has already succeeded.  Manually
+start a new workflow run using the `next_min_initial_skipped` printed in the continuation cache
+guard.  The workflow now retries transient dispatch failures and records
+`route-a-continuation-dispatch.json` for diagnosis.
+
 The recommended post-cert build order is:
 
 1. `Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe`

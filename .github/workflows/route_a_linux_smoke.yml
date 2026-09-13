@@ -729,8 +729,9 @@ jobs:
           github.event.inputs.auto_continue == 'true' &&
           steps.artifact_size.outputs.exists == 'true' &&
           steps.route_a_cache_save.outcome == 'success'
+        continue-on-error: true
         shell: bash
-        timeout-minutes: 3
+        timeout-minutes: 6
         env:
           BUILD_EXIT_CODE: ${{ steps.build.outputs.exit_code }}
           GH_TOKEN: ${{ github.token }}
@@ -756,11 +757,13 @@ jobs:
             exit 0
           fi
           echo "Checkpoint timeout detected; dispatching continuation run for ${TARGET} on ${REF_NAME}."
-          sleep 30
           python3 - <<'PY'
           import json
           import os
+          import time
+          import urllib.error
           import urllib.request
+          from pathlib import Path
 
           repo = os.environ["REPOSITORY"]
           workflow_id = "route_a_linux_smoke.yml"
@@ -816,19 +819,85 @@ jobs:
               },
           }
           data = json.dumps(payload).encode()
-          request = urllib.request.Request(
-              url,
-              data=data,
-              method="POST",
-              headers={
-                  "Accept": "application/vnd.github+json",
-                  "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
-                  "X-GitHub-Api-Version": "2022-11-28",
-                  "Content-Type": "application/json",
-              },
+          Path("route-a-continuation-dispatch.json").write_text(
+              json.dumps(
+                  {
+                      "status": "pending",
+                      "url": url,
+                      "payload": payload,
+                  },
+                  indent=2,
+                  sort_keys=True,
+              )
+              + "\n"
           )
-          with urllib.request.urlopen(request) as response:
-              print(f"Dispatched continuation run: HTTP {response.status}")
+
+          delays = [10, 20, 40, 60]
+          last_error = ""
+          for attempt, delay in enumerate([0] + delays, start=1):
+              if delay:
+                  print(f"Retrying continuation dispatch after {delay}s...")
+                  time.sleep(delay)
+              request = urllib.request.Request(
+                  url,
+                  data=data,
+                  method="POST",
+                  headers={
+                      "Accept": "application/vnd.github+json",
+                      "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                      "Content-Type": "application/json",
+                  },
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=30) as response:
+                      print(f"Dispatched continuation run: HTTP {response.status}")
+                      last_error = ""
+                      Path("route-a-continuation-dispatch.json").write_text(
+                          json.dumps(
+                              {
+                                  "status": "dispatched",
+                                  "attempt": attempt,
+                                  "http_status": response.status,
+                                  "payload": payload,
+                              },
+                              indent=2,
+                              sort_keys=True,
+                          )
+                          + "\n"
+                      )
+                      break
+              except urllib.error.HTTPError as exc:
+                  body = exc.read().decode("utf-8", errors="replace")
+                  last_error = f"HTTP {exc.code}: {exc.reason}: {body[:1000]}"
+                  print(f"Continuation dispatch attempt {attempt} failed: {last_error}")
+                  if exc.code not in {429, 500, 502, 503, 504}:
+                      break
+              except Exception as exc:
+                  last_error = repr(exc)
+                  print(f"Continuation dispatch attempt {attempt} failed: {last_error}")
+          else:
+              attempt = len(delays) + 1
+
+          if last_error:
+              print(
+                  "::warning::Continuation dispatch did not complete automatically. "
+                  "The cache checkpoint may still be valid; manually rerun the workflow "
+                  "with the min_initial_skipped shown in the continuation cache guard."
+              )
+              Path("route-a-continuation-dispatch.json").write_text(
+                  json.dumps(
+                      {
+                          "status": "failed",
+                          "attempts": attempt,
+                          "last_error": last_error,
+                          "payload": payload,
+                      },
+                      indent=2,
+                      sort_keys=True,
+                  )
+                  + "\n"
+              )
           PY
 
       - name: Upload smoke log
@@ -846,6 +915,7 @@ jobs:
             route-a-source-archive-audit.json
             route-a-post-cert-bridge-probe.log
             route-a-post-cert-bridge-probe-status.json
+            route-a-continuation-dispatch.json
           retention-days: 14
 
       - name: Report final build status
