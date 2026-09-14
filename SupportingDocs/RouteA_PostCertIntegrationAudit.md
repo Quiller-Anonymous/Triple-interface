@@ -230,8 +230,9 @@ interface:
 
 - `target=Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert`
 - `build_mode=direct`
-- `direct_workers=8` by workflow default; use a lower manual value if GitHub runner termination
-  errors recur.
+- `direct_workers=4` by workflow default while the build is crossing the slow non-dyadic frontier.
+  Use `6` only as a monitored throughput experiment.  Avoid `8` unless a run has enough headroom to
+  reach cache-save cleanup reliably.
 - `direct_checkpoint_margin_minutes=35`.  This is intentionally larger than the old five-minute
   margin so the direct builder can stop, terminate Lean children, write status, prune artifacts, and
   reach cache-save steps before GitHub's outer timeout kills the job.
@@ -269,6 +270,12 @@ that is an infrastructure failure after the checkpoint accounting has already su
 start a new workflow run using the `next_min_initial_skipped` printed in the continuation cache
 guard.  The workflow now retries transient dispatch failures and records
 `route-a-continuation-dispatch.json` for diagnosis.
+
+If a run on SHA `269bbc694` or later still ends early with exit code `143` but no signal-handler or
+cache-save lines, treat it as GitHub runner loss/termination rather than a normal timeout.  Restart
+from the last successful checkpoint with `direct_workers=4`.  If early loss repeats even at four
+workers, shorten the run interval manually by lowering `build_timeout_minutes`; this saves smaller
+checkpoints before the runner enters the observed failure window.
 
 The recommended post-cert build order is:
 

@@ -22,7 +22,7 @@ on:
       direct_workers:
         description: "Parallel workers for direct mode"
         required: true
-        default: "8"
+        default: "4"
       module_timeout_minutes:
         description: "Stop and checkpoint if one direct-mode module runs too long"
         required: true
