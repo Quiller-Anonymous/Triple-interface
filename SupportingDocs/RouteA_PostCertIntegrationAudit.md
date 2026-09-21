@@ -181,6 +181,17 @@ The current workflow now performs these cheap checks before spending hours in Le
   import-chain build and are pruned before cache save.  This is intended to keep checkpoints below
   the GitHub Actions cache eviction threshold.
 - Uploads `route-a-source-archive-audit.json` with the normal smoke-log artifact.
+- Can publish a compiled milestone independently of the evictable Actions cache.  Set
+  `publish_durable_checkpoint=true` on one workflow run.  After that run reaches its normal
+  checkpoint boundary, it packages only `.lake/build/lib/lean/Goldbach` into checksum-protected
+  1.5 GB tar parts and uploads the named artifact
+  `route-a-durable-checkpoint-RUN_ID` with 90-day retention.  The automatically dispatched
+  continuation resets publication to `false`, so a milestone is uploaded once rather than on every
+  continuation.
+- Can recover directly from such a milestone by setting `durable_checkpoint_run_id=RUN_ID`.
+  The workflow downloads that exact named artifact, verifies `SHA256SUMS`, restores the compiled
+  Goldbach tree, and skips the ordinary project-cache restore so an older cache cannot overwrite the
+  milestone.  Leave `cache_restore_key` blank for this recovery path.
 
 This does not prove the target, but it should prevent another delayed failure caused by a missing
 ignored source file.
@@ -244,6 +255,17 @@ interface:
 - `cache_restore_key=` blank unless recovering from a known bad latest cache
 - `allow_broad_cache_restore=false`
 - `run_post_success_probe=true`
+- `publish_durable_checkpoint=false` during ordinary continuation.  Turn it on deliberately after
+  a high-value checkpoint (for example, the present 100k-plus compiled state or final cert success).
+- `durable_checkpoint_run_id=` blank during ordinary continuation.  To recover from a published
+  milestone, enter the producing GitHub workflow run ID here.
+
+Actions artifacts are more stable than the repository's rolling build cache, but they are not a
+permanent archive: this workflow requests 90-day retention, subject to repository policy and
+available Actions storage.  Record the producing run ID and download an important milestone outside
+GitHub, or restore and republish it before expiry.  A successful publication prints
+`Durable checkpoint upload: success / success`; do not regard the milestone as protected until that
+line appears.
 
 If the run aborts with exit code `86`, inspect the cache restore key before rerunning.  That means
 the restored artifact cache is too cold for productive continuation.  If the log shows a weak latest

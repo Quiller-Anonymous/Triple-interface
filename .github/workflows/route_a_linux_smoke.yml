@@ -55,6 +55,14 @@ on:
         description: "After the selected target succeeds, also smoke-build the narrow Route A post-cert bridge probe"
         required: true
         default: "true"
+      publish_durable_checkpoint:
+        description: "Upload this run's compiled Goldbach checkpoint as a restorable 90-day artifact"
+        required: true
+        default: "false"
+      durable_checkpoint_run_id:
+        description: "Optional workflow run ID containing route-a-durable-checkpoint-RUN_ID; restores it before Actions cache"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -151,6 +159,8 @@ jobs:
           echo "allow_broad_cache_restore=${{ github.event.inputs.allow_broad_cache_restore }}"
           echo "auto_continue=${{ github.event.inputs.auto_continue }}"
           echo "run_post_success_probe=${{ github.event.inputs.run_post_success_probe }}"
+          echo "publish_durable_checkpoint=${{ github.event.inputs.publish_durable_checkpoint }}"
+          echo "durable_checkpoint_run_id=${{ github.event.inputs.durable_checkpoint_run_id }}"
 
       - name: Audit Route A generated source archive
         id: archive_audit
@@ -239,6 +249,43 @@ jobs:
               echo "workflow_sha=${GITHUB_SHA}"
               echo "prepared_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
             } > route-a-build-status.txt
+          fi
+
+      - name: Restore durable Route A checkpoint
+        id: durable_checkpoint_restore
+        if: github.event.inputs.durable_checkpoint_run_id != ''
+        shell: bash
+        timeout-minutes: 45
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHECKPOINT_RUN_ID: ${{ github.event.inputs.durable_checkpoint_run_id }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          artifact_name="route-a-durable-checkpoint-${CHECKPOINT_RUN_ID}"
+          download_dir="${RUNNER_TEMP}/route-a-durable-checkpoint-${CHECKPOINT_RUN_ID}"
+          mkdir -p "$download_dir"
+          echo "Restoring durable checkpoint '${artifact_name}' from run ${CHECKPOINT_RUN_ID}."
+          gh run download "$CHECKPOINT_RUN_ID" \
+            --repo "$REPOSITORY" \
+            --name "$artifact_name" \
+            --dir "$download_dir"
+          (
+            cd "$download_dir"
+            sha256sum --check SHA256SUMS
+          )
+          mkdir -p .lake/build/lib/lean
+          find "$download_dir" -maxdepth 1 -type f -name 'route-a-checkpoint-*.tar.part-*' \
+            -print0 \
+            | sort -z \
+            | xargs -0 cat \
+            | tar --ignore-zeros -xf - -C .lake/build/lib/lean
+          restored_olean="$(find .lake/build/lib/lean/Goldbach -type f -name '*.olean' 2>/dev/null | wc -l | tr -d ' ')"
+          restored_stamps="$(find .lake/build/lib/lean/Goldbach -type f -name '*.route_a_source.sha256' 2>/dev/null | wc -l | tr -d ' ')"
+          echo "Restored durable checkpoint: olean=${restored_olean} source_hash_stamps=${restored_stamps}."
+          if [ "$restored_olean" -eq 0 ]; then
+            echo "::error::Durable checkpoint contained no Goldbach .olean files."
+            exit 2
           fi
 
       - name: Compute project Lake artifact cache keys
@@ -340,6 +387,7 @@ jobs:
 
       - name: Restore project Lake artifact cache
         id: route_a_cache_restore
+        if: github.event.inputs.durable_checkpoint_run_id == ''
         continue-on-error: true
         timeout-minutes: 20
         uses: actions/cache/restore@v4
@@ -677,6 +725,60 @@ jobs:
           path: .lake/build/lib/lean
           key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
 
+      - name: Package durable Route A checkpoint
+        id: durable_checkpoint_package
+        if: >-
+          always() &&
+          github.event.inputs.publish_durable_checkpoint == 'true' &&
+          steps.artifact_size.outputs.exists == 'true' &&
+          steps.build.outputs.save_cache == 'true'
+        shell: bash
+        timeout-minutes: 30
+        run: |
+          set -euo pipefail
+          checkpoint_dir="route-a-durable-checkpoint"
+          mkdir -p "$checkpoint_dir"
+          olean_count="$(find .lake/build/lib/lean/Goldbach -type f -name '*.olean' 2>/dev/null | wc -l | tr -d ' ')"
+          stamp_count="$(find .lake/build/lib/lean/Goldbach -type f -name '*.route_a_source.sha256' 2>/dev/null | wc -l | tr -d ' ')"
+          if [ "$olean_count" -eq 0 ]; then
+            echo "::error::Refusing to publish an empty durable checkpoint."
+            exit 2
+          fi
+          cat > "$checkpoint_dir/MANIFEST.txt" <<EOF
+          format=route-a-lean-artifacts-v1
+          workflow_run_id=${GITHUB_RUN_ID}
+          workflow_run_attempt=${GITHUB_RUN_ATTEMPT}
+          workflow_sha=${GITHUB_SHA}
+          target=${{ github.event.inputs.target }}
+          olean_count=${olean_count}
+          source_hash_stamp_count=${stamp_count}
+          created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          restore_input_durable_checkpoint_run_id=${GITHUB_RUN_ID}
+          EOF
+          tar -C .lake/build/lib/lean -cf - Goldbach \
+            | split -b 1500m -d -a 3 - "$checkpoint_dir/route-a-checkpoint-${GITHUB_RUN_ID}.tar.part-"
+          (
+            cd "$checkpoint_dir"
+            sha256sum MANIFEST.txt route-a-checkpoint-*.tar.part-* > SHA256SUMS
+          )
+          part_count="$(find "$checkpoint_dir" -type f -name 'route-a-checkpoint-*.tar.part-*' | wc -l | tr -d ' ')"
+          checkpoint_size="$(du -sh "$checkpoint_dir" | awk '{print $1}')"
+          echo "parts=${part_count}" >> "$GITHUB_OUTPUT"
+          echo "olean_count=${olean_count}" >> "$GITHUB_OUTPUT"
+          echo "Packaged durable checkpoint: parts=${part_count} olean=${olean_count} stamps=${stamp_count} size=${checkpoint_size}."
+
+      - name: Upload durable Route A checkpoint
+        id: durable_checkpoint_upload
+        if: always() && steps.durable_checkpoint_package.outcome == 'success'
+        timeout-minutes: 60
+        uses: actions/upload-artifact@v4
+        with:
+          name: route-a-durable-checkpoint-${{ github.run_id }}
+          path: route-a-durable-checkpoint/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 90
+
       - name: Record cache checkpoint status
         if: always()
         shell: bash
@@ -707,6 +809,13 @@ jobs:
             echo "artifact_dir_exists=${{ steps.artifact_size.outputs.exists }}"
             echo "post_success_probe_outcome=${{ steps.post_success_probe.outcome }}"
             echo "post_success_probe_conclusion=${{ steps.post_success_probe.conclusion }}"
+            echo "durable_checkpoint_restore_outcome=${{ steps.durable_checkpoint_restore.outcome }}"
+            echo "durable_checkpoint_restore_conclusion=${{ steps.durable_checkpoint_restore.conclusion }}"
+            echo "durable_checkpoint_package_outcome=${{ steps.durable_checkpoint_package.outcome }}"
+            echo "durable_checkpoint_package_conclusion=${{ steps.durable_checkpoint_package.conclusion }}"
+            echo "durable_checkpoint_upload_outcome=${{ steps.durable_checkpoint_upload.outcome }}"
+            echo "durable_checkpoint_upload_conclusion=${{ steps.durable_checkpoint_upload.conclusion }}"
+            echo "durable_checkpoint_run_id=${GITHUB_RUN_ID}"
           } >> route-a-build-status.txt
           echo "Setup outcomes:"
           echo "Restore generated sources: ${{ steps.restore_sources.outcome }} / ${{ steps.restore_sources.conclusion }}"
@@ -722,6 +831,8 @@ jobs:
           echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
           echo "Post-success probe: ${{ steps.post_success_probe.outcome }} / ${{ steps.post_success_probe.conclusion }}"
+          echo "Durable checkpoint restore: ${{ steps.durable_checkpoint_restore.outcome }} / ${{ steps.durable_checkpoint_restore.conclusion }}"
+          echo "Durable checkpoint upload: ${{ steps.durable_checkpoint_upload.outcome }} / ${{ steps.durable_checkpoint_upload.conclusion }}"
 
       - name: Dispatch continuation run after checkpoint timeout
         if: >-
@@ -747,6 +858,7 @@ jobs:
           CACHE_RESTORE_KEY: ${{ github.event.inputs.cache_restore_key }}
           ALLOW_BROAD_CACHE_RESTORE: ${{ github.event.inputs.allow_broad_cache_restore }}
           RUN_POST_SUCCESS_PROBE: ${{ github.event.inputs.run_post_success_probe }}
+          DURABLE_CHECKPOINT_RUN_ID: ${{ github.event.inputs.durable_checkpoint_run_id }}
           REF_NAME: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
         run: |
@@ -816,6 +928,8 @@ jobs:
                   "allow_broad_cache_restore": os.environ["ALLOW_BROAD_CACHE_RESTORE"],
                   "auto_continue": "true",
                   "run_post_success_probe": os.environ.get("RUN_POST_SUCCESS_PROBE", "true"),
+                  "publish_durable_checkpoint": "false",
+                  "durable_checkpoint_run_id": os.environ.get("DURABLE_CHECKPOINT_RUN_ID", ""),
               },
           }
           data = json.dumps(payload).encode()
