@@ -30,10 +30,30 @@ def read_direct_json(path: Path) -> str:
     return str(value).strip()
 
 
+def read_status_from_log(path: Path) -> str:
+    """Read the last direct-builder JSON status streamed into the smoke log."""
+    if not path.exists():
+        return ""
+    status = ""
+    for raw_line in path.read_text(errors="ignore").splitlines():
+        marker = "[status] "
+        marker_index = raw_line.find(marker)
+        if marker_index < 0:
+            continue
+        payload = raw_line[marker_index + len(marker) :].strip()
+        try:
+            value = json.loads(payload).get("exit_code", "")
+        except Exception:
+            continue
+        status = str(value).strip()
+    return status
+
+
 def resolve_status() -> tuple[str, str]:
     step_status = os.environ.get("BUILD_EXIT_CODE", "").strip()
     text_status = read_status_file(Path("route-a-build-status.txt"))
     direct_status = read_direct_json(Path("route-a-direct-build-status.json"))
+    log_status = read_status_from_log(Path("route-a-linux-smoke.log"))
     checkpoint_statuses = {"0", "124", "137", "143"}
 
     # The direct builder writes its JSON status after terminating workers and
@@ -42,6 +62,8 @@ def resolve_status() -> tuple[str, str]:
     # checkpoint status instead of suppressing cache save/continuation.
     if direct_status in checkpoint_statuses and step_status not in checkpoint_statuses:
         return direct_status, "route-a-direct-build-status.json:reconciled"
+    if log_status in checkpoint_statuses and step_status not in checkpoint_statuses:
+        return log_status, "route-a-linux-smoke.log:reconciled"
 
     status = step_status
     source = "step_output"
@@ -51,6 +73,9 @@ def resolve_status() -> tuple[str, str]:
     if not status:
         status = direct_status
         source = "route-a-direct-build-status.json"
+    if not status:
+        status = log_status
+        source = "route-a-linux-smoke.log"
     if status == "running":
         # The build step was killed before final cleanup. Treat it as a
         # checkpointable termination rather than an opaque setup failure.
