@@ -69,6 +69,26 @@ def extract_left_rows(text: str) -> tuple[int, ...]:
     return tuple(sorted({int(left) for left, _right in pairs}))
 
 
+def existing_split_rows_for_group(group: int) -> tuple[int, ...]:
+    """Rows already delegated to split modules by wrappers in this group."""
+    split_ids: set[int] = set()
+    for idx in class_group_range(group):
+        path = class_path(idx)
+        if not path.exists():
+            continue
+        split_ids.update(
+            int(match)
+            for match in re.findall(r"NonDyadicSplit(\d+)", path.read_text(errors="ignore"))
+        )
+
+    rows: set[int] = set()
+    for split_id in split_ids:
+        split_path = MODULE_DIR / f"{SPLIT_MARKER}{split_id}.lean"
+        if split_path.exists():
+            rows.update(extract_left_rows(split_path.read_text(errors="ignore")))
+    return tuple(sorted(rows))
+
+
 def scan_group(group: int, threshold_bytes: int, include_split: bool) -> GroupPlan | None:
     large: list[LargeClass] = []
     row_counts: collections.Counter[int] = collections.Counter()
@@ -237,6 +257,12 @@ def main() -> int:
             plan,
             max_rows=args.max_rows_per_group,
             min_row_count=args.min_row_count,
+        )
+        # The group builder rewrites every class wrapper in the group.  Preserve
+        # rows selected by earlier passes or a later pass can inline those hard
+        # records again while splitting a different row.
+        chosen_rows = tuple(
+            sorted(set(chosen_rows) | set(existing_split_rows_for_group(group)))
         )
         if not chosen_rows:
             continue
