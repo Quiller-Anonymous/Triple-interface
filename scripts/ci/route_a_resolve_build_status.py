@@ -31,13 +31,25 @@ def read_direct_json(path: Path) -> str:
 
 
 def resolve_status() -> tuple[str, str]:
-    status = os.environ.get("BUILD_EXIT_CODE", "").strip()
+    step_status = os.environ.get("BUILD_EXIT_CODE", "").strip()
+    text_status = read_status_file(Path("route-a-build-status.txt"))
+    direct_status = read_direct_json(Path("route-a-direct-build-status.json"))
+    checkpoint_statuses = {"0", "124", "137", "143"}
+
+    # The direct builder writes its JSON status after terminating workers and
+    # accounting for completed artifacts.  If the surrounding Actions shell
+    # subsequently reports a generic failure, retain the authoritative direct
+    # checkpoint status instead of suppressing cache save/continuation.
+    if direct_status in checkpoint_statuses and step_status not in checkpoint_statuses:
+        return direct_status, "route-a-direct-build-status.json:reconciled"
+
+    status = step_status
     source = "step_output"
     if not status:
-        status = read_status_file(Path("route-a-build-status.txt"))
+        status = text_status
         source = "route-a-build-status.txt"
     if not status:
-        status = read_direct_json(Path("route-a-direct-build-status.json"))
+        status = direct_status
         source = "route-a-direct-build-status.json"
     if status == "running":
         # The build step was killed before final cleanup. Treat it as a

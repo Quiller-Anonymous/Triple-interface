@@ -634,11 +634,30 @@ jobs:
             echo "Build failed with exit code ${status}; saving logs/cache for diagnosis."
           fi
 
+      - name: Reconcile Route A checkpoint status
+        id: checkpoint_status
+        if: always()
+        shell: bash
+        timeout-minutes: 2
+        env:
+          BUILD_EXIT_CODE: ${{ steps.build.outputs.exit_code }}
+        run: |
+          set -euo pipefail
+          eval "$(python3 scripts/ci/route_a_resolve_build_status.py --shell)"
+          save_cache=false
+          case "$status" in
+            0|124|137|143) save_cache=true ;;
+          esac
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          echo "source=${source}" >> "$GITHUB_OUTPUT"
+          echo "save_cache=${save_cache}" >> "$GITHUB_OUTPUT"
+          echo "Reconciled Route A status: ${status:-missing} (${source}); save_cache=${save_cache}."
+
       - name: Run post-success Route A bridge probe
         id: post_success_probe
         if: >-
           always() &&
-          steps.build.outputs.exit_code == '0' &&
+          steps.checkpoint_status.outputs.status == '0' &&
           github.event.inputs.run_post_success_probe == 'true' &&
           github.event.inputs.target != 'Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe'
         continue-on-error: true
@@ -717,7 +736,7 @@ jobs:
 
       - name: Save project Lake artifact cache
         id: route_a_cache_save
-        if: always() && steps.artifact_size.outputs.exists == 'true' && steps.build.outputs.save_cache == 'true'
+        if: always() && steps.artifact_size.outputs.exists == 'true' && steps.checkpoint_status.outputs.save_cache == 'true'
         continue-on-error: true
         timeout-minutes: 45
         uses: actions/cache/save@v4
@@ -731,7 +750,7 @@ jobs:
           always() &&
           github.event.inputs.publish_durable_checkpoint == 'true' &&
           steps.artifact_size.outputs.exists == 'true' &&
-          steps.build.outputs.save_cache == 'true'
+          steps.checkpoint_status.outputs.save_cache == 'true'
         shell: bash
         timeout-minutes: 30
         run: |
@@ -806,6 +825,8 @@ jobs:
             echo "cache_restore_matched_key=${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
             echo "cache_save_outcome=${{ steps.route_a_cache_save.outcome }}"
             echo "cache_save_conclusion=${{ steps.route_a_cache_save.conclusion }}"
+            echo "reconciled_build_status=${{ steps.checkpoint_status.outputs.status }}"
+            echo "reconciled_build_status_source=${{ steps.checkpoint_status.outputs.source }}"
             echo "artifact_dir_exists=${{ steps.artifact_size.outputs.exists }}"
             echo "post_success_probe_outcome=${{ steps.post_success_probe.outcome }}"
             echo "post_success_probe_conclusion=${{ steps.post_success_probe.conclusion }}"
