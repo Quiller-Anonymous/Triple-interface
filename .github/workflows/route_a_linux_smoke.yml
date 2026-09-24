@@ -88,14 +88,41 @@ jobs:
           set -euo pipefail
           echo "Disk before cleanup:"
           df -h
-          sudo rm -rf /usr/share/dotnet || true
-          sudo rm -rf /usr/local/lib/android || true
-          sudo rm -rf /opt/ghc || true
-          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
-          sudo rm -rf /usr/local/share/boost || true
-          sudo rm -rf /usr/local/.ghcup || true
-          docker system prune -af || true
-          sudo apt-get clean || true
+
+          free_gib() {
+            df -Pk / | awk 'NR == 2 { print int($4 / 1024 / 1024) }'
+          }
+
+          required_free_gib=70
+          if [ "$(free_gib)" -ge "$required_free_gib" ]; then
+            echo "At least ${required_free_gib} GiB is already free; skipping destructive SDK cleanup."
+            exit 0
+          fi
+
+          cleanup_paths=(
+            /usr/share/dotnet
+            /usr/local/lib/android
+            /opt/ghc
+            /opt/hostedtoolcache/CodeQL
+            /usr/local/share/boost
+            /usr/local/.ghcup
+          )
+          for path in "${cleanup_paths[@]}"; do
+            if [ -e "$path" ]; then
+              echo "Removing $path (bounded to 75 seconds)."
+              sudo timeout --signal=TERM --kill-after=10s 75s rm -rf -- "$path" || true
+            fi
+            if [ "$(free_gib)" -ge "$required_free_gib" ]; then
+              break
+            fi
+          done
+
+          if [ "$(free_gib)" -lt "$required_free_gib" ]; then
+            timeout --signal=TERM --kill-after=10s 75s docker system prune -af || true
+          fi
+          if [ "$(free_gib)" -lt "$required_free_gib" ]; then
+            sudo timeout --signal=TERM --kill-after=10s 75s apt-get clean || true
+          fi
           echo "Disk after cleanup:"
           df -h
 
