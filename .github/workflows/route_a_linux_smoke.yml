@@ -903,7 +903,7 @@ jobs:
           DIRECT_CHECKPOINT_MARGIN_MINUTES: ${{ github.event.inputs.direct_checkpoint_margin_minutes }}
           USE_FORCE_REBUILD_LIST: ${{ github.event.inputs.use_force_rebuild_list }}
           MIN_INITIAL_SKIPPED: ${{ github.event.inputs.min_initial_skipped }}
-          CACHE_RESTORE_KEY: ${{ github.event.inputs.cache_restore_key }}
+          SAVED_CACHE_KEY: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
           ALLOW_BROAD_CACHE_RESTORE: ${{ github.event.inputs.allow_broad_cache_restore }}
           RUN_POST_SUCCESS_PROBE: ${{ github.event.inputs.run_post_success_probe }}
           DURABLE_CHECKPOINT_RUN_ID: ${{ github.event.inputs.durable_checkpoint_run_id }}
@@ -972,7 +972,10 @@ jobs:
                   "direct_checkpoint_margin_minutes": os.environ["DIRECT_CHECKPOINT_MARGIN_MINUTES"],
                   "use_force_rebuild_list": os.environ["USE_FORCE_REBUILD_LIST"],
                   "min_initial_skipped": next_min_initial_skipped(),
-                  "cache_restore_key": os.environ["CACHE_RESTORE_KEY"],
+                  # This step only runs after the current run saved its cache.
+                  # Continuing from the original input key would repeatedly
+                  # restore the older checkpoint while raising the cache floor.
+                  "cache_restore_key": os.environ["SAVED_CACHE_KEY"],
                   "allow_broad_cache_restore": os.environ["ALLOW_BROAD_CACHE_RESTORE"],
                   "auto_continue": "true",
                   "run_post_success_probe": os.environ.get("RUN_POST_SUCCESS_PROBE", "true"),
