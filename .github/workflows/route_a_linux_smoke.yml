@@ -783,14 +783,24 @@ jobs:
         timeout-minutes: 30
         run: |
           set -euo pipefail
+          echo "exists=false" >> "$GITHUB_OUTPUT"
           checkpoint_dir="route-a-durable-checkpoint"
-          mkdir -p "$checkpoint_dir"
           olean_count="$(find .lake/build/lib/lean/Goldbach -type f -name '*.olean' 2>/dev/null | wc -l | tr -d ' ')"
           stamp_count="$(find .lake/build/lib/lean/Goldbach -type f -name '*.route_a_source.sha256' 2>/dev/null | wc -l | tr -d ' ')"
           if [ "$olean_count" -eq 0 ]; then
             echo "::error::Refusing to publish an empty durable checkpoint."
             exit 2
           fi
+          source_bytes="$(du -sb .lake/build/lib/lean/Goldbach | awk '{print $1}')"
+          available_bytes="$(df --output=avail -B1 . | tail -n 1 | tr -d ' ')"
+          reserve_bytes=$((3 * 1024 * 1024 * 1024))
+          required_bytes=$((source_bytes + reserve_bytes))
+          echo "Durable checkpoint disk preflight: source_bytes=${source_bytes} available_bytes=${available_bytes} required_bytes=${required_bytes}."
+          if [ "$available_bytes" -lt "$required_bytes" ]; then
+            echo "::warning::Skipping durable checkpoint: packaging a second artifact copy would exhaust runner disk. The Actions cache has already been saved."
+            exit 0
+          fi
+          mkdir -p "$checkpoint_dir"
           cat > "$checkpoint_dir/MANIFEST.txt" <<EOF
           format=route-a-lean-artifacts-v1
           workflow_run_id=${GITHUB_RUN_ID}
@@ -812,11 +822,15 @@ jobs:
           checkpoint_size="$(du -sh "$checkpoint_dir" | awk '{print $1}')"
           echo "parts=${part_count}" >> "$GITHUB_OUTPUT"
           echo "olean_count=${olean_count}" >> "$GITHUB_OUTPUT"
+          echo "exists=true" >> "$GITHUB_OUTPUT"
           echo "Packaged durable checkpoint: parts=${part_count} olean=${olean_count} stamps=${stamp_count} size=${checkpoint_size}."
 
       - name: Upload durable Route A checkpoint
         id: durable_checkpoint_upload
-        if: always() && steps.durable_checkpoint_package.outcome == 'success'
+        if: >-
+          always() &&
+          steps.durable_checkpoint_package.outcome == 'success' &&
+          steps.durable_checkpoint_package.outputs.exists == 'true'
         timeout-minutes: 60
         uses: actions/upload-artifact@v4
         with:
