@@ -29,6 +29,41 @@ _TERMINATION_REQUESTED = threading.Event()
 SOURCE_HASH_STAMP_SUFFIX = ".route_a_source.sha256"
 
 
+def available_memory_bytes() -> int | None:
+    """Return the most restrictive available-memory estimate on Linux."""
+    candidates: list[int] = []
+    meminfo = Path("/proc/meminfo")
+    if meminfo.exists():
+        for line in meminfo.read_text(errors="ignore").splitlines():
+            if line.startswith("MemAvailable:"):
+                fields = line.split()
+                if len(fields) >= 2:
+                    candidates.append(int(fields[1]) * 1024)
+                break
+
+    # GitHub-hosted runners use cgroup v2. Keep v1 support for local CI images.
+    cgroup_pairs = [
+        (Path("/sys/fs/cgroup/memory.current"), Path("/sys/fs/cgroup/memory.max")),
+        (
+            Path("/sys/fs/cgroup/memory/memory.usage_in_bytes"),
+            Path("/sys/fs/cgroup/memory/memory.limit_in_bytes"),
+        ),
+    ]
+    for current_path, maximum_path in cgroup_pairs:
+        if not current_path.exists() or not maximum_path.exists():
+            continue
+        current_text = current_path.read_text(errors="ignore").strip()
+        maximum_text = maximum_path.read_text(errors="ignore").strip()
+        if maximum_text == "max":
+            continue
+        try:
+            candidates.append(max(0, int(maximum_text) - int(current_text)))
+        except ValueError:
+            continue
+
+    return min(candidates) if candidates else None
+
+
 def module_to_source(root: Path, module: str) -> Path:
     return root / (module.replace(".", "/") + ".lean")
 
@@ -288,6 +323,7 @@ def build_closure(
     heartbeat_seconds: float,
     slow_module_log_seconds: float,
     min_initial_skipped: int,
+    min_available_memory_bytes: int,
 ) -> tuple[int, int, str | None, int, dict[str, int]]:
     """Compile the local module DAG, running independent modules in parallel."""
     total = len(order)
@@ -391,6 +427,15 @@ def build_closure(
         )
         print(f"[freshness] {freshness_summary}", flush=True)
 
+    initial_available_memory = available_memory_bytes()
+    if initial_available_memory is not None:
+        print(
+            "[memory] "
+            f"available_mb={initial_available_memory // (1024 * 1024)} "
+            f"checkpoint_below_mb={min_available_memory_bytes // (1024 * 1024)}",
+            flush=True,
+        )
+
     if min_initial_skipped > 0 and skipped < min_initial_skipped:
         print(
             f"[cache-health] initial_skipped={skipped} below "
@@ -410,6 +455,22 @@ def build_closure(
             remaining_time = deadline - time.monotonic()
             if remaining_time <= 0:
                 print("[timeout] build budget exhausted before next module", flush=True)
+                exit_code = 124
+                break
+
+            current_available_memory = available_memory_bytes()
+            if (
+                min_available_memory_bytes > 0
+                and current_available_memory is not None
+                and current_available_memory < min_available_memory_bytes
+            ):
+                print(
+                    "[memory-pressure] "
+                    f"available_mb={current_available_memory // (1024 * 1024)} "
+                    f"below checkpoint threshold_mb="
+                    f"{min_available_memory_bytes // (1024 * 1024)}",
+                    flush=True,
+                )
                 exit_code = 124
                 break
 
@@ -465,8 +526,15 @@ def build_closure(
                         f"{module} elapsed_s={module_elapsed:.1f}"
                         for module_elapsed, module in active[:worker_count]
                     )
+                    heartbeat_memory = available_memory_bytes()
+                    memory_text = (
+                        "unknown"
+                        if heartbeat_memory is None
+                        else str(heartbeat_memory // (1024 * 1024))
+                    )
                     print(
                         f"[active] running={len(submitted)} ready={len(ready)} "
+                        f"available_memory_mb={memory_text} "
                         f"elapsed_s={now - started:.1f} {active_text}",
                         flush=True,
                     )
@@ -586,6 +654,15 @@ def main() -> int:
             "or poisoned cache, not a Lean theorem failure."
         ),
     )
+    parser.add_argument(
+        "--min-available-memory-mb",
+        type=int,
+        default=0,
+        help=(
+            "Checkpoint before Linux available memory falls below this threshold. "
+            "Use 0 to disable the guard."
+        ),
+    )
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -659,6 +736,9 @@ def main() -> int:
             heartbeat_seconds=args.heartbeat_seconds,
             slow_module_log_seconds=args.slow_module_log_seconds,
             min_initial_skipped=max(args.min_initial_skipped, 0),
+            min_available_memory_bytes=max(args.min_available_memory_mb, 0)
+            * 1024
+            * 1024,
         )
     finally:
         elapsed = time.monotonic() - started
@@ -672,6 +752,7 @@ def main() -> int:
             "module_timeout_minutes": args.module_timeout_minutes,
             "trust_unstamped_cache": args.trust_unstamped_cache,
             "min_initial_skipped": max(args.min_initial_skipped, 0),
+            "min_available_memory_mb": max(args.min_available_memory_mb, 0),
             "heartbeat_seconds": args.heartbeat_seconds,
             "slow_module_log_seconds": args.slow_module_log_seconds,
             "freshness_counts": freshness_counts,

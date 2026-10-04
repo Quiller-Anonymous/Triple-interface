@@ -20,9 +20,9 @@ on:
         required: true
         default: "direct"
       direct_workers:
-        description: "Parallel workers for direct mode"
+        description: "Parallel workers for direct mode; 3 leaves runner-agent resource headroom"
         required: true
-        default: "4"
+        default: "3"
       module_timeout_minutes:
         description: "Stop and checkpoint if one direct-mode module runs too long"
         required: true
@@ -515,15 +515,15 @@ jobs:
               ;;
           esac
           if ! [[ "$direct_workers" =~ ^[0-9]+$ ]]; then
-            echo "Invalid direct worker count '${direct_workers}', using 4."
-            direct_workers=4
+            echo "Invalid direct worker count '${direct_workers}', using 3."
+            direct_workers=3
           fi
           if [ "$direct_workers" -lt 1 ]; then
             direct_workers=1
           fi
-          if [ "$direct_workers" -gt 8 ]; then
-            echo "Requested direct_workers=${direct_workers}; capping at 8 for ubuntu-latest."
-            direct_workers=8
+          if [ "$direct_workers" -gt 4 ]; then
+            echo "Requested direct_workers=${direct_workers}; capping at 4 for ubuntu-latest."
+            direct_workers=4
           fi
           if ! [[ "$direct_checkpoint_margin_minutes" =~ ^[0-9]+$ ]]; then
             echo "Invalid direct_checkpoint_margin_minutes='${direct_checkpoint_margin_minutes}', using 35."
@@ -631,6 +631,7 @@ jobs:
                 --timeout-minutes "$direct_timeout" \
                 --module-timeout-minutes "$module_timeout_minutes" \
                 --workers "$direct_workers" \
+                --min-available-memory-mb 2048 \
                 --trust-unstamped-cache \
                 --min-initial-skipped "$min_initial_skipped" \
                 "${direct_force_args[@]}" \
