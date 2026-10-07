@@ -42,7 +42,7 @@ separate those cases clearly.
 -- `SSU/STATUS.md` tracks the canonical flagship as complete. Remaining work there is optional
   sharpening, not required for the current SSU contract surface.
 
-4. Alt-Zeta -- Current status: gold (B2 interface)
+4. Alt-Zeta -- Current status: mud overall (exploratory programme), with partial conditional Lean interfaces. The B2 interface does not establish the proposed Alt-Zeta analytic construction or its route to RH.
 
 5. Riemann hypothesis -- Current status: mud
 
@@ -320,10 +320,21 @@ This section lists (1) the hypothesis surface of the gold entrypoints, and (2) a
 
 # ALT-ZETA
 
-The Alt-Zeta project is an experimental “nuanced primes detector” / RH-adjacent limb.
-It is intended to consume ETI-style arithmetic provenance (pin level, variance scale,
-AO short-shift uniformity) exported from the Goldbach/Twin world and combine it with
-explicit-formula style analytic control in a way that can be wired into later RH work.
+The Alt-Zeta project is an exploratory “nuanced primes detector” / RH-adjacent programme.
+Its overall status is **mud**: the proposed analytic construction and transfer to classical
+zeta remain sketches requiring mathematical validation and revision. It is intended to
+consume ETI-style arithmetic provenance (pin level, variance scale, AO short-shift uniformity)
+exported from the Goldbach/Twin world, but the existing interfaces do not establish that
+these arithmetic inputs supply the analytic hypotheses needed for zero exclusion.
+
+The repository contains partial conditional Lean results, especially the B2 bound below.
+Those results prove implications from supplied hypothesis bundles; they do not establish
+an Alt-Zeta zero-free region or a route to RH. In the December 17, 2025 manuscript, the
+finite exponential completion is already nonvanishing by construction. Its nonvanishing
+therefore gives no information about classical zeta without a valid transfer theorem.
+The smoothed explicit formula, its treatment of off-line zero weights, and that transfer
+remain substantive analytic obligations. The former project-wide “gold (B2 interface)”
+label overstated the maturity of this programme.
 
 ## Intended shape (current scaffold)
 
@@ -349,13 +360,16 @@ explicitly as subgoals. Status uses the project legend at the top of this README
   - A2. Margin efficiency per unit analytic input — mud
 - **B) Prime-counting & distribution quality** — status: iron
   - B1. Short-interval primes in AP (NTT-style moduli) — mud
-  - B2. Windowed Chebyshev/ψ error bound — gold
-    - Gold entrypoint: `AltZeta/B2Gold.lean` (`AltZeta.B2.b2_bound_on_window'`) is axiom-free and
-      takes conventional hypothesis bundles (`TruncEFSpec`, `TailControl`).
-    - Fool’s-gold canonical instantiation: `AltZeta/B2RealBound.lean` depends on the pinned checklist
+  - B2. Windowed Chebyshev/ψ error bound — iron (conditional interface; analytic instantiation unresolved)
+    - Conditional entrypoint: `AltZeta/B2Gold.lean` (`AltZeta.B2.b2_bound_on_window'`) is axiom-free and
+      derives the bound from supplied `TruncEFSpec` and `TailControl` bundles. The filename is
+      historical; this implication does not itself prove the explicit-formula decomposition,
+      spectral envelope, or tail estimates for the intended Alt-Zeta construction.
+    - Axiomatized canonical instantiation: `AltZeta/B2RealBound.lean` depends on the pinned checklist
       axioms in `AltZeta/B2RealTruncAxioms.lean` (audit: `AltZeta/B2AxiomAudit.lean`).
     - Bridge: `AltZeta/B2RealToConventional.lean` packages those pinned axioms as a `TruncEFSpec`
-      (`spec0`) and derives the canonical bound by instantiating the gold entrypoint.
+      (`spec0`) and derives the canonical bound by instantiating the conditional entrypoint;
+      repackaging preserves its dependence on the pinned axioms.
     - Honest baseline interface: `AltZeta/B2ZetaControl.lean` defines `ZetaControl W K` (an envelope
       plus a proof that it bounds the **same** smoothed statistic `PsiK K x`).
     - Outpowering plumbing: `AltZeta/B2Outpowers.lean` (`outpowersOnWindow`) takes an AltZeta B2
@@ -383,19 +397,21 @@ explicitly as subgoals. Status uses the project legend at the top of this README
 - AltZeta is a separate Lake library (`lakefile.lean`) and is not imported by
   `All.lean`, so the default target does not exercise it.
 - To check it explicitly, use `lake build AltZeta`.
-- Gold acceptance check (local): `lake env lean AltZeta/B2GoldAxiomAudit.lean`.
+- Conditional B2 axiom audit (local): `lake env lean AltZeta/B2GoldAxiomAudit.lean`.
 - Canonical B2 axiom audit (local): `lake env lean AltZeta/B2AxiomAudit.lean`.
 
 ## AltZeta: axioms / hypotheses (transparency list)
 
-This section lists (1) the hypothesis surface of the gold entrypoint(s), and (2) explicit
+This section lists (1) the hypothesis surface of the conditional entrypoints, and (2) explicit
 `axiom`s currently present in `AltZeta/*` (for convenience / unfinished analytic limbs).
+An axiom-free implication does not discharge the analytic content of its hypotheses.
 
-**Gold entrypoints (axiom-free; hypothesis-based)**
+**Conditional entrypoints (axiom-free implications; analytic hypotheses still required)**
 - `AltZeta/B2Gold.lean` exposes `AltZeta.B2.b2_bound_on_window'`, taking a `TruncEFSpec W K N`
-  (conventional explicit-formula/truncation package) and a `TailControl W K N` (tail certificate).
+  (explicit-formula decomposition and component bounds) and a `TailControl W K N` (tail control).
 - `AltZeta/B2Outpowers.lean` exposes `AltZeta.B2.outpowersOnWindow`, taking the same AltZeta B2
-  inputs plus a ζ-only baseline `ZetaControl W K` (a bound for the same smoothed statistic).
+  inputs plus a ζ-only baseline `ZetaControl W K` (a bound for the same smoothed statistic)
+  and a separate hypothesis that the Alt-Zeta error envelope is strictly smaller.
 
 **Axioms currently used by the AltZeta scaffold (explicit `axiom`s)**
 - `AltZeta/EFSignWeights.lean:48` `fejer_explicit_formula_delta` (the Fejér-weighted
