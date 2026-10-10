@@ -336,24 +336,29 @@ jobs:
               ;;
           esac
           base_key='route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}'
+          family_prefix="${base_key}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-"
+          save_key="${family_prefix}${{ github.run_id }}-${{ github.run_attempt }}"
           if [ -n "$exact_key" ]; then
             primary_key="$exact_key"
             restore_keys=""
           else
-            primary_key="${base_key}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-latest"
-            restore_keys="${base_key}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-"
+            primary_key="${family_prefix}latest"
+            restore_keys="$family_prefix"
             if [ "$allow_broad" = "true" ]; then
               restore_keys="${restore_keys}"$'\n'"${base_key}-"
             fi
           fi
           {
             echo "primary_key=${primary_key}"
+            echo "family_prefix=${family_prefix}"
+            echo "save_key=${save_key}"
             echo "restore_keys<<EOF"
             printf '%s\n' "$restore_keys"
             echo "EOF"
             echo "allow_broad=${allow_broad}"
           } >> "$GITHUB_OUTPUT"
           echo "Project cache primary key: ${primary_key}"
+          echo "Project cache save key: ${save_key}"
           echo "Project cache restore keys:"
           printf '%s\n' "$restore_keys"
 
@@ -785,15 +790,135 @@ jobs:
             echo "No Lean library build artifact directory exists."
           fi
 
+      - name: Rotate Route A checkpoint caches
+        id: route_a_cache_rotation
+        if: always() && steps.artifact_size.outputs.exists == 'true' && steps.checkpoint_status.outputs.save_cache == 'true'
+        shell: bash
+        timeout-minutes: 5
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          CACHE_FAMILY_PREFIX: ${{ steps.route_a_cache_keys.outputs.family_prefix }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          repo = os.environ["REPOSITORY"]
+          prefix = os.environ["CACHE_FAMILY_PREFIX"]
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+              "X-GitHub-Api-Version": "2022-11-28",
+          }
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/actions/caches?per_page=100",
+              headers=headers,
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              payload = json.load(response)
+
+          caches = [
+              cache
+              for cache in payload.get("actions_caches", [])
+              if str(cache.get("key", "")).startswith(prefix)
+          ]
+          caches.sort(key=lambda cache: cache.get("created_at", ""), reverse=True)
+          retained = caches[:2]
+          stale = caches[2:]
+          print(
+              f"[cache-rotation] family_count={len(caches)} "
+              f"retain={len(retained)} delete={len(stale)}"
+          )
+          for cache in retained:
+              print(
+                  f"[cache-retain] id={cache.get('id')} "
+                  f"size_bytes={cache.get('size_in_bytes')} key={cache.get('key')}"
+              )
+          for cache in stale:
+              cache_id = cache["id"]
+              delete_request = urllib.request.Request(
+                  f"https://api.github.com/repos/{repo}/actions/caches/{cache_id}",
+                  headers=headers,
+                  method="DELETE",
+              )
+              with urllib.request.urlopen(delete_request, timeout=30) as response:
+                  if response.status != 204:
+                      raise RuntimeError(
+                          f"unexpected cache deletion status {response.status} for {cache_id}"
+                      )
+              print(f"[cache-delete] id={cache_id} key={cache.get('key')}")
+          PY
+
       - name: Save project Lake artifact cache
         id: route_a_cache_save
-        if: always() && steps.artifact_size.outputs.exists == 'true' && steps.checkpoint_status.outputs.save_cache == 'true'
+        if: >-
+          always() &&
+          steps.artifact_size.outputs.exists == 'true' &&
+          steps.checkpoint_status.outputs.save_cache == 'true' &&
+          steps.route_a_cache_rotation.outcome == 'success'
         continue-on-error: true
         timeout-minutes: 45
         uses: actions/cache/save@v4
         with:
           path: .lake/build/lib/lean
-          key: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ steps.route_a_cache_keys.outputs.save_key }}
+
+      - name: Verify saved project cache checkpoint
+        id: route_a_cache_verify
+        if: always() && steps.route_a_cache_save.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        timeout-minutes: 3
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SAVED_CACHE_KEY: ${{ steps.route_a_cache_keys.outputs.save_key }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.parse
+          import urllib.request
+
+          repo = os.environ["REPOSITORY"]
+          key = os.environ["SAVED_CACHE_KEY"]
+          encoded_key = urllib.parse.quote(key, safe="")
+          request = urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/actions/caches?key={encoded_key}",
+              headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                  "X-GitHub-Api-Version": "2022-11-28",
+              },
+          )
+          matches = []
+          for delay in (0, 5, 15, 30):
+              if delay:
+                  time.sleep(delay)
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  payload = json.load(response)
+              matches = [
+                  cache
+                  for cache in payload.get("actions_caches", [])
+                  if cache.get("key") == key
+              ]
+              if matches:
+                  break
+          if not matches:
+              raise RuntimeError(
+                  f"actions/cache reported success but saved key is absent: {key}"
+              )
+          cache = matches[0]
+          print(
+              f"[cache-verified] id={cache.get('id')} "
+              f"size_bytes={cache.get('size_in_bytes')} key={key}"
+          )
+          PY
 
       - name: Package durable Route A checkpoint
         id: durable_checkpoint_package
@@ -890,6 +1015,10 @@ jobs:
             echo "cache_restore_matched_key=${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
             echo "cache_save_outcome=${{ steps.route_a_cache_save.outcome }}"
             echo "cache_save_conclusion=${{ steps.route_a_cache_save.conclusion }}"
+            echo "cache_rotation_outcome=${{ steps.route_a_cache_rotation.outcome }}"
+            echo "cache_rotation_conclusion=${{ steps.route_a_cache_rotation.conclusion }}"
+            echo "cache_verify_outcome=${{ steps.route_a_cache_verify.outcome }}"
+            echo "cache_verify_conclusion=${{ steps.route_a_cache_verify.conclusion }}"
             echo "reconciled_build_status=${{ steps.checkpoint_status.outputs.status }}"
             echo "reconciled_build_status_source=${{ steps.checkpoint_status.outputs.source }}"
             echo "artifact_dir_exists=${{ steps.artifact_size.outputs.exists }}"
@@ -915,6 +1044,8 @@ jobs:
           echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
           echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
           echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+          echo "Cache rotation: ${{ steps.route_a_cache_rotation.outcome }} / ${{ steps.route_a_cache_rotation.conclusion }}"
+          echo "Cache verification: ${{ steps.route_a_cache_verify.outcome }} / ${{ steps.route_a_cache_verify.conclusion }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
           echo "Post-success probe: ${{ steps.post_success_probe.outcome }} / ${{ steps.post_success_probe.conclusion }}"
           echo "Durable checkpoint restore: ${{ steps.durable_checkpoint_restore.outcome }} / ${{ steps.durable_checkpoint_restore.conclusion }}"
@@ -925,7 +1056,8 @@ jobs:
           always() &&
           github.event.inputs.auto_continue == 'true' &&
           steps.artifact_size.outputs.exists == 'true' &&
-          steps.route_a_cache_save.outcome == 'success'
+          steps.route_a_cache_save.outcome == 'success' &&
+          steps.route_a_cache_verify.outcome == 'success'
         continue-on-error: true
         shell: bash
         timeout-minutes: 6
@@ -942,7 +1074,7 @@ jobs:
           DIRECT_CHECKPOINT_MARGIN_MINUTES: ${{ github.event.inputs.direct_checkpoint_margin_minutes }}
           USE_FORCE_REBUILD_LIST: ${{ github.event.inputs.use_force_rebuild_list }}
           MIN_INITIAL_SKIPPED: ${{ github.event.inputs.min_initial_skipped }}
-          SAVED_CACHE_KEY: route-a-linux-smoke-${{ runner.os }}-${{ hashFiles('lean-toolchain', 'lakefile.lean', 'lake-manifest.json') }}-${{ github.event.inputs.build_mode }}-${{ github.event.inputs.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          SAVED_CACHE_KEY: ${{ steps.route_a_cache_keys.outputs.save_key }}
           ALLOW_BROAD_CACHE_RESTORE: ${{ github.event.inputs.allow_broad_cache_restore }}
           RUN_POST_SUCCESS_PROBE: ${{ github.event.inputs.run_post_success_probe }}
           DURABLE_CHECKPOINT_RUN_ID: ${{ github.event.inputs.durable_checkpoint_run_id }}
@@ -1148,12 +1280,18 @@ jobs:
             exit 0
           fi
           if [ "$status" = "124" ] || [ "$status" = "137" ] || [ "$status" = "143" ]; then
-            echo "Route A Linux smoke target hit the timeout guard in this run. Cache/log artifacts were saved for resume."
+            echo "Route A Linux smoke target hit the timeout guard in this run."
             echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
             echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
             echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
             echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+            echo "Cache verification: ${{ steps.route_a_cache_verify.outcome }} / ${{ steps.route_a_cache_verify.conclusion }}"
             echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
+            if [ "${{ steps.route_a_cache_verify.outcome }}" != "success" ]; then
+              echo "::error::Checkpoint cache was not verified; automatic continuation was stopped."
+              exit 1
+            fi
+            echo "Checkpoint cache was verified and is safe to resume."
             echo "Re-run the same workflow/input to continue from the saved cache checkpoint."
             exit 0
           fi
