@@ -826,8 +826,11 @@ jobs:
               if str(cache.get("key", "")).startswith(prefix)
           ]
           caches.sort(key=lambda cache: cache.get("created_at", ""), reverse=True)
-          retained = caches[:2]
-          stale = caches[2:]
+          # Keep the restored checkpoint until its successor is verified. After
+          # the save, the cache family contains the new checkpoint plus this
+          # single rollback checkpoint, comfortably below the repository quota.
+          retained = caches[:1]
+          stale = caches[1:]
           print(
               f"[cache-rotation] family_count={len(caches)} "
               f"retain={len(retained)} delete={len(stale)}"
