@@ -87,7 +87,7 @@ jobs:
 
       - name: Free runner disk space
         shell: bash
-        timeout-minutes: 10
+        timeout-minutes: 15
         run: |
           set -euo pipefail
           echo "Disk before cleanup:"
@@ -97,7 +97,11 @@ jobs:
             df -Pk / | awk 'NR == 2 { print int($4 / 1024 / 1024) }'
           }
 
-          required_free_gib=70
+          # The restored Route A checkpoint is about 60 GiB uncompressed and
+          # actions/cache needs additional local space for its compressed
+          # archive. Preserve enough headroom for both the current checkpoint
+          # and its projected growth toward the end of the fixed module graph.
+          required_free_gib=120
           if [ "$(free_gib)" -ge "$required_free_gib" ]; then
             echo "At least ${required_free_gib} GiB is already free; skipping destructive SDK cleanup."
             exit 0
@@ -774,6 +778,86 @@ jobs:
             echo "No project Lean artifact directory exists; nothing to prune."
           fi
 
+      - name: Reserve disk for Route A checkpoint compression
+        id: checkpoint_disk
+        if: >-
+          always() &&
+          steps.checkpoint_status.outputs.save_cache == 'true'
+        shell: bash
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+
+          artifact_dir=.lake/build/lib/lean
+          if [ ! -d "$artifact_dir" ]; then
+            echo "::error::Route A artifact directory is absent before cache save."
+            exit 2
+          fi
+
+          echo "Disk before checkpoint cleanup:"
+          df -h /
+
+          # These paths are not part of the Route A checkpoint and are no
+          # longer needed after Lean has stopped. Removing them prevents the
+          # actions/cache temporary archive from competing with the restored
+          # 60+ GiB artifact tree for the runner's local disk.
+          rm -rf -- .lake/packages .lake/build/bin .lake/build/ir .lake/build/lib/c || true
+          rm -rf -- "$HOME/.elan/toolchains" || true
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          removed = 0
+          prefix = Path("Goldbach/Cert/MajorArcModules")
+          for manifest in Path(".github/route_a_smoke").glob("*_missing_sources.txt"):
+              for raw in manifest.read_text().splitlines():
+                  candidate = Path(raw.strip())
+                  if (
+                      candidate.suffix == ".lean"
+                      and not candidate.is_absolute()
+                      and candidate.parts[: len(prefix.parts)] == prefix.parts
+                  ):
+                      try:
+                          candidate.unlink()
+                          removed += 1
+                      except FileNotFoundError:
+                          pass
+          print(f"Removed {removed} archive-restored generated source files.")
+          PY
+
+          cleanup_paths=(
+            /usr/share/dotnet
+            /usr/local/lib/android
+            /opt/ghc
+            /opt/hostedtoolcache/CodeQL
+            /usr/local/share/boost
+            /usr/local/.ghcup
+          )
+          for path in "${cleanup_paths[@]}"; do
+            if [ -e "$path" ]; then
+              echo "Removing remaining runner payload $path."
+              sudo timeout --signal=TERM --kill-after=10s 75s rm -rf -- "$path" || true
+            fi
+          done
+
+          artifact_bytes="$(du -sb "$artifact_dir" | awk '{print $1}')"
+          available_bytes="$(df -PB1 / | awk 'NR == 2 {print $4}')"
+          minimum_bytes=$((20 * 1024 * 1024 * 1024))
+          estimated_archive_bytes=$((artifact_bytes * 40 / 100))
+          required_bytes=$((estimated_archive_bytes + 5 * 1024 * 1024 * 1024))
+          if [ "$required_bytes" -lt "$minimum_bytes" ]; then
+            required_bytes="$minimum_bytes"
+          fi
+
+          echo "[checkpoint-disk] artifact_bytes=${artifact_bytes} available_bytes=${available_bytes} required_bytes=${required_bytes}"
+          df -h /
+          if [ "$available_bytes" -lt "$required_bytes" ]; then
+            echo "::error::Insufficient local disk for safe Route A cache compression."
+            echo "The previous verified remote checkpoint has not been rotated."
+            exit 3
+          fi
+          echo "compression_headroom_verified=true" >> "$GITHUB_OUTPUT"
+
       - name: Report project artifact size
         if: always()
         id: artifact_size
@@ -792,7 +876,11 @@ jobs:
 
       - name: Rotate Route A checkpoint caches
         id: route_a_cache_rotation
-        if: always() && steps.artifact_size.outputs.exists == 'true' && steps.checkpoint_status.outputs.save_cache == 'true'
+        if: >-
+          always() &&
+          steps.artifact_size.outputs.exists == 'true' &&
+          steps.checkpoint_status.outputs.save_cache == 'true' &&
+          steps.checkpoint_disk.outputs.compression_headroom_verified == 'true'
         shell: bash
         timeout-minutes: 5
         env:
