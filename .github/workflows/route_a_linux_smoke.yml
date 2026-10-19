@@ -97,7 +97,7 @@ jobs:
             df -Pk / | awk 'NR == 2 { print int($4 / 1024 / 1024) }'
           }
 
-          # The restored Route A checkpoint is about 60 GiB uncompressed and
+          # The restored Route A checkpoint is over 70 GiB uncompressed and
           # actions/cache needs additional local space for its compressed
           # archive. Preserve enough headroom for both the current checkpoint
           # and its projected growth toward the end of the fixed module graph.
@@ -134,8 +134,8 @@ jobs:
           echo "Disk after cleanup:"
           df -h
 
-      - name: Restore Route A smoke generated sources
-        id: restore_sources
+      - name: Stage Route A smoke generated sources for audit
+        id: stage_sources
         shell: bash
         timeout-minutes: 25
         run: |
@@ -210,59 +210,32 @@ jobs:
             --archive .github/route_a_smoke/*.tar.gz \
             --json-output route-a-source-archive-audit.json
 
-      - name: Cache elan toolchain
-        id: cache_elan
-        timeout-minutes: 10
-        uses: actions/cache@v4
-        with:
-          path: ~/.elan
-          key: ${{ runner.os }}-elan-${{ hashFiles('lean-toolchain') }}
-          restore-keys: |
-            ${{ runner.os }}-elan-
-
-      - name: Set up Lean
-        id: setup_lean
-        timeout-minutes: 20
-        uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          test: false
-          lint: false
-          use-mathlib-cache: true
-          use-github-cache: false
-
-      - name: Environment diagnostics
+      - name: Unstage generated sources before project cache restore
         shell: bash
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: |
           set -euo pipefail
-          echo "Runner: $(uname -a)"
-          echo "Cores: $(nproc)"
-          free -h || true
-          echo "Stack before:"
-          ulimit -s || true
-          ulimit -s unlimited || true
-          echo "Stack after:"
-          ulimit -s || true
-          elan --version
-          lake --version
-          lean --version
-          timeout --version || true
-          git rev-parse HEAD
-          echo "Workflow SHA: ${GITHUB_SHA}"
-          echo "Requested build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
-          df -h
+          python3 - <<'PY'
+          from pathlib import Path
 
-      - name: Fetch dependencies
-        id: fetch_deps
-        timeout-minutes: 20
-        run: lake update
-
-      - name: Fetch Mathlib cache
-        id: fetch_mathlib
-        timeout-minutes: 45
-        run: lake exe cache get
+          removed = 0
+          prefix = Path("Goldbach/Cert/MajorArcModules")
+          for manifest in Path(".github/route_a_smoke").glob("*_missing_sources.txt"):
+              for raw in manifest.read_text().splitlines():
+                  candidate = Path(raw.strip())
+                  if (
+                      candidate.suffix == ".lean"
+                      and not candidate.is_absolute()
+                      and candidate.parts[: len(prefix.parts)] == prefix.parts
+                  ):
+                      try:
+                          candidate.unlink()
+                          removed += 1
+                      except FileNotFoundError:
+                          pass
+          print(f"Temporarily removed {removed} generated source files before cache restore.")
+          PY
+          df -h /
 
       - name: Prepare smoke log files
         id: prepare_logs
@@ -367,6 +340,7 @@ jobs:
           printf '%s\n' "$restore_keys"
 
       - name: List project Lake artifact cache candidates
+        id: route_a_cache_candidates
         shell: bash
         timeout-minutes: 2
         env:
@@ -424,7 +398,55 @@ jobs:
                   f"last_accessed_at={cache.get('last_accessed_at')} "
                   f"key={cache.get('key')}"
               )
+
+          exact = next(
+              (cache for cache in candidates if cache.get("key") == primary_key),
+              None,
+          )
+          selected = exact or (candidates[0] if candidates else None)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(
+                  f"selected_cache_bytes={int(selected.get('size_in_bytes') or 0) if selected else 0}\n"
+              )
+              output.write(
+                  f"selected_cache_key={selected.get('key', '') if selected else ''}\n"
+              )
           PY
+
+      - name: Verify disk headroom for project cache restore
+        if: github.event.inputs.durable_checkpoint_run_id == ''
+        shell: bash
+        timeout-minutes: 2
+        env:
+          SELECTED_CACHE_BYTES: ${{ steps.route_a_cache_candidates.outputs.selected_cache_bytes }}
+          SELECTED_CACHE_KEY: ${{ steps.route_a_cache_candidates.outputs.selected_cache_key }}
+        run: |
+          set -euo pipefail
+          cache_bytes="${SELECTED_CACHE_BYTES:-0}"
+          available_bytes="$(df -PB1 / | awk 'NR == 2 {print $4}')"
+
+          if [ "$cache_bytes" -le 0 ]; then
+            echo "::error::No compatible Route A checkpoint cache was found."
+            exit 2
+          fi
+
+          # The current checkpoint expands to about 4.1 times its compressed
+          # size. actions/cache also retains the compressed download while tar
+          # writes the expanded tree, so reserve 5.2 times the cache size plus
+          # 5 GiB for filesystem and runner variation.
+          required_bytes=$((cache_bytes * 52 / 10 + 5 * 1024 * 1024 * 1024))
+          minimum_bytes=$((95 * 1024 * 1024 * 1024))
+          if [ "$required_bytes" -lt "$minimum_bytes" ]; then
+            required_bytes="$minimum_bytes"
+          fi
+
+          echo "[restore-disk] cache_bytes=${cache_bytes} available_bytes=${available_bytes} required_bytes=${required_bytes} key=${SELECTED_CACHE_KEY}"
+          df -h /
+          if [ "$available_bytes" -lt "$required_bytes" ]; then
+            echo "::error::Insufficient local disk to expand the selected Route A checkpoint safely."
+            echo "The remote checkpoint remains intact; no partial build will be attempted."
+            exit 3
+          fi
 
       - name: Restore project Lake artifact cache
         id: route_a_cache_restore
@@ -436,6 +458,117 @@ jobs:
           path: .lake/build/lib/lean
           key: ${{ steps.route_a_cache_keys.outputs.primary_key }}
           restore-keys: ${{ steps.route_a_cache_keys.outputs.restore_keys }}
+
+      - name: Verify project cache restoration
+        if: github.event.inputs.durable_checkpoint_run_id == ''
+        shell: bash
+        timeout-minutes: 2
+        env:
+          RESTORE_OUTCOME: ${{ steps.route_a_cache_restore.outcome }}
+          MATCHED_KEY: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}
+        run: |
+          set -euo pipefail
+          if [ "$RESTORE_OUTCOME" != "success" ] || [ -z "$MATCHED_KEY" ]; then
+            echo "::error::Route A checkpoint restoration failed or did not match a cache."
+            echo "restore_outcome=${RESTORE_OUTCOME} matched_key=${MATCHED_KEY}"
+            exit 2
+          fi
+          echo "Restored Route A checkpoint from ${MATCHED_KEY}."
+
+      - name: Restore Route A smoke generated sources
+        id: restore_sources
+        shell: bash
+        timeout-minutes: 25
+        run: |
+          set -euo pipefail
+          failed_archive="none"
+          restore_phase="start"
+          trap 'rc=$?; if [ "$rc" -ne 0 ]; then { echo "target=${{ github.event.inputs.target }}"; echo "exit_code=restore_sources_failed"; echo "phase=${restore_phase}"; echo "failed_archive=${failed_archive}"; echo "restore_exit_code=${rc}"; echo "workflow_sha=${GITHUB_SHA}"; echo "updated_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"; df -h .; } > route-a-build-status.txt; fi' EXIT
+          shopt -s nullglob
+          archives=(.github/route_a_smoke/*.tar.gz)
+          if [ "${#archives[@]}" -gt 0 ]; then
+            for archive in "${archives[@]}"; do
+              failed_archive="${archive}"
+              restore_phase="checksum:${archive}"
+              if [ -f "${archive}.sha256" ]; then
+                expected_sha="$(awk '{ print $1; exit }' "${archive}.sha256")"
+                actual_sha="$(python3 -c 'import hashlib, sys; digest = hashlib.sha256(); handle = open(sys.argv[1], "rb"); list(map(digest.update, iter(lambda: handle.read(1024 * 1024), b""))); handle.close(); print(digest.hexdigest())' "${archive}")"
+                if [ "${actual_sha}" != "${expected_sha}" ]; then
+                  echo "::error::Checksum mismatch for ${archive}: expected ${expected_sha}, got ${actual_sha}."
+                  exit 2
+                fi
+                echo "Checksum OK for ${archive}."
+              else
+                echo "::warning::No checksum file found for ${archive}."
+              fi
+              restore_phase="extract:${archive}"
+              tar -xzf "${archive}"
+              manifest="${archive%.tar.gz}.txt"
+              if [ -f "${manifest}" ]; then
+                restored_count="$(wc -l < "${manifest}" | tr -d ' ')"
+              else
+                restored_count="unknown"
+              fi
+              echo "Restored ${restored_count} Route A generated sources from ${archive}."
+            done
+          else
+            echo "No Route A smoke source archives found."
+          fi
+          restore_phase="done"
+
+      - name: Cache elan toolchain
+        id: cache_elan
+        timeout-minutes: 10
+        uses: actions/cache@v4
+        with:
+          path: ~/.elan
+          key: ${{ runner.os }}-elan-${{ hashFiles('lean-toolchain') }}
+          restore-keys: |
+            ${{ runner.os }}-elan-
+
+      - name: Set up Lean
+        id: setup_lean
+        timeout-minutes: 20
+        uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          test: false
+          lint: false
+          use-mathlib-cache: true
+          use-github-cache: false
+
+      - name: Environment diagnostics
+        shell: bash
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          echo "Runner: $(uname -a)"
+          echo "Cores: $(nproc)"
+          free -h || true
+          echo "Stack before:"
+          ulimit -s || true
+          ulimit -s unlimited || true
+          echo "Stack after:"
+          ulimit -s || true
+          elan --version
+          lake --version
+          lean --version
+          timeout --version || true
+          git rev-parse HEAD
+          echo "Workflow SHA: ${GITHUB_SHA}"
+          echo "Requested build timeout: ${{ github.event.inputs.build_timeout_minutes }} minutes"
+          df -h
+
+      - name: Fetch dependencies
+        id: fetch_deps
+        timeout-minutes: 20
+        run: lake update
+
+      - name: Fetch Mathlib cache
+        id: fetch_mathlib
+        timeout-minutes: 45
+        run: lake exe cache get
 
       - name: Verify isolated Route A target
         id: verify_target
