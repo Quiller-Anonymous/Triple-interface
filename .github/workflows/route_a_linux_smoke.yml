@@ -936,6 +936,7 @@ jobs:
           # 60+ GiB artifact tree for the runner's local disk.
           rm -rf -- .lake/packages .lake/build/bin .lake/build/ir .lake/build/lib/c || true
           rm -rf -- "$HOME/.elan/toolchains" || true
+          rm -rf -- "$HOME/.cache" || true
 
           python3 - <<'PY'
           from pathlib import Path
@@ -976,7 +977,10 @@ jobs:
           artifact_bytes="$(du -sb "$artifact_dir" | awk '{print $1}')"
           available_bytes="$(df -PB1 / | awk 'NR == 2 {print $4}')"
           minimum_bytes=$((20 * 1024 * 1024 * 1024))
-          estimated_archive_bytes=$((artifact_bytes * 40 / 100))
+          # Recent Route A checkpoints compress to about 24.4% of their
+          # uncompressed size. Budget 30% plus 5 GiB rather than the former
+          # 40% estimate, which rejected a safe save by only 0.5 GB.
+          estimated_archive_bytes=$((artifact_bytes * 30 / 100))
           required_bytes=$((estimated_archive_bytes + 5 * 1024 * 1024 * 1024))
           if [ "$required_bytes" -lt "$minimum_bytes" ]; then
             required_bytes="$minimum_bytes"
