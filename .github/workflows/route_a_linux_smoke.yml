@@ -933,7 +933,7 @@ jobs:
           # These paths are not part of the Route A checkpoint and are no
           # longer needed after Lean has stopped. Removing them prevents the
           # actions/cache temporary archive from competing with the restored
-          # 60+ GiB artifact tree for the runner's local disk.
+          # 70+ GiB artifact tree for the runner's local disk.
           rm -rf -- .lake/packages .lake/build/bin .lake/build/ir .lake/build/lib/c || true
           rm -rf -- "$HOME/.elan/toolchains" || true
           rm -rf -- "$HOME/.cache" || true
@@ -958,6 +958,14 @@ jobs:
                           pass
           print(f"Removed {removed} archive-restored generated source files.")
           PY
+
+          # Compilation and the optional post-success probe are finished. The
+          # remaining workflow steps only need the .olean checkpoint, status
+          # files, and CI scripts, so project Lean sources can be discarded to
+          # leave more room for the temporary compressed cache archive.
+          lean_sources_before="$(find Goldbach -type f -name '*.lean' 2>/dev/null | wc -l | tr -d ' ')"
+          find Goldbach -type f -name '*.lean' -delete 2>/dev/null || true
+          echo "Removed ${lean_sources_before} remaining Goldbach Lean source files before cache save."
 
           cleanup_paths=(
             /usr/share/dotnet
@@ -1094,16 +1102,58 @@ jobs:
           path: .lake/build/lib/lean
           key: ${{ steps.route_a_cache_keys.outputs.save_key }}
 
+      - name: Retry project Lake artifact cache save
+        id: route_a_cache_save_retry
+        if: >-
+          always() &&
+          steps.artifact_size.outputs.exists == 'true' &&
+          steps.checkpoint_status.outputs.save_cache == 'true' &&
+          steps.route_a_cache_rotation.outcome == 'success' &&
+          steps.route_a_cache_save.outcome != 'success'
+        continue-on-error: true
+        timeout-minutes: 45
+        uses: actions/cache/save@v4
+        with:
+          path: .lake/build/lib/lean
+          key: ${{ steps.route_a_cache_keys.outputs.save_key }}-retry
+
+      - name: Select saved project cache key
+        id: route_a_cache_save_result
+        if: always()
+        shell: bash
+        timeout-minutes: 2
+        env:
+          PRIMARY_OUTCOME: ${{ steps.route_a_cache_save.outcome }}
+          RETRY_OUTCOME: ${{ steps.route_a_cache_save_retry.outcome }}
+          PRIMARY_KEY: ${{ steps.route_a_cache_keys.outputs.save_key }}
+        run: |
+          set -euo pipefail
+          if [ "$PRIMARY_OUTCOME" = "success" ]; then
+            echo "save_succeeded=true" >> "$GITHUB_OUTPUT"
+            echo "saved_key=${PRIMARY_KEY}" >> "$GITHUB_OUTPUT"
+            echo "Selected primary Route A cache save: ${PRIMARY_KEY}"
+          elif [ "$RETRY_OUTCOME" = "success" ]; then
+            echo "save_succeeded=true" >> "$GITHUB_OUTPUT"
+            echo "saved_key=${PRIMARY_KEY}-retry" >> "$GITHUB_OUTPUT"
+            echo "Selected retry Route A cache save: ${PRIMARY_KEY}-retry"
+          else
+            echo "save_succeeded=false" >> "$GITHUB_OUTPUT"
+            echo "saved_key=" >> "$GITHUB_OUTPUT"
+            echo "No Route A cache save succeeded: primary=${PRIMARY_OUTCOME} retry=${RETRY_OUTCOME}"
+          fi
+
       - name: Verify saved project cache checkpoint
         id: route_a_cache_verify
-        if: always() && steps.route_a_cache_save.outcome == 'success'
+        if: >-
+          always() &&
+          steps.route_a_cache_save_result.outputs.save_succeeded == 'true'
         continue-on-error: true
         shell: bash
-        timeout-minutes: 3
+        timeout-minutes: 5
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          SAVED_CACHE_KEY: ${{ steps.route_a_cache_keys.outputs.save_key }}
+          SAVED_CACHE_KEY: ${{ steps.route_a_cache_save_result.outputs.saved_key }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -1125,7 +1175,7 @@ jobs:
               },
           )
           matches = []
-          for delay in (0, 5, 15, 30):
+          for delay in (0, 5, 15, 30, 60):
               if delay:
                   time.sleep(delay)
               with urllib.request.urlopen(request, timeout=30) as response:
@@ -1243,6 +1293,10 @@ jobs:
             echo "cache_restore_matched_key=${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
             echo "cache_save_outcome=${{ steps.route_a_cache_save.outcome }}"
             echo "cache_save_conclusion=${{ steps.route_a_cache_save.conclusion }}"
+            echo "cache_save_retry_outcome=${{ steps.route_a_cache_save_retry.outcome }}"
+            echo "cache_save_retry_conclusion=${{ steps.route_a_cache_save_retry.conclusion }}"
+            echo "cache_save_succeeded=${{ steps.route_a_cache_save_result.outputs.save_succeeded }}"
+            echo "cache_saved_key=${{ steps.route_a_cache_save_result.outputs.saved_key }}"
             echo "cache_rotation_outcome=${{ steps.route_a_cache_rotation.outcome }}"
             echo "cache_rotation_conclusion=${{ steps.route_a_cache_rotation.conclusion }}"
             echo "cache_verify_outcome=${{ steps.route_a_cache_verify.outcome }}"
@@ -1271,7 +1325,9 @@ jobs:
           echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
           echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
           echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
-          echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+          echo "Cache save primary: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+          echo "Cache save retry: ${{ steps.route_a_cache_save_retry.outcome }} / ${{ steps.route_a_cache_save_retry.conclusion }}"
+          echo "Cache saved key: ${{ steps.route_a_cache_save_result.outputs.saved_key }}"
           echo "Cache rotation: ${{ steps.route_a_cache_rotation.outcome }} / ${{ steps.route_a_cache_rotation.conclusion }}"
           echo "Cache verification: ${{ steps.route_a_cache_verify.outcome }} / ${{ steps.route_a_cache_verify.conclusion }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
@@ -1284,11 +1340,11 @@ jobs:
           always() &&
           github.event.inputs.auto_continue == 'true' &&
           steps.artifact_size.outputs.exists == 'true' &&
-          steps.route_a_cache_save.outcome == 'success' &&
+          steps.route_a_cache_save_result.outputs.save_succeeded == 'true' &&
           steps.route_a_cache_verify.outcome == 'success'
         continue-on-error: true
         shell: bash
-        timeout-minutes: 6
+        timeout-minutes: 15
         env:
           BUILD_EXIT_CODE: ${{ steps.build.outputs.exit_code }}
           GH_TOKEN: ${{ github.token }}
@@ -1302,7 +1358,7 @@ jobs:
           DIRECT_CHECKPOINT_MARGIN_MINUTES: ${{ github.event.inputs.direct_checkpoint_margin_minutes }}
           USE_FORCE_REBUILD_LIST: ${{ github.event.inputs.use_force_rebuild_list }}
           MIN_INITIAL_SKIPPED: ${{ github.event.inputs.min_initial_skipped }}
-          SAVED_CACHE_KEY: ${{ steps.route_a_cache_keys.outputs.save_key }}
+          SAVED_CACHE_KEY: ${{ steps.route_a_cache_save_result.outputs.saved_key }}
           ALLOW_BROAD_CACHE_RESTORE: ${{ github.event.inputs.allow_broad_cache_restore }}
           RUN_POST_SUCCESS_PROBE: ${{ github.event.inputs.run_post_success_probe }}
           DURABLE_CHECKPOINT_RUN_ID: ${{ github.event.inputs.durable_checkpoint_run_id }}
@@ -1401,7 +1457,10 @@ jobs:
               + "\n"
           )
 
-          delays = [10, 20, 40, 60]
+          # GitHub's dispatch API has occasionally returned transient 500s.
+          # Keep retrying for nearly nine minutes so an unattended checkpoint
+          # chain does not stop on a short control-plane outage.
+          delays = [10, 20, 40, 60, 90, 120, 180]
           last_error = ""
           for attempt, delay in enumerate([0] + delays, start=1):
               if delay:
@@ -1512,7 +1571,9 @@ jobs:
             echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
             echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
             echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
-            echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+            echo "Cache save primary: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+            echo "Cache save retry: ${{ steps.route_a_cache_save_retry.outcome }} / ${{ steps.route_a_cache_save_retry.conclusion }}"
+            echo "Cache saved key: ${{ steps.route_a_cache_save_result.outputs.saved_key }}"
             echo "Cache verification: ${{ steps.route_a_cache_verify.outcome }} / ${{ steps.route_a_cache_verify.conclusion }}"
             echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
             if [ "${{ steps.route_a_cache_verify.outcome }}" != "success" ]; then
@@ -1528,7 +1589,9 @@ jobs:
             echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
             echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
             echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
-            echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+            echo "Cache save primary: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+            echo "Cache save retry: ${{ steps.route_a_cache_save_retry.outcome }} / ${{ steps.route_a_cache_save_retry.conclusion }}"
+            echo "Cache saved key: ${{ steps.route_a_cache_save_result.outputs.saved_key }}"
             echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
             echo "Do not rerun blindly; inspect cache restore matched key or use a different cache/force setting."
             exit 1
@@ -1545,7 +1608,9 @@ jobs:
           echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
           echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
           echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
-          echo "Cache save outcome: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+          echo "Cache save primary: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
+          echo "Cache save retry: ${{ steps.route_a_cache_save_retry.outcome }} / ${{ steps.route_a_cache_save_retry.conclusion }}"
+          echo "Cache saved key: ${{ steps.route_a_cache_save_result.outputs.saved_key }}"
           echo "Artifact dir exists: ${{ steps.artifact_size.outputs.exists }}"
           if ! [[ "$status" =~ ^[0-9]+$ ]]; then
             echo "Resolved status is nonnumeric; treating this as an infrastructure/setup failure."
