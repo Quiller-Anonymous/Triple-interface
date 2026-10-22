@@ -31,6 +31,10 @@ on:
         description: "Stop and checkpoint if one direct-mode module runs too long"
         required: true
         default: "150"
+      protect_final_modules:
+        description: "Reserve up to four hours per module for the full Route A certificate target"
+        required: true
+        default: "true"
       direct_checkpoint_margin_minutes:
         description: "Minutes reserved between the direct builder self-timeout and the outer timeout guard"
         required: true
@@ -80,7 +84,7 @@ jobs:
   smoke:
     name: Build selected Route A target on Linux
     runs-on: ubuntu-latest
-    timeout-minutes: 270
+    timeout-minutes: 360
 
     steps:
       - uses: actions/checkout@v4
@@ -188,6 +192,7 @@ jobs:
           echo "direct_workers=${{ github.event.inputs.direct_workers }}"
           echo "prefer_four_workers=${{ github.event.inputs.prefer_four_workers }}"
           echo "module_timeout_minutes=${{ github.event.inputs.module_timeout_minutes }}"
+          echo "protect_final_modules=${{ github.event.inputs.protect_final_modules }}"
           echo "direct_checkpoint_margin_minutes=${{ github.event.inputs.direct_checkpoint_margin_minutes }}"
           echo "use_force_rebuild_list=${{ github.event.inputs.use_force_rebuild_list }}"
           echo "min_initial_skipped=${{ github.event.inputs.min_initial_skipped }}"
@@ -613,7 +618,7 @@ jobs:
       - name: Build selected target
         id: build
         shell: bash
-        timeout-minutes: 260
+        timeout-minutes: 300
         run: |
           set -euo pipefail
           target='${{ github.event.inputs.target }}'
@@ -642,10 +647,26 @@ jobs:
             echo "Invalid build timeout '${requested_timeout}', using 200 minutes."
             requested_timeout=200
           fi
+          protect_final_modules='${{ github.event.inputs.protect_final_modules }}'
+          case "$protect_final_modules" in
+            true|"")
+              protect_final_modules=true
+              if [ "$target" = 'Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert' ] \
+                  && [ "$requested_timeout" -lt 280 ]; then
+                echo "Final-module protection enabled; raising build timeout from ${requested_timeout} to 280 minutes."
+                requested_timeout=280
+              fi
+              ;;
+            false) ;;
+            *)
+              echo "Invalid protect_final_modules='${protect_final_modules}', using true."
+              protect_final_modules=true
+              ;;
+          esac
           actual_timeout="$requested_timeout"
-          if [ "$actual_timeout" -gt 200 ]; then
-            echo "Requested timeout ${actual_timeout} leaves too little checkpoint time; capping at 200 minutes."
-            actual_timeout=200
+          if [ "$actual_timeout" -gt 280 ]; then
+            echo "Requested timeout ${actual_timeout} leaves too little checkpoint time; capping at 280 minutes."
+            actual_timeout=280
           fi
           : > route-a-linux-smoke.log
           build_mode='${{ github.event.inputs.build_mode }}'
@@ -708,6 +729,12 @@ jobs:
             echo "Invalid module_timeout_minutes='${module_timeout_minutes}', using 150."
             module_timeout_minutes=150
           fi
+          if [ "$protect_final_modules" = "true" ] \
+              && [ "$target" = 'Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert' ] \
+              && [ "$module_timeout_minutes" -lt 240 ]; then
+            echo "Final-module protection enabled; raising module timeout from ${module_timeout_minutes} to 240 minutes."
+            module_timeout_minutes=240
+          fi
           if [ "$module_timeout_minutes" -lt 10 ]; then
             module_timeout_minutes=10
           fi
@@ -748,6 +775,7 @@ jobs:
               echo "actual_build_timeout_minutes=${actual_timeout}"
               echo "direct_build_timeout_minutes=${direct_timeout}"
               echo "module_timeout_minutes=${module_timeout_minutes}"
+              echo "protect_final_modules=${protect_final_modules}"
               echo "direct_checkpoint_margin_minutes=${direct_checkpoint_margin_minutes}"
               echo "use_force_rebuild_list=${use_force_rebuild_list}"
               echo "min_initial_skipped=${min_initial_skipped}"
@@ -769,6 +797,7 @@ jobs:
           echo "Building ${build_target}" | tee -a route-a-linux-smoke.log
           echo "Build mode: ${build_mode}" | tee -a route-a-linux-smoke.log
           echo "Direct workers: ${direct_workers}" | tee -a route-a-linux-smoke.log
+          echo "Protect final modules: ${protect_final_modules}" | tee -a route-a-linux-smoke.log
           echo "Build timeout guard: ${actual_timeout} minutes" | tee -a route-a-linux-smoke.log
           if [ "$build_mode" = "direct" ]; then
             echo "Direct builder self-timeout: ${direct_timeout} minutes" | tee -a route-a-linux-smoke.log
@@ -1355,6 +1384,7 @@ jobs:
           DIRECT_WORKERS: ${{ github.event.inputs.direct_workers }}
           PREFER_FOUR_WORKERS: ${{ github.event.inputs.prefer_four_workers }}
           MODULE_TIMEOUT_MINUTES: ${{ github.event.inputs.module_timeout_minutes }}
+          PROTECT_FINAL_MODULES: ${{ github.event.inputs.protect_final_modules }}
           DIRECT_CHECKPOINT_MARGIN_MINUTES: ${{ github.event.inputs.direct_checkpoint_margin_minutes }}
           USE_FORCE_REBUILD_LIST: ${{ github.event.inputs.use_force_rebuild_list }}
           MIN_INITIAL_SKIPPED: ${{ github.event.inputs.min_initial_skipped }}
@@ -1429,6 +1459,7 @@ jobs:
                   ),
                   "prefer_four_workers": os.environ.get("PREFER_FOUR_WORKERS") or "true",
                   "module_timeout_minutes": os.environ["MODULE_TIMEOUT_MINUTES"],
+                  "protect_final_modules": os.environ.get("PROTECT_FINAL_MODULES") or "true",
                   "direct_checkpoint_margin_minutes": os.environ["DIRECT_CHECKPOINT_MARGIN_MINUTES"],
                   "use_force_rebuild_list": os.environ["USE_FORCE_REBUILD_LIST"],
                   "min_initial_skipped": next_min_initial_skipped(),

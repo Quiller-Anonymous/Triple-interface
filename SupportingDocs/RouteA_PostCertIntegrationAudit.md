@@ -284,8 +284,15 @@ it as a cache-continuation failure rather than a mathematical failure.
 
 If the log ends with `Terminated` / exit code `143` but does not print cache-save or final-status
 lines, the build step was killed too close to the outer timeout.  Do not rerun with the same timing
-inputs.  Use the patched workflow with the larger direct checkpoint margin, or manually set
-`build_timeout_minutes=200` and keep `direct_checkpoint_margin_minutes=35`.
+inputs.  Use the patched workflow with the larger direct checkpoint margin.
+
+At the final high-fan-in wrapper frontier, keep `protect_final_modules=true`.  For the full
+`Q0MinorZeroModeNormalizedAverageX0Cert` target this raises short inherited continuation inputs to
+`build_timeout_minutes=280` and `module_timeout_minutes=240`.  With the 35-minute direct checkpoint
+margin, the direct builder receives 245 minutes and any one module may use at most 240 minutes,
+leaving five minutes for worker termination and status emission.  The GitHub job limit is 360
+minutes so cache cleanup and save still have a separate outer window.  Set the protection input to
+`false` only for deliberately short diagnostic runs.
 
 If the cache save succeeds but the automatic continuation dispatch fails with a GitHub API `500`,
 that is an infrastructure failure after the checkpoint accounting has already succeeded.  Manually
