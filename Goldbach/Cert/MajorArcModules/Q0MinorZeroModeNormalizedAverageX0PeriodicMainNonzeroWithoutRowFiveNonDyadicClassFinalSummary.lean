@@ -1,0 +1,25 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalStage035
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Shallow aliases for the completed non-dyadic class assembly. -/
+
+def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairs : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo286
+
+def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotal : ℚ :=
+  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotalUpTo286
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairs_actual_sum :
+    (∑ p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairs, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p) = PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotal := by
+  simpa [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairs, PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotal] using PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo286_actual_sum
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

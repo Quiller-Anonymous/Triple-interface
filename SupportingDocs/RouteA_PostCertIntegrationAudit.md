@@ -180,6 +180,8 @@ The current workflow now performs these cheap checks before spending hours in Le
 - Checks restore disk headroom against the measured checkpoint expansion ratio, while retaining at
   least 4 GiB of runner/filesystem variation headroom.  A marginal preflight rejection does not
   delete or modify the remote checkpoint.
+- Refuses to auto-dispatch another continuation when a timeout completed zero modules.  A stalled
+  atomic module requires splitting or repair, not an identical unattended rerun.
 - The direct builder writes only `.olean` artifacts; `.ilean` files are not needed for this CI
   import-chain build and are pruned before cache save.  This is intended to keep checkpoints below
   the GitHub Actions cache eviction threshold.
@@ -191,6 +193,20 @@ The current workflow now performs these cheap checks before spending hours in Le
   `route-a-durable-checkpoint-RUN_ID` with 90-day retention.  The automatically dispatched
   continuation resets publication to `false`, so a milestone is uploaded once rather than on every
   continuation.
+
+## Non-Dyadic Final Assembly Split
+
+`Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinal`
+previously contained all 287 grouped-class accumulation steps.  Lean had to finish the entire
+4,907-line module before any result could be cached; repeated 150- and 240-minute attempts completed
+zero modules.  The generated replacement uses 36 eight-group `FinalStageNNN` modules followed by
+separate `FinalSummary`, `FinalCoverage`, and public `Final` wrappers.  The declaration bodies and
+public theorem names are unchanged.  Regenerate or verify this surface with:
+
+```bash
+python3 scripts/ci/generate_nondyadic_class_final_stages.py --stage-size 8
+python3 scripts/ci/generate_nondyadic_class_final_stages.py --stage-size 8 --check
+```
 - Can recover directly from such a milestone by setting `durable_checkpoint_run_id=RUN_ID`.
   The workflow downloads that exact named artifact, verifies `SHA256SUMS`, restores the compiled
   Goldbach tree, and skips the ordinary project-cache restore so an older cache cannot overwrite the

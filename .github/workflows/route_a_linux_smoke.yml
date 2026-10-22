@@ -1403,6 +1403,20 @@ jobs:
             echo "No checkpoint continuation needed; build status '${status:-missing}' from ${source}."
             exit 0
           fi
+          built_count="$(python3 - <<'PY'
+          import json
+
+          try:
+              with open("route-a-direct-build-status.json", encoding="utf-8") as handle:
+                  print(int(json.load(handle).get("built") or 0))
+          except Exception:
+              print("")
+          PY
+          )"
+          if [ "$built_count" = "0" ]; then
+            echo "::warning::Checkpoint timeout completed zero modules; refusing to repeat the same stalled frontier automatically."
+            exit 0
+          fi
           echo "Checkpoint timeout detected; dispatching continuation run for ${TARGET} on ${REF_NAME}."
           python3 - <<'PY'
           import json
