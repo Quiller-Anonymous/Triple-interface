@@ -437,9 +437,11 @@ jobs:
 
           # The current checkpoint expands to about 4.1 times its compressed
           # size. actions/cache also retains the compressed download while tar
-          # writes the expanded tree, so reserve 5.2 times the cache size plus
-          # 5 GiB for filesystem and runner variation.
-          required_bytes=$((cache_bytes * 52 / 10 + 5 * 1024 * 1024 * 1024))
+          # writes the expanded tree, so reserve 5.1 times the cache size plus
+          # 4 GiB for filesystem and runner variation. This still leaves more
+          # than 2 GiB above the measured peak for the current 18.3 GiB cache,
+          # without rejecting standard runners by a few hundred MiB.
+          required_bytes=$((cache_bytes * 51 / 10 + 4 * 1024 * 1024 * 1024))
           minimum_bytes=$((95 * 1024 * 1024 * 1024))
           if [ "$required_bytes" -lt "$minimum_bytes" ]; then
             required_bytes="$minimum_bytes"

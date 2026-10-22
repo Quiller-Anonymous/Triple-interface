@@ -177,6 +177,9 @@ The current workflow now performs these cheap checks before spending hours in Le
   build with only a few thousand skipped modules.
 - Lists matching project artifact cache candidates before restore, including cache ID, size, creation
   time, last access time, and key.
+- Checks restore disk headroom against the measured checkpoint expansion ratio, while retaining at
+  least 4 GiB of runner/filesystem variation headroom.  A marginal preflight rejection does not
+  delete or modify the remote checkpoint.
 - The direct builder writes only `.olean` artifacts; `.ilean` files are not needed for this CI
   import-chain build and are pruned before cache save.  This is intended to keep checkpoints below
   the GitHub Actions cache eviction threshold.
