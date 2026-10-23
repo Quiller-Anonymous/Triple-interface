@@ -459,28 +459,59 @@ jobs:
         id: route_a_cache_restore
         if: github.event.inputs.durable_checkpoint_run_id == ''
         continue-on-error: true
-        timeout-minutes: 20
-        uses: actions/cache/restore@v4
+        timeout-minutes: 40
+        uses: actions/cache/restore@v5
+        env:
+          # The Route A checkpoint is currently about 18.7 GiB compressed.
+          # A healthy but slow runner can need more than the action's default
+          # ten-minute segment deadline to download it.
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 30
+        with:
+          path: .lake/build/lib/lean
+          key: ${{ steps.route_a_cache_keys.outputs.primary_key }}
+          restore-keys: ${{ steps.route_a_cache_keys.outputs.restore_keys }}
+
+      - name: Retry project Lake artifact cache restoration
+        id: route_a_cache_restore_retry
+        if: >-
+          github.event.inputs.durable_checkpoint_run_id == '' &&
+          steps.route_a_cache_restore.outputs.cache-matched-key == ''
+        continue-on-error: true
+        timeout-minutes: 40
+        uses: actions/cache/restore@v5
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 30
         with:
           path: .lake/build/lib/lean
           key: ${{ steps.route_a_cache_keys.outputs.primary_key }}
           restore-keys: ${{ steps.route_a_cache_keys.outputs.restore_keys }}
 
       - name: Verify project cache restoration
+        id: route_a_cache_restore_verify
         if: github.event.inputs.durable_checkpoint_run_id == ''
         shell: bash
         timeout-minutes: 2
         env:
-          RESTORE_OUTCOME: ${{ steps.route_a_cache_restore.outcome }}
-          MATCHED_KEY: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}
+          PRIMARY_OUTCOME: ${{ steps.route_a_cache_restore.outcome }}
+          PRIMARY_MATCHED_KEY: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}
+          RETRY_OUTCOME: ${{ steps.route_a_cache_restore_retry.outcome }}
+          RETRY_MATCHED_KEY: ${{ steps.route_a_cache_restore_retry.outputs.cache-matched-key }}
         run: |
           set -euo pipefail
-          if [ "$RESTORE_OUTCOME" != "success" ] || [ -z "$MATCHED_KEY" ]; then
+          matched_key=""
+          if [ "$PRIMARY_OUTCOME" = "success" ] && [ -n "$PRIMARY_MATCHED_KEY" ]; then
+            matched_key="$PRIMARY_MATCHED_KEY"
+          elif [ "$RETRY_OUTCOME" = "success" ] && [ -n "$RETRY_MATCHED_KEY" ]; then
+            matched_key="$RETRY_MATCHED_KEY"
+          fi
+          if [ -z "$matched_key" ]; then
             echo "::error::Route A checkpoint restoration failed or did not match a cache."
-            echo "restore_outcome=${RESTORE_OUTCOME} matched_key=${MATCHED_KEY}"
+            echo "primary_outcome=${PRIMARY_OUTCOME} primary_matched_key=${PRIMARY_MATCHED_KEY}"
+            echo "retry_outcome=${RETRY_OUTCOME} retry_matched_key=${RETRY_MATCHED_KEY}"
             exit 2
           fi
-          echo "Restored Route A checkpoint from ${MATCHED_KEY}."
+          echo "matched_key=${matched_key}" >> "$GITHUB_OUTPUT"
+          echo "Restored Route A checkpoint from ${matched_key}."
 
       - name: Restore Route A smoke generated sources
         id: restore_sources
@@ -526,7 +557,7 @@ jobs:
       - name: Cache elan toolchain
         id: cache_elan
         timeout-minutes: 10
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.elan
           key: ${{ runner.os }}-elan-${{ hashFiles('lean-toolchain') }}
@@ -1128,7 +1159,7 @@ jobs:
           steps.route_a_cache_rotation.outcome == 'success'
         continue-on-error: true
         timeout-minutes: 45
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: .lake/build/lib/lean
           key: ${{ steps.route_a_cache_keys.outputs.save_key }}
@@ -1143,7 +1174,7 @@ jobs:
           steps.route_a_cache_save.outcome != 'success'
         continue-on-error: true
         timeout-minutes: 45
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: .lake/build/lib/lean
           key: ${{ steps.route_a_cache_keys.outputs.save_key }}-retry
@@ -1322,6 +1353,10 @@ jobs:
             echo "cache_restore_conclusion=${{ steps.route_a_cache_restore.conclusion }}"
             echo "cache_restore_hit=${{ steps.route_a_cache_restore.outputs.cache-hit }}"
             echo "cache_restore_matched_key=${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
+            echo "cache_restore_retry_outcome=${{ steps.route_a_cache_restore_retry.outcome }}"
+            echo "cache_restore_retry_conclusion=${{ steps.route_a_cache_restore_retry.conclusion }}"
+            echo "cache_restore_retry_matched_key=${{ steps.route_a_cache_restore_retry.outputs.cache-matched-key }}"
+            echo "cache_restore_selected_key=${{ steps.route_a_cache_restore_verify.outputs.matched_key }}"
             echo "cache_save_outcome=${{ steps.route_a_cache_save.outcome }}"
             echo "cache_save_conclusion=${{ steps.route_a_cache_save.conclusion }}"
             echo "cache_save_retry_outcome=${{ steps.route_a_cache_save_retry.outcome }}"
@@ -1356,6 +1391,9 @@ jobs:
           echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
           echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
           echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
+          echo "Cache restore retry: ${{ steps.route_a_cache_restore_retry.outcome }} / ${{ steps.route_a_cache_restore_retry.conclusion }}"
+          echo "Cache restore retry matched key: ${{ steps.route_a_cache_restore_retry.outputs.cache-matched-key }}"
+          echo "Cache restore selected key: ${{ steps.route_a_cache_restore_verify.outputs.matched_key }}"
           echo "Cache save primary: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
           echo "Cache save retry: ${{ steps.route_a_cache_save_retry.outcome }} / ${{ steps.route_a_cache_save_retry.conclusion }}"
           echo "Cache saved key: ${{ steps.route_a_cache_save_result.outputs.saved_key }}"
@@ -1618,6 +1656,8 @@ jobs:
             echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
             echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
             echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
+            echo "Cache restore retry: ${{ steps.route_a_cache_restore_retry.outcome }} / ${{ steps.route_a_cache_restore_retry.conclusion }}"
+            echo "Cache restore selected key: ${{ steps.route_a_cache_restore_verify.outputs.matched_key }}"
             echo "Cache save primary: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
             echo "Cache save retry: ${{ steps.route_a_cache_save_retry.outcome }} / ${{ steps.route_a_cache_save_retry.conclusion }}"
             echo "Cache saved key: ${{ steps.route_a_cache_save_result.outputs.saved_key }}"
@@ -1636,6 +1676,8 @@ jobs:
             echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
             echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
             echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
+            echo "Cache restore retry: ${{ steps.route_a_cache_restore_retry.outcome }} / ${{ steps.route_a_cache_restore_retry.conclusion }}"
+            echo "Cache restore selected key: ${{ steps.route_a_cache_restore_verify.outputs.matched_key }}"
             echo "Cache save primary: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
             echo "Cache save retry: ${{ steps.route_a_cache_save_retry.outcome }} / ${{ steps.route_a_cache_save_retry.conclusion }}"
             echo "Cache saved key: ${{ steps.route_a_cache_save_result.outputs.saved_key }}"
@@ -1655,6 +1697,8 @@ jobs:
           echo "Cache restore outcome: ${{ steps.route_a_cache_restore.outcome }} / ${{ steps.route_a_cache_restore.conclusion }}"
           echo "Cache restore hit: ${{ steps.route_a_cache_restore.outputs.cache-hit }}"
           echo "Cache restore matched key: ${{ steps.route_a_cache_restore.outputs.cache-matched-key }}"
+          echo "Cache restore retry: ${{ steps.route_a_cache_restore_retry.outcome }} / ${{ steps.route_a_cache_restore_retry.conclusion }}"
+          echo "Cache restore selected key: ${{ steps.route_a_cache_restore_verify.outputs.matched_key }}"
           echo "Cache save primary: ${{ steps.route_a_cache_save.outcome }} / ${{ steps.route_a_cache_save.conclusion }}"
           echo "Cache save retry: ${{ steps.route_a_cache_save_retry.outcome }} / ${{ steps.route_a_cache_save_retry.conclusion }}"
           echo "Cache saved key: ${{ steps.route_a_cache_save_result.outputs.saved_key }}"
