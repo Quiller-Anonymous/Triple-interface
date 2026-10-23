@@ -460,7 +460,7 @@ jobs:
         if: github.event.inputs.durable_checkpoint_run_id == ''
         continue-on-error: true
         timeout-minutes: 40
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         env:
           # The Route A checkpoint is currently about 18.7 GiB compressed.
           # A healthy but slow runner can need more than the action's default
@@ -478,7 +478,7 @@ jobs:
           steps.route_a_cache_restore.outputs.cache-matched-key == ''
         continue-on-error: true
         timeout-minutes: 40
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         env:
           SEGMENT_DOWNLOAD_TIMEOUT_MINS: 30
         with:
@@ -557,7 +557,7 @@ jobs:
       - name: Cache elan toolchain
         id: cache_elan
         timeout-minutes: 10
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.elan
           key: ${{ runner.os }}-elan-${{ hashFiles('lean-toolchain') }}
@@ -1159,7 +1159,7 @@ jobs:
           steps.route_a_cache_rotation.outcome == 'success'
         continue-on-error: true
         timeout-minutes: 45
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: .lake/build/lib/lean
           key: ${{ steps.route_a_cache_keys.outputs.save_key }}
@@ -1174,7 +1174,7 @@ jobs:
           steps.route_a_cache_save.outcome != 'success'
         continue-on-error: true
         timeout-minutes: 45
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: .lake/build/lib/lean
           key: ${{ steps.route_a_cache_keys.outputs.save_key }}-retry
