@@ -1,0 +1,32 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalStage090
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup252
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Checkpointed final assembly stage for class groups 252..252. -/
+
+def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo252 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo251 ∪ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup252Pairs
+
+def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotalUpTo252 : ℚ :=
+  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotalUpTo251 + PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup252Total
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo251_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup252Pairs :
+    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo251 PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup252Pairs := by
+  native_decide
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo252_actual_sum :
+    (∑ p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo252, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p) = PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotalUpTo252 := by
+  rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo252, Finset.sum_union PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo251_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup252Pairs]
+  rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo251_actual_sum, periodicMainNonzeroWithoutRowFiveNonDyadicClassGroup252_actual_sum]
+  rfl
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

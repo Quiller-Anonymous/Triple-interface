@@ -25,6 +25,9 @@ BRIDGE_MODULE = (
 )
 NAMESPACE = "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage"
 GROUP_COUNT = 287
+DEFAULT_STAGE_SIZE = 8
+DEFAULT_TAIL_START = 184
+DEFAULT_TAIL_STAGE_SIZE = 1
 
 
 def module_name(stem: str) -> str:
@@ -190,18 +193,46 @@ def render_final() -> str:
     return "\n".join(lines)
 
 
-def expected_files(stage_size: int) -> dict[Path, str]:
+def stage_ranges(
+    stage_size: int,
+    tail_start: int | None,
+    tail_stage_size: int,
+) -> list[tuple[int, int]]:
     if stage_size <= 0:
         raise ValueError("stage size must be positive")
+    if tail_stage_size <= 0:
+        raise ValueError("tail stage size must be positive")
+    if tail_start is not None and not 0 <= tail_start <= GROUP_COUNT:
+        raise ValueError(f"tail start must be between 0 and {GROUP_COUNT}")
+
+    ranges: list[tuple[int, int]] = []
+    start = 0
+    while start < GROUP_COUNT:
+        size = (
+            tail_stage_size
+            if tail_start is not None and start >= tail_start
+            else stage_size
+        )
+        end = min(GROUP_COUNT, start + size)
+        if tail_start is not None and start < tail_start < end:
+            end = tail_start
+        ranges.append((start, end))
+        start = end
+    return ranges
+
+
+def expected_files(
+    stage_size: int,
+    tail_start: int | None,
+    tail_stage_size: int,
+) -> dict[Path, str]:
     rendered: dict[Path, str] = {}
-    stage_index = 0
-    for start in range(0, GROUP_COUNT, stage_size):
-        end = min(GROUP_COUNT, start + stage_size)
+    ranges = stage_ranges(stage_size, tail_start, tail_stage_size)
+    for stage_index, (start, end) in enumerate(ranges):
         rendered[OUT_DIR / f"{stage_stem(stage_index)}.lean"] = render_stage(
             stage_index, start, end
         )
-        stage_index += 1
-    rendered[OUT_DIR / f"{STEM}Summary.lean"] = render_summary(stage_index - 1)
+    rendered[OUT_DIR / f"{STEM}Summary.lean"] = render_summary(len(ranges) - 1)
     rendered[OUT_DIR / f"{STEM}Coverage.lean"] = render_coverage()
     rendered[OUT_DIR / f"{STEM}.lean"] = render_final()
     return rendered
@@ -209,11 +240,27 @@ def expected_files(stage_size: int) -> dict[Path, str]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--stage-size", type=int, default=8)
+    parser.add_argument("--stage-size", type=int, default=DEFAULT_STAGE_SIZE)
+    parser.add_argument(
+        "--tail-start",
+        type=int,
+        default=DEFAULT_TAIL_START,
+        help="First group emitted with the smaller tail stage size.",
+    )
+    parser.add_argument(
+        "--tail-stage-size",
+        type=int,
+        default=DEFAULT_TAIL_STAGE_SIZE,
+        help="Groups per checkpoint after --tail-start.",
+    )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
 
-    rendered = expected_files(args.stage_size)
+    rendered = expected_files(
+        args.stage_size,
+        args.tail_start,
+        args.tail_stage_size,
+    )
     mismatches: list[str] = []
     for path, content in rendered.items():
         if args.check:
@@ -225,7 +272,11 @@ def main() -> None:
     if mismatches:
         raise SystemExit("generated files differ: " + ", ".join(mismatches))
     action = "verified" if args.check else "wrote"
-    print(f"{action} {len(rendered)} files with stage_size={args.stage_size}")
+    print(
+        f"{action} {len(rendered)} files with "
+        f"stage_size={args.stage_size}, tail_start={args.tail_start}, "
+        f"tail_stage_size={args.tail_stage_size}"
+    )
 
 
 if __name__ == "__main__":

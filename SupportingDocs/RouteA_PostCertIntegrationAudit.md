@@ -204,8 +204,10 @@ separate `FinalSummary`, `FinalCoverage`, and public `Final` wrappers.  The decl
 public theorem names are unchanged.  Regenerate or verify this surface with:
 
 ```bash
-python3 scripts/ci/generate_nondyadic_class_final_stages.py --stage-size 8
-python3 scripts/ci/generate_nondyadic_class_final_stages.py --stage-size 8 --check
+python3 scripts/ci/generate_nondyadic_class_final_stages.py \
+  --stage-size 8 --tail-start 184 --tail-stage-size 1
+python3 scripts/ci/generate_nondyadic_class_final_stages.py \
+  --stage-size 8 --tail-start 184 --tail-stage-size 1 --check
 ```
 - Can recover directly from such a milestone by setting `durable_checkpoint_run_id=RUN_ID`.
   The workflow downloads that exact named artifact, verifies `SHA256SUMS`, restores the compiled
