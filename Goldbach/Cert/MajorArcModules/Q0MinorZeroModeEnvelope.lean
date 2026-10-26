@@ -6,14 +6,18 @@ import Goldbach.Cert.MajorArcModules.Q0MinorNormalizedEnergy
 `Q0MinorZeroModeEnvelope` packages the current zero-mode envelope seam behind the frozen
 route-visible bridge witness.
 
-The key point is that the promoted empirical envelope
+The frozen candidate envelope
 
 `sigmaEnvelopeFormula(X) = κ / log(X + H)^2`
 
-is not an unrelated extra factor: it uses exactly the same `log(X + H)^(-2)` normalization seam
-already present in the canonical route floor `c_X`.  This file isolates that relationship and
-defines the normalized zero-mode ratio whose eventual analytic explanation is now the main
-frontier.
+is a constant multiple of the canonical route floor `c_X`. This file records that identity and
+the exact residual definitions; it does not establish that the resulting unweighted normalized
+ratio is close to a constant.
+
+The unweighted bookkeeping, average, and variance targets below are retained as legacy diagnostic
+interfaces. The exact energy transfer in `Q0MinorZeroModeWeightedEnergy` retains
+`‖zeroModeSigmaBaseline X N‖ ^ 2` and is the appropriate equivalent form of the native envelope
+target. Removing that weight imposes an additional, much stronger arithmetic claim.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeEnvelope
@@ -223,7 +227,8 @@ The zero-mode envelope observable:
 
 `zeroModeScalar / (q0NormFactor(N) * geometricWeightedMinorCoeff(X,N,0) * sigmaNormalizedSeries(N))`.
 
-This is the quantity whose near-constancy in `N` motivated the frozen `sigmaEnvelopeFormula`.
+This definition includes the outer `q0NormFactor` as well as the normalization inside the geometric
+coefficient. Diagnostics that use a bare geometric sum measure a different observable.
 -/
 noncomputable def zeroModeEnvelopeObservable (X N : ℕ) : ℂ :=
   zeroModeScalar X N / zeroModeSigmaBaseline X N
@@ -231,8 +236,8 @@ noncomputable def zeroModeEnvelopeObservable (X N : ℕ) : ℂ :=
 /--
 Raw post-`σ` zero-mode mass ratio observable.
 
-This is the upstream ratio that current diagnostics show is already nearly scalar before the later
-route-floor `c_X` normalization is reinstated.
+This divides the exact prime-weighted mass by the normalized geometric mass and singular series.
+Its normalization differs from the unscaled ratio defined below.
 -/
 noncomputable def rawZeroModeMassRatioObservable (X N : ℕ) : ℂ :=
   rawExactZeroModeMass X N / (rawGeometricZeroSliceMass X N * sigmaNormalizedSeries N)
@@ -240,9 +245,9 @@ noncomputable def rawZeroModeMassRatioObservable (X N : ℕ) : ℂ :=
 /--
 Unscaled post-`σ` zero-mode mass ratio observable.
 
-This is the same upstream ratio, but with the intrinsic surrogate zero-slice normalization peeled
-off. Current diagnostics suggest this is the first layer whose scalar content is genuinely order
-one.
+This replaces the normalized geometric mass in the denominator by its unscaled counterpart.
+Consequently this observable still carries the geometric normalization of the exact numerator;
+it must not be identified with the half-mass-recentered ratio or assigned its scalar constants.
 -/
 noncomputable def unscaledZeroModeMassRatioObservable (X N : ℕ) : ℂ :=
   rawExactZeroModeMass X N / (unscaledGeometricZeroSliceMass X N * sigmaNormalizedSeries N)
@@ -480,9 +485,9 @@ theorem zeroModeScalar_eq_kappa_times_sigmaFloor_plus_error
 Exact pointwise normalization identity behind the zero-mode shape transfer.
 
 When the defining denominators are nonzero, the route-facing envelope error is precisely the
-normalized shape error multiplied back by `zeroModeSigmaBaseline` and the route floor. The
-inequality packaged by `ZeroModeEnvelopeNormalizationTransferTarget` is therefore a pure
-normalization-size question, not new half-mass arithmetic.
+normalized shape error multiplied back by `zeroModeSigmaBaseline` and the route floor.
+`Q0MinorZeroModeWeightedEnergy` retains the squared baseline weight in the corresponding exact
+energy identity. The legacy `ZeroModeEnvelopeNormalizationTransferTarget` discards that weight.
 -/
 theorem zeroModeEnvelopeError_eq_sigma_floor_mul_normalizedShapeError
     (κ : ℝ) (X N : ℕ)
@@ -511,8 +516,8 @@ noncomputable def zeroModeEnvelopeErrorWindowEnergy (κ : ℝ) (X : ℕ) : ℝ :
 /--
 Route-facing zero-mode shape target with abstract scalar `κ`.
 
-This is the current proof-oriented frontier: the `N`-shape and the shared `c_X` seam are fixed,
-and only the scalar bookkeeping and residual estimate remain.
+This is a bound on the native residual after subtracting the chosen singular-series baseline.
+It does not assert unweighted closeness of the normalized ratio to `κ`.
 -/
 structure ZeroModeEnvelopeShapeTarget (κ C2 C3 : ℝ) : Prop where
   C2_nonneg : 0 ≤ C2
@@ -546,20 +551,17 @@ noncomputable def normalizedZeroModeShapeWindowAverageStabilityEnergy (κ : ℝ)
   ((EvenIn X H).card : ℝ) * ‖normalizedZeroModeShapeWindowAverage X - (κ : ℂ)‖ ^ 2
 
 /--
-The normalized-observable form of the zero-mode target:
+Legacy unweighted normalized-observable target:
 
 `normalizedZeroModeShapeObservable = κ + error`
 
 with the error controlled on the canonical route window.
 
-This is the live arithmetic frontier for the numerically viable normalized route. A proof that is
-meant to preserve that route should hit this target directly, or through a theorem that stays on
-the normalized shape surface. In particular, the fallback path through
-`normalizedZeroModeBookkeepingTarget_of_halfMass_and_correction` imports
-`HalfMassRecenteredZeroModeTarget`; combined with the current half-mass variance seam downstream of
-`Goldbach.Cert.MajorArcModules.Q0MinorRawEnergyLedgerRoute.rawLedger_canon_one_one_axiom`, that
-fallback path inherits the raw-ledger `C2 * (H / X)` profile with `C2 = 1`, which is numerically
-incompatible with the calibrated admissibility cap for the bookkeeping comparison theorem.
+This target drops the exact squared baseline weight and is not equivalent to
+`ZeroModeEnvelopeShapeTarget`. Its conditional reductions are retained for compatibility, not as
+the preferred Route-A proof obligation. Use the weighted target and exact transfer in
+`Q0MinorZeroModeWeightedEnergy` when estimating the native envelope residual. Constants calibrated
+for an unscaled mass ratio cannot be applied to this observable without a separate comparison.
 -/
 structure NormalizedZeroModeBookkeepingTarget (κ C2 C3 : ℝ) : Prop where
   C2_nonneg : 0 ≤ C2
@@ -572,20 +574,19 @@ structure NormalizedZeroModeBookkeepingTarget (κ C2 C3 : ℝ) : Prop where
         + C3 / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)
 
 /--
-Named direct-frontier alias for the normalized zero-mode bookkeeping problem.
+Legacy alias for the unweighted normalized zero-mode bookkeeping problem.
 
-This alias is intentionally non-innovative mathematically: it records that the next viable theorem
-must be a direct proof on the normalized observable itself, rather than a reduction through the
-older half-mass variance route.
+The historical `Direct` name does not designate an active arithmetic frontier. This alias is
+retained so existing conditional reductions continue to elaborate.
 -/
 abbrev DirectNormalizedZeroModeBookkeepingTarget (κ C2 C3 : ℝ) : Prop :=
   NormalizedZeroModeBookkeepingTarget κ C2 C3
 
 /--
-Direct arithmetic average target for the normalized zero-mode shape observable.
+Legacy exact-average target for the unweighted normalized zero-mode shape observable.
 
-This is the normalized-surface analogue of the half-mass average witness, but it lives directly on
-the Route-A bookkeeping observable rather than the half-mass-recentered proxy.
+This is an additional constant-mean assumption, not a consequence of the exact normalization
+identities or of a centered singular-series energy bound.
 -/
 structure NormalizedZeroModeWindowAverageTarget (κ : ℝ) : Prop where
   average_eq :
@@ -593,11 +594,10 @@ structure NormalizedZeroModeWindowAverageTarget (κ : ℝ) : Prop where
       normalizedZeroModeShapeWindowAverage X = (κ : ℂ)
 
 /--
-Raw-sum form of the normalized window-average target.
+Legacy raw-sum form of the unweighted normalized window-average target.
 
-This is the smallest honest arithmetic source theorem for the direct normalized Route-A branch:
-identify the canonical even-window raw sum of the normalized shape observable with
-`|EvenIn(X,H)| * κ`.
+It asserts that the raw sum equals `|EvenIn(X,H)| * κ`. The weighted energy route does not require
+this fixed-scalar identity.
 -/
 structure NormalizedZeroModeWindowRawSumTarget (κ : ℝ) : Prop where
   sum_eq :
@@ -605,10 +605,10 @@ structure NormalizedZeroModeWindowRawSumTarget (κ : ℝ) : Prop where
       normalizedZeroModeShapeWindowRawSum X = ((EvenIn X H).card : ℂ) * (κ : ℂ)
 
 /--
-Direct centered-variance target for the normalized zero-mode shape observable.
+Legacy unweighted centered-variance target for the normalized zero-mode shape observable.
 
-This is the route-preserving replacement for proving a variance theorem only after dropping back to
-the half-mass endpoint.
+It measures a different energy from the weighted envelope residual and is retained only as a
+conditional diagnostic interface.
 -/
 structure NormalizedZeroModeArithmeticVarianceTarget (C2 C3 : ℝ) : Prop where
   C2_nonneg : 0 ≤ C2
@@ -621,10 +621,10 @@ structure NormalizedZeroModeArithmeticVarianceTarget (C2 C3 : ℝ) : Prop where
         + C3 / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)
 
 /--
-Average-stability target for the normalized zero-mode shape observable.
+Legacy unweighted average-stability target for the normalized zero-mode shape observable.
 
-This lets the direct normalized route separate centered fluctuation from the question of whether
-the canonical window average stabilizes to a single bookkeeping scalar `κ`.
+This assumes a uniform error budget around one fixed scalar. Such stabilization is not supplied
+by centering the singular-series truncation and is not required by the weighted energy route.
 -/
 structure NormalizedZeroModeWindowAverageStabilityTarget (κ C2 C3 : ℝ) : Prop where
   C2_nonneg : 0 ≤ C2
@@ -637,13 +637,11 @@ structure NormalizedZeroModeWindowAverageStabilityTarget (κ C2 C3 : ℝ) : Prop
         + C3 / ((H : ℝ) * ((Goldbach.AO_OffDiag.TailBlock.Q0 : ℕ) : ℝ) ^ 2)
 
 /--
-Pointwise transfer from the normalized zero-mode shape error back to the route-facing envelope
-error.
+Legacy coarse transfer from the unweighted normalized shape error to the envelope error.
 
-This is the normalization seam in the zero-mode shape problem. It is deliberately separated from
-the arithmetic bookkeeping target: proving this target should be a deterministic comparison of the
-`zeroModeSigmaBaseline` and route-floor normalizations, while `NormalizedZeroModeBookkeepingTarget`
-contains the actual scalar/half-mass arithmetic.
+This inequality removes the squared baseline weight. Its use with
+`NormalizedZeroModeBookkeepingTarget` is sufficient but can impose a much stronger requirement than
+the native envelope estimate. Prefer the exact weighted identity in `Q0MinorZeroModeWeightedEnergy`.
 -/
 structure ZeroModeEnvelopeNormalizationTransferTarget (κ : ℝ) : Prop where
   bound :
@@ -653,13 +651,13 @@ structure ZeroModeEnvelopeNormalizationTransferTarget (κ : ℝ) : Prop where
       routeVisibleWindowNormFloorSq X * ‖normalizedZeroModeShapeError κ X N‖ ^ 2
 
 /--
-Assemble the route-facing zero-mode envelope shape target from two smaller inputs:
+Legacy conditional assembly of the envelope target from two unweighted inputs:
 
 * a deterministic normalization transfer from the normalized shape error to the envelope error;
 * the normalized bookkeeping/half-mass arithmetic bound.
 
-This exposes the real obstruction: after this reduction, `ZeroModeEnvelopeShapeTarget` no longer
-hides whether the hard work is arithmetic or normalization bookkeeping.
+The implication remains valid, but neither input is asserted here. The exact weighted transfer
+avoids imposing these stronger unweighted hypotheses.
 -/
 theorem zeroModeEnvelopeShapeTarget_of_normalizedBookkeeping_and_transfer
     {κ C2 C3 : ℝ}
@@ -723,7 +721,8 @@ structure RawZeroModeMassShapeTarget (κ C2 C3 : ℝ) : Prop where
 /--
 The unscaled raw-mass version of the zero-mode scalar target.
 
-This is the first layer where the constant appears empirically to be order one.
+This is a separate hypothesis on the unscaled ratio. Its scalar and error constants must be
+calibrated on that exact observable rather than borrowed from another normalization layer.
 -/
 structure UnscaledZeroModeMassShapeTarget (κ C2 C3 : ℝ) : Prop where
   C2_nonneg : 0 ≤ C2
@@ -1026,11 +1025,10 @@ theorem normalizedZeroModeBookkeepingTarget_of_average_and_variance
   exact hVar.bound hX
 
 /--
-Direct-frontier packaging of the normalized bookkeeping target from native average and variance
-inputs.
+Legacy conditional packaging of unweighted bookkeeping from exact average and variance inputs.
 
-This is the preferred closure theorem for the numerically viable Route-A branch: it stays entirely
-on `normalizedZeroModeShapeObservable` and its window operators.
+This theorem is retained for compatibility; it does not establish the inputs or their feasibility.
+The native envelope estimate should use the exact weighted transfer instead.
 -/
 theorem directNormalizedZeroModeBookkeepingTarget_of_average_and_variance
     {κ C2 C3 : ℝ}
@@ -1071,11 +1069,10 @@ theorem normalizedZeroModeWindowAverageTarget_of_rawSum
   rw [← mul_assoc, inv_mul_cancel₀ hcardC, one_mul]
 
 /--
-Direct-frontier packaging from the raw normalized window sum and native normalized variance.
+Legacy conditional packaging from the raw unweighted window sum and unweighted variance.
 
-This theorem isolates the remaining arithmetic source theorem for the direct normalized route:
-prove the exact raw sum on the normalized observable and a native variance bound, and the
-bookkeeping target follows without any half-mass reduction.
+These hypotheses imply the unweighted bookkeeping target. They are not required by the weighted
+energy route and are not consequences of a centered truncation certificate.
 -/
 theorem directNormalizedZeroModeBookkeepingTarget_of_rawSum_and_variance
     {κ C2 C3 : ℝ}
@@ -1105,10 +1102,10 @@ theorem normalizedZeroModeWindowAverageStabilityTarget_of_averageTarget
   rw [hleft, hright]
 
 /--
-Direct normalized-surface reduction from centered variance plus scale-by-scale average stability.
+Legacy unweighted reduction from centered variance and average stability.
 
-This is the honest Route-A version of the projection-to-constants step: keep the whole argument on
-`normalizedZeroModeShapeObservable` until a direct proof either succeeds or visibly collapses.
+This algebraic implication remains valid when both hypotheses are supplied. It should not be used
+to replace the exact weighted envelope energy by an unweighted constant-shape requirement.
 -/
 theorem normalizedZeroModeBookkeepingTarget_of_variance_and_averageStability
     {κ C2v C3v C2a C3a : ℝ}
@@ -1184,14 +1181,9 @@ theorem normalizedZeroModeBookkeepingTarget_of_variance_and_averageStability
 Reduction from the normalized bookkeeping target to the older half-mass-recentered target plus a
 separate correction-factor stability package.
 
-This theorem is intentionally diagnostic. If the only available proof of
-`NormalizedZeroModeBookkeepingTarget` goes through this lemma and then through
-`HalfMassRecenteredZeroModeTarget`, the Route A zero-mode residual has inherited the old half-mass
-arithmetic burden. If the normalized target is proved directly, it is genuinely weaker than that
-old endpoint. Under the current repo seam, the downstream fallback path eventually reaches
-`Goldbach.Cert.MajorArcModules.Q0MinorRawEnergyLedgerRoute.rawLedger_canon_one_one_axiom`, so this
-reduction should be treated as structurally informative but numerically dead for the calibrated
-bookkeeping comparison problem.
+This theorem is retained as a conditional diagnostic reduction. The correction-factor stability
+package is an additional hypothesis; it cannot be omitted when comparing normalization layers.
+No feasibility claim for the resulting unweighted target is made here.
 -/
 theorem normalizedZeroModeBookkeepingTarget_of_halfMass_and_correction
     {κ A C2h C3h C2c C3c : ℝ}
@@ -1739,17 +1731,17 @@ theorem finalRouteClosureTarget_of_endpoint_and_meanApprox
       (routeVisibleApproximationTargetAtScalar_of_endpoint_and_meanApprox e hm)
 
 /--
-Arithmetic-side frontier for Vaughan's bridge: produce the abstract half-mass-recentered endpoint.
+Legacy axiomatized half-mass endpoint retained for compatibility.
 
-This is intentionally explicit. The zero-mode provenance ladder below this endpoint is now
-stabilized, so the remaining arithmetic task is exactly to instantiate this interface.
+This declaration supplies no proof or calibration of the endpoint. The exact weighted energy
+transfer does not use this axiom.
 -/
 axiom vaughanHalfMassRecenteredEndpoint : HalfMassRecenteredEndpoint
 
 /--
-Geometric-side frontier for Vaughan's bridge: prove the frozen mean-channel approximation target.
+Legacy axiomatized existence of a frozen mean-channel approximation target.
 
-This is the second remaining mathematical input after the zero-mode endpoint.
+Consumers must distinguish this declaration from an explicit theorem with calibrated constants.
 -/
 axiom vaughanMeanChannelApproxTarget :
   ∃ C2 C3 : ℝ, MeanChannelApproxTarget C2 C3
