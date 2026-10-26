@@ -118,9 +118,9 @@ theorem dyadicGramDecayPoly_canon_of_band2_and_diagonal3
   dyadicGramDecayPoly_of_band2_and_diagonal (Δ := Δ_canon) (C2 := 3) (C3 := 3) hBand hDiag
 
 /--
-Final bridge wrapper:
-if band-2 shell orthogonality and the raw `3,3` diagonal ledger are proved analytically, then the
-only remaining input is the two calibration inequalities against the certified constants.
+Local bridge wrapper: if band-2 shell orthogonality and the raw `3,3` diagonal ledger are proved
+analytically, then this constructor additionally needs the two calibration inequalities against the
+certified constants.
 -/
 def calibratedDyadicGramDecayPoly_canon_of_band2_diagonal3_and_calibration
     (hBand : Band2ShellOrthogonality Δ_canon)

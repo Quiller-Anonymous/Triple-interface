@@ -1,0 +1,25 @@
+import Goldbach.Cert.MajorArcModules.RouteABalancedFiniteCutoffObstruction
+import Goldbach.Cert.MajorArcModules.Q0MinorCalibrationUniversalContradiction
+import Goldbach.Cert.MajorArcModules.Q0MinorPacketOrthogonalityCore
+import Goldbach.Cert.MajorArcModules.Q0GlobalSSU
+import Goldbach.Cert.MajorArcModules.Q0RawFullPacketLedger
+import Goldbach.Cert.MajorArcModules.Q0Theorem627
+import SSU.Engines.TypeIIToeplitzGlobalNoSavingAudit
+
+/-!
+Small axiom audit for the October 2026 Route A consistency review.
+
+This deliberately contrasts the checked balanced identities and the two new diagnostic theorems
+with the placeholder/axiom-dependent Q0 Vaughan application surfaces.
+-/
+
+#print axioms Goldbach.Cert.MajorArcModules.RouteABalancedFiniteCutoffRemainder.balancedVonMangoldtAfterMajorUpToRemainder_eq_integral
+#print axioms Goldbach.Cert.MajorArcModules.RouteABalancedFiniteCutoffObstruction.convolution_lt_two_main_sub_power
+#print axioms Goldbach.Cert.MajorArcModules.RouteABalancedFiniteCutoffObstruction.no_cutoff_two_closure_of_cap_and_progression_obstruction
+#print axioms Goldbach.Cert.MajorArcModules.Q0MinorCalibrationUniversalContradiction.legacy_universal_calibration_inconsistent
+#print axioms SSU.Engines.TypeIIToeplitz.Step34ProdSum.card_le_effective_constant
+
+#print axioms Goldbach.Cert.MajorArcModules.Q0MinorPacketOrthogonalityCore.vaughanLambda_suppliesF3Energy
+#print axioms Goldbach.Cert.MajorArcModules.Q0GlobalSSU.globalSSU_of_vaughan
+#print axioms Goldbach.Cert.MajorArcModules.Q0RawFullPacketLedger.rawFullPacketLedger_1_1
+#print axioms Goldbach.Cert.MajorArcModules.Q0Theorem627.rawFullPacketLedger_1_1_of_globalSSU

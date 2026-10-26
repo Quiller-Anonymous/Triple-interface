@@ -26,7 +26,7 @@ separate those cases clearly.
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: silver overall, with a gold-grade conditional boundary and fool's-gold pinned/staging workbenches. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves the closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches build and contain substantial checked infrastructure, but they are not final endpoints. The current fixed-width Route A bank is now formally known to be empty at arbitrarily large scales, so its universal positive-mean target is impossible. The corrected Route A endpoint is the complete pointwise prime convolution. Its exact circle split and von-Mangoldt-to-prime transfer are checked, including a uniform `(5/2) * (sqrt N + 1) * log(N)^2` higher-prime-power allowance. On the balanced finite-cutoff implementation, the von Mangoldt major approximation and its exact arithmetic-geometric model are also checked. Route A is now open at the complete-coefficient remainder cancellation bound, its strict explicit budget, and the finite-base threshold gap.
+1. Goldbach conjecture -- Current status: silver as a formal conditional pipeline, not as evidence that an unconditional proof is nearly complete. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches contain substantial checked infrastructure, but they are not final endpoints. The fixed-width Route A bank is empty at arbitrarily large scales, and the later finite-cutoff two-sided norm-and-budget target is also incompatible with fixed-modulus arithmetic-progression averages. A bounded SSU application audit found no exact extraction of the balanced von Mangoldt remainder into the advertised packet interface. Route A is therefore suspended as a proof-completion project pending a genuinely new, one-sided arithmetic estimate with a demonstrated nontrivial saving.
 
 2. Twin primes conjecture -- Current status: conditional entrypoint + fool's-gold default build
 -- The hypothesis-only checklist entry point `Twin/ChecklistEntrypoint.lean`
@@ -49,7 +49,7 @@ separate those cases clearly.
 Build note: “it builds” means it builds locally. The finite-base chunks are too large for the
 current GitHub setup, so local builds are the authoritative check here.
 
-## October 2026 Route A fixed-bank feasibility correction
+## October 2026 Route A consistency correction
 
 The universal positive-mean version of Route A cannot be closed with the current fixed-width prime
 bank. A checked factorial construction now gives arbitrarily large scales at which every integer in
@@ -58,39 +58,36 @@ scalar vanish; Lean also checks that the frozen residual cancels the proposed ma
 the large finite `X0` certificate is no longer a Route A closure dependency. It remains useful as a
 finite diagnostic and regression artifact, but completing it cannot repair the universal target.
 
-The replacement audit is in `SupportingDocs/RouteABankRedesign.md`. A separate growing-bank
-prototype has exact coefficient mass one and unconditional dyadic prime-pair coverage via
-Bertrand's theorem, but it does not prove exact-center coverage. The corrected endpoint is now the
-full normalized pointwise prime-pair convolution in
-`Goldbach/Cert/MajorArcModules/RouteABroadPrimeConvolution.lean`: Lean checks that its positivity is
-equivalent to a genuine Goldbach representation and that an exact positive-main/smaller-error
-certificate would combine with the finite base to prove Goldbach. Route A is therefore open at the
-analytic estimate for that full pointwise convolution, not at old-certificate completion. The
-follow-up modules `RouteABroadPrimeCircle.lean` and `RouteABroadPrimeCircleProgram.lean` now prove
-the exact complete-convolution circle identity, its broad major/minor split, and the final
-finite-base wrapper. The production refinement keeps the complete von Mangoldt weight through the
-circle analysis and removes higher prime powers only at the end. Lean now checks the exact transfer
-and the uniform contamination bound `(5 / 2) * (sqrt N + 1) * log(N)^2`; see
-`RouteABroadPrimeVonMangoldt.lean`, `RouteABroadPrimePowerCount.lean`, and
-`RouteABroadVonMangoldtClosure.lean`. A checked balanced growing-interval adapter now applies the
-existing BMOR estimate on `[L,N-L]`. The first exact split on `[0,1]` exposed a circle-seam problem:
-the principal arc centered at zero is cut in half, so its copy near one would be mislabeled minor.
-`RouteABalancedQ0SeamSafeSplit.lean` repairs this by translating the length-one fundamental
-interval, and `RouteABalancedFiniteCutoffCircle.lean` exposes an exact low-denominator major sum
-plus remainder at an arbitrary cutoff `Q`. The full `Q0 = 30000` BMOR error is numerically unusable;
-the corrected diagnostic leaves a real cutoff tradeoff rather than selecting a theorem-level
-value: `Q = 2` has the largest reserve before the remainder estimate, while roughly `Q = 8..10`
-captures more rational peaks. `RouteABalancedFiniteCutoffMajorApprox.lean` now integrates the BMOR
-error, and `RouteABalancedFiniteCutoffModel.lean` proves that the finite-cutoff model is the explicit
-real signed sum
-`sum_{q <= Q} muSq(q) * c_q(N) / phi(q)^2 * K_q(L,N)`, with every geometric mass `K_q`
-nonnegative. `RouteABalancedFiniteCutoffRemainder.lean` identifies the exact complementary
-integral, while `RouteABalancedFiniteCutoffClosure.lean` reduces closure to a norm bound for that
-remainder and a strict explicit budget. Those two analytic facts, cutoff selection, and the finite
-base/BMOR threshold gap remain open. The current coarse ledger crosses from negative to positive
-only around three to three-and-a-half million; that is diagnostic evidence, not a theorem. A tested
-output-sequence DFT projector was too lossy and is retained only as exploratory infrastructure. See
-`SupportingDocs/RouteABroadPrimeConvolutionPlan.md` for the ordered integration plan.
+The redesign audit began in `SupportingDocs/RouteABankRedesign.md`. A growing-bank prototype has
+exact coefficient mass one and unconditional dyadic prime-pair coverage via Bertrand's theorem, but
+it does not prove exact-center coverage. The corrected arithmetic endpoint is the full pointwise
+prime-pair convolution in `RouteABroadPrimeConvolution.lean`, whose positivity is equivalent to a
+Goldbach representation. The follow-up modules check the complete-convolution circle identity,
+balanced support, seam-safe split, BMOR major approximation, finite-cutoff arithmetic-geometric
+model, and the uniform higher-prime-power allowance
+`(5 / 2) * (sqrt N + 1) * log(N)^2`.
+
+The next consistency audit changed the project status again. The two-sided closure interface in
+`RouteABalancedFiniteCutoffClosure.lean` forces the full balanced von Mangoldt convolution below
+twice a fixed-cutoff main term. At cutoff two, a Parseval cap would make this less than `4N`, while
+fixed-modulus PNT-in-progressions averaging in the class `0 mod 210` has limiting ratio
+`35/8 > 4`. More generally, increasing to another fixed cutoff cannot repair the same two-sided
+strategy. `RouteABalancedFiniteCutoffObstruction.lean` checks the order-theoretic consequence and
+the contradiction from explicit model-cap and progression hypotheses; the full PNT averaging lemma
+is not yet formalized in Lean.
+
+The same audit removed the inconsistent universally quantified
+`ssu_minor_energy_calibration` axiom and proved its contradiction with the existing dyadic witness
+existence surface. A bounded application test then attempted to connect the exact balanced
+remainder to SSU. It failed at the extraction step: the Q0 Vaughan block-family predicate is `True`,
+the supplied witness uses a zero cutoff, the raw ledger is axiom-backed, and the compatibility
+bridge ignores its global-SSU premise. A separate Lean theorem shows that the global all-array
+`Step34ProdSum` interface cannot by itself beat the trivial per-frequency norm.
+
+The complete audit is `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`. Route A is
+suspended until an exact phase-preserving arithmetic decomposition and a restricted-family estimate
+produce a visible one-sided saving. The old `X0` certificate remains a diagnostic/regression
+artifact, not a closure dependency.
 
 ## August 2026 Route A / Q0 certificate update
 
@@ -130,18 +127,18 @@ Main progress:
   reports source-restore/archive-audit/setup/cache outcomes, and prints direct-builder closure-scan
   progress before the scheduler starts.
 
-Current practical state:
+Historical certificate-build state:
 - Historically, the Route A/Q0 certificate path made real checked progress through the
   generated-certificate integration phase. The October feasibility correction above means it is no
   longer the live closure path.
-- The most common current blocker is not a new mathematical objection; it is a generated module that
-  is too large, stale, or misnamed for the current incremental CI cache. The response pattern is now
-  clear: inspect the failed module, distinguish interface/cache errors from real Lean errors, split
-  large modules where needed, update the source archive, and force-rebuild only the affected closure.
+- The most common build blocker was a generated module that was too large, stale, or misnamed for
+  the incremental CI cache. The response pattern was to inspect the failed module, distinguish
+  interface/cache errors from Lean errors, split large modules where needed, update the source
+  archive, and force-rebuild only the affected closure.
 - More large dyadic base modules may still need splitting before the full
-  `Q0MinorZeroModeNormalizedAverageX0Cert` target finishes. Once that target builds, the next step is
-  to build the narrow `Q0RouteAPostCertBridgeProbe`, then the periodic-main/final certificate
-  wrappers, before attempting broader turnkey or final Goldbach targets.
+  `Q0MinorZeroModeNormalizedAverageX0Cert` target finishes. Completion is optional diagnostic work.
+  It must not automatically trigger `Q0RouteAPostCertBridgeProbe` or a broader Goldbach target,
+  because the uniform bridge target has failed the later consistency and application audits.
 
 ## Local hiccups
 See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are present or missing.
@@ -299,13 +296,16 @@ turnkey route remains available and is audited separately.
 - `Goldbach/GoldFunX_OptionB_TextbookMajorArc.lean` still leaves the canonical `ε < c0` input,
   `WeightsBridgeHyp`, and the global budget inequality explicit.
 
-**Axioms currently used by the “turnkey” pinned-cap Option-B route (explicit `axiom`s)**
-- ε₁ minor-energy ledger engine export (project-pinned route): `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean:55`
-  `ssu_minor_energy_ledger_engine` (now derived via `Q0MinorEnergyLedgerEngineAxiom`, not postulated directly).
-- ε₁ remaining pinned seam (calibration only): `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedgerEngineAxiom.lean:76`
-  `ssu_minor_energy_calibration` (Crow calibration to certified caps).
-- ε₁ conventional dyadic existence boundary (project-neutral): `Goldbach/Cert/MajorArcModules/Q0MinorInterzoneDyadicConventionalAxioms.lean:158`
-  `q0MinorDyadicGramDecayPoly_exists`.
+**Pinned Q0 workbench provenance (not an active Route A closure)**
+- `Q0TwoBoundsPinnedAxioms.ssu_minor_energy_ledger_engine` is currently derived from the checked
+  weighted-channel certificate path, including `Q0MinorSSUFromCert.nonzeroModeEnergyBound`; it does
+  not use `Q0MinorEnergyLedgerEngineAxiom`.
+- The universally quantified `ssu_minor_energy_calibration` axiom has been removed as inconsistent.
+  `Q0MinorEnergyLedgerEngineAxiom` remains only as a compatibility surface that requires explicit
+  calibration for one chosen dyadic witness.
+- The separate conventional dyadic existence boundary
+  `q0MinorDyadicGramDecayPoly_exists` remains an explicit axiom where imported. It is used by the
+  contradiction audit but is not the provider for the active pinned cap-16 certificate path.
 
 The ε₂-small branch is now discharged deterministically in
 `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundDeterministic.lean` and is no longer an

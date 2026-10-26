@@ -1,6 +1,6 @@
 # SSU status (rolling)
 
-Last updated: 2026-03-08
+Last updated: 2026-10-26
 
 Estimated “status bar” (**M1–M6 flagship roadmap tranche**): 100%
 
@@ -10,24 +10,32 @@ Internal micro-bar (Type–II large sieve stage): ~100%
 
 Secondary bar (**plumbing + weak fallbacks**, end-to-end objects exist but with crude CS/geometry surrogates standing in for real large-sieve input): ~100%
 
-## Platinum completion state
+## Platinum library-contract state
 
-- ✅ **Project-complete at platinum level** for the frozen SSU blueprint and canonical flagship APIs.
-- ✅ Canonical extracted/default routes are non-fallback and proof-driven on the promoted paths.
-- ✅ Remaining work, if any, is optional sharpening (better constants or stronger families), not required
-  to use SSU as a completed library contract surface.
+- The frozen SSU blueprint and canonical flagship APIs are proved on the coefficient families and
+  hypotheses stated in their theorem types.
+- Canonical extracted/default routes are non-fallback and proof-driven on the promoted paths.
+- This status describes the standalone library contract. It does not assert that a nontrivial
+  quantitative saving has been obtained for the balanced von Mangoldt coefficients in the Goldbach
+  application.
 
-## Goldbach ep-1 integration note
+## Goldbach application audit
 
-- ✅ Downstream `Q0` pinned-route seam is now narrowed: Step-1/Step-2 are derived from the
-  project-neutral dyadic polynomial-decay boundary
-  `q0MinorDyadicGramDecayPoly_exists` in
-  `Goldbach/Cert/MajorArcModules/Q0MinorInterzoneDyadicConventionalAxioms.lean`.
-- ✅ Remaining project-pinned `ep-1` seam is calibration-only (Crow cap inequalities), exposed as
-  `ssu_minor_energy_calibration` in
-  `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedgerEngineAxiom.lean`.
-- ✅ Mathematician-facing handoff theorem/module added:
-  `Goldbach/Cert/MajorArcModules/Q0MinorCalibrationHandoff.lean`.
+- The former universal calibration axiom `ssu_minor_energy_calibration` was inconsistent with the
+  monotonic upper-bound witness and has been removed. The compatibility module now takes
+  calibration for one selected witness as an explicit hypothesis.
+- The active pinned cap-16 provider uses `Q0MinorSSUFromCert.nonzeroModeEnergyBound`, not the retired
+  universal calibration route. That finite certificate remains a pinned diagnostic, not a uniform
+  Goldbach application.
+- A bounded application test selected the exact balanced cutoff-two remainder. It stopped before an
+  SSU estimate could be applied: the present Q0 Vaughan surface contains no exact decomposition of
+  that arithmetic term, and the raw `(1,1)` ledger is axiom-backed.
+- `TypeIIToeplitzGlobalNoSavingAudit.lean` proves that the global all-array `Step34ProdSum` contract
+  must absorb at least the tube cardinality into its effective constant. The displayed square-root
+  factor is therefore not, by itself, a Goldbach saving.
+- See `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`. No further Goldbach closure
+  machinery should be built from these interfaces until a restricted arithmetic application shows
+  an explicit improvement over the trivial bound.
 
 ## Major status (flagship)
 

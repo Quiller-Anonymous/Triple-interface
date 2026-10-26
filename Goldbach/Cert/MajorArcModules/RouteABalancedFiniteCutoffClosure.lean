@@ -2,14 +2,20 @@ import Goldbach.Cert.MajorArcModules.RouteABalancedFiniteCutoffModel
 import Goldbach.Cert.MajorArcModules.RouteABalancedFiniteCutoffRemainder
 
 /-!
-# Closure interface for the corrected balanced Route A
+# Retired two-sided closure interface for the balanced Route A audit
 
 All exact circle algebra, the arithmetic-geometric major-model identity, the published BMOR
 major-arc error, and the prime-power contamination allowance are already checked upstream. This
-module packages the two remaining analytic obligations:
+module packages the two analytic obligations formerly proposed for closure:
 
 1. a norm bound for the explicit finite-cutoff remainder integral;
 2. a strict budget comparing that bound and the checked errors with the explicit signed main sum.
+
+This interface is retained for historical and consistency auditing only. Its two-sided norm bound
+and strict budget force an eventual upper bound on the full convolution that is incompatible with
+fixed-modulus prime-number-theorem averages. It is not an active Route A proof target. See
+`RouteABalancedFiniteCutoffObstruction` and
+`SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.RouteABalancedFiniteCutoffClosure

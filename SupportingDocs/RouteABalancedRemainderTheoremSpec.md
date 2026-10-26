@@ -1,11 +1,15 @@
-# Corrected Route A remainder theorem specification
+# Superseded Route A two-sided remainder specification
+
+> **Retired on 2026-10-26.** This document records a historical proposal. The norm-and-budget
+> target below is mathematically inconsistent with fixed-modulus PNT-in-progressions averages and
+> must not be used as an active Route A specification. See
+> `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`.
 
 ## Purpose
 
-This document fixes the remaining mathematical target after removal of the impossible fixed-bank
-positive-mean route. It is intentionally tied to the exact Lean objects. A theorem about the old
-`BG_Bank.wX` coefficients, a window average, or the legacy Q0 certificate does not satisfy this
-specification.
+This document formerly proposed the next mathematical target after removal of the impossible
+fixed-bank positive-mean route. It remains useful for identifying exact Lean objects and for
+auditing why the proposal failed; it no longer specifies work to be completed.
 
 ## Checked reduction
 
@@ -25,14 +29,15 @@ For the balanced von Mangoldt weight on `[L,N-L]`, Lean now checks all of the fo
    ```
 
    where `K_q(L,N) = balancedTruncatedGeometricKernelMass L N q 1` is nonnegative.
-6. A finite base and `BalancedFiniteCutoffClosureCertificate` prove `GoldbachRep N` for every even
-   `N >= 4`.
+6. Conditional on `BalancedFiniteCutoffClosureCertificate`, a finite base proves `GoldbachRep N`
+   for every even `N >= 4`. The implication is valid, but its two analytic fields cannot be
+   simultaneously populated at cutoff two.
 
 The axiom audit shows that items 1, 3, 5, and the closure plumbing use only Lean's standard logical
 axioms. The major approximation and final closure inherit the already-declared analytic input
 `ExplicitPNTinAP_BMOR.psi_bound`; no legacy certificate axiom is hidden in the chain.
 
-## Canonical first cutoff
+## Rejected first cutoff proposal
 
 The first serious target is `Q = 2`, not full `Q0`. For every even `N`, Lean proves
 
@@ -55,11 +60,11 @@ BMOR major-error formula and the checked prime-power allowance, but before a rem
 | 4,000,000 | 0.29909 |
 | 5,000,000 | 0.51698 |
 
-These values use numerical quadrature and are feasibility evidence only. They suggest testing a
-remainder target of `N/10` from a threshold near 3.5 million, with a larger threshold available if
-the provable constant is worse.
+These values use numerical quadrature and were feasibility evidence only. Subsequent
+arithmetic-progression averaging shows that neither the two-sided target nor even the proposed
+one-sided `Re remainder >= -N/10` target can hold beyond any threshold.
 
-## Exact missing theorem
+## Rejected missing theorem
 
 The central object is
 
@@ -73,7 +78,7 @@ and Lean has already identified it with
 balancedFiniteCutoffRemainderIntegral L N 2 1.
 ```
 
-A concrete candidate theorem is therefore:
+The historical candidate theorem was:
 
 ```text
 theorem balanced_q2_remainder_le_tenth
@@ -82,8 +87,9 @@ theorem balanced_q2_remainder_le_tenth
       <= (1 / 10 : Real) * N
 ```
 
-The constant and threshold may change. What must not change is the observable, the exact center, or
-the uniform quantifier over even `N`.
+No constant or threshold can make this two-sided norm target compatible with the associated strict
+budget. The exact observable and center remain relevant, but a continuation would need a different,
+one-sided arithmetic theorem.
 
 The second missing quantitative theorem is the corresponding strict budget:
 
@@ -94,10 +100,10 @@ balancedBMORIntegratedMajorError 1_000_001 N 2 1
   < balancedFiniteCutoffMain 1_000_001 N 2 1.
 ```
 
-Lean exposes these facts as `BalancedCutoffTwoRemainderTarget` and
-`BalancedCutoffTwoBudgetTarget`. Once they are proved and the finite base reaches the selected
-threshold, `goldbach_of_finiteBase_and_balancedCutoffTwoTargets` finishes Route A without another
-generated analytic certificate.
+Lean retains these facts as `BalancedCutoffTwoRemainderTarget` and
+`BalancedCutoffTwoBudgetTarget` for historical consistency auditing. The conditional wrapper
+`goldbach_of_finiteBase_and_balancedCutoffTwoTargets` remains logically valid, but its hypotheses
+are not an attainable Route A target.
 
 ## Mathematical difficulty
 
@@ -114,30 +120,30 @@ theory, not merely completion of a Lean wrapper. The formal development can expo
 combine such a theorem, but it must not silently rename a banked estimate or an average-result as
 the needed pointwise statement.
 
-## Plausible proof program
+## Historical proof program and stopping result
 
-1. Work directly with the balanced complete von Mangoldt exponential sum.
-2. Use a genuine Vaughan or related identity whose equality to that sum is proved, not assumed.
-3. Separate Type I and Type II ranges on the exact seam-safe complement of the `q <= 2` arcs.
-4. Prove the needed bilinear cancellation with explicit constants and uniformity in `N`.
-5. Integrate with the exact phase `e(-N alpha)` instead of replacing the scalar by a global
-   unnormalized `L2` norm.
-6. Re-run the ledger with the proved constant and choose the threshold only after the strict budget
-   has positive certified margin.
+The useful parts of the proposed program survive only as requirements for a future one-sided
+application: work with the complete balanced von Mangoldt sum, prove an exact Vaughan-like
+identity, retain the phase `e(-N alpha)`, and restore every coefficient norm and constant. The
+bounded SSU application audit found that the present Q0 interfaces do not supply the first exact
+extraction step and that the global all-array SSU endpoint cannot itself beat the trivial
+per-frequency bound. Under the adopted stopping rule, no further closure machinery should be built
+until a restricted arithmetic application shows an explicit nontrivial saving.
 
-The alternative is to increase `Q`, but that should be done only if the remainder theorem improves
-more than the BMOR major error and signed-main reserve deteriorate. The corrected ledger currently
-leaves `Q = 2` versus roughly `Q = 8..10` as an empirical tradeoff, not a settled choice.
+Increasing to another fixed `Q` does not repair the same two-sided strategy: fixed-modulus
+progression averages make the convolution-to-`N` ratio unbounded across suitable fixed moduli,
+whereas a fixed-cutoff model remains `O_Q(N)`.
 
 ## Acceptance and rejection tests
 
-A proposed bridge is acceptable only if it:
+A future replacement bridge is acceptable only if it:
 
-- bounds the exact `balancedVonMangoldtAfterMajorUpToRemainder` object or proves an exact equality to
-  the object it bounds;
+- starts from the exact `balancedVonMangoldtAfterMajorUpToRemainder` object or proves an exact
+  equality to the object it estimates;
 - is uniform for every even `N` beyond an explicit threshold;
-- retains the exact-center phase;
-- supplies constants that pass the strict budget; and
+- retains the exact-center phase and the sign of helpful positive contributions;
+- supplies a one-sided estimate whose fully restored constants give a strict positive final lower
+  bound; and
 - has an axiom audit listing only deliberately accepted analytic inputs.
 
 Reject any proposal that:
@@ -146,7 +152,9 @@ Reject any proposal that:
 - proves only an average over centers or a density-one result;
 - substitutes a positive nearby convolution for positivity at `N`;
 - uses the completed `X0` certificate as a scale-uniform estimate; or
-- hides the remainder estimate inside a new certificate structure or axiom.
+- hides the remainder estimate inside a new certificate structure or axiom;
+- cites the global all-array SSU square-root factor without restoring its effective constant; or
+- yields only the trivial bound after coefficient norms and shell sums are restored.
 
 ## Finite-base consequence
 
