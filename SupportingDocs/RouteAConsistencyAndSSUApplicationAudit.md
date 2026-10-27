@@ -408,6 +408,13 @@ stopping condition:
 
 No additional Route A certificate is justified by the present interfaces.
 
+The later hard-residual audit sharpens this conclusion.  Lean proves that the hard coefficient is
+`Lambda - mu_<=u * log`, independent of the auxiliary cutoff `v`, and extracts the three Vaughan
+components under the exact complementary mask.  Its long component is a cross-Toeplitz form
+between the product coefficient `mu(d) Lambda(k)` and the reflected prime sequence.  The proved
+rank-one SSU modules do not presently map that cross form to a fixed-center one-sided estimate.
+See `SupportingDocs/RouteAHardResidualSSUApplicationAudit.md`.
+
 ## The theorem needed to resume
 
 The next candidate must be a genuine arithmetic theorem, not a new wrapper. The algebraic

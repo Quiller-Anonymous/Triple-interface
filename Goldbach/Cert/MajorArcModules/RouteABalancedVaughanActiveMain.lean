@@ -93,6 +93,47 @@ noncomputable def balancedVaughanTypeIActiveDiscreteCoprimeMain
         ∑ p ∈ balancedVaughanTypeIActivePrimeSupport L N d,
           Real.log ((N - p) / d)
 
+/--
+The one-variable logarithmic profile underlying the active Type-I main.  The cutoff is both the
+Vaughan cutoff `u` and the geometric support condition `d ≤ k`; the latter is essential because
+the corresponding prime progression is empty outside that range.
+-/
+noncomputable def coprimeMoebiusTotientLogProfile
+    (N u k : ℕ) : ℝ :=
+  ∑ d ∈ ((Finset.Icc 1 u).filter (Nat.Coprime N)).filter (fun d => d ≤ k),
+    ((ArithmeticFunction.moebius d : ℤ) : ℝ) *
+      ((1 : ℝ) / (Nat.totient d : ℝ)) * Real.log (k / d)
+
+/--
+Finite Fubini form of the active discrete main.  This is the exact bridge from the checked
+prime-indexed definition to the coprime Mobius/totient logarithmic profile used by the explicit
+kernel argument.
+-/
+theorem activeDiscreteCoprimeMain_eq_sum_logProfile
+    (L N u : ℕ) :
+    balancedVaughanTypeIActiveDiscreteCoprimeMain L N u =
+      ∑ p ∈ balancedCandidateSupport L N,
+        coprimeMoebiusTotientLogProfile N u (N - p) := by
+  classical
+  unfold balancedVaughanTypeIActiveDiscreteCoprimeMain
+    coprimeMoebiusTotientLogProfile balancedVaughanTypeIActivePrimeSupport
+  simp_rw [Finset.mul_sum]
+  simp_rw [Finset.sum_filter]
+  rw [Finset.sum_comm]
+  apply Finset.sum_congr rfl
+  intro d hd
+  by_cases hcop : Nat.Coprime N d
+  · simp only [if_pos hcop]
+    apply Finset.sum_congr rfl
+    intro p hp
+    have hpN : p ≤ N := by
+      have hpBounds := Finset.mem_Icc.mp hp
+      exact le_trans hpBounds.2 (Nat.sub_le N L)
+    by_cases hdk : d ≤ N - p
+    · simp [hdk, Nat.cast_sub hpN]
+    · simp [hdk]
+  · simp [hcop]
+
 /-- The inactive tail by which the earlier comparison main differs from the active main. -/
 noncomputable def balancedVaughanTypeIInactiveDiscreteCoprimeMainTail
     (L N u : ℕ) : ℝ :=

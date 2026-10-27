@@ -266,6 +266,24 @@ structure BalancedVaughanHardResidualLowerBound
             (balancedVonMangoldtWeight L N) N (retained N)).re
 
 /--
+One-sided estimate for the retained part of the same hard residual.  This is the cancellation-safe
+surface for comparing the retained von Mangoldt pair with the retained Type-I model:
+
+`J(S,S) - J(A,S) = J(S-A,S) = J(hard,S)`.
+
+Bounding this difference directly avoids paying for two large retained integrals separately.
+-/
+structure BalancedVaughanRetainedHardResidualLowerBound
+    (L Xmin : ℕ) (u v : ℕ → ℕ) (retained : ℕ → Set ℝ)
+    (allowance : ℕ → ℝ) : Prop where
+  lower :
+    ∀ {N : ℕ}, Xmin ≤ N → Even N →
+      -allowance N
+        ≤ (finiteWeightBilinearSetIntegral
+            (balancedVaughanHardWeight L N (u N) (v N))
+            (balancedVonMangoldtWeight L N) N (retained N)).re
+
+/--
 Correct one-sided recombination.  It identifies the exact quantitative margin needed after the
 tractable Type-I correlation has been evaluated.
 -/
@@ -288,6 +306,88 @@ theorem balancedMaskedCorrelation_lower_bound
     (balancedVonMangoldtMaskedCorrelation_eq_typeI_add_hard
       L N (u N) (v N) (retained N) (hTypeI.measurable N))
   rw [Complex.add_re] at hSplit
+  linarith
+
+/--
+One-sided estimate for the retained part of the original von Mangoldt pair correlation.  Keeping
+this input separate is essential: the Type-I complementary correlation may have a negative main
+term because the positive `q = 1,2` contribution has deliberately been removed.
+-/
+structure BalancedRetainedPairLowerEstimate
+    (L Xmin : ℕ) (retained : ℕ → Set ℝ)
+    (main error : ℕ → ℝ) : Prop where
+  lower :
+    ∀ {N : ℕ}, Xmin ≤ N → Even N →
+      main N - error N
+        ≤ (finiteWeightBilinearSetIntegral
+            (balancedVonMangoldtWeight L N) (balancedVonMangoldtWeight L N) N
+            (retained N)).re
+
+/--
+Full-circle lower bound after restoring the retained von Mangoldt pair contribution.  The usable
+main margin is
+
+`typeIMain + (retainedPairMain - retainedTypeIMain)`,
+
+not `typeIMain - retainedTypeIMain` by itself.  In particular, this theorem records the exact
+cancellation that the retained-arc feasibility audit must establish before any Type-II estimate is
+commissioned.
+-/
+theorem balancedFullCorrelation_lower_bound
+    {L Xmin : ℕ} {u v : ℕ → ℕ} {retained : ℕ → Set ℝ}
+    {typeIMain retainedTypeIMain typeIFullError retainedTypeIError : ℕ → ℝ}
+    {retainedPairMain retainedPairError hardAllowance : ℕ → ℝ}
+    (hTypeI : BalancedVaughanTypeIFixedCenterEstimate
+      L Xmin u retained typeIMain retainedTypeIMain typeIFullError retainedTypeIError)
+    (hHard : BalancedVaughanHardResidualLowerBound
+      L Xmin u v retained hardAllowance)
+    (hRetained : BalancedRetainedPairLowerEstimate
+      L Xmin retained retainedPairMain retainedPairError)
+    {N : ℕ} (hN : Xmin ≤ N) (hEven : Even N) :
+    typeIMain N + (retainedPairMain N - retainedTypeIMain N)
+        - typeIFullError N - retainedTypeIError N - retainedPairError N - hardAllowance N
+      ≤ finiteWeightBilinearConvolution
+          (balancedVonMangoldtWeight L N) (balancedVonMangoldtWeight L N) N := by
+  have hMasked := balancedMaskedCorrelation_lower_bound hTypeI hHard hN hEven
+  have hRetainedLower := hRetained.lower hN hEven
+  have hCircle := congrArg Complex.re
+    (finiteWeightBilinearConvolution_cast_eq_set_add_compl
+      (balancedVonMangoldtWeight L N) (balancedVonMangoldtWeight L N) N
+      (retained N) (hTypeI.measurable N))
+  simp only [Complex.ofReal_re, Complex.add_re] at hCircle
+  linarith
+
+/--
+Cancellation-safe full-circle recombination.  A full Type-I progression estimate is combined with
+direct one-sided bounds for the retained and complementary pieces of the hard residual.  No
+separate approximation to either large retained main is required.
+-/
+theorem balancedFullCorrelation_lower_bound_of_retainedHard
+    {L Xmin : ℕ} {u v : ℕ → ℕ} {retained : ℕ → Set ℝ}
+    {typeIMain typeIFullError retainedHardAllowance hardAllowance : ℕ → ℝ}
+    (hTypeI : BalancedVaughanTypeIProgressionEstimate
+      L Xmin u typeIMain typeIFullError)
+    (hMeasurable : ∀ N, MeasurableSet (retained N))
+    (hHard : BalancedVaughanHardResidualLowerBound
+      L Xmin u v retained hardAllowance)
+    (hRetainedHard : BalancedVaughanRetainedHardResidualLowerBound
+      L Xmin u v retained retainedHardAllowance)
+    {N : ℕ} (hN : Xmin ≤ N) (hEven : Even N) :
+    typeIMain N - typeIFullError N
+        - retainedHardAllowance N - hardAllowance N
+      ≤ finiteWeightBilinearConvolution
+          (balancedVonMangoldtWeight L N) (balancedVonMangoldtWeight L N) N := by
+  have hTypeIAbs := typeIFullCorrelation_approx_of_progressionEstimate hTypeI hN hEven
+  have hTypeILower := (abs_le.mp hTypeIAbs).1
+  have hHardLower := hHard.lower hN hEven
+  have hRetainedHardLower := hRetainedHard.lower hN hEven
+  have hHardCircle := congrArg Complex.re
+    (finiteWeightBilinearConvolution_cast_eq_set_add_compl
+      (balancedVaughanHardWeight L N (u N) (v N))
+      (balancedVonMangoldtWeight L N) N (retained N) (hMeasurable N))
+  simp only [Complex.ofReal_re, Complex.add_re] at hHardCircle
+  have hSplit := balancedVonMangoldtBilinearConvolution_eq_typeI_add_hard
+    L N (u N) (v N)
   linarith
 
 end

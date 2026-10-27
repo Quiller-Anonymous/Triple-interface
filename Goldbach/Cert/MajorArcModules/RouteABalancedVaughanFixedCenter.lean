@@ -62,6 +62,27 @@ noncomputable def vaughanTypeIIArithmetic (u v : ℕ) : ArithmeticFunction ℝ :
   vaughanMuLarge u * (ArithmeticFunction.zeta : ArithmeticFunction ℝ)
     * vaughanLambdaLarge v
 
+/-- Nested divisor expansion of the genuine Type-II coefficient.  The inner variables are the
+large Mobius divisor and the free zeta factor; the outer second variable carries the long Lambda
+coefficient. -/
+theorem vaughanTypeIIArithmetic_apply (u v n : ℕ) :
+    vaughanTypeIIArithmetic u v n
+      = ∑ x ∈ Nat.divisorsAntidiagonal n,
+          (∑ d ∈ Nat.divisors x.1,
+            if u < d then ((ArithmeticFunction.moebius d : ℤ) : ℝ) else 0)
+            * (if v < x.2 then ArithmeticFunction.vonMangoldt x.2 else 0) := by
+  unfold vaughanTypeIIArithmetic vaughanMuLarge vaughanLambdaLarge
+  rw [ArithmeticFunction.mul_apply]
+  refine Finset.sum_congr rfl ?_
+  intro x hx
+  rw [ArithmeticFunction.coe_mul_zeta_apply]
+  simp only [arithmeticCutoffAbove_apply, ArithmeticFunction.intCoe_apply]
+
+/-- The short correction with the sign it has in Vaughan's identity. -/
+noncomputable def vaughanSignedShortCorrectionArithmetic
+    (u v : ℕ) : ArithmeticFunction ℝ :=
+  -vaughanShortCorrectionArithmetic u v
+
 /-- Everything left after removing the short Type-I term from von Mangoldt. -/
 noncomputable def vaughanHardArithmetic (u v : ℕ) : ArithmeticFunction ℝ :=
   vaughanLambdaSmall v - vaughanShortCorrectionArithmetic u v
@@ -76,6 +97,20 @@ theorem vonMangoldt_eq_typeI_add_hard (u v : ℕ) :
     vaughanShortCorrectionArithmetic vaughanTypeIIArithmetic
   ring
 
+/-- The hard coefficient is intrinsically `Lambda - mu_<=u * log`; the auxiliary split at `v`
+only changes its internal decomposition. -/
+theorem vaughanHardArithmetic_eq_vonMangoldt_sub_typeI (u v : ℕ) :
+    vaughanHardArithmetic u v
+      = ArithmeticFunction.vonMangoldt - vaughanTypeIArithmetic u := by
+  rw [vonMangoldt_eq_typeI_add_hard u v]
+  ring
+
+/-- Changing the auxiliary Lambda cutoff does not change the combined hard coefficient. -/
+theorem vaughanHardArithmetic_independent_of_v (u v₁ v₂ : ℕ) :
+    vaughanHardArithmetic u v₁ = vaughanHardArithmetic u v₂ := by
+  rw [vaughanHardArithmetic_eq_vonMangoldt_sub_typeI,
+    vaughanHardArithmetic_eq_vonMangoldt_sub_typeI]
+
 /-- Short Type-I coefficient restricted to the balanced support. -/
 noncomputable def balancedVaughanTypeIWeight
     (L N u n : ℕ) : ℝ :=
@@ -85,6 +120,45 @@ noncomputable def balancedVaughanTypeIWeight
 noncomputable def balancedVaughanHardWeight
     (L N u v n : ℕ) : ℝ :=
   balancedRestrictedWeight (vaughanHardArithmetic u v) L N n
+
+/-- The short-Lambda component of the hard coefficient, restricted to balanced support. -/
+noncomputable def balancedVaughanLambdaSmallWeight
+    (L N v n : ℕ) : ℝ :=
+  balancedRestrictedWeight (vaughanLambdaSmall v) L N n
+
+/-- The signed short-convolution correction, restricted to balanced support. -/
+noncomputable def balancedVaughanSignedShortCorrectionWeight
+    (L N u v n : ℕ) : ℝ :=
+  balancedRestrictedWeight (vaughanSignedShortCorrectionArithmetic u v) L N n
+
+/-- The genuine long Type-II component, restricted to balanced support. -/
+noncomputable def balancedVaughanTypeIIWeight
+    (L N u v n : ℕ) : ℝ :=
+  balancedRestrictedWeight (vaughanTypeIIArithmetic u v) L N n
+
+/-- Exact three-component decomposition of the restricted hard weight. -/
+theorem balancedVaughanHardWeight_eq_components
+    (L N u v n : ℕ) :
+    balancedVaughanHardWeight L N u v n
+      = balancedVaughanLambdaSmallWeight L N v n
+        + balancedVaughanSignedShortCorrectionWeight L N u v n
+        + balancedVaughanTypeIIWeight L N u v n := by
+  by_cases hn : n ∈ balancedCandidateSupport L N
+  · simp [balancedVaughanHardWeight, balancedVaughanLambdaSmallWeight,
+      balancedVaughanSignedShortCorrectionWeight, balancedVaughanTypeIIWeight,
+      balancedRestrictedWeight, vaughanHardArithmetic,
+      vaughanSignedShortCorrectionArithmetic, sub_eq_add_neg, hn]
+  · simp [balancedVaughanHardWeight, balancedVaughanLambdaSmallWeight,
+      balancedVaughanSignedShortCorrectionWeight, balancedVaughanTypeIIWeight,
+      balancedRestrictedWeight, hn]
+
+/-- The restricted hard weight is independent of the auxiliary Lambda cutoff. -/
+theorem balancedVaughanHardWeight_independent_of_v
+    (L N u v₁ v₂ n : ℕ) :
+    balancedVaughanHardWeight L N u v₁ n
+      = balancedVaughanHardWeight L N u v₂ n := by
+  simp only [balancedVaughanHardWeight]
+  rw [vaughanHardArithmetic_independent_of_v u v₁ v₂]
 
 theorem broadVonMangoldtWeight_eq_typeI_add_hard
     (u v n : ℕ) :
@@ -490,6 +564,16 @@ private theorem balancedVonMangoldtWeight_fun_eq_typeI_add_hard
   funext n
   exact balancedVonMangoldtWeight_eq_typeI_add_hard L N u v n
 
+private theorem balancedVaughanHardWeight_fun_eq_components
+    (L N u v : ℕ) :
+    balancedVaughanHardWeight L N u v
+      = fun n =>
+          (balancedVaughanLambdaSmallWeight L N v n
+            + balancedVaughanSignedShortCorrectionWeight L N u v n)
+            + balancedVaughanTypeIIWeight L N u v n := by
+  funext n
+  exact balancedVaughanHardWeight_eq_components L N u v n
+
 /--
 The full balanced convolution is a short Type-I--prime correlation plus one hard residual.
 -/
@@ -528,6 +612,22 @@ theorem balancedVonMangoldtMaskedCorrelation_eq_typeI_add_hard
           (balancedVaughanHardWeight L N u v) (balancedVonMangoldtWeight L N) N s := by
   rw [balancedVonMangoldtWeight_fun_eq_typeI_add_hard L N u v]
   exact finiteWeightBilinearSetComplementIntegral_add_left _ _ _ _ _ hs
+
+/-- Exact extraction of the three analytic subproblems inside the complementary hard residual. -/
+theorem balancedVaughanHardMaskedCorrelation_eq_components
+    (L N u v : ℕ) (s : Set ℝ) (hs : MeasurableSet s) :
+    finiteWeightBilinearSetComplementIntegral
+        (balancedVaughanHardWeight L N u v) (balancedVonMangoldtWeight L N) N s
+      = finiteWeightBilinearSetComplementIntegral
+          (balancedVaughanLambdaSmallWeight L N v) (balancedVonMangoldtWeight L N) N s
+        + finiteWeightBilinearSetComplementIntegral
+          (balancedVaughanSignedShortCorrectionWeight L N u v)
+          (balancedVonMangoldtWeight L N) N s
+        + finiteWeightBilinearSetComplementIntegral
+          (balancedVaughanTypeIIWeight L N u v) (balancedVonMangoldtWeight L N) N s := by
+  rw [balancedVaughanHardWeight_fun_eq_components L N u v]
+  rw [finiteWeightBilinearSetComplementIntegral_add_left _ _ _ _ _ hs]
+  rw [finiteWeightBilinearSetComplementIntegral_add_left _ _ _ _ _ hs]
 
 /--
 Exact mask removal for the tractable Type-I--prime term.  This is the formal counterpart of

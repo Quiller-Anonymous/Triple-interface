@@ -499,6 +499,19 @@ the Type-II coefficient
 mu_>u * zeta * Lambda_>v.
 ```
 
+Lean now also proves that the combined hard coefficient is exactly
+
+```text
+Lambda - mu_<=u * log
+```
+
+and is independent of `v`.  The auxiliary cutoff only reorganizes the proof into short-Lambda,
+signed short-correction, and long Type-II components.  Their complementary correlations are
+extracted by an exact theorem in `RouteABalancedVaughanFixedCenter.lean`.  The worked application
+audit in `RouteAHardResidualSSUApplicationAudit.md` identifies the long term as a cross-Toeplitz
+form against the reflected prime sequence and finds no existing checked SSU application theorem
+that supplies the required fixed-center saving.
+
 Known results show that neither a reflected additive convolution nor a growing specified center is
 categorically inaccessible. However, the available shifted-divisor and Kloosterman-fraction
 theorems do not automatically accept the actual truncated Mobius--von-Mangoldt weights. Expanding

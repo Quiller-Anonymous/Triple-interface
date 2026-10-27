@@ -128,6 +128,26 @@ remain open. No
 cited theorem yet controls the actual hard coefficient family with
 the uniform one-sided margin needed for Goldbach.
 
+The retained-margin audit now records the correct full-circle recombination. The Type-I
+complement alone can have a negative main of approximately `(2*C2 - 1.67651834) * N` on the
+minimal singular-series family; this is expected because the positive `q=1,2` arcs have been
+removed. The checked theorem `balancedFullCorrelation_lower_bound` restores a separate retained
+von Mangoldt pair lower bound, so the usable main is the Type-I main plus the difference between
+the retained pair and retained Type-I models. The signed Mobius/totient kernel and Ramaré's
+explicit ordinary Mobius estimates now give a viable paper proof of the uniform active-main target
+`M_A >= 0.9*N` at the frozen threshold. Lean checks the exact reduction of `M_A` to the required
+one-variable logarithmic profiles; the published analytic inequalities and kernel tail remain to
+be formalized. A direct prefix/Abel argument also bounds the retained hard difference by `0.49*N`,
+leaving more than `0.40*N` before the complementary hard term. The remaining substantive paper
+gate is now the exact one-sided estimate `H(hard,S).re >= -0.35*N`. Lean now proves that
+`hard = Lambda - mu_<=u * log` is independent of the auxiliary Vaughan cutoff and extracts its
+short-Lambda, signed short-correction, and long Type-II complementary correlations separately.
+The SSU application audit finds no checked map from the resulting cross-Toeplitz form to a
+restricted arithmetic estimate with the required fixed-center saving. See
+`SupportingDocs/RouteARetainedMarginAudit.md`, `SupportingDocs/RouteAActiveMainKernelAudit.md`,
+`SupportingDocs/RouteARetainedHardAudit.md`, and
+`SupportingDocs/RouteAHardResidualSSUApplicationAudit.md`.
+
 The complete audit is `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`; the bounded next
 program is `SupportingDocs/RouteABalancedVaughanFixedCenterPlan.md`. Route A is suspended until the
 extracted hard residual receives a restricted-family estimate producing a visible one-sided saving
