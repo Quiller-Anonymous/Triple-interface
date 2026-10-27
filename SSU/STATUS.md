@@ -27,15 +27,18 @@ Secondary bar (**plumbing + weak fallbacks**, end-to-end objects exist but with 
 - The active pinned cap-16 provider uses `Q0MinorSSUFromCert.nonzeroModeEnergyBound`, not the retired
   universal calibration route. That finite certificate remains a pinned diagnostic, not a uniform
   Goldbach application.
-- A bounded application test selected the exact balanced cutoff-two remainder. It stopped before an
-  SSU estimate could be applied: the present Q0 Vaughan surface contains no exact decomposition of
-  that arithmetic term, and the raw `(1,1)` ledger is axiom-backed.
+- A bounded application test selected the exact balanced cutoff-two remainder. The legacy Q0
+  Vaughan surface still contains no exact decomposition of that arithmetic term, and the raw
+  `(1,1)` ledger is axiom-backed. A separate checked arithmetic-function development now gives an
+  exact Vaughan identity and isolates the hard Type-II residual, but no proved SSU constructor has
+  yet been matched to its actual coefficient family.
 - `TypeIIToeplitzGlobalNoSavingAudit.lean` proves that the global all-array `Step34ProdSum` contract
   must absorb at least the tube cardinality into its effective constant. The displayed square-root
   factor is therefore not, by itself, a Goldbach saving.
-- See `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`. No further Goldbach closure
-  machinery should be built from these interfaces until a restricted arithmetic application shows
-  an explicit improvement over the trivial bound.
+- See `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md` and
+  `SupportingDocs/RouteABalancedVaughanFixedCenterPlan.md`. No further Goldbach closure machinery
+  should be built from these interfaces until the extracted hard residual receives a restricted
+  arithmetic application with an explicit one-sided improvement over the trivial bound.
 
 ## Major status (flagship)
 

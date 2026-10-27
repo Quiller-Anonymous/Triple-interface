@@ -26,7 +26,7 @@ separate those cases clearly.
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: silver as a formal conditional pipeline, not as evidence that an unconditional proof is nearly complete. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches contain substantial checked infrastructure, but they are not final endpoints. The fixed-width Route A bank is empty at arbitrarily large scales, and the later finite-cutoff two-sided norm-and-budget target is also incompatible with fixed-modulus arithmetic-progression averages. A bounded SSU application audit found no exact extraction of the balanced von Mangoldt remainder into the advertised packet interface. Route A is therefore suspended as a proof-completion project pending a genuinely new, one-sided arithmetic estimate with a demonstrated nontrivial saving.
+1. Goldbach conjecture -- Current status: silver as a formal conditional pipeline, not as evidence that an unconditional proof is nearly complete. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches contain substantial checked infrastructure, but they are not final endpoints. The fixed-width Route A bank is empty at arbitrarily large scales, and the later finite-cutoff two-sided norm-and-budget target is also incompatible with fixed-modulus arithmetic-progression averages. The balanced route now has an exact Vaughan identity, a checked fixed-center bilinear split, and an exact prime-residue formula for the short Type-I--prime term; these isolate one hard long-modulus/Type-II residual. Route A remains suspended as a proof-completion project until an effective maximal progression estimate controls the Type-I formula and the hard residual receives a genuine one-sided arithmetic estimate with demonstrated nontrivial saving.
 
 2. Twin primes conjecture -- Current status: conditional entrypoint + fool's-gold default build
 -- The hypothesis-only checklist entry point `Twin/ChecklistEntrypoint.lean`
@@ -78,16 +78,26 @@ is not yet formalized in Lean.
 
 The same audit removed the inconsistent universally quantified
 `ssu_minor_energy_calibration` axiom and proved its contradiction with the existing dyadic witness
-existence surface. A bounded application test then attempted to connect the exact balanced
-remainder to SSU. It failed at the extraction step: the Q0 Vaughan block-family predicate is `True`,
-the supplied witness uses a zero cutoff, the raw ledger is axiom-backed, and the compatibility
-bridge ignores its global-SSU premise. A separate Lean theorem shows that the global all-array
-`Step34ProdSum` interface cannot by itself beat the trivial per-frequency norm.
+existence surface. A bounded application test then found that the legacy Q0 Vaughan/SSU bridge is
+still placeholder-backed: its block-family predicate is `True`, its supplied witness uses a zero
+cutoff, its raw ledger is axiom-backed, and its compatibility bridge ignores the global-SSU
+premise. A separate Lean theorem shows that the global all-array `Step34ProdSum` interface cannot
+by itself beat the trivial per-frequency norm.
 
-The complete audit is `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`. Route A is
-suspended until an exact phase-preserving arithmetic decomposition and a restricted-family estimate
-produce a visible one-sided saving. The old `X0` certificate remains a diagnostic/regression
-artifact, not a closure dependency.
+An independent algebraic route now passes the extraction stage. `RouteABalancedVaughanIdentity`
+proves the exact finite Vaughan identity, `RouteAFiniteWeightBilinearCircle` proves exact bilinear
+mask removal at a specified center, and `RouteABalancedVaughanFixedCenter` proves the signed split
+`H(S,S) = H(A,S) + H(hard,S)` while keeping one prime sum intact. Standard maximal
+Bombieri--Vinogradov methods plausibly control the short Type-I term; its exact error is now split
+into coprime progression and noncoprime prime-power obligations, subject to a formal and
+effective implementation. No cited theorem yet controls the actual hard coefficient family with
+the uniform one-sided margin needed for Goldbach.
+
+The complete audit is `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`; the bounded next
+program is `SupportingDocs/RouteABalancedVaughanFixedCenterPlan.md`. Route A is suspended until the
+extracted hard residual receives a restricted-family estimate producing a visible one-sided saving
+with effective constants. The old `X0` certificate remains a diagnostic/regression artifact, not a
+closure dependency.
 
 ## August 2026 Route A / Q0 certificate update
 

@@ -3,7 +3,8 @@
 > **Retired on 2026-10-26.** This document records a historical proposal. The norm-and-budget
 > target below is mathematically inconsistent with fixed-modulus PNT-in-progressions averages and
 > must not be used as an active Route A specification. See
-> `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`.
+> `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`. The replacement bounded research
+> surface is `SupportingDocs/RouteABalancedVaughanFixedCenterPlan.md`.
 
 ## Purpose
 

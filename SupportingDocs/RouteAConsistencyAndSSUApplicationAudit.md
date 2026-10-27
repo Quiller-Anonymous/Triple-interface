@@ -20,8 +20,9 @@ This decision has three independent causes:
    full balanced von Mangoldt convolution that conflicts with fixed-modulus arithmetic-progression
    averages.
 3. The inspected Q0/SSU chain does not contain the exact arithmetic extraction needed to apply a
-   proved SSU theorem to the balanced remainder. Its global all-array interface also has no
-   intrinsic pointwise saving.
+   proved SSU theorem to the balanced remainder. A separate exact Vaughan extraction has now been
+   built, but its hard Type-II residual does not match any proved repository SSU application, and
+   the global all-array interface has no intrinsic pointwise saving.
 
 These conclusions do not invalidate the checked exact identities and major-arc estimates listed
 below. They do invalidate the claim that Route A merely awaits completion of the present
@@ -37,6 +38,8 @@ The following machinery remains mathematically and formally useful:
 - the finite-cutoff arithmetic-geometric major model;
 - the BMOR-based major-arc approximation, subject to its declared analytic input;
 - the exact higher-prime-power transfer and its explicit allowance;
+- the exact finite Vaughan identity and fixed-center bilinear mask identity;
+- the exact signed split into a short Type-I--prime correlation and one hard residual;
 - the finite `X0` certificate as a diagnostic of the pinned observable;
 - the standalone SSU library contracts on the coefficient families named in their theorem types.
 
@@ -123,6 +126,10 @@ surfaces:
 | No-cutoff-two theorem | Same, plus explicit cap and progression hypotheses |
 | Universal-calibration contradiction | Core axioms plus `q0MinorDyadicGramDecayPoly_exists` |
 | Global `Step34ProdSum` no-saving theorem | Core logical axioms only |
+| Exact finite Vaughan identity | Core logical axioms and Mathlib arithmetic-function identities only |
+| Bilinear fixed-center mask identity | Core logical axioms only |
+| Exact `H(S,S) = H(A,S) + H(hard,S)` split | Core logical axioms only |
+| Type-I and hard-residual recombination interface | Core logical axioms only; analytic estimates remain explicit hypotheses |
 | `vaughanLambda_suppliesF3Energy` | Formally proved, but content-free because its target predicate is `True` |
 | `globalSSU_of_vaughan` | Depends on abstract packet/sequence axioms and `overlapSummationLedger_of_vaughan` |
 | `rawFullPacketLedger_1_1` | Depends on `rawMinorPacketEnergy_canon` through the legacy raw-ledger route |
@@ -165,9 +172,49 @@ A successful worked application would need all of the following:
 6. Recombination at the original Fourier coefficient for the fixed integer `N`.
 7. A numerical comparison showing a strict improvement over the corresponding trivial bound.
 
-### What the current source provides
+### Corrected extraction result
 
-The chain stops at step 1:
+The application no longer stops at step 1. The following modules now supply an independent,
+non-placeholder extraction:
+
+- `RouteABalancedVaughanIdentity.lean` proves the exact arithmetic-function identity
+
+  ```text
+  Lambda = Lambda_<=v + mu_<=u * log
+    - mu_<=u * zeta * Lambda_<=v
+    + mu_>u * zeta * Lambda_>v.
+  ```
+
+- `RouteAFiniteWeightBilinearCircle.lean` proves the fixed-center bilinear circle identity and
+  exact set/complement mask removal for arbitrary finite real weights.
+- `RouteABalancedVaughanFixedCenter.lean` keeps the second von Mangoldt factor intact and proves
+
+  ```text
+  H(S,S) = H(A,S) + H(hard,S),
+  ```
+
+  where `A = mu_<=u * log` and `hard` is the exact signed combination of the other three Vaughan
+  terms. It also proves the exact prime-residue formula
+
+  ```text
+  C_N(A,S) = sum_{d <= u} mu(d)
+    sum_{p in [L,N-L], p = N (mod d)} Lambda(p) log((N-p)/d).
+  ```
+
+  The finite change of variables and all support endpoints are checked in Lean.
+- `RouteABalancedVaughanTypeIInterface.lean` checks how a full Type-I progression estimate and a
+  retained-arc estimate combine, states the required maximal Bombieri--Vinogradov selector
+  interface, and leaves the hard residual as an explicit one-sided input. The progression error is
+  also split exactly into a reduced-residue coprime term and a noncoprime contribution, with a
+  checked theorem recombining independent bounds for the two pieces. A support theorem verifies
+  that every nonzero von Mangoldt term in the latter piece is a prime power noncoprime to its
+  modulus.
+
+These theorems do not depend on the legacy Q0 Vaughan scaffold.
+
+### What the legacy Q0 source provides
+
+The legacy packet chain still does not advance the new extraction through a proved SSU estimate:
 
 - `Q0VaughanDecomposition.lean` explicitly states that it does not prove the full analytic Vaughan
   identity.
@@ -181,9 +228,31 @@ The chain stops at step 1:
   `rawLedger_canon_one_one_axiom`.
 - `rawFullPacketLedger_1_1_of_globalSSU` does not use its `hSSU` argument.
 
-There is consequently no honest term to which coefficient norms and SSU constants can yet be
-restored. Filling that gap with a record field would assume the desired application rather than
-demonstrate it.
+There is consequently still no honest map from the extracted hard term to the legacy packet
+objects. Filling that gap with a record field would assume the desired Type-II application rather
+than demonstrate it.
+
+### Positive fixed-center Type-I application
+
+The specialist review identifies a genuine application of maximal Bombieri--Vinogradov to the
+short Type-I--prime term. The averaging is over moduli `d <= N^(1/3)`, while the residue
+`N mod d` may remain fixed because the theorem is maximal over reduced residues. Partial summation
+should give
+
+```text
+C_N(A,S) = M_A(N) + O_K(N / log(N)^K),
+```
+
+and separate `q=1,2` arc analysis should give the corresponding retained-arc expression. This
+would control the signed combination `H(A,S)` without passing through full complementary energy.
+
+The exact finite progression formula is now formalized. The analytic estimate is not. In
+particular, the repository's explicit BMOR input only covers each modulus `d <= 100000`; it cannot
+replace an average over the unbounded range `d <= N^(1/3)`. The repository still needs an effective
+maximal Bombieri--Vinogradov theorem, noncoprime prime-power control, explicit constants, and a
+computable threshold before this term can be joined to a finite base. The exact interval
+partial-summation identity and its endpoint/variation bound are now checked against the new
+per-modulus error. Therefore this is a credible partial theorem, not a completed Route A estimate.
 
 ### Global-interface control test
 
@@ -202,25 +271,29 @@ present in the global interface alone.
 
 ### Result and stopping rule
 
-The worked application fails before a quantitative SSU estimate can be applied. It would require
-the missing cancellation/application link as an assumption. This triggers the agreed stopping
-condition:
+The extraction and mask-removal stages now pass, and one substantial Type-I subfamily has a
+credible conventional fixed-center estimate. The application still fails at the hard residual:
+the long-modulus/Type-II coefficient has not been converted to the input of an applicable theorem,
+and no one-sided saving has been demonstrated after recombination. This preserves the agreed
+stopping condition:
 
-> Stop extending the Goldbach closure machinery until a concrete arithmetic application produces
-> a visible nontrivial saving.
+> Develop the effective Type-I estimate as a bounded test, but stop before further closure
+> machinery unless the actual hard residual can be matched to a theorem that produces a visible
+> one-sided saving.
 
 No additional Route A certificate is justified by the present interfaces.
 
 ## The theorem needed to resume
 
-The next candidate must be a genuine arithmetic theorem, not a new wrapper. At minimum it must
-provide:
+The next candidate must be a genuine arithmetic theorem, not a new wrapper. The algebraic
+decomposition in item 1 is now checked. The remaining work must provide:
 
-1. an exact phase-preserving decomposition of the balanced von Mangoldt remainder into explicit
-   Type I, Type II, and controlled residual terms;
-2. a restricted-family SSU or other bilinear estimate for the actual extracted Type II arrays;
-3. explicit coefficient-energy and shell-summation estimates;
-4. a one-sided bound for the resulting Fourier coefficient, since the two-sided fixed-cutoff
+1. an effective Bombieri--Vinogradov/partial-summation theorem for the extracted Type-I--prime
+   correlation, including its retained `q=1,2` arc model;
+2. a restricted-family SSU, dispersion, spectral, or Kloosterman estimate for the actual extracted
+   hard coefficients;
+3. explicit coefficient norms, factorability/smoothness checks, and shell-summation estimates;
+4. a one-sided bound for the hard Fourier coefficient, since the two-sided fixed-cutoff
    target is impossible; and
 5. constants that pass the full major-error and prime-power budget.
 
@@ -236,4 +309,5 @@ suspended.
 - Do not select a new empirical constant and call it a theorem target.
 - Keep the current large certificate only as a finite diagnostic/regression artifact.
 - Preserve and maintain the independent exact identities and major-arc infrastructure.
-- Reopen Route A only after the worked arithmetic application test passes.
+- Follow `SupportingDocs/RouteABalancedVaughanFixedCenterPlan.md` for the bounded Type-I test.
+- Reopen Route A only after the hard-residual application test passes with explicit constants.
