@@ -1,6 +1,6 @@
 # Route A consistency and SSU application audit
 
-Date: 2026-10-26
+Date: 2026-10-27
 
 ## Decision
 
@@ -130,6 +130,20 @@ surfaces:
 | Bilinear fixed-center mask identity | Core logical axioms only |
 | Exact `H(S,S) = H(A,S) + H(hard,S)` split | Core logical axioms only |
 | Type-I and hard-residual recombination interface | Core logical axioms only; analytic estimates remain explicit hypotheses |
+| Signed Mobius/totient six-bound | Finite arithmetic-function identities and a finite Euler-product estimate only; no project analytic axiom |
+| Exact character expansion and primitive-character fiber partition | Core logical axioms only; induced-character correction remains explicit |
+| Logarithmic conductor-weight bound | Finite Abel summation plus the signed Mobius/totient six-bound; no project analytic axiom |
+| Direct large-conductor `1/R` reduction | Exact absolute lift sum, finite Stieltjes control, and an explicit reciprocal-totient prefix input; core logical axioms only |
+| Reciprocal-totient prefix `<= 6(1+log K)` | Exact finite hyperbola identity, positive squarefree Euler product, and Mathlib's harmonic bound; no project analytic axiom |
+| Explicit small/large hybrid Type-I endpoint | Reciprocal-totient input discharged; conductor stability and character estimates remain theorem arguments |
+| Represented-fiber Type-I endpoint | Exact sum over the primitive keys actually represented by `primitiveCharacter`; removes conductor stability, with factor-three endpoint cost and factor `18(1+log u) log N/R` on the large range; character estimates remain theorem arguments |
+| Squarefree conductor transport | A primitive character lifted to a squarefree multiple keeps its conductor and canonical primitive-character key; core logical axioms only |
+| Localized signed/direct Type-I endpoint | Signed factor-two cost through `R`, unconditional represented factor-three cost above `R`; nonzero Mobius support supplies squarefreeness, so the restricted small-fiber completeness condition is proved; character estimates remain theorem arguments |
+| Canonical finite `psi` maxima | Exact finite suprema construct `PrimitivePsiMaxInput` and feed the localized endpoint; the aggregate character estimates remain theorem arguments |
+| Noncoprime Type-I progression bound | Explicit finite von Mangoldt-mass bound; core logical axioms only |
+| Induced-character correction through partial summation | Exact decomposition plus an explicit finite norm majorant; core logical axioms only |
+| Active-main correction and pointwise active-modulus reindexing | Exact finite identities; core logical axioms only |
+| Active primitive-character reduction and sharp induced correction | Exact active primitive-main-minus-corrections identity; correction bounded by `u log(u) log(N)^2 / log 2`; core logical axioms only |
 | `vaughanLambda_suppliesF3Energy` | Formally proved, but content-free because its target predicate is `True` |
 | `globalSSU_of_vaughan` | Depends on abstract packet/sequence axioms and `overlapSummationLedger_of_vaughan` |
 | `rawFullPacketLedger_1_1` | Depends on `rawMinorPacketEnergy_canon` through the legacy raw-ledger route |
@@ -234,10 +248,11 @@ than demonstrate it.
 
 ### Positive fixed-center Type-I application
 
-The specialist review identifies a genuine application of maximal Bombieri--Vinogradov to the
-short Type-I--prime term. The averaging is over moduli `d <= N^(1/3)`, while the residue
-`N mod d` may remain fixed because the theorem is maximal over reduced residues. Partial summation
-should give
+The first specialist review identified maximal Bombieri--Vinogradov as a sufficient input for the
+short Type-I--prime term. A later review found a narrower candidate route: retain the outer Mobius
+signs and group the progression errors by primitive conductor before taking absolute values. The
+averaging remains over moduli `d <= N^(1/3)` at the fixed residue `N mod d`. Either route should
+ultimately give
 
 ```text
 C_N(A,S) = M_A(N) + O_K(N / log(N)^K),
@@ -246,13 +261,123 @@ C_N(A,S) = M_A(N) + O_K(N / log(N)^K),
 and separate `q=1,2` arc analysis should give the corresponding retained-arc expression. This
 would control the signed combination `H(A,S)` without passing through full complementary energy.
 
-The exact finite progression formula is now formalized. The analytic estimate is not. In
-particular, the repository's explicit BMOR input only covers each modulus `d <= 100000`; it cannot
-replace an average over the unbounded range `d <= N^(1/3)`. The repository still needs an effective
-maximal Bombieri--Vinogradov theorem, noncoprime prime-power control, explicit constants, and a
-computable threshold before this term can be joined to a finite base. The exact interval
-partial-summation identity and its endpoint/variation bound are now checked against the new
-per-modulus error. Therefore this is a credible partial theorem, not a completed Route A estimate.
+The exact finite progression formula is now formalized. A support audit also found and repaired an
+interface mismatch: the earlier comparison main summed logarithms in the inactive region
+`d > N - p`, although the residue sum has no such terms. Lean now checks an exact active-main
+decomposition, modulus-dependent partial summation with endpoint `N - max L d`, and a pointwise
+Fubini formula over precisely the active moduli. The old main and error are retained with an
+explicit inactive-tail identity. The repository's explicit BMOR input only covers each modulus
+`d <= 100000`; it cannot
+replace an average over the unbounded range `d <= N^(1/3)`. No published unrestricted explicit
+maximal theorem has yet been found in the exact required form. The signed-conductor proposal avoids
+that stronger norm at the algebraic level: Lean now checks the constant-six Mobius/totient prefix
+bound, exact active character expansion, canonical primitive-character partition, logarithmic
+conductor-lift majorant, fixed-level fiber uniqueness, and the exact global
+primitive-main-minus-corrections identity. The active induced correction is bounded sharply by
+`u log(u) log(N)^2 / log 2`, matching the specialist's elementary correction allowance. The
+conductor weight now also has its exact one-step cutoff identity and the telescoping estimate
+`|W(a)| + |W(b)| + Var(W) <= 2 c_r log N`; in particular, the moving active cutoff creates no
+uncontrolled boundary term. The noncoprime progression contribution has a proved coarse explicit
+bound, and principal conductor-one lift completeness is checked.
+
+The finite Stieltjes and global conductor-reindexing layer is now complete. Lean separates the
+centered conductor-one family, reindexes every nonprincipal family, and proves that an ordinary
+maximum bound for each cumulative primitive-character `psi` sum yields the complete short Type-I
+estimate
+
+```text
+|Type-I prime convolution - active discrete main|
+  <= principal allowance
+     + (12 * N / phi(N) * log N) * primitive mean-value mass
+     + induced-character allowance
+     + noncoprime allowance.
+```
+
+This complete-fiber endpoint has no project analytic axiom. Its still-unproved inputs are explicit
+theorem arguments: general conductor stability for `changeLevel`, a principal `psi` maximum, and
+an effective bound for the conventional weighted primitive-character mass.
+
+A subsequent direct represented-fiber construction removes the conductor-stability argument from
+the valid proof path. Instead of asserting that every multiple of a primitive conductor occurs, it
+sums only the primitive keys and lifts actually represented by the canonical Mathlib map. Lean
+checks the exact principal-plus-represented-minus-induced decomposition, finite Stieltjes control,
+and the original Type-I convolution endpoint. The direct endpoint/variation cost has constant
+three rather than two. Its conventional all-conductor factor is
+`18 * (1 + log u) * log N`, and its split large-conductor factor is
+`18 * (1 + log u) * log N / R`. Thus conductor stability is optional sharpening, not a blocking
+assumption. Effective principal, small-conductor, and large-conductor character bounds remain
+genuine analytic obligations.
+
+The localized hybrid is now the strongest theorem surface that avoids assuming global conductor
+stability. `RouteABalancedVaughanLocalizedHybrid.lean` uses the complete signed fiber estimate only
+for represented keys of conductor at most `R`, where its finite completeness predicate ignores
+every modulus with zero Mobius coefficient. Above `R`, the hybrid switches to the unconditional
+direct represented-fiber estimate. Thus the small range keeps cost two, while only the large-range
+coefficient changes from 12 to 18.
+
+The restricted completeness condition is no longer an assumption. In
+`RouteADirichletCharacterConductorTransport.lean`, Lean proves that factor-through levels are
+closed under gcd when the ambient level is squarefree. It follows that changing the level of a
+primitive character to a squarefree multiple preserves both its conductor and its canonical
+primitive-character key. Since `moebius d != 0` implies `Squarefree d`, this proves
+`PrimitiveCharacterSupportedChangeLevelStable` and then
+`RepresentedConductorLiftCompleteUpTo L N u R` for all parameters. The final localized theorem
+`abs_typeIPrimeConvolution_sub_activeMain_le_localizedHybridMeanValueAllowance_unconditional`
+carries the split through the principal, induced-character, noncoprime, and original-convolution
+recombination layers without a conductor-stability or completeness premise. Its axiom audit reports
+only Lean's standard logical axioms.
+
+`RouteABalancedVaughanCanonicalPsiMax.lean` additionally replaces the abstract maximal-input
+witness by exact finite suprema over `Finset.Icc (L - 1) (N - L)`. The canonical record and its
+localized endpoint are proved with only Lean's standard logical axioms. This does not prove a
+numerical character estimate; it makes the remaining small- and large-conductor hypotheses refer
+to concrete repository expressions rather than an arbitrary witness record.
+
+The numerical script now audits both routes. At `log log N = 100`, the localized route changes the
+large term from `5.792008651388e-193` to `8.688012977081e-193`, while the total remains
+`8.482782076783e-12`. This is evidence that the local algebraic repair preserves the proposed
+constant budget. It is not evidence that the external small- and large-character estimates, their
+range hypotheses, or the retained main/arc margin have been proved.
+
+Because the specialist estimate treats exceptional/small conductors separately from the
+large-conductor mean-value range, Lean also checks an exact split at every cutoff `R` and a final
+convolution theorem taking independent bounds for the two ranges. This avoids losing the
+large-conductor weight in the coarser all-conductor corollary.
+
+The direct large-conductor branch has now been carried through rather than left as a schematic
+split. For `r > R`, Lean proves that the exact active conductor cost is bounded by
+
+```text
+(2 B log N / R) * (r / phi(r)),
+```
+
+and sums it against the large-conductor primitive-character mass. A separate finite arithmetic
+module proves the required input
+
+```text
+sum_{k <= u} 1/phi(k) <= 6 * (1 + log u)
+```
+
+from an exact Dirichlet-hyperbola identity and a constant-six squarefree Euler-product comparison.
+The resulting original-convolution theorem therefore has explicit large term
+
+```text
+(12 * (1 + log u) * log N / R) * large-conductor primitive mean-value mass
+```
+
+without assuming the reciprocal-totient estimate. This is a genuine `1/R` saving and is not the
+coarse all-conductor mass bound in different notation. The unconditional represented-fiber route
+has the corresponding factor `18 * (1 + log u) * log N / R`. The globally quantified factor-12
+complete-fiber theorem still asks for stability at every level, but the localized theorem now uses
+proved squarefree support to retain its signed small-conductor branch and needs no such premise.
+Effective small/large primitive-character estimates remain explicit hypotheses.
+
+Lean also checks the exact Mobius-signed partial-summation aggregate and its adapter to the existing
+coprime-progression interface. The specialist's continuous integral main is not identical to the
+repository's exact active discrete main, so any sum-versus-integral correction must also remain
+explicit. The inactive tail from the older comparison main is separately exposed and may not be
+folded silently into that correction.
+Therefore this is a credible partial theorem, not a completed Route A estimate.
 
 ### Global-interface control test
 
@@ -288,8 +413,9 @@ No additional Route A certificate is justified by the present interfaces.
 The next candidate must be a genuine arithmetic theorem, not a new wrapper. The algebraic
 decomposition in item 1 is now checked. The remaining work must provide:
 
-1. an effective Bombieri--Vinogradov/partial-summation theorem for the extracted Type-I--prime
-   correlation, including its retained `q=1,2` arc model;
+1. an effective signed-conductor/partial-summation theorem, or the stronger maximal
+   Bombieri--Vinogradov theorem, for the extracted Type-I--prime correlation, including its
+   retained `q=1,2` arc model;
 2. a restricted-family SSU, dispersion, spectral, or Kloosterman estimate for the actual extracted
    hard coefficients;
 3. explicit coefficient norms, factorability/smoothness checks, and shell-summation estimates;

@@ -26,7 +26,7 @@ separate those cases clearly.
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: silver as a formal conditional pipeline, not as evidence that an unconditional proof is nearly complete. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches contain substantial checked infrastructure, but they are not final endpoints. The fixed-width Route A bank is empty at arbitrarily large scales, and the later finite-cutoff two-sided norm-and-budget target is also incompatible with fixed-modulus arithmetic-progression averages. The balanced route now has an exact Vaughan identity, a checked fixed-center bilinear split, and an exact prime-residue formula for the short Type-I--prime term; these isolate one hard long-modulus/Type-II residual. Route A remains suspended as a proof-completion project until an effective maximal progression estimate controls the Type-I formula and the hard residual receives a genuine one-sided arithmetic estimate with demonstrated nontrivial saving.
+1. Goldbach conjecture -- Current status: silver as a formal conditional pipeline, not as evidence that an unconditional proof is nearly complete. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches contain substantial checked infrastructure, but they are not final endpoints. The fixed-width Route A bank is empty at arbitrarily large scales, and the later finite-cutoff two-sided norm-and-budget target is also incompatible with fixed-modulus arithmetic-progression averages. The balanced route now has an exact Vaughan identity, a checked fixed-center bilinear split, an exact prime-residue formula for the short Type-I--prime term, and an exact active character expansion and primitive-character regrouping. Lean proves the logarithmic conductor-weight bound derived from `|sum_{k <= X, (k,m)=1} mu(k)/phi(k)| <= 6m/phi(m)`, the global primitive-main-minus-corrections identity, and the sharp active induced-character correction bound `u * log(u) * log(N)^2 / log(2)`. Fixed-level primitive-fiber uniqueness, principal-fiber lift completeness, a coarse explicit noncoprime progression bound, the corrected active-main/active-modulus reindexing, finite Stieltjes control, and global reindexing by primitive conductor are checked. A final theorem now carries ordinary cumulative primitive-character `psi` bounds through the original short Type-I convolution. Its general complete-fiber form still assumes conductor stability at every level. The localized form no longer does: Lean proves that lifting a primitive character to a squarefree multiple preserves its conductor and canonical primitive-character key, and nonzero Mobius coefficients restrict the signed sum to exactly those squarefree levels. This discharges the represented small-conductor completeness condition while preserving the sharper signed estimate there. The direct represented-fiber branch handles large conductors unconditionally and preserves the `1/R` saving with explicit factor `18 * (1 + log u) * log N / R`. Lean also proves `sum_{k <= K} 1/phi(k) <= 6 * (1 + log K)`. The remaining frontier consists of populating this algebraically unconditional split interface with verified effective character estimates and constants, analyzing the retained main/arc margin, and controlling one hard long-modulus/Type-II residual. Route A remains suspended as a proof-completion project until those estimates give a usable margin and the hard residual receives a genuine one-sided arithmetic estimate with demonstrated nontrivial saving.
 
 2. Twin primes conjecture -- Current status: conditional entrypoint + fool's-gold default build
 -- The hypothesis-only checklist entry point `Twin/ChecklistEntrypoint.lean`
@@ -90,7 +90,42 @@ mask removal at a specified center, and `RouteABalancedVaughanFixedCenter` prove
 `H(S,S) = H(A,S) + H(hard,S)` while keeping one prime sum intact. Standard maximal
 Bombieri--Vinogradov methods plausibly control the short Type-I term; its exact error is now split
 into coprime progression and noncoprime prime-power obligations, subject to a formal and
-effective implementation. No cited theorem yet controls the actual hard coefficient family with
+effective implementation. A signed-conductor interface now preserves the outer Mobius
+cancellation and is weaker than the previously requested unrestricted maximal norm. Its exact
+active character/conductor regrouping and arithmetic logarithmic-weight bound are checked. Lean
+also proves the exact global primitive-main-minus-corrections identity, the specialist's sharp
+induced-character allowance `u * log(u) * log(N)^2 / log(2)`, and the exact discrete
+conductor-weight variation bound `|W(a)| + |W(b)| + Var_[a,b](W) <= 2 c_r log N`; a coarse
+noncoprime bound is checked separately. The moving cutoff contributes no boundary jump because
+the departing modulus has weight `log(X/X) = 0`. Finite Stieltjes control and global reindexing by
+primitive conductor now culminate in a checked short Type-I endpoint. Its primary form retains
+separate small- and large-conductor bounds at an arbitrary cutoff through the original Type-I
+prime convolution. The direct large branch has the genuine factor `1/R`, and Lean proves its
+elementary reciprocal-totient input `sum_{k <= K} 1/phi(k) <= 6 * (1 + log K)`, giving explicit
+global factor `12 * (1 + log u) * log N / R`. A coarser corollary accepts a conventional weighted
+primitive-character mean-value bound. Both forms include the principal, induced-character, and noncoprime terms. The support
+condition required by the logarithmic weight is formalized as an exact
+active-main decomposition and a pointwise sum over `d <= N - p`; the older uniform-endpoint main
+differs by an explicit inactive tail. A direct represented-fiber endpoint now removes general
+conductor-lift stability from the required path, at the cost of replacing the factor 12 by 18 in
+the split large-conductor coefficient. The stronger localized hybrid in
+`RouteABalancedVaughanLocalizedHybrid` retains the signed factor-two estimate for represented
+conductors at most `R` and uses the unconditional factor-three estimate only above `R`. It replaces
+global change-level stability by `RepresentedConductorLiftCompleteUpTo`, an exact completeness
+condition restricted to the represented small-conductor keys, the prime interval actually used by
+the convolution, and the moduli with nonzero Mobius coefficient. That condition is now proved:
+`RouteADirichletCharacterConductorTransport` shows that a primitive character lifted to a
+squarefree multiple keeps both its conductor and its canonical primitive-character key, while a
+nonzero Mobius coefficient supplies squarefreeness. The final localized Type-I theorem therefore
+has no conductor-stability or lift-completeness hypothesis. A canonical endpoint now defines the
+principal and primitive `psi` maxima as exact finite suprema, so constructing the maximal-input
+record is no longer an additional obligation. The accompanying numerical audit changes only the
+negligible large-conductor
+coefficient from 12 to 18; at `log log N = 100` it still reports total majorant
+`8.482782076783e-12`. This calculation is not a Lean proof of the external character estimates.
+Published analytic character estimates with checked constants and the retained main/arc margin
+remain open. No
+cited theorem yet controls the actual hard coefficient family with
 the uniform one-sided margin needed for Goldbach.
 
 The complete audit is `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`; the bounded next
