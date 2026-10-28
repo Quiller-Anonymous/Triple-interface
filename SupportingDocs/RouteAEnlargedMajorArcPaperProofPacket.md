@@ -8,6 +8,16 @@ Base repository commit:
 22a16ab5822479d8ab1bcff9b3785652cf097544
 ```
 
+Packet publication commit:
+
+```text
+f6e466ddfb9f7989097bef0fdc5136f89a6dff17
+```
+
+The base commit pins the mathematical source snapshot audited by this packet.  The packet commit
+pins the first repository revision containing this document, its JSON template, and the ledger
+checker.  A completed ledger should retain both identifiers.
+
 This packet specifies the next bounded paper-mathematics experiment.  It is not a theorem and does
 not reopen Route A as a proof-completion project.  The first objective is to determine whether an
 enlarged retained set improves the complete signed budget.  Only if that test passes should the
@@ -325,6 +335,12 @@ proved status:
 python3 scripts/experiments/route_a_enlarged_major_arc_ledger.py \
   --input SupportingDocs/RouteAEnlargedMajorArcPilotTemplate.json --check
 ```
+
+The checker verifies denominator coverage, row status, decimal-field validity, and the final
+80-digit decimal calculation.  `COMPLETE_POSITIVE` therefore means that the populated ledger is
+complete and arithmetically positive.  It does not independently verify the analytic proofs cited
+by its rows; those proofs require separate specialist review and, if the paper test passes,
+formalization.
 
 ## 11. References
 
