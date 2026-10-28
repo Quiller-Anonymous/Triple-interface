@@ -18,6 +18,32 @@ library does not yet contain a checked application from this arithmetic coeffici
 fixed-center, one-sided bound.  Further Route A closure work should stop at this gate unless a
 paper proof supplies that application with explicit constants.
 
+## Independent specialist review
+
+A subsequent independent paper review supports the two ancillary estimates needed by this
+reduction, but does not supply the hard-residual theorem:
+
+* it reconstructs the active-main argument with a conservative pointwise profile floor above
+  `0.9102`, hence confirms the required aggregate bound `M_A > 0.9 N` without relying on the
+  earlier `0.96866` intermediate value;
+* it reconstructs the unmodulated hard-prefix bound `0.03 N`, improves the parity-prefix bound
+  from `0.09 N` to `0.06 N`, and confirms the retained-arc allowance
+  `0.4847091 N < 0.49 N` including the wrapped seam;
+* it confirms that the active-main Euler product is the full Goldbach singular series, so the
+  retired fixed-cutoff averaging obstruction does not transfer to this signed decomposition;
+* it finds no published dispersion, spectral, or bilinear theorem whose hypotheses and
+  fixed-center conclusion imply the remaining `0.35 N` estimate.
+
+The review uses the uniform half-moment estimate
+
+```text
+sum_a |h_N(a)| sqrt(a) <= exp(12 sqrt(log N) + 8)
+```
+
+and splits the kernel at `u^(1/10)`.  This is a more conservative independently checkable route
+than the sharper local budget in `RouteAActiveMainKernelAudit.md`.  Either route still requires
+formalization before entering the Lean closure chain.
+
 ## Exact coefficient surface
 
 `RouteABalancedVaughanFixedCenter.lean` now proves
@@ -56,6 +82,17 @@ sum_{d*m*k=n, d>u, k>v} mu(d) Lambda(k).
 
 This is the correct coefficient to dyadically decompose.  No legacy Q0 Vaughan predicate is
 needed to define it.
+
+The specialist review identifies a simpler primary surface for the *combined* hard coefficient:
+
+```text
+hard(n) = sum_{d*m=n, d>u} mu(d) log(m).
+```
+
+`RouteABalancedVaughanFixedCenter.lean` now checks this as
+`vaughanHardArithmetic_eq_muLarge_mul_log` and `vaughanHardArithmetic_apply`.  This identity
+removes `v` entirely.  Estimating the isolated long Type-II component is insufficient unless its
+two companion components are recombined with it.
 
 ## The exact cross-Toeplitz form
 
@@ -170,6 +207,24 @@ abs (sum_{d in D, m in M, k in K, b' in B}
 followed by an explicit shell summation whose total, together with the two short components, is at
 most `0.35 N`.  Every coefficient norm and logarithmic factor must be present.  The theorem must
 not take the desired cross-cancellation as an input record.
+
+Equivalently, and preferably as the primary target, prove the combined form
+
+```text
+Re sum_{d>u, L<=d*m<=N-L} sum_{L<=b<=N-L}
+     mu(d) log(m) Lambda(N-b) K_R(d*m-b)
+  >= -0.35 N,
+```
+
+where for the wrapped `q=1,2` retained set
+
+```text
+K_R(0) = 1 - 3/N,
+K_R(j) = -sin(2*pi*j/N)/(pi*j) - (-1)^j*sin(pi*j/N)/(pi*j)  (j != 0).
+```
+
+This theorem is consistent with the expected Hardy--Littlewood scale and with the finite
+diagnostics, but no proof or contradictory averaging obstruction is presently known.
 
 ## Two plausible research directions
 

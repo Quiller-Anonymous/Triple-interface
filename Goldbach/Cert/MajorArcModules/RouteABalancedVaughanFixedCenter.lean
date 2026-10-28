@@ -105,6 +105,31 @@ theorem vaughanHardArithmetic_eq_vonMangoldt_sub_typeI (u v : ℕ) :
   rw [vonMangoldt_eq_typeI_add_hard u v]
   ring
 
+/--
+The combined hard coefficient is exactly the large-divisor Mobius tail convolved with `log`.
+This is the auxiliary-cutoff-free surface for the remaining fixed-center estimate.
+-/
+theorem vaughanHardArithmetic_eq_muLarge_mul_log (u v : ℕ) :
+    vaughanHardArithmetic u v
+      = vaughanMuLarge u * ArithmeticFunction.log := by
+  rw [vaughanHardArithmetic_eq_vonMangoldt_sub_typeI]
+  unfold vaughanTypeIArithmetic
+  rw [← ArithmeticFunction.moebius_mul_log_eq_vonMangoldt,
+    ← vaughanMuSmall_add_large u]
+  ring
+
+/-- Pointwise large-divisor formula for the combined hard coefficient. -/
+theorem vaughanHardArithmetic_apply (u v n : ℕ) :
+    vaughanHardArithmetic u v n
+      = ∑ x ∈ Nat.divisorsAntidiagonal n,
+          (if u < x.1 then ((ArithmeticFunction.moebius x.1 : ℤ) : ℝ) else 0)
+            * Real.log x.2 := by
+  rw [vaughanHardArithmetic_eq_muLarge_mul_log, ArithmeticFunction.mul_apply]
+  refine Finset.sum_congr rfl ?_
+  intro x hx
+  simp only [vaughanMuLarge, arithmeticCutoffAbove_apply,
+    ArithmeticFunction.log_apply, ArithmeticFunction.intCoe_apply]
+
 /-- Changing the auxiliary Lambda cutoff does not change the combined hard coefficient. -/
 theorem vaughanHardArithmetic_independent_of_v (u v₁ v₂ : ℕ) :
     vaughanHardArithmetic u v₁ = vaughanHardArithmetic u v₂ := by
