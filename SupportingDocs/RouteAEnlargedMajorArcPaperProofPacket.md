@@ -23,6 +23,29 @@ not reopen Route A as a proof-completion project.  The first objective is to det
 enlarged retained set improves the complete signed budget.  Only if that test passes should the
 complementary cross-correlation be investigated.
 
+## Stage 1 update (2026-10-28)
+
+A specialist calculation now gives a provisional paper-level pass for `P=Q=100`, with claimed
+uniform reserve
+
+```text
+R(100,100;N) > 0.699 N.
+```
+
+The 100-row decimal ledger has been run locally and returns `COMPLETE_POSITIVE`.  This verifies the
+ledger arithmetic, not the analytic proof.  The report, completed ledger, and independent status
+audit are:
+
+```text
+SupportingDocs/RouteAEnlargedMajorArcStage1SpecialistReport.md
+SupportingDocs/RouteAEnlargedMajorArcPilotCompleted.json
+SupportingDocs/RouteAEnlargedMajorArcStage1Audit.md
+```
+
+Stage 2 is now authorized at paper level: prove a one-sided fixed-center estimate for the
+complementary hard cross-correlation beneath this reserve.  Stage 1 still requires second review or
+formalization before it can enter the checked theorem chain.
+
 ## 1. Fixed notation and exact checked identities
 
 Let
