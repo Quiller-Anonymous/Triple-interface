@@ -154,6 +154,18 @@ extracted hard residual receives a restricted-family estimate producing a visibl
 with effective constants. The old `X0` certificate remains a diagnostic/regression artifact, not a
 closure dependency.
 
+The October 28 enlarged-major-arc pilot sharpened that frontier without closing it.  Its retained
+model has a provisional paper-level reserve above `0.699*N`, and the exact complementary kernel
+normalization checks out.  A specialist then carried one balanced hard block through a genuine
+fixed-center prime-progression estimate, gaining one logarithm over the trivial envelope.  The
+result is still of order `N*log N` on that block and `N*(log N)^2` globally.  The missing input is
+the signed fixed-center interaction between `mu(d)` and `Lambda(N-d*m)` (or cancellation with its
+exact retained projection); proving the required constant bound would already be a quantitative
+binary-Goldbach-level theorem.  Phase B is not authorized.  The status and one final bounded
+factorable-dispersion feasibility test are recorded in
+`SupportingDocs/RouteAComplementaryCrossStage2Audit.md` and
+`SupportingDocs/RouteAFactorableDispersionFeasibilityAssignment.md`.
+
 ## August 2026 Route A / Q0 certificate update
 
 This month has been dominated by turning the Route A/Q0 workbench from a proof-design problem into

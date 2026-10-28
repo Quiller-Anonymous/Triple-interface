@@ -111,10 +111,10 @@ second paper review or Lean formalization:
 These qualifications do not erase the feasibility result.  Even a substantial weakening of the
 tiny `E_I` and major-model error allowances would leave room beneath the claimed `0.699N` reserve.
 
-## Next gate
+## Stage 2 outcome
 
-The next paper theorem must control the complementary fixed-center form for the enlarged retained
-set:
+The next paper theorem was required to control the complementary fixed-center form for the
+enlarged retained set:
 
 ```text
 B(100,100;N)
@@ -133,8 +133,21 @@ The estimate must preserve the fixed center and the arithmetic coefficient struc
 energy estimate, an average over centers, or a hypothesis that assumes the desired cancellation is
 not sufficient.
 
-The bounded paper-mathematics specification for this gate is:
+The bounded paper-mathematics specification for this gate was:
 
 ```text
 SupportingDocs/RouteAComplementaryCrossSpecialistAssignment.md
 ```
+
+The specialist returned **UNRESOLVED**.  The exact normalization passed and one balanced block
+received a genuine logarithmic saving, but the resulting bound remains of order `N*log N`; the
+global envelope remains of order `N*(log N)^2`.  No reviewed theorem supplied the needed signed
+fixed-center Mobius--prime cancellation.  Phase B is therefore not authorized.  See:
+
+```text
+SupportingDocs/RouteAComplementaryCrossStage2Audit.md
+```
+
+The only bounded continuation is the factorable-dispersion feasibility test named there.  Route A
+remains suspended, and no certificate or Lean formalization should be commissioned for the failed
+Stage 2 envelope.
