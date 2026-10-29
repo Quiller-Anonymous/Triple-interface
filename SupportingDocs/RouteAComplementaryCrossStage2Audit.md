@@ -105,17 +105,23 @@ The enlarged-major-arc work remains useful as:
 
 Route A remains suspended as a proof-completion project.
 
-## One bounded continuation
+## Outcome of the bounded continuation
 
 The specialist identified one nonvacuous opening: a more elaborate arithmetic decomposition might
 replace part of the raw Mobius interval weight by triply well-factorable weights, at the cost of
-companion terms.  This possibility has not been established.  It is the subject of
+companion terms.  It was tested in
 
 ```text
 SupportingDocs/RouteAFactorableDispersionFeasibilityAssignment.md
 ```
 
-That assignment is a final bounded feasibility test, not authorization for a new Lean build.  If
-the complete decomposition leaves a nonfactorable fixed-center remainder of linear or larger
-scale, or only produces an almost-all-centers theorem, this branch stops.
+The test returned **UNRESOLVED** and met the stopping condition.  The factorable pieces cannot
+cover large prime moduli, while the isolated prime-`d` companion is negatively of order
+`N*log N` along arbitrarily large even centers and therefore cannot be budgeted as an `O(N)` error.
+The cancellation must remain coupled to composite-`d` terms, leaving exactly the original
+Goldbach-level fixed-center discrepancy.  This branch is frozen.  See:
+
+```text
+SupportingDocs/RouteAFactorableDispersionAudit.md
+```
 

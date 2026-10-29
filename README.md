@@ -161,10 +161,54 @@ fixed-center prime-progression estimate, gaining one logarithm over the trivial 
 result is still of order `N*log N` on that block and `N*(log N)^2` globally.  The missing input is
 the signed fixed-center interaction between `mu(d)` and `Lambda(N-d*m)` (or cancellation with its
 exact retained projection); proving the required constant bound would already be a quantitative
-binary-Goldbach-level theorem.  Phase B is not authorized.  The status and one final bounded
-factorable-dispersion feasibility test are recorded in
+binary-Goldbach-level theorem.  Phase B is not authorized.  The final bounded
+factorable-dispersion feasibility test also failed its Phase A stopping rule.  Triply
+well-factorable weights cannot cover the large prime moduli in the raw Mobius coefficient, and the
+isolated prime-modulus companion is negatively of order `N*log N` along arbitrarily large even
+centers under the exact retained mask.  Any successful theorem must preserve cancellation between
+prime and composite divisor contributions; the resulting recombined statement is the original
+Goldbach-level fixed-center discrepancy, not a narrower conventional theorem.  This Route A branch
+is frozen as a conditional reduction.  The audits are recorded in
 `SupportingDocs/RouteAComplementaryCrossStage2Audit.md` and
-`SupportingDocs/RouteAFactorableDispersionFeasibilityAssignment.md`.
+`SupportingDocs/RouteAFactorableDispersionAudit.md`.  Independent review validates the
+prime-companion asymptotic and the freeze, while narrowing one presentation claim: the compensating
+prime and composite terms need not lie in different smooth/rough strata.  The corrected theorem is
+recorded in `SupportingDocs/RouteAPrimeCompanionObstruction.md`.
+
+The bounded variable-principal-arc test has now also reached its stopping condition.  Widening only
+the principal arc to radius `A*log(N)/N`, for `1 <= A <= 8`, removes the isolated prime companion's
+negative `N*log(N)` average and preserves a provisional retained reserve above `0.699*N` on the
+inherited paper inputs.  But the complete widened discrepancy differs from the old fixed-mask
+discrepancy by less than `0.000061*N`.  The remaining theorem is therefore essentially the same
+fixed-center signed Mobius--prime correlation, and the best restored global forecast still loses
+`log(N)^2`.  This candidate is not authorized as a Route C formalization or certificate program.
+The audit is `SupportingDocs/RouteCVariablePrincipalArcAudit.md`.  The currently identified
+Triple-Interface Goldbach endgames are exhausted unless a genuinely new joint fixed-center estimate
+or a different proof architecture is supplied.
+
+One narrower post-audit investigation is now specified without being promoted to a new route.  If
+all large-divisor terms attached to the same integer are combined before taking absolute values,
+then the one-large-prime/small-cofactor region satisfies the exact paper identity
+`h_u(p*r) = -Lambda(r)`.  Its total coefficient mass is only order `N`, rather than the isolated
+prime companion's `N*log(N)` scale.  That is genuine algebraic cancellation, but not yet a
+fixed-center correlation estimate.  The bounded next test must derive an effective upper sieve for
+the full convolution, calculate the retained projection with its sign, separate common factors and
+prime powers, and preserve a compatible singular-series normalization.  It is recorded in
+`SupportingDocs/RouteASmallCofactorCancellationFeasibilityAssignment.md`; no Route D, Lean build,
+or certificate has been authorized.  The first paper calculation now provisionally passes for the
+very narrow choice `eta=10^-8`: after an explicit finite Selberg upper sieve and a signed
+rational-arc calculation, it claims
+`Delta_eta(N)>-0.001609*S(N)*N` uniformly at the frozen threshold.  This is the first
+post-obstruction estimate that controls a proper part of the hard coefficient after restoring its
+reflected-prime correlation and retained projection.  Independent paper review has now passed this
+theorem and the separate active-main strengthening `M_A(N)>0.91*S(N)*N` without changing either
+constant.  Neither is Lean-formalized, and the other inherited Stage 1 estimates still need one
+normalized-ledger reconciliation before the claimed `0.708*S(N)*N` reserve is treated as reviewed.
+The next bounded paper test targets the complete one-large-prime row; it expressly rejects a series
+of merely microscopic exponent increases as a new route.  See
+`SupportingDocs/RouteASmallCofactorCancellationAudit.md` and
+`SupportingDocs/RouteASmallCofactorCancellationIndependentReview.md` and
+`SupportingDocs/RouteAOneLargePrimeCompletionFeasibilityAssignment.md`.
 
 ## August 2026 Route A / Q0 certificate update
 

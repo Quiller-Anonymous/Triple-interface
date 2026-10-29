@@ -2,6 +2,19 @@
 
 Date: 2026-10-28
 
+## Outcome
+
+This assignment is complete with verdict **UNRESOLVED**.  Phase A did not produce an admissible
+factorable family with independently controlled companions.  More strongly, the prime-`d`
+companion is negatively of order `N*log N` along arbitrarily large even centers under the exact
+retained mask, so it cannot receive any uniform `O(N)` lower allowance by itself.  See:
+
+```text
+SupportingDocs/RouteAFactorableDispersionAudit.md
+```
+
+The stopping rule has been met.  No later phase is authorized.
+
 ## Purpose
 
 Test the only concrete analytic opening left by the complementary-cross Stage 2 audit:
