@@ -10,6 +10,8 @@ end-to-end glue. Some entry points are fully in-repo proofs, some are conditiona
 hypotheses, and some convenience routes still rely on explicit axioms. The README below tries to
 separate those cases clearly.
 
+October 29, 2026: By its own standards, this project is a failure. I am winding it down.
+
 ## Status legend:
 - Platinum standard: builds; unconditional proof; no `axiom`/`sorry`/`admit` dependencies (beyond core classical axioms).
 - Gold standard: builds; end-to-end proof depending only on explicitly listed **conventional math axioms**.
@@ -204,16 +206,16 @@ reflected-prime correlation and retained projection.  Independent paper review h
 theorem and the separate active-main strengthening `M_A(N)>0.91*S(N)*N` without changing either
 constant.  Neither is Lean-formalized, and the other inherited Stage 1 estimates still need one
 normalized-ledger reconciliation before the claimed `0.708*S(N)*N` reserve is treated as reviewed.
-The bounded complete one-large-prime test has now returned provisional **UNRESOLVED**.  It reconciles
-the `0.708*S(N)*N` paper reserve, proves that the full local model has coefficient `log(3/2)`, and
-finds that the exact retained model is uniformly positive.  The missing term is the difference
-between the actual fixed-center averaged prime-pair convolution and that local model.  The reviewed
-finite sieve can safely extend the exponent only to `17699/10^9=0.000017699`, still below the
-assignment's `10^-4` stopping threshold.  No further microscopic expansion, certificate, or Lean
-program is authorized.  See
+Independent review confirms that the bounded complete one-large-prime test is **UNRESOLVED**.  It
+reconciles the `0.708*S(N)*N` paper reserve, proves that the full local model has coefficient
+`log(3/2)`, and finds that the exact retained model is uniformly positive.  The missing term is the
+difference between the actual fixed-center averaged prime-pair convolution and that local model.  The
+reviewed finite sieve can safely extend the exponent only to `17699/10^9=0.000017699`, still below
+the assignment's `10^-4` stopping threshold.  No further microscopic expansion, certificate, or
+Lean program is authorized.  See
 `SupportingDocs/RouteASmallCofactorCancellationAudit.md` and
 `SupportingDocs/RouteASmallCofactorCancellationIndependentReview.md` and
-`SupportingDocs/RouteAOneLargePrimeCompletionAudit.md`.
+`SupportingDocs/RouteAOneLargePrimeCompletionIndependentReview.md`.
 
 ## August 2026 Route A / Q0 certificate update
 

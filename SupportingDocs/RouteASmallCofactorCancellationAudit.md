@@ -271,8 +271,8 @@ hard coefficient with a uniform fixed-center bound after restoring the retained 
 real progress, but its chosen range `r<=N^(10^-8)` is very narrow and the complement still contains
 the principal unresolved arithmetic difficulty.
 
-Do not start a full-complement certificate or call this Route D.  The complete one-large-prime test
-has now returned provisional **UNRESOLVED**.  It reconciles the normalized Stage 1 reserve and finds
-a positive retained model, but no fixed-center averaged prime-pair theorem with the required
-constant.  Its improved fallback exponent remains below `10^-4`, so microscopic range expansion is
-stopped.  See `SupportingDocs/RouteAOneLargePrimeCompletionAudit.md`.
+Do not start a full-complement certificate or call this Route D.  Independent review confirms that
+the complete one-large-prime test is **UNRESOLVED**.  It reconciles the normalized Stage 1 reserve
+and finds a positive retained model, but no fixed-center averaged prime-pair theorem with the
+required constant.  Its improved fallback exponent remains below `10^-4`, so microscopic range
+expansion is stopped.  See `SupportingDocs/RouteAOneLargePrimeCompletionIndependentReview.md`.

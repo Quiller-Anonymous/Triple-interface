@@ -4,10 +4,11 @@ Date: 2026-10-29
 
 ## Status
 
-**Provisional paper-level UNRESOLVED.**  The complete one-large-prime row does not pass the bounded
-feasibility test.  Gate 0 reconciles the normalized Stage 1 reserve, and the deterministic full and
-retained models are favorable, but no verified fixed-center averaged prime-pair estimate controls
-the difference between the actual convolution and its local model with the required constant.
+**Independently reviewed paper-level UNRESOLVED.**  The complete one-large-prime row does not pass
+the bounded feasibility test.  Gate 0 reconciles the normalized Stage 1 reserve, and the
+deterministic full and retained models are favorable, but no verified fixed-center averaged
+prime-pair estimate controls the difference between the actual convolution and its local model with
+the required constant.
 
 The fallback exponent improves substantially over the first small-cofactor theorem, but remains
 below the assignment's stopping threshold:
@@ -19,8 +20,8 @@ Delta_(eta_*)(N)>-0.707972531*S(N)*N.
 ```
 
 Do not begin an incremental range-expansion, certificate, or Lean formalization program from this
-outcome.  The new claims in this audit still require the independent check specified in
-`SupportingDocs/RouteAOneLargePrimeCompletionIndependentReviewAssignment.md`.
+outcome.  Independent review confirmed the mathematics, constants, and stopping decision without
+correction; see `SupportingDocs/RouteAOneLargePrimeCompletionIndependentReview.md`.
 
 ## Gate 0: normalized reserve
 

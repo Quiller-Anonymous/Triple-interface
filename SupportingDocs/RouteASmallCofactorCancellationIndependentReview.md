@@ -104,7 +104,8 @@ The subsequent bounded paper investigation was
 SupportingDocs/RouteAOneLargePrimeCompletionFeasibilityAssignment.md
 ```
 
-It returned provisional **UNRESOLVED**.  The normalized Stage 1 reserve and retained-model positivity
-survive, but no verified theorem controls the actual fixed-center averaged prime-pair convolution
-with the required constant.  See `SupportingDocs/RouteAOneLargePrimeCompletionAudit.md`.
+Independent review confirms the **UNRESOLVED** verdict.  The normalized Stage 1 reserve and
+retained-model positivity survive, but no verified theorem controls the actual fixed-center averaged
+prime-pair convolution with the required constant.  See
+`SupportingDocs/RouteAOneLargePrimeCompletionIndependentReview.md`.
 
