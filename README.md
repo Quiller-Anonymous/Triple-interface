@@ -204,11 +204,16 @@ reflected-prime correlation and retained projection.  Independent paper review h
 theorem and the separate active-main strengthening `M_A(N)>0.91*S(N)*N` without changing either
 constant.  Neither is Lean-formalized, and the other inherited Stage 1 estimates still need one
 normalized-ledger reconciliation before the claimed `0.708*S(N)*N` reserve is treated as reviewed.
-The next bounded paper test targets the complete one-large-prime row; it expressly rejects a series
-of merely microscopic exponent increases as a new route.  See
+The bounded complete one-large-prime test has now returned provisional **UNRESOLVED**.  It reconciles
+the `0.708*S(N)*N` paper reserve, proves that the full local model has coefficient `log(3/2)`, and
+finds that the exact retained model is uniformly positive.  The missing term is the difference
+between the actual fixed-center averaged prime-pair convolution and that local model.  The reviewed
+finite sieve can safely extend the exponent only to `17699/10^9=0.000017699`, still below the
+assignment's `10^-4` stopping threshold.  No further microscopic expansion, certificate, or Lean
+program is authorized.  See
 `SupportingDocs/RouteASmallCofactorCancellationAudit.md` and
 `SupportingDocs/RouteASmallCofactorCancellationIndependentReview.md` and
-`SupportingDocs/RouteAOneLargePrimeCompletionFeasibilityAssignment.md`.
+`SupportingDocs/RouteAOneLargePrimeCompletionAudit.md`.
 
 ## August 2026 Route A / Q0 certificate update
 

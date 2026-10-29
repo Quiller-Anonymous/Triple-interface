@@ -2,6 +2,24 @@
 
 Date: 2026-10-29
 
+## Outcome
+
+**Provisional paper-level UNRESOLVED.**  Gate 0 reconciles the normalized reserve, the complete row
+has local-model coefficient `log(3/2)`, and the retained projection has a uniformly positive main
+term.  No verified fixed-center averaged prime-pair theorem controls the actual convolution with the
+required constant.
+
+Sharper summation of the reviewed finite sieve proves the safe fallback
+
+```text
+Delta_(17699/10^9)(N)>-0.707972531*S(N)*N,
+```
+
+but `17699/10^9<10^-4`, so the assignment's stopping rule applies.  The outcome is recorded in
+`SupportingDocs/RouteAOneLargePrimeCompletionAudit.md`; the next and final gate for these new claims
+is the bounded independent review in
+`SupportingDocs/RouteAOneLargePrimeCompletionIndependentReviewAssignment.md`.
+
 ## Decision question
 
 Can the reviewed same-integer cancellation be extended from the microscopic range

@@ -96,15 +96,15 @@ For reference:
 
 Merely increasing `eta` under the same envelopes is therefore not a completion strategy.
 
-## Next gate
+## Subsequent gate outcome
 
-The next bounded paper investigation is
+The subsequent bounded paper investigation was
 
 ```text
 SupportingDocs/RouteAOneLargePrimeCompletionFeasibilityAssignment.md
 ```
 
-It asks whether the full one-large-prime row can be controlled by preserving cancellation between
-its full correlation and retained projection, rather than paying for them separately with the crude
-upper-sieve and absolute retained envelopes.
+It returned provisional **UNRESOLVED**.  The normalized Stage 1 reserve and retained-model positivity
+survive, but no verified theorem controls the actual fixed-center averaged prime-pair convolution
+with the required constant.  See `SupportingDocs/RouteAOneLargePrimeCompletionAudit.md`.
 
