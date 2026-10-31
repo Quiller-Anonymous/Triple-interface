@@ -83,7 +83,10 @@ concurrency:
 jobs:
   smoke:
     name: Build selected Route A target on Linux
-    runs-on: ubuntu-latest
+    # The Ubuntu 26 rollout reduced the usable root filesystem below the
+    # expanded Route A checkpoint size. Keep this historical completion run on
+    # the runner image that produced the checkpoint.
+    runs-on: ubuntu-24.04
     timeout-minutes: 360
 
     steps:
