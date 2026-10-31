@@ -4,6 +4,13 @@ Date: 2026-10-30
 
 Repository commit: `d150106a204bb3ac4a523bdaa65256eb30526995`
 
+> **Later update on 2026-10-30.**  This document records the state before an external specialist
+> supplied an exact fixed-center, slope-averaged formulation.  That formulation and the first
+> reproducible diagnostics are assessed in
+> `SupportingDocs/RouteALongMobiusSlopeAverageDiagnostic.md`.  The provenance conclusions below
+> remain accurate for the earlier repository state; they should not be read as saying that the
+> proposal is still unspecified.
+
 ## Executive verdict
 
 There is no current long-Mobius or centered-divisor-graph audit in this repository.  The proposed
