@@ -26,7 +26,7 @@ separate those cases clearly.
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: silver overall, with a gold-grade conditional boundary and fool's-gold pinned/staging workbenches. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves the closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches build and contain substantial checked infrastructure, but they are not final endpoints: the remaining live obstructions are the scale-sensitive closure budget, the half-mass/zero-mode endpoint (`vaughanHalfMassRecenteredEndpoint`), the mean-channel approximation (`vaughanMeanChannelApproxTarget`), and calibration of the minor-energy route rather than another formal assembly layer.
+1. Goldbach conjecture -- Current status: silver conditional infrastructure, but no active unconditional closure route. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves the closure/budget inputs explicit. Route A is archived as analytically stalled, Route B is retired, and the pinned `Q0` certificate is a historical computational artifact rather than a route to unconditional closure. The precise missing input is a new fixed-center, parity-sensitive Type-II estimate for the one-large-prime row; see `SupportingDocs/RouteA_FinalResearchStatus_2026-10-31.md`.
 
 2. Twin primes conjecture -- Current status: conditional entrypoint + fool's-gold default build
 -- The hypothesis-only checklist entry point `Twin/ChecklistEntrypoint.lean`
@@ -49,13 +49,12 @@ separate those cases clearly.
 Build note: “it builds” means it builds locally. The finite-base chunks are too large for the
 current GitHub setup, so local builds are the authoritative check here.
 
-## August 2026 Route A / Q0 certificate update
+## Historical August 2026 Route A / Q0 certificate update
 
-This month has been dominated by turning the Route A/Q0 workbench from a proof-design problem into
-a concrete certificate-integration and CI-resumption problem. This does **not** yet change the
-overall Goldbach status above: Route A is still not closed, and the canonical endpoint is still
-conditional on the listed analytic/budget hypotheses. It does, however, clarify the live remaining
-work.
+This section records the certificate program as it stood in August-September 2026. It is retained
+for engineering provenance, not as a current completion plan. The later analytic audit showed that
+the pinned certificate cannot supply the missing uniform fixed-center Type-II theorem. Route A is
+now archived; see `SupportingDocs/RouteA_FinalResearchStatus_2026-10-31.md`.
 
 Main progress:
 - Route A theorem surfaces were stabilized for the major remaining aggregate pieces, especially the
@@ -87,17 +86,15 @@ Main progress:
   reports source-restore/archive-audit/setup/cache outcomes, and prints direct-builder closure-scan
   progress before the scheduler starts.
 
-Current practical state:
-- The Route A/Q0 certificate path is making real checked progress, but the work is still in the
-  generated-certificate integration phase rather than the final theorem-wrapper phase.
-- The most common current blocker is not a new mathematical objection; it is a generated module that
-  is too large, stale, or misnamed for the current incremental CI cache. The response pattern is now
-  clear: inspect the failed module, distinguish interface/cache errors from real Lean errors, split
-  large modules where needed, update the source archive, and force-rebuild only the affected closure.
-- More large dyadic base modules may still need splitting before the full
-  `Q0MinorZeroModeNormalizedAverageX0Cert` target finishes. Once that target builds, the next step is
-  to build the narrow `Q0RouteAPostCertBridgeProbe`, then the periodic-main/final certificate
-  wrappers, before attempting broader turnkey or final Goldbach targets.
+Historical practical state:
+- The Route A/Q0 certificate path made substantial checked progress and produced reusable generated
+  certificate and CI infrastructure.
+- Its recurring blockers were large or stale generated modules, source-archive synchronization,
+  and incremental cache management. Those engineering findings remain useful for reproducing the
+  historical artifact.
+- Completion of `Q0MinorZeroModeNormalizedAverageX0Cert` does not authorize the old
+  `Q0RouteAPostCertBridgeProbe` sequence. The post-cert bridge plan is superseded by the analytic
+  stop report because a pinned `X0` theorem cannot discharge the missing uniform Type-II estimate.
 
 ## Local hiccups
 See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are present or missing.
@@ -271,7 +268,7 @@ The ε₂-large branch is now discharged deterministically in
 `Goldbach/Cert/MajorArcModules/Q0MajorTailTTStarUpperBoundFromToeplitz.lean` and is likewise no
 longer an active pinned axiom in the turnkey `Q0` route.
 
-**Active singularity-object bridge layer (exact-weight; no new explicit `axiom`s)**
+**Historical singularity-object bridge layer (exact-weight; no new explicit `axiom`s)**
 - Major-side exact bookkeeping for the current structured candidate `R23-S7`:
   `Goldbach/BankPieces/Cert/RawScaleSmallBetaS7Decomposition.lean`.
 - Minor-side exact-weight object and projector/subspace infrastructure:
@@ -280,8 +277,8 @@ longer an active pinned axiom in the turnkey `Q0` route.
   - `Goldbach/Cert/MajorArcModules/Q0MinorSingularityFamilies.lean`
   - `Goldbach/Cert/MajorArcModules/Q0MinorSingularitySubspaces.lean`
   - `Goldbach/Cert/MajorArcModules/Q0MinorSingularityCertificates.lean`
-- These modules are the current theorem-facing bridge infrastructure for the singularity-first
-  program described in `SupportingDocs/Goldbach_FirstMajorDeparture.md`. They do **not** yet prove
+- These modules preserve the theorem-facing infrastructure developed for the singularity-first
+  program described in `SupportingDocs/Goldbach_FirstMajorDeparture.md`. They do **not** prove
   Route A / Route B closure and they do **not** currently change the audited endpoint axiom lists
   above.
 
@@ -444,3 +441,4 @@ An axiom-free implication does not discharge the analytic content of its hypothe
 - In April the main project was clarity about the math we're missing. The code now separates checked reductions, conventional axiom boundaries, pinned workbenches, and the true remaining obstructions. The project is not platinum or gold, it is silver, but with a much cleaner map of what has to be proved next. Maybe this is all a waste of time after all.
 - April-July 2026: The Route A push turned into a more serious diagnosis. We spent a lot of time tuning constants, chunking large certificate files, and trying to make the Q0/Route A certification route small enough and honest enough to check. That produced useful machinery, but it also made clear that the remaining loss was structural rather than just a bad downstream estimate. By late June and early July the live program had shifted to a singularity-first decomposition: expose a better major structured block (`R23-S7`), isolate the route-visible minor object, split it into zero mode + mean channel + residual, and test frozen geometric and singular-series witnesses against the exact scalar target. The main progress is that the route-visible object is now much better understood; the main challenge is that we still need a theorem-ready decomposition `R₂ = major singular block + minor singular block + small residual`, rather than another layer of bookkeeping around the old Route A/B closure.
 - August 2026: The project returned to Route A as a concrete certificate build. The important shift was operational: the remaining work stopped looking like a vague proof-design gap and started looking like a sequence of generated Lean certificate closures that can be built, cached, repaired, and resumed. We stabilized the periodic-main/zero-mode surfaces, pushed the noncoprime zero certificates through large generated targets, built a direct GitHub `.olean` closure builder, and started forcing the full `Q0MinorZeroModeNormalizedAverageX0Cert` target through CI. The main new lesson is that the hard errors are now usually engineering errors in the certificate pipeline: stale `.olean` caches, source-archive mismatches, naming aliases, or monolithic generated files that must be split. `Base042` and `Base077` are now split into term/row/pair wrappers, `Base066` has compatibility aliases, and the direct builder can force-rebuild stale interfaces. Route A is not closed yet, but the process is now a resumable certificate grind with known failure patterns rather than an open-ended search for a new mathematical object.
+- October 2026: Independent feasibility and obstruction audits reversed the August completion assessment. The pinned certificate remains a substantial computational artifact, but it cannot prove the uniform fixed-center bridge required by Route A. The final reflected Vaughan audit located the missing parity-sensitive information in a balanced Type-II correlation containing `rp + dm = N`; available Type-I distribution estimates and ordinary upper-sieve improvements do not control it with the required constant. Route A is therefore archived as analytically stalled, Route B remains retired, and no further certificate or Lean generation is part of the current proof-completion program without a new independently reviewed analytic theorem. See `SupportingDocs/RouteA_FinalResearchStatus_2026-10-31.md`.

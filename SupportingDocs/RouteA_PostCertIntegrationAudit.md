@@ -1,10 +1,16 @@
-# Route A Post-Cert Integration Audit
+# Route A Post-Cert Integration Audit (Historical)
 
 Date: 2026-09-06
 
-## Current Build Target
+> **Archived 2026-10-31.** This document records the certificate-integration plan before the
+> later analytic obstruction audits. It is retained for build and provenance purposes only. Do not
+> treat the bridge sequence below as an active route to Goldbach closure. See
+> `SupportingDocs/RouteA_FinalResearchStatus_2026-10-31.md` for the current mathematical status and
+> the condition for reopening Route A.
 
-The live CI target is:
+## Historical Build Target
+
+At the time of this audit, the live CI target was:
 
 `Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert`
 
@@ -42,14 +48,16 @@ The audit is now wired into `.github/workflows/route_a_linux_smoke.yml` before t
 step. It should fail fast if a clean GitHub runner would be missing an ignored/generated source file
 needed by the selected target.
 
-## Key Integration Finding
+## Historical Integration Finding
 
 No non-generated higher-level Goldbach module currently imports
 `Q0MinorZeroModeNormalizedAverageX0Cert`.
 
-That means completion of the current cert target is necessary but not automatically sufficient for
-the higher Goldbach route. After the target builds, we still need an explicit bridge from the
-Route A/Q0 window-energy theorem into the existing turnkey major-arc path.
+At the time, this was taken to mean that completion of the cert target was necessary but not
+automatically sufficient for the higher Goldbach route. The proposed next step was an explicit
+bridge from the Route A/Q0 window-energy theorem into the existing turnkey major-arc path. Later
+analysis showed that the missing bridge contains a genuinely new uniform fixed-center Type-II
+estimate; it is not supplied by this pinned certificate.
 
 ## Existing Turnkey Route
 
@@ -75,9 +83,9 @@ That provider goes through the split SSU/Type-I route:
 - SSU/nonzero mode: `Q0MinorSSUUpperBoundCoarse.nonzeroModeEnergyBound_80`
 - Type-I/zero mode: `Q0MinorTypeIUpperBoundRouteA.zeroModeEnergyBound_72000000`
 
-## Main Remaining Bridge
+## Historical Proposed Bridge (Now Obstructed)
 
-The current cert target proves a pointwise pinned-window object:
+The cert target was designed to prove a pointwise pinned-window object:
 
 `CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795`
 
@@ -88,8 +96,7 @@ The existing turnkey Q0 route consumes a uniform energy object:
 Those are different theorem surfaces. There is currently no discovered downstream module that turns
 the former into the latter.
 
-So the next proof-engineering job after the cert finishes is not another generated certificate by
-default. It is to create or identify the bridge:
+The then-proposed proof-engineering job was to create or identify the bridge:
 
 `CenteredNormalizedSigmaTruncWindowEnergyTargetAt X0 1795`
 `=>`
@@ -100,7 +107,15 @@ of:
 
 `Q0MinorTypeIUpperBoundRouteA.zeroModeEnergyBound_72000000`
 
-## Post-Cert Work Sequence
+This implication is not an available theorem. The final research audit explains why a pinned
+`X0` certificate cannot by itself establish the required uniform statement and identifies the
+missing parity-sensitive Type-II input.
+
+## Historical Post-Cert Work Sequence (Superseded)
+
+The following was the planned sequence before the fixed-center Type-II obstruction was isolated.
+It should not be executed as a proof-completion program merely because the pinned certificate
+finishes. The sequence remains useful only for reproducing or inspecting the historical artifact.
 
 1. Let the current CI target finish:
    `Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert`.
@@ -251,14 +266,15 @@ authoritative.
   why the normalized centered window-energy target at the pinned top window controls the
   Q0-complement energy used by `Q0MinorEnergyBound`.
 
-## Practical Next Step
+## Historical Practical Next Step (Superseded)
 
-When the current CI target succeeds, do not immediately start a broad final build. First create the
-small bridge target and test only that bridge. The highest-value next build target should be the
-new bridge module, followed by `Q0TwoBoundsSpec`, not the full `Goldbach` target.
+The former plan was to finish the certificate target, build the narrow bridge probe, and identify
+the smallest theorem surface needed by `Q0MinorEnergyBoundProvider`. The later audit showed that
+this is not merely an interface problem: the required uniform fixed-center estimate needs new
+parity-sensitive Type-II mathematics. No broad Goldbach build, bridge implementation, or further
+certificate generation should be commissioned from this document alone.
 
-For the ongoing full-cert CI run, use these default settings unless debugging a specific stale
-interface:
+For the historical full-cert CI run, the recommended default settings were:
 
 - `target=Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert`
 - `build_mode=direct`
@@ -327,7 +343,7 @@ from the last successful checkpoint with `direct_workers=4`.  If early loss repe
 workers, shorten the run interval manually by lowering `build_timeout_minutes`; this saves smaller
 checkpoints before the runner enters the observed failure window.
 
-The recommended post-cert build order is:
+The former recommended post-cert build order was:
 
 1. `Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe`
 2. `Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainFinal`
@@ -336,10 +352,10 @@ The recommended post-cert build order is:
 4. `Goldbach.Cert.MajorArcModules.Q0TwoBoundsSpec`
 5. `Goldbach.Cert.TurnkeyMajorArcCanonSpec`
 
-If step 1 fails after the cert target succeeds, treat it as an integration/name-surface bug first,
-not as evidence that the certificate payload failed.
+Under that former plan, a failure at step 1 after cert success was to be treated first as an
+integration/name-surface bug, not as evidence that the certificate payload failed.
 
-## Prepared Bridge Probe
+## Historical Prepared Bridge Probe
 
 Prepared module:
 
@@ -373,11 +389,11 @@ provider path once the post-cert bridge is proved:
 - `routeA_q0Minor_energyBound16_from_tail_boundary_certificates`
 - `routeA_q0Minor_deviationBound4_from_tail_boundary_certificates`
 
-After the current cert target succeeds, this should be the first narrow target to build before
-patching `Q0MinorEnergyBoundProvider` or attempting any broad final build.
+This was prepared as the first narrow target to build before patching
+`Q0MinorEnergyBoundProvider`. It is retained as an interface diagnostic, not as an active
+proof-completion step.
 
-The GitHub smoke workflow now has `run_post_success_probe=true` by default.  If the selected target
-finishes with exit code `0`, the workflow immediately attempts a short direct build of
-`Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe` while the restored artifact cache is
-hot.  This is diagnostic only: a probe failure should be treated as a post-cert integration/name
-surface bug, not as evidence that the main certificate target failed.
+The historical GitHub smoke workflow set `run_post_success_probe=true` by default. If the selected
+target finished with exit code `0`, the workflow attempted a short direct build of
+`Goldbach.Cert.MajorArcModules.Q0RouteAPostCertBridgeProbe` while the restored artifact cache was
+hot. This remains diagnostic only and does not establish the missing analytic implication.
