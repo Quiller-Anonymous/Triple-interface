@@ -4,6 +4,8 @@
 Examples:
     python3 scripts/experiments/route_a_long_mobius_fibers.py 7077888 16777216
     python3 scripts/experiments/route_a_long_mobius_fibers.py 16777216 --square-cutoff 7
+    python3 scripts/experiments/route_a_long_mobius_fibers.py 16777216 \
+      --square-cutoff 7 --auxiliary-upper 97
 
 Default mode uses z = ceil(log(N)^20), capped only where the cap does not
 change b_z on the tested integer range. ``--square-cutoff`` selects a
@@ -65,7 +67,7 @@ def arithmetic_tables(limit: int):
                 break
             mu[value] = -mu[n]
 
-    return mu, liouville, primes
+    return spf, mu, liouville, primes
 
 
 def localized_liouville(limit, cutoff, mu, liouville, primes):
@@ -85,6 +87,18 @@ def localized_liouville(limit, cutoff, mu, liouville, primes):
         if not excluded[n]:
             result[n] = liouville[n]
     return result
+
+
+def distinct_prime_factors_in_range(n, spf, lower, upper):
+    """Return the distinct prime factors p of n with lower < p <= upper."""
+    factors = []
+    while n > 1:
+        prime = spf[n]
+        if lower < prime <= upper:
+            factors.append(prime)
+        while n % prime == 0:
+            n //= prime
+    return tuple(factors)
 
 
 def bump(x: float) -> float:
@@ -143,7 +157,12 @@ def finish_stratum(stats, center):
     }
 
 
-def audit(center: int, cutoff: int | None, max_long: int):
+def audit(
+    center: int,
+    cutoff: int | None,
+    max_long: int,
+    auxiliary_upper: int | None,
+):
     if center <= 0 or center % 2:
         raise ValueError("N must be a positive even integer")
 
@@ -160,7 +179,7 @@ def audit(center: int, cutoff: int | None, max_long: int):
 
     log_center = math.log(center)
     short_scale = center ** (1.0 / 3.0)  # Used only in the smooth weight.
-    mu, liouville, primes = arithmetic_tables(long_upper)
+    spf, mu, liouville, primes = arithmetic_tables(long_upper)
 
     if cutoff is None:
         # A cap at long_upper changes no square-divisibility test in this range.
@@ -175,6 +194,31 @@ def audit(center: int, cutoff: int | None, max_long: int):
     coefficient = localized_liouville(
         long_upper, square_cutoff, mu, liouville, primes
     )
+    if auxiliary_upper is not None and auxiliary_upper < 2:
+        raise ValueError("--auxiliary-upper must be >= 2")
+    auxiliary_upper_used = (
+        min(auxiliary_upper, long_upper)
+        if auxiliary_upper is not None
+        else None
+    )
+    auxiliary_pool_empty = (
+        auxiliary_upper_used is not None
+        and auxiliary_upper_used <= square_cutoff
+    )
+    auxiliary_factor_cache = {}
+
+    def auxiliary_factors(n):
+        cached = auxiliary_factor_cache.get(n)
+        if cached is None:
+            cached = distinct_prime_factors_in_range(
+                n,
+                spf,
+                square_cutoff,
+                auxiliary_upper_used,
+            )
+            auxiliary_factor_cache[n] = cached
+        return cached
+
     short_weight = {
         m: bump(m / short_scale) * math.log(m)
         for m in range(short_lower, short_upper + 1)
@@ -187,6 +231,16 @@ def audit(center: int, cutoff: int | None, max_long: int):
     weight_energy_terms = []
     diagonal_terms = []
     common_absolute_terms = []
+    auxiliary_stats = {
+        "low_union_T": 0.0,
+        "low_union_absolute": 0.0,
+        "low_union_V": 0.0,
+        "low_union_Vw": 0.0,
+        "both_zero_T": 0.0,
+        "both_zero_absolute": 0.0,
+        "both_zero_V": 0.0,
+        "both_zero_Vw": 0.0,
+    }
     strata = {
         "active_all": empty_stratum(),
         "active_m_eq_b": empty_stratum(),
@@ -222,6 +276,11 @@ def audit(center: int, cutoff: int | None, max_long: int):
 
             correlation = 0
             diagonal = 0
+            low_union_correlation = 0
+            low_union_absolute = 0
+            both_zero_correlation = 0
+            both_zero_absolute = 0
+            excluded_auxiliary_product = r * s * reduced_center
             for t in range(t_min, t_max + 1):
                 d = d0 + s * t
                 a = a0 - r * t
@@ -232,6 +291,22 @@ def audit(center: int, cutoff: int | None, max_long: int):
                 value = int(coefficient[d]) * int(coefficient[a])
                 correlation += value
                 diagonal += value * value
+
+                if auxiliary_upper_used is not None:
+                    d_has_usable = any(
+                        excluded_auxiliary_product % p
+                        for p in auxiliary_factors(d)
+                    )
+                    a_has_usable = any(
+                        excluded_auxiliary_product % p
+                        for p in auxiliary_factors(a)
+                    )
+                    if not d_has_usable or not a_has_usable:
+                        low_union_correlation += value
+                        low_union_absolute += abs(value)
+                    if not d_has_usable and not a_has_usable:
+                        both_zero_correlation += value
+                        both_zero_absolute += abs(value)
 
             weight = short_weight[m] * short_weight[b]
             solution_mass += length
@@ -252,6 +327,40 @@ def audit(center: int, cutoff: int | None, max_long: int):
                     correlation,
                     weight,
                 )
+
+                if auxiliary_upper_used is not None:
+                    auxiliary_stats["low_union_T"] += (
+                        weight * low_union_correlation
+                    )
+                    auxiliary_stats["low_union_absolute"] += (
+                        abs(weight) * low_union_absolute
+                    )
+                    auxiliary_stats["low_union_V"] += (
+                        low_union_correlation * low_union_correlation / length
+                    )
+                    auxiliary_stats["low_union_Vw"] += (
+                        weight
+                        * weight
+                        * low_union_correlation
+                        * low_union_correlation
+                        / length
+                    )
+                    auxiliary_stats["both_zero_T"] += (
+                        weight * both_zero_correlation
+                    )
+                    auxiliary_stats["both_zero_absolute"] += (
+                        abs(weight) * both_zero_absolute
+                    )
+                    auxiliary_stats["both_zero_V"] += (
+                        both_zero_correlation * both_zero_correlation / length
+                    )
+                    auxiliary_stats["both_zero_Vw"] += (
+                        weight
+                        * weight
+                        * both_zero_correlation
+                        * both_zero_correlation
+                        / length
+                    )
                 update_stratum(
                     strata["active_g_eq_1" if gcd == 1 else "active_g_gt_1"],
                     length,
@@ -305,6 +414,41 @@ def audit(center: int, cutoff: int | None, max_long: int):
             p > square_cutoff for p in primes
         ),
         "marked_operator_norms": "NOT COMPUTED: signed matrix unspecified",
+        "auxiliary_pool_diagnostic": (
+            None
+            if auxiliary_upper_used is None
+            else {
+                "pool": (
+                    "empty because auxiliary_upper <= square_cutoff"
+                    if auxiliary_pool_empty
+                    else (
+                        f"primes {square_cutoff} < p <= {auxiliary_upper_used} "
+                        "with p not dividing r*s*A"
+                    )
+                ),
+                "pool_empty_by_cutoff": auxiliary_pool_empty,
+                "warning": (
+                    "SURROGATE finite-scale diagnostic unless the requested "
+                    "cutoffs equal the asymptotic application"
+                ),
+                "low_union_signed_T_over_N": (
+                    auxiliary_stats["low_union_T"] / center
+                ),
+                "low_union_absolute_envelope_over_N": (
+                    auxiliary_stats["low_union_absolute"] / center
+                ),
+                "low_union_V": auxiliary_stats["low_union_V"],
+                "low_union_Vw": auxiliary_stats["low_union_Vw"],
+                "both_zero_signed_T_over_N": (
+                    auxiliary_stats["both_zero_T"] / center
+                ),
+                "both_zero_absolute_envelope_over_N": (
+                    auxiliary_stats["both_zero_absolute"] / center
+                ),
+                "both_zero_V": auxiliary_stats["both_zero_V"],
+                "both_zero_Vw": auxiliary_stats["both_zero_Vw"],
+            }
+        ),
         "active_strata": {
             name: finish_stratum(stats, center)
             for name, stats in strata.items()
@@ -316,11 +460,30 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("centers", nargs="+", type=int)
     parser.add_argument("--square-cutoff", type=int, default=None)
+    parser.add_argument(
+        "--auxiliary-upper",
+        type=int,
+        default=None,
+        help=(
+            "Report the signed low-factor remainder for auxiliary primes "
+            "square_cutoff < p <= this value; this is normally surrogate-only"
+        ),
+    )
     parser.add_argument("--max-long", type=int, default=2_000_000)
     args = parser.parse_args()
 
     for center in args.centers:
-        print(json.dumps(audit(center, args.square_cutoff, args.max_long), sort_keys=True))
+        print(
+            json.dumps(
+                audit(
+                    center,
+                    args.square_cutoff,
+                    args.max_long,
+                    args.auxiliary_upper,
+                ),
+                sort_keys=True,
+            )
+        )
 
 
 if __name__ == "__main__":

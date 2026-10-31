@@ -4,6 +4,13 @@ Date: 2026-10-30
 
 Status: **NUMERICALLY COMPATIBLE; ANALYTICALLY UNRESOLVED**
 
+> **Marked-reconstruction update.**  The subsequent paper audit in
+> `SupportingDocs/RouteALongMobiusMarkedReconstructionAudit.md` proves exact factorial
+> reconstruction identities but shows that the existing positive-order marked theorem misses the
+> zero-usable-prime and low-usable-factor strata.  Their absolute mass cannot be charged to the
+> ledger.  The source-only transfer therefore fails Gate B.  The broader unmarked slope-mean-square
+> question remains unresolved.
+
 ## Executive verdict
 
 The supplied fixed-center formulation repairs two defects in the earlier long-Mobius discussion:
@@ -359,6 +366,11 @@ Give an exact finite identity or a quantitatively controlled approximation that 
 unmarked `b_z` block.  The source mark weight vanishes on a non-negligible part of the unmarked
 support, so division by that weight is not available.  If the complement's cancellation has to be
 assumed, stop: that would merely rename the missing theorem.
+
+**Current outcome:** failed for the existing positive-order source marks.  Exact reconstruction is
+available only by including zero-order terms or an explicit low-factor remainder.  The former
+contains a raw norm-one component; the latter requires a new signed estimate.  See the marked
+reconstruction audit.
 
 ### Gate C: slope-averaged signed residual estimate
 
