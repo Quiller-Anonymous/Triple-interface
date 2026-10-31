@@ -1,0 +1,830 @@
+{
+  "base_commit": "22a16ab5822479d8ab1bcff9b3785652cf097544",
+  "packet_commit": "f6e466ddfb9f7989097bef0fdc5136f89a6dff17",
+  "P": 100,
+  "Q": 100,
+  "threshold_log_log": "100",
+  "active_main_lower_fraction": "0.9",
+  "type_i_error_upper_fraction": "0.000000000000005",
+  "prime_power_upper_fraction": "1e-130",
+  "paper_verdict": "PASS",
+  "proved_reserve_lower_fraction": "0.699",
+  "checker_executed": true,
+  "active_main_status": "reviewed paper input; not Lean-formalized",
+  "type_i_error_status": "paper rederived using weighted primitive-conductor estimates",
+  "row_model_rule": "Squarefree q: exact contribution is c_q(N)*D_q(N)/phi(q)^2 with |D_q(N)|<0.034. Nonsquarefree q: model contribution is zero.",
+  "ramanujan_rule": "c_q(N)=sum_{d|gcd(q,N)} d*mu(q/d); for squarefree q, c_q(N)=product_{p|q}(p*1_{p|N}-1).",
+  "row_lower_rule": "For squarefree q, round -0.034/phi(q) downward to six decimal places. Otherwise use zero.",
+  "row_error_rule": "Each denominator error divided by N is less than 2400*phi(q)/(q*log(N))<1e-39.",
+  "row_dependencies": [
+    "Type-I rational-arc proof",
+    "BMOR Corollary 1.7",
+    "Ramare Theorems 1.2 and 1.5 and global bounds",
+    "nonnegative sine-integral model kernel",
+    "elementary product-error estimate"
+  ],
+  "rows": [
+    {
+      "q": 1,
+      "squarefree": true,
+      "phi": 1,
+      "status": "proved",
+      "model_lower_fraction": "-0.034000",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 2,
+      "squarefree": true,
+      "phi": 1,
+      "status": "proved",
+      "model_lower_fraction": "-0.034000",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 3,
+      "squarefree": true,
+      "phi": 2,
+      "status": "proved",
+      "model_lower_fraction": "-0.017000",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 4,
+      "squarefree": false,
+      "phi": 2,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 5,
+      "squarefree": true,
+      "phi": 4,
+      "status": "proved",
+      "model_lower_fraction": "-0.008500",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 6,
+      "squarefree": true,
+      "phi": 2,
+      "status": "proved",
+      "model_lower_fraction": "-0.017000",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 7,
+      "squarefree": true,
+      "phi": 6,
+      "status": "proved",
+      "model_lower_fraction": "-0.005667",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 8,
+      "squarefree": false,
+      "phi": 4,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 9,
+      "squarefree": false,
+      "phi": 6,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 10,
+      "squarefree": true,
+      "phi": 4,
+      "status": "proved",
+      "model_lower_fraction": "-0.008500",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 11,
+      "squarefree": true,
+      "phi": 10,
+      "status": "proved",
+      "model_lower_fraction": "-0.003400",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 12,
+      "squarefree": false,
+      "phi": 4,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 13,
+      "squarefree": true,
+      "phi": 12,
+      "status": "proved",
+      "model_lower_fraction": "-0.002834",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 14,
+      "squarefree": true,
+      "phi": 6,
+      "status": "proved",
+      "model_lower_fraction": "-0.005667",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 15,
+      "squarefree": true,
+      "phi": 8,
+      "status": "proved",
+      "model_lower_fraction": "-0.004250",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 16,
+      "squarefree": false,
+      "phi": 8,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 17,
+      "squarefree": true,
+      "phi": 16,
+      "status": "proved",
+      "model_lower_fraction": "-0.002125",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 18,
+      "squarefree": false,
+      "phi": 6,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 19,
+      "squarefree": true,
+      "phi": 18,
+      "status": "proved",
+      "model_lower_fraction": "-0.001889",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 20,
+      "squarefree": false,
+      "phi": 8,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 21,
+      "squarefree": true,
+      "phi": 12,
+      "status": "proved",
+      "model_lower_fraction": "-0.002834",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 22,
+      "squarefree": true,
+      "phi": 10,
+      "status": "proved",
+      "model_lower_fraction": "-0.003400",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 23,
+      "squarefree": true,
+      "phi": 22,
+      "status": "proved",
+      "model_lower_fraction": "-0.001546",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 24,
+      "squarefree": false,
+      "phi": 8,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 25,
+      "squarefree": false,
+      "phi": 20,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 26,
+      "squarefree": true,
+      "phi": 12,
+      "status": "proved",
+      "model_lower_fraction": "-0.002834",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 27,
+      "squarefree": false,
+      "phi": 18,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 28,
+      "squarefree": false,
+      "phi": 12,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 29,
+      "squarefree": true,
+      "phi": 28,
+      "status": "proved",
+      "model_lower_fraction": "-0.001215",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 30,
+      "squarefree": true,
+      "phi": 8,
+      "status": "proved",
+      "model_lower_fraction": "-0.004250",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 31,
+      "squarefree": true,
+      "phi": 30,
+      "status": "proved",
+      "model_lower_fraction": "-0.001134",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 32,
+      "squarefree": false,
+      "phi": 16,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 33,
+      "squarefree": true,
+      "phi": 20,
+      "status": "proved",
+      "model_lower_fraction": "-0.001700",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 34,
+      "squarefree": true,
+      "phi": 16,
+      "status": "proved",
+      "model_lower_fraction": "-0.002125",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 35,
+      "squarefree": true,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "-0.001417",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 36,
+      "squarefree": false,
+      "phi": 12,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 37,
+      "squarefree": true,
+      "phi": 36,
+      "status": "proved",
+      "model_lower_fraction": "-0.000945",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 38,
+      "squarefree": true,
+      "phi": 18,
+      "status": "proved",
+      "model_lower_fraction": "-0.001889",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 39,
+      "squarefree": true,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "-0.001417",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 40,
+      "squarefree": false,
+      "phi": 16,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 41,
+      "squarefree": true,
+      "phi": 40,
+      "status": "proved",
+      "model_lower_fraction": "-0.000850",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 42,
+      "squarefree": true,
+      "phi": 12,
+      "status": "proved",
+      "model_lower_fraction": "-0.002834",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 43,
+      "squarefree": true,
+      "phi": 42,
+      "status": "proved",
+      "model_lower_fraction": "-0.000810",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 44,
+      "squarefree": false,
+      "phi": 20,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 45,
+      "squarefree": false,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 46,
+      "squarefree": true,
+      "phi": 22,
+      "status": "proved",
+      "model_lower_fraction": "-0.001546",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 47,
+      "squarefree": true,
+      "phi": 46,
+      "status": "proved",
+      "model_lower_fraction": "-0.000740",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 48,
+      "squarefree": false,
+      "phi": 16,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 49,
+      "squarefree": false,
+      "phi": 42,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 50,
+      "squarefree": false,
+      "phi": 20,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 51,
+      "squarefree": true,
+      "phi": 32,
+      "status": "proved",
+      "model_lower_fraction": "-0.001063",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 52,
+      "squarefree": false,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 53,
+      "squarefree": true,
+      "phi": 52,
+      "status": "proved",
+      "model_lower_fraction": "-0.000654",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 54,
+      "squarefree": false,
+      "phi": 18,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 55,
+      "squarefree": true,
+      "phi": 40,
+      "status": "proved",
+      "model_lower_fraction": "-0.000850",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 56,
+      "squarefree": false,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 57,
+      "squarefree": true,
+      "phi": 36,
+      "status": "proved",
+      "model_lower_fraction": "-0.000945",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 58,
+      "squarefree": true,
+      "phi": 28,
+      "status": "proved",
+      "model_lower_fraction": "-0.001215",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 59,
+      "squarefree": true,
+      "phi": 58,
+      "status": "proved",
+      "model_lower_fraction": "-0.000587",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 60,
+      "squarefree": false,
+      "phi": 16,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 61,
+      "squarefree": true,
+      "phi": 60,
+      "status": "proved",
+      "model_lower_fraction": "-0.000567",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 62,
+      "squarefree": true,
+      "phi": 30,
+      "status": "proved",
+      "model_lower_fraction": "-0.001134",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 63,
+      "squarefree": false,
+      "phi": 36,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 64,
+      "squarefree": false,
+      "phi": 32,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 65,
+      "squarefree": true,
+      "phi": 48,
+      "status": "proved",
+      "model_lower_fraction": "-0.000709",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 66,
+      "squarefree": true,
+      "phi": 20,
+      "status": "proved",
+      "model_lower_fraction": "-0.001700",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 67,
+      "squarefree": true,
+      "phi": 66,
+      "status": "proved",
+      "model_lower_fraction": "-0.000516",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 68,
+      "squarefree": false,
+      "phi": 32,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 69,
+      "squarefree": true,
+      "phi": 44,
+      "status": "proved",
+      "model_lower_fraction": "-0.000773",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 70,
+      "squarefree": true,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "-0.001417",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 71,
+      "squarefree": true,
+      "phi": 70,
+      "status": "proved",
+      "model_lower_fraction": "-0.000486",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 72,
+      "squarefree": false,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 73,
+      "squarefree": true,
+      "phi": 72,
+      "status": "proved",
+      "model_lower_fraction": "-0.000473",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 74,
+      "squarefree": true,
+      "phi": 36,
+      "status": "proved",
+      "model_lower_fraction": "-0.000945",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 75,
+      "squarefree": false,
+      "phi": 40,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 76,
+      "squarefree": false,
+      "phi": 36,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 77,
+      "squarefree": true,
+      "phi": 60,
+      "status": "proved",
+      "model_lower_fraction": "-0.000567",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 78,
+      "squarefree": true,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "-0.001417",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 79,
+      "squarefree": true,
+      "phi": 78,
+      "status": "proved",
+      "model_lower_fraction": "-0.000436",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 80,
+      "squarefree": false,
+      "phi": 32,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 81,
+      "squarefree": false,
+      "phi": 54,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 82,
+      "squarefree": true,
+      "phi": 40,
+      "status": "proved",
+      "model_lower_fraction": "-0.000850",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 83,
+      "squarefree": true,
+      "phi": 82,
+      "status": "proved",
+      "model_lower_fraction": "-0.000415",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 84,
+      "squarefree": false,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 85,
+      "squarefree": true,
+      "phi": 64,
+      "status": "proved",
+      "model_lower_fraction": "-0.000532",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 86,
+      "squarefree": true,
+      "phi": 42,
+      "status": "proved",
+      "model_lower_fraction": "-0.000810",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 87,
+      "squarefree": true,
+      "phi": 56,
+      "status": "proved",
+      "model_lower_fraction": "-0.000608",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 88,
+      "squarefree": false,
+      "phi": 40,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 89,
+      "squarefree": true,
+      "phi": 88,
+      "status": "proved",
+      "model_lower_fraction": "-0.000387",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 90,
+      "squarefree": false,
+      "phi": 24,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 91,
+      "squarefree": true,
+      "phi": 72,
+      "status": "proved",
+      "model_lower_fraction": "-0.000473",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 92,
+      "squarefree": false,
+      "phi": 44,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 93,
+      "squarefree": true,
+      "phi": 60,
+      "status": "proved",
+      "model_lower_fraction": "-0.000567",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 94,
+      "squarefree": true,
+      "phi": 46,
+      "status": "proved",
+      "model_lower_fraction": "-0.000740",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 95,
+      "squarefree": true,
+      "phi": 72,
+      "status": "proved",
+      "model_lower_fraction": "-0.000473",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 96,
+      "squarefree": false,
+      "phi": 32,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 97,
+      "squarefree": true,
+      "phi": 96,
+      "status": "proved",
+      "model_lower_fraction": "-0.000355",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 98,
+      "squarefree": false,
+      "phi": 42,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 99,
+      "squarefree": false,
+      "phi": 60,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    },
+    {
+      "q": 100,
+      "squarefree": false,
+      "phi": 40,
+      "status": "proved",
+      "model_lower_fraction": "0",
+      "model_error_upper_fraction": "1e-39"
+    }
+  ],
+  "checker_result": "COMPLETE_POSITIVE",
+  "checker_reserve_lower_fraction": "0.6990179999999949999999999999999999999"
+}

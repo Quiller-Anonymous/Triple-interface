@@ -3,20 +3,22 @@ import Goldbach.Cert.MajorArcModules.Q0MinorEnergyFromLedgerCert
 import Goldbach.Cert.MajorArcModules.Q0MinorWeightedChannelEngine
 
 /-!
-`Q0MinorCalibrationStatus` is a small status module for the corrected ε₁ route.
+`Q0MinorCalibrationStatus` compares the current certified `ε₁` route with a conditional calibration
+alternative.
 
 After the weighted-channel cleanup, the live route-visible minor object is
 
 `minorResidual = zeroMode + meanChannel`.
 
-That decomposition is already enough to recover the existing turnkey ε₁ engine with the certified
-constants. So the remaining work on the pinned `Q0` route is no longer a decomposition problem.
-It is the calibration problem isolated in `Q0MinorCalibrationHandoff`:
+That decomposition already recovers the existing turnkey ε₁ engine with the certified constants.
+The calibration problem in `Q0MinorCalibrationHandoff` is therefore an optional alternative route,
+not the remaining obligation of the active pinned provider:
 
 * produce a dyadic polynomial Gram-decay witness at `Δ_canon`, and
 * verify the two calibration inequalities placing the raw constants under the certified caps.
 
-This file packages that conclusion as theorem-facing handoff lemmas.
+This file packages both conclusions as theorem-facing handoff lemmas. Neither conclusion supplies
+the missing arithmetic application from SSU to the balanced von Mangoldt remainder.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorCalibrationStatus
@@ -58,7 +60,7 @@ theorem current_weightedChannel_route_gives_energyBound16 :
   energyBound16_of_currentWeightedChannelCerts
 
 /--
-Mathematician-facing remaining ε₁ seam:
+Mathematician-facing conditional ε₁ alternative:
 once a dyadic polynomial witness and calibration target are supplied, the certified ledger engine
 follows deterministically.
 -/
@@ -70,7 +72,7 @@ theorem ledgerEngine_of_remainingCalibrationTarget
   ledgerEngine_of_dyadicPoly_and_calibration hDy hCal
 
 /--
-Equivalent `cap = 16` consequence of the remaining calibration target.
+Equivalent `cap = 16` consequence of the conditional calibration target.
 -/
 theorem energyBound16_of_remainingCalibrationTarget
     {C : ℝ} {p : ℕ} {C2raw C3raw : ℝ}

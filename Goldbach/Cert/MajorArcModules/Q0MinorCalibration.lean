@@ -1,15 +1,16 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorTTStarAnalyticTarget
 
 /-!
-`Q0MinorCalibration` packages the final deterministic/numeric step of the `ε₁` route.
+`Q0MinorCalibration` packages a local deterministic/numeric implication for the `ε₁` route.
 
 Once the mathematician provides explicit TT* constants
 
 * `C, p` for off-diagonal shell decay,
 * `C2raw, C3raw` for the diagonal ledger,
 
-the only remaining work is to verify the two Crow calibration inequalities. This file packages
-that final step and immediately derives the Goldbach bridge witness and certified ledger engine.
+the remaining work within this implication is to verify the two Crow calibration inequalities.
+This does not assert that every dyadic witness is calibrated, and it is not the active provider or
+a Goldbach closure theorem.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorCalibration

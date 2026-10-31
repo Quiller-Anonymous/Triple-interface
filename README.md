@@ -10,6 +10,8 @@ end-to-end glue. Some entry points are fully in-repo proofs, some are conditiona
 hypotheses, and some convenience routes still rely on explicit axioms. The README below tries to
 separate those cases clearly.
 
+October 29, 2026: By its own standards, this project is a failure. I am winding it down.
+
 ## Status legend:
 - Platinum standard: builds; unconditional proof; no `axiom`/`sorry`/`admit` dependencies (beyond core classical axioms).
 - Gold standard: builds; end-to-end proof depending only on explicitly listed **conventional math axioms**.
@@ -26,7 +28,7 @@ separate those cases clearly.
 - Mud standard: informal sketch.
 
 ## Project status:
-1. Goldbach conjecture -- Current status: silver overall, with a gold-grade conditional boundary and fool's-gold pinned/staging workbenches. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves the closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches build and contain substantial checked infrastructure, but they are not final endpoints: the remaining live obstructions are the scale-sensitive closure budget, the half-mass/zero-mode endpoint (`vaughanHalfMassRecenteredEndpoint`), the mean-channel approximation (`vaughanMeanChannelApproxTarget`), and calibration of the minor-energy route rather than another formal assembly layer.
+1. Goldbach conjecture -- Current status: silver as a formal conditional pipeline, not as evidence that an unconditional proof is nearly complete. The final wrapper `Goldbach.goldbach_final` is a checked pointwise reduction from finite base plus a global analytic witness, and `Goldbach/GoldFunX.lean` is axiom-free in the `#print axioms` sense, but the canonical theorem is still conditional on `SigmaUpperOnWindow`, `SigmaLowerOnWindow`, `WeightsBridgeHyp`, and `ParallelFunXCanonScale.BudgetHyp`; the best clean public route, `Goldbach/GoldFunX_OptionB_Gold.lean`, uses the conventional major-arc axiom `majorArc_powerSaving` and still leaves closure/budget inputs explicit. The pinned `Q0` and route-visible workbenches contain substantial checked infrastructure, but they are not final endpoints. The fixed-width Route A bank is empty at arbitrarily large scales, and the later finite-cutoff two-sided norm-and-budget target is also incompatible with fixed-modulus arithmetic-progression averages. The balanced route now has an exact Vaughan identity, a checked fixed-center bilinear split, an exact prime-residue formula for the short Type-I--prime term, and an exact active character expansion and primitive-character regrouping. Lean proves the logarithmic conductor-weight bound derived from `|sum_{k <= X, (k,m)=1} mu(k)/phi(k)| <= 6m/phi(m)`, the global primitive-main-minus-corrections identity, and the sharp active induced-character correction bound `u * log(u) * log(N)^2 / log(2)`. Fixed-level primitive-fiber uniqueness, principal-fiber lift completeness, a coarse explicit noncoprime progression bound, the corrected active-main/active-modulus reindexing, finite Stieltjes control, and global reindexing by primitive conductor are checked. A final theorem now carries ordinary cumulative primitive-character `psi` bounds through the original short Type-I convolution. Its general complete-fiber form still assumes conductor stability at every level. The localized form no longer does: Lean proves that lifting a primitive character to a squarefree multiple preserves its conductor and canonical primitive-character key, and nonzero Mobius coefficients restrict the signed sum to exactly those squarefree levels. This discharges the represented small-conductor completeness condition while preserving the sharper signed estimate there. The direct represented-fiber branch handles large conductors unconditionally and preserves the `1/R` saving with explicit factor `18 * (1 + log u) * log N / R`. Lean also proves `sum_{k <= K} 1/phi(k) <= 6 * (1 + log K)`. The remaining frontier consists of populating this algebraically unconditional split interface with verified effective character estimates and constants, analyzing the retained main/arc margin, and controlling one hard long-modulus/Type-II residual. Route A remains suspended as a proof-completion project until those estimates give a usable margin and the hard residual receives a genuine one-sided arithmetic estimate with demonstrated nontrivial saving.
 
 2. Twin primes conjecture -- Current status: conditional entrypoint + fool's-gold default build
 -- The hypothesis-only checklist entry point `Twin/ChecklistEntrypoint.lean`
@@ -48,6 +50,172 @@ separate those cases clearly.
 
 Build note: “it builds” means it builds locally. The finite-base chunks are too large for the
 current GitHub setup, so local builds are the authoritative check here.
+
+## October 2026 Route A consistency correction
+
+The universal positive-mean version of Route A cannot be closed with the current fixed-width prime
+bank. A checked factorial construction now gives arbitrarily large scales at which every integer in
+the bank support is composite. At those scales all exact bank coefficients and the route-visible
+scalar vanish; Lean also checks that the frozen residual cancels the proposed main term. Therefore
+the large finite `X0` certificate is no longer a Route A closure dependency. It remains useful as a
+finite diagnostic and regression artifact, but completing it cannot repair the universal target.
+
+The redesign audit began in `SupportingDocs/RouteABankRedesign.md`. A growing-bank prototype has
+exact coefficient mass one and unconditional dyadic prime-pair coverage via Bertrand's theorem, but
+it does not prove exact-center coverage. The corrected arithmetic endpoint is the full pointwise
+prime-pair convolution in `RouteABroadPrimeConvolution.lean`, whose positivity is equivalent to a
+Goldbach representation. The follow-up modules check the complete-convolution circle identity,
+balanced support, seam-safe split, BMOR major approximation, finite-cutoff arithmetic-geometric
+model, and the uniform higher-prime-power allowance
+`(5 / 2) * (sqrt N + 1) * log(N)^2`.
+
+The next consistency audit changed the project status again. The two-sided closure interface in
+`RouteABalancedFiniteCutoffClosure.lean` forces the full balanced von Mangoldt convolution below
+twice a fixed-cutoff main term. At cutoff two, a Parseval cap would make this less than `4N`, while
+fixed-modulus PNT-in-progressions averaging in the class `0 mod 210` has limiting ratio
+`35/8 > 4`. More generally, increasing to another fixed cutoff cannot repair the same two-sided
+strategy. `RouteABalancedFiniteCutoffObstruction.lean` checks the order-theoretic consequence and
+the contradiction from explicit model-cap and progression hypotheses; the full PNT averaging lemma
+is not yet formalized in Lean.
+
+The same audit removed the inconsistent universally quantified
+`ssu_minor_energy_calibration` axiom and proved its contradiction with the existing dyadic witness
+existence surface. A bounded application test then found that the legacy Q0 Vaughan/SSU bridge is
+still placeholder-backed: its block-family predicate is `True`, its supplied witness uses a zero
+cutoff, its raw ledger is axiom-backed, and its compatibility bridge ignores the global-SSU
+premise. A separate Lean theorem shows that the global all-array `Step34ProdSum` interface cannot
+by itself beat the trivial per-frequency norm.
+
+An independent algebraic route now passes the extraction stage. `RouteABalancedVaughanIdentity`
+proves the exact finite Vaughan identity, `RouteAFiniteWeightBilinearCircle` proves exact bilinear
+mask removal at a specified center, and `RouteABalancedVaughanFixedCenter` proves the signed split
+`H(S,S) = H(A,S) + H(hard,S)` while keeping one prime sum intact. Standard maximal
+Bombieri--Vinogradov methods plausibly control the short Type-I term; its exact error is now split
+into coprime progression and noncoprime prime-power obligations, subject to a formal and
+effective implementation. A signed-conductor interface now preserves the outer Mobius
+cancellation and is weaker than the previously requested unrestricted maximal norm. Its exact
+active character/conductor regrouping and arithmetic logarithmic-weight bound are checked. Lean
+also proves the exact global primitive-main-minus-corrections identity, the specialist's sharp
+induced-character allowance `u * log(u) * log(N)^2 / log(2)`, and the exact discrete
+conductor-weight variation bound `|W(a)| + |W(b)| + Var_[a,b](W) <= 2 c_r log N`; a coarse
+noncoprime bound is checked separately. The moving cutoff contributes no boundary jump because
+the departing modulus has weight `log(X/X) = 0`. Finite Stieltjes control and global reindexing by
+primitive conductor now culminate in a checked short Type-I endpoint. Its primary form retains
+separate small- and large-conductor bounds at an arbitrary cutoff through the original Type-I
+prime convolution. The direct large branch has the genuine factor `1/R`, and Lean proves its
+elementary reciprocal-totient input `sum_{k <= K} 1/phi(k) <= 6 * (1 + log K)`, giving explicit
+global factor `12 * (1 + log u) * log N / R`. A coarser corollary accepts a conventional weighted
+primitive-character mean-value bound. Both forms include the principal, induced-character, and noncoprime terms. The support
+condition required by the logarithmic weight is formalized as an exact
+active-main decomposition and a pointwise sum over `d <= N - p`; the older uniform-endpoint main
+differs by an explicit inactive tail. A direct represented-fiber endpoint now removes general
+conductor-lift stability from the required path, at the cost of replacing the factor 12 by 18 in
+the split large-conductor coefficient. The stronger localized hybrid in
+`RouteABalancedVaughanLocalizedHybrid` retains the signed factor-two estimate for represented
+conductors at most `R` and uses the unconditional factor-three estimate only above `R`. It replaces
+global change-level stability by `RepresentedConductorLiftCompleteUpTo`, an exact completeness
+condition restricted to the represented small-conductor keys, the prime interval actually used by
+the convolution, and the moduli with nonzero Mobius coefficient. That condition is now proved:
+`RouteADirichletCharacterConductorTransport` shows that a primitive character lifted to a
+squarefree multiple keeps both its conductor and its canonical primitive-character key, while a
+nonzero Mobius coefficient supplies squarefreeness. The final localized Type-I theorem therefore
+has no conductor-stability or lift-completeness hypothesis. A canonical endpoint now defines the
+principal and primitive `psi` maxima as exact finite suprema, so constructing the maximal-input
+record is no longer an additional obligation. The accompanying numerical audit changes only the
+negligible large-conductor
+coefficient from 12 to 18; at `log log N = 100` it still reports total majorant
+`8.482782076783e-12`. This calculation is not a Lean proof of the external character estimates.
+Published analytic character estimates with checked constants and the retained main/arc margin
+remain open. No
+cited theorem yet controls the actual hard coefficient family with
+the uniform one-sided margin needed for Goldbach.
+
+The retained-margin audit now records the correct full-circle recombination. The Type-I
+complement alone can have a negative main of approximately `(2*C2 - 1.67651834) * N` on the
+minimal singular-series family; this is expected because the positive `q=1,2` arcs have been
+removed. The checked theorem `balancedFullCorrelation_lower_bound` restores a separate retained
+von Mangoldt pair lower bound, so the usable main is the Type-I main plus the difference between
+the retained pair and retained Type-I models. The signed Mobius/totient kernel and Ramaré's
+explicit ordinary Mobius estimates now give a viable paper proof of the uniform active-main target
+`M_A >= 0.9*N` at the frozen threshold. Lean checks the exact reduction of `M_A` to the required
+one-variable logarithmic profiles; the published analytic inequalities and kernel tail remain to
+be formalized. A direct prefix/Abel argument also bounds the retained hard difference by `0.49*N`,
+leaving more than `0.40*N` before the complementary hard term. The remaining substantive paper
+gate is now the exact one-sided estimate `H(hard,S).re >= -0.35*N`. Lean now proves that
+`hard = Lambda - mu_<=u * log` is independent of the auxiliary Vaughan cutoff and extracts its
+short-Lambda, signed short-correction, and long Type-II complementary correlations separately.
+The SSU application audit finds no checked map from the resulting cross-Toeplitz form to a
+restricted arithmetic estimate with the required fixed-center saving. See
+`SupportingDocs/RouteARetainedMarginAudit.md`, `SupportingDocs/RouteAActiveMainKernelAudit.md`,
+`SupportingDocs/RouteARetainedHardAudit.md`, and
+`SupportingDocs/RouteAHardResidualSSUApplicationAudit.md`.
+
+The complete audit is `SupportingDocs/RouteAConsistencyAndSSUApplicationAudit.md`; the bounded next
+program is `SupportingDocs/RouteABalancedVaughanFixedCenterPlan.md`. Route A is suspended until the
+extracted hard residual receives a restricted-family estimate producing a visible one-sided saving
+with effective constants. The old `X0` certificate remains a diagnostic/regression artifact, not a
+closure dependency.
+
+The October 28 enlarged-major-arc pilot sharpened that frontier without closing it.  Its retained
+model has a provisional paper-level reserve above `0.699*N`, and the exact complementary kernel
+normalization checks out.  A specialist then carried one balanced hard block through a genuine
+fixed-center prime-progression estimate, gaining one logarithm over the trivial envelope.  The
+result is still of order `N*log N` on that block and `N*(log N)^2` globally.  The missing input is
+the signed fixed-center interaction between `mu(d)` and `Lambda(N-d*m)` (or cancellation with its
+exact retained projection); proving the required constant bound would already be a quantitative
+binary-Goldbach-level theorem.  Phase B is not authorized.  The final bounded
+factorable-dispersion feasibility test also failed its Phase A stopping rule.  Triply
+well-factorable weights cannot cover the large prime moduli in the raw Mobius coefficient, and the
+isolated prime-modulus companion is negatively of order `N*log N` along arbitrarily large even
+centers under the exact retained mask.  Any successful theorem must preserve cancellation between
+prime and composite divisor contributions; the resulting recombined statement is the original
+Goldbach-level fixed-center discrepancy, not a narrower conventional theorem.  This Route A branch
+is frozen as a conditional reduction.  The audits are recorded in
+`SupportingDocs/RouteAComplementaryCrossStage2Audit.md` and
+`SupportingDocs/RouteAFactorableDispersionAudit.md`.  Independent review validates the
+prime-companion asymptotic and the freeze, while narrowing one presentation claim: the compensating
+prime and composite terms need not lie in different smooth/rough strata.  The corrected theorem is
+recorded in `SupportingDocs/RouteAPrimeCompanionObstruction.md`.
+
+The bounded variable-principal-arc test has now also reached its stopping condition.  Widening only
+the principal arc to radius `A*log(N)/N`, for `1 <= A <= 8`, removes the isolated prime companion's
+negative `N*log(N)` average and preserves a provisional retained reserve above `0.699*N` on the
+inherited paper inputs.  But the complete widened discrepancy differs from the old fixed-mask
+discrepancy by less than `0.000061*N`.  The remaining theorem is therefore essentially the same
+fixed-center signed Mobius--prime correlation, and the best restored global forecast still loses
+`log(N)^2`.  This candidate is not authorized as a Route C formalization or certificate program.
+The audit is `SupportingDocs/RouteCVariablePrincipalArcAudit.md`.  The currently identified
+Triple-Interface Goldbach endgames are exhausted unless a genuinely new joint fixed-center estimate
+or a different proof architecture is supplied.
+
+One narrower post-audit investigation is now specified without being promoted to a new route.  If
+all large-divisor terms attached to the same integer are combined before taking absolute values,
+then the one-large-prime/small-cofactor region satisfies the exact paper identity
+`h_u(p*r) = -Lambda(r)`.  Its total coefficient mass is only order `N`, rather than the isolated
+prime companion's `N*log(N)` scale.  That is genuine algebraic cancellation, but not yet a
+fixed-center correlation estimate.  The bounded next test must derive an effective upper sieve for
+the full convolution, calculate the retained projection with its sign, separate common factors and
+prime powers, and preserve a compatible singular-series normalization.  It is recorded in
+`SupportingDocs/RouteASmallCofactorCancellationFeasibilityAssignment.md`; no Route D, Lean build,
+or certificate has been authorized.  The first paper calculation now provisionally passes for the
+very narrow choice `eta=10^-8`: after an explicit finite Selberg upper sieve and a signed
+rational-arc calculation, it claims
+`Delta_eta(N)>-0.001609*S(N)*N` uniformly at the frozen threshold.  This is the first
+post-obstruction estimate that controls a proper part of the hard coefficient after restoring its
+reflected-prime correlation and retained projection.  Independent paper review has now passed this
+theorem and the separate active-main strengthening `M_A(N)>0.91*S(N)*N` without changing either
+constant.  Neither is Lean-formalized, and the other inherited Stage 1 estimates still need one
+normalized-ledger reconciliation before the claimed `0.708*S(N)*N` reserve is treated as reviewed.
+Independent review confirms that the bounded complete one-large-prime test is **UNRESOLVED**.  It
+reconciles the `0.708*S(N)*N` paper reserve, proves that the full local model has coefficient
+`log(3/2)`, and finds that the exact retained model is uniformly positive.  The missing term is the
+difference between the actual fixed-center averaged prime-pair convolution and that local model.  The
+reviewed finite sieve can safely extend the exponent only to `17699/10^9=0.000017699`, still below
+the assignment's `10^-4` stopping threshold.  No further microscopic expansion, certificate, or
+Lean program is authorized.  See
+`SupportingDocs/RouteASmallCofactorCancellationAudit.md` and
+`SupportingDocs/RouteASmallCofactorCancellationIndependentReview.md` and
+`SupportingDocs/RouteAOneLargePrimeCompletionIndependentReview.md`.
 
 ## August 2026 Route A / Q0 certificate update
 
@@ -87,17 +255,18 @@ Main progress:
   reports source-restore/archive-audit/setup/cache outcomes, and prints direct-builder closure-scan
   progress before the scheduler starts.
 
-Current practical state:
-- The Route A/Q0 certificate path is making real checked progress, but the work is still in the
-  generated-certificate integration phase rather than the final theorem-wrapper phase.
-- The most common current blocker is not a new mathematical objection; it is a generated module that
-  is too large, stale, or misnamed for the current incremental CI cache. The response pattern is now
-  clear: inspect the failed module, distinguish interface/cache errors from real Lean errors, split
-  large modules where needed, update the source archive, and force-rebuild only the affected closure.
+Historical certificate-build state:
+- Historically, the Route A/Q0 certificate path made real checked progress through the
+  generated-certificate integration phase. The October feasibility correction above means it is no
+  longer the live closure path.
+- The most common build blocker was a generated module that was too large, stale, or misnamed for
+  the incremental CI cache. The response pattern was to inspect the failed module, distinguish
+  interface/cache errors from Lean errors, split large modules where needed, update the source
+  archive, and force-rebuild only the affected closure.
 - More large dyadic base modules may still need splitting before the full
-  `Q0MinorZeroModeNormalizedAverageX0Cert` target finishes. Once that target builds, the next step is
-  to build the narrow `Q0RouteAPostCertBridgeProbe`, then the periodic-main/final certificate
-  wrappers, before attempting broader turnkey or final Goldbach targets.
+  `Q0MinorZeroModeNormalizedAverageX0Cert` target finishes. Completion is optional diagnostic work.
+  It must not automatically trigger `Q0RouteAPostCertBridgeProbe` or a broader Goldbach target,
+  because the uniform bridge target has failed the later consistency and application audits.
 
 ## Local hiccups
 See `Goldbach/DontHassleMe.txt` for Mathlib constants and lemmas that are present or missing.
@@ -255,13 +424,16 @@ turnkey route remains available and is audited separately.
 - `Goldbach/GoldFunX_OptionB_TextbookMajorArc.lean` still leaves the canonical `ε < c0` input,
   `WeightsBridgeHyp`, and the global budget inequality explicit.
 
-**Axioms currently used by the “turnkey” pinned-cap Option-B route (explicit `axiom`s)**
-- ε₁ minor-energy ledger engine export (project-pinned route): `Goldbach/Cert/MajorArcModules/Q0TwoBoundsPinnedAxioms.lean:55`
-  `ssu_minor_energy_ledger_engine` (now derived via `Q0MinorEnergyLedgerEngineAxiom`, not postulated directly).
-- ε₁ remaining pinned seam (calibration only): `Goldbach/Cert/MajorArcModules/Q0MinorEnergyLedgerEngineAxiom.lean:76`
-  `ssu_minor_energy_calibration` (Crow calibration to certified caps).
-- ε₁ conventional dyadic existence boundary (project-neutral): `Goldbach/Cert/MajorArcModules/Q0MinorInterzoneDyadicConventionalAxioms.lean:158`
-  `q0MinorDyadicGramDecayPoly_exists`.
+**Pinned Q0 workbench provenance (not an active Route A closure)**
+- `Q0TwoBoundsPinnedAxioms.ssu_minor_energy_ledger_engine` is currently derived from the checked
+  weighted-channel certificate path, including `Q0MinorSSUFromCert.nonzeroModeEnergyBound`; it does
+  not use `Q0MinorEnergyLedgerEngineAxiom`.
+- The universally quantified `ssu_minor_energy_calibration` axiom has been removed as inconsistent.
+  `Q0MinorEnergyLedgerEngineAxiom` remains only as a compatibility surface that requires explicit
+  calibration for one chosen dyadic witness.
+- The separate conventional dyadic existence boundary
+  `q0MinorDyadicGramDecayPoly_exists` remains an explicit axiom where imported. It is used by the
+  contradiction audit but is not the provider for the active pinned cap-16 certificate path.
 
 The ε₂-small branch is now discharged deterministically in
 `Goldbach/Cert/MajorArcModules/Q0MajorSmallUpperBoundDeterministic.lean` and is no longer an

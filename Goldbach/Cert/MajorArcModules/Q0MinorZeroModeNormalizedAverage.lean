@@ -1,5 +1,6 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeEnvelope
 import Goldbach.Cert.MajorArcModules.Q0MinorHalfMassTrueTail
+import Goldbach.Cert.MajorArcModules.Q0MinorSigmaTruncEnergyTarget
 import Goldbach.Cert.MajorArcModules.Q0MinorHalfMassArithmeticModelMeanTargets
 import Goldbach.Cert.MajorArcModules.Q0MajorWindowBounds
 import Goldbach.Cert.MajorArcModules.Q0MinorRouteAMeanVarianceTargets
@@ -1414,10 +1415,6 @@ theorem centeredQ0InvExplicitWindowEnergy_le_card_mul_span_sq
 /-- Squared `ℓ²(EvenIn X H)` energy of the centered true-sigma series on the canonical window. -/
 noncomputable def centeredTrueSigmaWindowEnergy (X : ℕ) : ℝ :=
   ∑ N ∈ EvenIn X H, ‖centeredTrueSigmaSeries ramanujanSeriesOnWindow X N‖ ^ 2
-
-/-- Squared `ℓ²(EvenIn X H)` energy of the centered fixed-`Q0` truncation on the canonical window. -/
-noncomputable def centeredNormalizedSigmaTruncWindowEnergy (X : ℕ) : ℝ :=
-  ∑ N ∈ EvenIn X H, ‖centeredNormalizedSigmaTrunc ramanujanSeriesOnWindow X N‖ ^ 2
 
 /-- Diagonal part of the local `q,q'` truncation energy expansion. -/
 noncomputable def centeredNormalizedSigmaTruncDiagonalEnergy (X : ℕ) : ℝ :=
@@ -23838,11 +23835,6 @@ Native true-sigma window-energy target for the first centered packet on the dire
 structure CenteredTrueSigmaWindowEnergyTarget (Cσ : ℝ) : Prop where
   Cσ_nonneg : 0 ≤ Cσ
   bound : ∀ {X : ℕ}, X0 ≤ X → centeredTrueSigmaWindowEnergy X ≤ Cσ
-
-/-- Native truncation window-energy target on the direct normalized route. -/
-structure CenteredNormalizedSigmaTruncWindowEnergyTarget (Cτ : ℝ) : Prop where
-  Cτ_nonneg : 0 ≤ Cτ
-  bound : ∀ {X : ℕ}, X0 ≤ X → centeredNormalizedSigmaTruncWindowEnergy X ≤ Cτ
 
 /-- Direct target for the diagonal truncation energy term. -/
 structure CenteredNormalizedSigmaTruncDiagonalEnergyDirectTarget (Cdiag : ℝ) : Prop where
