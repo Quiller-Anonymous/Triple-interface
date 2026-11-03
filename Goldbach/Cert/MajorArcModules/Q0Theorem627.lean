@@ -2,8 +2,9 @@ import Goldbach.Cert.MajorArcModules.Q0GlobalSSU
 import Goldbach.Cert.MajorArcModules.Q0RawFullPacketLedger
 
 /-!
-`Q0Theorem627` assembles the Theorem 6.27 tower and exposes theorem-shaped discharges for the
-existing collaborator-facing interface placeholders.
+`Q0Theorem627` preserves theorem-shaped compatibility wrappers around the older Theorem 6.27
+interfaces. These wrappers do not constitute an application to the balanced von Mangoldt
+remainder; the raw `(1,1)` endpoint remains axiom-backed.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0Theorem627
@@ -18,7 +19,7 @@ open Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 noncomputable section
 
-/-- Discharge theorem for the global SSU interface placeholder. -/
+/-- Compatibility discharge for the global SSU interface placeholder. -/
 theorem vaughanTypeII_globalSSU_discharge :
     ∀ (X U V _H _Q : ℕ) (f : ℕ → ℝ),
       isVaughanTypeII f X U V →
@@ -27,11 +28,10 @@ theorem vaughanTypeII_globalSSU_discharge :
   exact globalSSU_of_vaughan X U V H Q f hf
 
 /--
-Bookkeeping bridge from the global SSU statement to the canonical raw `(1,1)` ledger.
+Compatibility bridge to the canonical raw `(1,1)` ledger.
 
-This is now just an alias to the single frontier theorem in `Q0RawFullPacketLedger`, so the
-pipeline has only one remaining raw-ledger obligation instead of two duplicated copies of the same
-mathematical gap.
+The argument intentionally does not use `hSSU`; it returns the independent axiom-backed ledger.
+Consequently this theorem must not be cited as evidence that global SSU proves that ledger.
 -/
 theorem rawFullPacketLedger_1_1_of_globalSSU
     (hSSU : ∀ (X U V _H _Q : ℕ) (f : ℕ → ℝ),
@@ -41,7 +41,7 @@ theorem rawFullPacketLedger_1_1_of_globalSSU
   let _ := hSSU
   exact rawFullPacketLedger_1_1
 
-/-- Discharge theorem for the canonical raw full-packet ledger frontier. -/
+/-- Compatibility export of the axiom-backed canonical raw full-packet ledger. -/
 theorem rawFullPacketLedger_1_1_discharge :
     Q0MinorRawEnergyLedger Δ_canon 1 1 := by
   exact rawFullPacketLedger_1_1_of_globalSSU vaughanTypeII_globalSSU_discharge

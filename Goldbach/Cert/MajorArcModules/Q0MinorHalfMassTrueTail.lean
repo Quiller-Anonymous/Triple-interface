@@ -37,16 +37,6 @@ noncomputable def trueSigmaWindowAverage
     (S : TrueSingularSeriesOnWindow) (X : ℕ) : ℂ :=
   ((EvenIn X H).card : ℂ)⁻¹ * trueSigmaWindowRawSum S X
 
-/-- Raw window sum of the normalized fixed-`Q0` truncation on the canonical even window. -/
-noncomputable def normalizedSigmaTruncWindowRawSum
-    (S : TrueSingularSeriesOnWindow) (X : ℕ) : ℂ :=
-  ∑ N ∈ EvenIn X H, normalizedSigmaTruncQ0 S N
-
-/-- Canonical even-window average of the normalized fixed-`Q0` truncation. -/
-noncomputable def normalizedSigmaTruncWindowAverage
-    (S : TrueSingularSeriesOnWindow) (X : ℕ) : ℂ :=
-  ((EvenIn X H).card : ℂ)⁻¹ * normalizedSigmaTruncWindowRawSum S X
-
 /-- Centered full true normalized singular-series object on the canonical even window. -/
 noncomputable def centeredTrueSigmaSeries
     (S : TrueSingularSeriesOnWindow) (X N : ℕ) : ℂ :=
@@ -134,11 +124,6 @@ noncomputable def rawHalfMassTrueTailResidualWindowAverage
 noncomputable def centeredRawHalfMassTrueTailResidual
     (S : TrueSingularSeriesOnWindow) (X N : ℕ) : ℂ :=
   rawHalfMassTrueTailResidual S X N - rawHalfMassTrueTailResidualWindowAverage S X
-
-/-- Centered normalized fixed-`Q0` truncation on the canonical even window. -/
-noncomputable def centeredNormalizedSigmaTrunc
-    (S : TrueSingularSeriesOnWindow) (X N : ℕ) : ℂ :=
-  normalizedSigmaTruncQ0 S N - normalizedSigmaTruncWindowAverage S X
 
 /--
 Centered true `q > Q0` singular-series tail on the canonical even window.

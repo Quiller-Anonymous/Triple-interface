@@ -7,13 +7,16 @@ import Goldbach.Cert.MajorArcModules.Q0MinorToeplitzTarget
 import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 /-!
-Tool-axiom seam for ε₁ (minor / Q0-complement) in the turnkey `Q0` route.
+Legacy calibration seam for ε₁ (minor / Q0-complement) in the turnkey `Q0` route.
 
-This isolates the remaining analytic input needed by the *certificate glue*
-`Q0MinorEnergyFromLedgerCert`, at the calibrated dyadic-bridge layer.
+This file formerly asserted calibration for every tuple satisfying
+`Q0MinorDyadicGramDecayPoly`. That quantifier is inconsistent with the monotonicity of an
+upper-bound witness: enlarging its constants preserves the dyadic bounds but eventually violates
+the fixed calibration caps. The universal axiom has therefore been removed.
 
-Polished-gold policy: this should eventually be discharged in-repo from the SSU/interzone
-lever-bundle machinery (possibly still assuming project-neutral SSU tool axioms).
+The surviving declarations make calibration an explicit input for the particular witness chosen
+below. This module is retained at its old import path for compatibility; it is not an active Route A
+closure provider.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorEnergyLedgerEngineAxiom
@@ -70,15 +73,6 @@ noncomputable def ssu_minor_energy_dyadic_polyWitness :
   exact ⟨C, p, C2raw, C3raw, hDy⟩
 
 /--
-Step 3 seam (numeric calibration):
-connect the Step-1/Step-2 constants to certified caps `C2,C3`.
--/
-axiom ssu_minor_energy_calibration
-    {C : ℝ} {p : ℕ} {C2raw C3raw : ℝ}
-    (hDy : Q0MinorDyadicGramDecayPoly Δ_canon C p C2raw C3raw) :
-    Q0MinorCalibrationBounds C p C2raw C3raw
-
-/--
 Derived TT* package from Step-1 and Step-2 seam witnesses.
 -/
 theorem ssu_minor_energy_ttstar_polyDecay :
@@ -100,7 +94,13 @@ theorem ssu_minor_energy_ttstar_polyDecay :
 /--
 Remaining bridge witness, now derived from explicit Step-1/2/3 seam obligations.
 -/
-noncomputable def ssu_minor_energy_calibratedDyadicGramDecayPoly :
+noncomputable def ssu_minor_energy_calibratedDyadicGramDecayPoly
+    (hCalibration :
+      Q0MinorCalibrationBounds
+        ssu_minor_energy_dyadic_polyWitness.C
+        ssu_minor_energy_dyadic_polyWitness.p
+        ssu_minor_energy_dyadic_polyWitness.C2raw
+        ssu_minor_energy_dyadic_polyWitness.C3raw) :
     CalibratedDyadicGramDecayPoly := by
   let w := ssu_minor_energy_dyadic_polyWitness
   let C : ℝ := w.C
@@ -116,17 +116,23 @@ noncomputable def ssu_minor_energy_calibratedDyadicGramDecayPoly :
       have hInner := hDy.gram_bound (X := X) hX i hi j hj
       simpa [Goldbach.Cert.MajorArcModules.Q0MinorInterzoneDyadicTTStar.inner_dyadicV_eq_dyadicGramSum]
         using hInner
-  have hCal : Q0MinorCalibrationBounds C p C2raw C3raw :=
-    ssu_minor_energy_calibration hDy
+  have hCal : Q0MinorCalibrationBounds C p C2raw C3raw := by
+    simpa [w, C, p, C2raw, C3raw] using hCalibration
   exact calibratedDyadicGramDecayPoly_of_ttstar_and_calibration hTT hCal
 
 /--
 The turnkey-facing ledger engine, derived deterministically from the calibrated bridge witness.
 -/
 theorem ssu_minor_energy_ledger_engine :
-  Q0MinorEnergyLedgerEngine Δ_canon C2 C3 :=
+    Q0MinorCalibrationBounds
+        ssu_minor_energy_dyadic_polyWitness.C
+        ssu_minor_energy_dyadic_polyWitness.p
+        ssu_minor_energy_dyadic_polyWitness.C2raw
+        ssu_minor_energy_dyadic_polyWitness.C3raw →
+      Q0MinorEnergyLedgerEngine Δ_canon C2 C3 :=
+  fun hCalibration =>
   ssu_minor_energy_ledger_engine_of_calibratedDyadicGramDecayPoly
-    ssu_minor_energy_calibratedDyadicGramDecayPoly
+    (ssu_minor_energy_calibratedDyadicGramDecayPoly hCalibration)
 
 end
 

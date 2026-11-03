@@ -1,4 +1,5 @@
 import Goldbach.BankPieces.Cert.TrueSingularSeries
+import Goldbach.Cert.MajorArcModules.Q0MinorSigmaTruncObservables
 import Goldbach.Cert.MajorArcModules.Q0MinorRouteVisibleDecomposition
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorTrueSigmaBridge
@@ -33,10 +34,6 @@ noncomputable def trueSigmaNormalizedSeries (S : TrueSingularSeriesOnWindow) (N 
 /-- The same normalized object, written through the Ramanujan-series realization. -/
 noncomputable def normalizedRamanujanSeries (S : TrueSingularSeriesOnWindow) (N : ℕ) : ℂ :=
   (((sigmaSeriesRamanujan N / ((2 : ℝ) * S.C.C2)) : ℝ) : ℂ)
-
-/-- The normalized fixed-`Q0` truncation. -/
-noncomputable def normalizedSigmaTruncQ0 (S : TrueSingularSeriesOnWindow) (N : ℕ) : ℂ :=
-  (((Goldbach.AO_OffDiag.TailBlock.sigma_trunc_Q0 N / ((2 : ℝ) * S.C.C2)) : ℝ) : ℂ)
 
 /-- The normalized `q`-summand of the fixed-`Q0` truncation. -/
 noncomputable def normalizedSigmaTruncSummand

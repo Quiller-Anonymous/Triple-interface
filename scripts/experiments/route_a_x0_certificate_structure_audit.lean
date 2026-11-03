@@ -1,0 +1,11 @@
+import Goldbach.Cert.MajorArcModules.Q0SigmaTruncLowModeConcentration
+
+open Goldbach.Cert.MajorArcModules.Q0SigmaTruncLowModeConcentration
+
+#check lowModeVarianceRat_eq
+#check lowModeVarianceRat_le_varianceRat
+#check lowModeVarianceRat_gt_9652_permyriad
+#check varianceRat_sub_lowModeVarianceRat_lt
+
+#print axioms lowModeVarianceRat_gt_9652_permyriad
+#print axioms lowModeVarianceRat_le_varianceRat

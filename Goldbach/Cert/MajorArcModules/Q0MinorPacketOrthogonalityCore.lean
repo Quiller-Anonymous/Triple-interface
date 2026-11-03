@@ -32,11 +32,11 @@ def isVaughanTypeII (f : ℕ → ℝ) (X U V : ℕ) : Prop :=
   f = vaughanTypeIISmoothed X U V
 
 /--
-Collaborator-facing bookkeeping predicate: a finite family of admissible F3 blocks realizes the
-Vaughan Type-II contribution of `Λ` at scale `X`.
+Legacy collaborator-facing bookkeeping predicate.
 
-This is intentionally lightweight here; the actual content is the existence theorem
-`vaughanLambda_suppliesF3Energy` below.
+The current definition is propositionally `True`: it does not assert that the blocks reconstruct
+the Vaughan Type-II contribution of `Λ`, preserve a Fourier phase, or control an arithmetic
+remainder. It is retained only to avoid breaking the older interface surface.
 -/
 def isVaughanTypeIIBlockFamily
     (X _U _V : ℕ)
@@ -50,11 +50,11 @@ axiom packetTransform : ℤ → ℤ → (ℕ → ℝ) → ℂ
 axiom sequenceMass : (ℕ → ℝ) → ℝ
 
 /--
-Single-sum Vaughan decomposition of `Λ` supplies the admissible F3 energy used on the SSU side.
+Compatibility witness for the legacy block-family predicate.
 
-This is intended as a Lean assembly boundary, not as a new mathematical input: standard Vaughan
-decomposition of a single arithmetic function produces Type I and Type II pieces, and the
-dyadically smoothed Type II shells are exactly what `Q0VaughanAdmissibility` packages.
+The proof constructs a singleton block with zero cutoff `W` and succeeds because
+`isVaughanTypeIIBlockFamily` is `True`. In particular, this theorem is not an exact Vaughan
+decomposition of `Λ` and cannot serve as the extraction step in a Goldbach/SSU application.
 -/
 theorem vaughanLambda_suppliesF3Energy
     (X U V : ℕ) :
