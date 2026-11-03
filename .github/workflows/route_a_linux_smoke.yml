@@ -7,6 +7,10 @@ on:
         description: "Lean module to build"
         required: true
         default: "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0Cert"
+      checkout_ref:
+        description: "Optional source commit/ref to build while retaining the dispatch branch's cache scope"
+        required: false
+        default: ""
       olean_only:
         description: "Build only the .olean target"
         required: true
@@ -91,6 +95,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Actions caches are branch-scoped. A pinned source snapshot lets a
+          # historical completion run reuse its branch cache without building
+          # later, unrelated source changes.
+          ref: ${{ github.event.inputs.checkout_ref || github.ref }}
 
       - name: Free runner disk space
         shell: bash
@@ -189,6 +198,8 @@ jobs:
           set -euo pipefail
           echo "Workflow SHA: ${GITHUB_SHA}"
           echo "target=${{ github.event.inputs.target }}"
+          echo "checkout_ref=${{ github.event.inputs.checkout_ref }}"
+          echo "checked_out_sha=$(git rev-parse HEAD)"
           echo "olean_only=${{ github.event.inputs.olean_only }}"
           echo "build_timeout_minutes=${{ github.event.inputs.build_timeout_minutes }}"
           echo "build_mode=${{ github.event.inputs.build_mode }}"
@@ -1421,6 +1432,7 @@ jobs:
           BUILD_EXIT_CODE: ${{ steps.build.outputs.exit_code }}
           GH_TOKEN: ${{ github.token }}
           TARGET: ${{ github.event.inputs.target }}
+          CHECKOUT_REF: ${{ github.event.inputs.checkout_ref }}
           OLEAN_ONLY: ${{ github.event.inputs.olean_only }}
           BUILD_TIMEOUT_MINUTES: ${{ github.event.inputs.build_timeout_minutes }}
           BUILD_MODE: ${{ github.event.inputs.build_mode }}
@@ -1506,6 +1518,7 @@ jobs:
               "ref": os.environ["REF_NAME"],
               "inputs": {
                   "target": os.environ["TARGET"],
+                  "checkout_ref": os.environ.get("CHECKOUT_REF", ""),
                   "olean_only": os.environ["OLEAN_ONLY"],
                   "build_timeout_minutes": os.environ["BUILD_TIMEOUT_MINUTES"],
                   "build_mode": os.environ["BUILD_MODE"],
