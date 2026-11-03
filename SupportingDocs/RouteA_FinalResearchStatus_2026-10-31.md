@@ -174,4 +174,3 @@ No further Lean generation, certificate campaign, post-certificate bridge build,
 analytic branch is part of the current proof-completion program. Route A may be reopened only after
 an independently reviewed theorem controls the complete signed fixed-center Type-II contribution
 with sufficient quantitative margin.
-
