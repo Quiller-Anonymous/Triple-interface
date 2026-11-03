@@ -8,11 +8,10 @@ import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 The turnkey `Q0` route consumes the project-neutral energy interface
 `Q0MinorEnergyBound Δ_canon 16`.
 
-This file centralizes *how* we obtain that bound:
-
-- from a ledger-engine seam (`Q0MinorEnergyLedgerEngineAxiom`) plus the checked
-  `Q0MinorLedgerCertData` cap-16 bridge (`Q0MinorEnergyFromLedgerCert`),
-- with a stable output surface for downstream consumers.
+This file centralizes *how* we obtain that bound: the current provider uses the checked
+`Q0MinorSSUFromCert.nonzeroModeEnergyBound` through the cap-16 conversion in
+`Q0MinorEnergyFromLedgerCert`. It does not import or use the retired universal calibration seam in
+`Q0MinorEnergyLedgerEngineAxiom`.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorEnergyBoundProvider

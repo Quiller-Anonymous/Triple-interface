@@ -184,6 +184,79 @@ theorem norm_intervalIntegral_indicator_arcSetTextbook_le
     simpa [hInt] using hset_bound
   simpa [s] using this
 
+/--
+The arc-length bound on an arbitrary ordered integration interval. The intersection of the arc
+with `[u,v]` can only shorten its measure, so the same `2 * Delta / (q * X)` cap applies.
+-/
+theorem norm_intervalIntegral_indicator_arcSetTextbook_le_at
+    {X q a : ℕ} {Δ C u v : ℝ}
+    (huv : u ≤ v) (hΔ : 0 ≤ Δ) (hq : 1 ≤ q) (hX : 0 < X) (hC : 0 ≤ C)
+    {f : ℝ → ℂ}
+    (hf : ∀ α, α ∈ arcSetTextbook X q a Δ → ‖f α‖ ≤ C) :
+    ‖∫ α in u..v, (arcSetTextbook X q a Δ).indicator f α‖
+      ≤ C * (2 * (Δ / ((q : ℝ) * (X : ℝ)))) := by
+  classical
+  set s : Set ℝ := arcSetTextbook X q a Δ
+  have hs : MeasurableSet s := by
+    simpa [s] using measurableSet_arcSetTextbook (X := X) (q := q) (a := a) (Δ := Δ)
+  have hI :
+      (∫ α in u..v, s.indicator f α ∂volume)
+        = ∫ α in Set.Ioc u v, s.indicator f α ∂volume := by
+    simpa using
+      (intervalIntegral.integral_of_le (μ := volume) (f := fun α => s.indicator f α)
+        (a := u) (b := v) huv)
+  let μuv : Measure ℝ := volume.restrict (Set.Ioc u v)
+  haveI : IsFiniteMeasure μuv := by
+    refine ⟨?_⟩
+    simpa [μuv] using (measure_Ioc_lt_top (μ := volume) (a := u) (b := v))
+  have hInd :
+      (∫ α in Set.Ioc u v, s.indicator f α ∂volume)
+        = ∫ α in s, f α ∂μuv := by
+    simpa [μuv, s] using (MeasureTheory.integral_indicator (μ := μuv) (f := f) hs)
+  have hAeImp : ∀ᵐ α ∂μuv, α ∈ s → ‖f α‖ ≤ C := by
+    refine Filter.Eventually.of_forall ?_
+    intro α hα
+    exact hf α (by simpa [s] using hα)
+  have hAe : ∀ᵐ α ∂μuv.restrict s, ‖f α‖ ≤ C :=
+    (MeasureTheory.ae_restrict_iff' (μ := μuv) (s := s) hs).2 hAeImp
+  have hbound :
+      ‖∫ α, f α ∂(μuv.restrict s)‖ ≤ C * (μuv.restrict s).real Set.univ :=
+    MeasureTheory.norm_integral_le_of_norm_le_const
+      (μ := μuv.restrict s) (f := f) (C := C) hAe
+  have hμuv_le : (μuv.restrict s).real Set.univ ≤ (volume s).toReal := by
+    have h1 : (μuv.restrict s).real Set.univ = μuv.real s := by
+      simpa using (measureReal_restrict_apply_univ (μ := μuv) (s := s))
+    have h2 : μuv.real s = volume.real (s ∩ Set.Ioc u v) := by
+      simp [μuv, measureReal_restrict_apply hs, Set.inter_assoc, Set.inter_left_comm,
+        Set.inter_comm]
+    have h3 : volume.real (s ∩ Set.Ioc u v) ≤ volume.real s := by
+      refine measureReal_mono Set.inter_subset_left ?_
+      have hfinite : volume s < ⊤ := by
+        have hIcc := arcSetTextbook_eq_Icc (X := X) (q := q) (a := a) (Δ := Δ)
+        simpa [s, hIcc] using
+          (measure_Icc_lt_top (μ := volume)
+            (a := (a : ℝ) / (q : ℝ) - Δ / ((q : ℝ) * (X : ℝ)))
+            (b := (a : ℝ) / (q : ℝ) + Δ / ((q : ℝ) * (X : ℝ))))
+      exact hfinite.ne
+    simpa [h1, h2] using h3
+  have hsLen : (volume s).toReal = 2 * (Δ / ((q : ℝ) * (X : ℝ))) := by
+    simpa [s] using
+      toReal_volume_arcSetTextbook (X := X) (q := q) (a := a) hΔ hq hX
+  have hInt :
+      (∫ α in u..v, s.indicator f α ∂volume) = ∫ α in s, f α ∂μuv := by
+    calc
+      (∫ α in u..v, s.indicator f α ∂volume)
+          = ∫ α in Set.Ioc u v, s.indicator f α ∂volume := hI
+      _ = ∫ α in s, f α ∂μuv := hInd
+  have hbound' : ‖∫ α in s, f α ∂μuv‖ ≤ C * (μuv.restrict s).real Set.univ := by
+    simpa using hbound
+  have hmul : C * (μuv.restrict s).real Set.univ ≤ C * (volume s).toReal :=
+    mul_le_mul_of_nonneg_left hμuv_le hC
+  have hfinal : ‖∫ α in s, f α ∂μuv‖ ≤ C * (volume s).toReal :=
+    le_trans hbound' hmul
+  rw [hInt]
+  simpa [s, hsLen] using hfinal
+
 end
 
 end Goldbach.Cert.MajorArcModules.ArcSetBounds

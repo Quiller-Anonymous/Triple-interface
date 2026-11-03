@@ -3,15 +3,16 @@ import Goldbach.Cert.MajorArcModules.Q0MinorInterzoneDyadicConventionalAxioms
 import Goldbach.Cert.MajorArcModules.TurnkeyRouteQ0
 
 /-!
-`Q0MinorCalibrationHandoff` is the mathematician-facing handoff for the final `ep-1` seam.
+`Q0MinorCalibrationHandoff` records a historical alternative handoff for the `ep-1` seam.
 
-At this stage, the only remaining project-pinned ingredient is numerical calibration:
+For a particular selected dyadic witness, this conditional route asks for numerical calibration:
 
 * `CrowOf (aPoly C p) * C2raw ≤ C2`
 * `CrowOf (aPoly C p) * C3raw ≤ C3`
 
-Once those inequalities are supplied for a dyadic polynomial Gram-decay witness at `Δ_canon`,
-the certified `ε₁` ledger engine follows deterministically.
+Once those inequalities are supplied for that witness at `Δ_canon`, the certified `ε₁` ledger
+engine follows deterministically. The active pinned provider instead uses the weighted-channel
+certificate path, and this handoff has no independent Route A closure status.
 -/
 
 namespace Goldbach.Cert.MajorArcModules.Q0MinorCalibrationHandoff
