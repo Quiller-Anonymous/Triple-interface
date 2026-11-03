@@ -313,7 +313,8 @@ int main(int argc, char** argv) {
       const int first_r = (lower + d - 1) / d;
       const int last_r = upper / d;
       for (int r = std::max(1, first_r); r <= last_r; ++r) {
-        type_i[d * r] += mu * std::log(static_cast<double>(r));
+        type_i[static_cast<std::size_t>(d) * static_cast<std::size_t>(r)] +=
+            mu * std::log(static_cast<double>(r));
       }
     }
 
