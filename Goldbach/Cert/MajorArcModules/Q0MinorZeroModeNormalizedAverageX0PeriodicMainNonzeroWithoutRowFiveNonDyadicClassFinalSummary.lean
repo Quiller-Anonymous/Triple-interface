@@ -1,4 +1,4 @@
-import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalStage125
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalPrefixTailAggregateChunk027
 
 set_option maxHeartbeats 0
 set_option maxRecDepth 100000
@@ -10,7 +10,19 @@ open Goldbach
 open Goldbach.BankParams
 open Goldbach.Windows
 
-/- Shallow aliases for the completed non-dyadic class assembly. -/
+/- Recombine the checkpointed prefix and tail assemblies. -/
+
+def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo286 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo272 ∪ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo286
+
+def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotalUpTo286 : ℚ :=
+  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotalUpTo272 + PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailTotalUpTo286
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo286_actual_sum :
+    (∑ p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo286, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p) = PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTotalUpTo286 := by
+  rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo286, Finset.sum_union PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo272_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo286]
+  rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo272_actual_sum, PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo286_actual_sum]
+  rfl
 
 def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairs : Finset (ℕ × ℕ) :=
   PeriodicMainNonzeroWithoutRowFiveNonDyadicClassPairsUpTo286

@@ -1,0 +1,27 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalStage125
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Pairwise prefix/tail disjointness for class groups 270..272. -/
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup270Pairs_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo286 :
+    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup270Pairs PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo286 := by
+  native_decide
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup271Pairs_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo286 :
+    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup271Pairs PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo286 := by
+  native_decide
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup272Pairs_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo286 :
+    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup272Pairs PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo286 := by
+  native_decide
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
