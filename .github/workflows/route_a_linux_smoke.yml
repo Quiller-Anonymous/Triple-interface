@@ -75,6 +75,10 @@ on:
         description: "Optional workflow run ID containing route-a-durable-checkpoint-RUN_ID; restores it before Actions cache"
         required: false
         default: ""
+      runner_retry_count:
+        description: "Internal counter for automatic retries on undersized hosted runners"
+        required: false
+        default: "0"
 
 permissions:
   contents: read
@@ -102,6 +106,7 @@ jobs:
           ref: ${{ github.event.inputs.checkout_ref || github.ref }}
 
       - name: Free runner disk space
+        id: runner_disk
         shell: bash
         timeout-minutes: 15
         run: |
@@ -113,6 +118,24 @@ jobs:
             df -Pk / | awk 'NR == 2 { print int($4 / 1024 / 1024) }'
           }
 
+          total_gib() {
+            df -Pk / | awk 'NR == 2 { print int($2 / 1024 / 1024) }'
+          }
+
+          # GitHub currently provisions this label from both roughly 72 GiB
+          # and roughly 145 GiB root images. The compressed checkpoint plus
+          # its extracted tree cannot fit on the smaller image under any
+          # cleanup policy, so reject it immediately and let the workflow
+          # redispatch onto another hosted runner.
+          minimum_root_gib=105
+          minimum_restore_free_gib=100
+          if [ "$(total_gib)" -lt "$minimum_root_gib" ]; then
+            echo "viable=false" >> "$GITHUB_OUTPUT"
+            echo "reason=undersized_root" >> "$GITHUB_OUTPUT"
+            echo "::warning::Hosted runner root is too small for the Route A checkpoint; redispatching."
+            exit 78
+          fi
+
           # The restored Route A checkpoint is over 70 GiB uncompressed and
           # actions/cache needs additional local space for its compressed
           # archive. Preserve enough headroom for both the current checkpoint
@@ -120,6 +143,8 @@ jobs:
           required_free_gib=120
           if [ "$(free_gib)" -ge "$required_free_gib" ]; then
             echo "At least ${required_free_gib} GiB is already free; skipping destructive SDK cleanup."
+            echo "viable=true" >> "$GITHUB_OUTPUT"
+            echo "reason=ok" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -149,6 +174,84 @@ jobs:
           fi
           echo "Disk after cleanup:"
           df -h
+          if [ "$(free_gib)" -lt "$minimum_restore_free_gib" ]; then
+            echo "viable=false" >> "$GITHUB_OUTPUT"
+            echo "reason=insufficient_free_space" >> "$GITHUB_OUTPUT"
+            echo "::warning::Hosted runner cannot provide enough free disk for the Route A checkpoint; redispatching."
+            exit 78
+          fi
+          echo "viable=true" >> "$GITHUB_OUTPUT"
+          echo "reason=ok" >> "$GITHUB_OUTPUT"
+
+      - name: Redispatch after undersized runner
+        if: failure() && steps.runner_disk.outputs.viable == 'false'
+        shell: bash
+        timeout-minutes: 10
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUTS_JSON: ${{ toJSON(github.event.inputs) }}
+          REF_NAME: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          inputs = json.loads(os.environ["INPUTS_JSON"])
+          retry_count = int(inputs.get("runner_retry_count") or "0")
+          max_retries = 8
+          if retry_count >= max_retries:
+              raise SystemExit(
+                  f"undersized-runner retry limit reached: {retry_count}/{max_retries}"
+              )
+
+          inputs["runner_retry_count"] = str(retry_count + 1)
+          payload = {
+              "ref": os.environ["REF_NAME"],
+              "inputs": inputs,
+          }
+          data = json.dumps(payload).encode()
+          url = (
+              "https://api.github.com/repos/"
+              f"{os.environ['REPOSITORY']}/actions/workflows/"
+              "route_a_linux_smoke.yml/dispatches"
+          )
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+              "Content-Type": "application/json",
+              "User-Agent": "route-a-runner-retry",
+          }
+
+          for attempt in range(1, 7):
+              request = urllib.request.Request(
+                  url,
+                  data=data,
+                  headers=headers,
+                  method="POST",
+              )
+              try:
+                  with urllib.request.urlopen(request, timeout=60) as response:
+                      response.read()
+                  print(
+                      "Dispatched runner retry "
+                      f"{retry_count + 1}/{max_retries} on {os.environ['REF_NAME']}."
+                  )
+                  break
+              except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+                  if attempt == 6:
+                      raise
+                  delay = min(10 * attempt, 60)
+                  print(
+                      f"Runner redispatch attempt {attempt}/6 failed: {exc}; "
+                      f"retrying in {delay}s."
+                  )
+                  time.sleep(delay)
+          PY
 
       - name: Stage Route A smoke generated sources for audit
         id: stage_sources
@@ -216,6 +319,7 @@ jobs:
           echo "run_post_success_probe=${{ github.event.inputs.run_post_success_probe }}"
           echo "publish_durable_checkpoint=${{ github.event.inputs.publish_durable_checkpoint }}"
           echo "durable_checkpoint_run_id=${{ github.event.inputs.durable_checkpoint_run_id }}"
+          echo "runner_retry_count=${{ github.event.inputs.runner_retry_count }}"
 
       - name: Audit Route A generated source archive
         id: archive_audit
@@ -1542,6 +1646,9 @@ jobs:
                   "run_post_success_probe": os.environ.get("RUN_POST_SUCCESS_PROBE", "true"),
                   "publish_durable_checkpoint": "false",
                   "durable_checkpoint_run_id": os.environ.get("DURABLE_CHECKPOINT_RUN_ID", ""),
+                  # A productive checkpoint proves the runner was viable, so
+                  # future infrastructure retries start with a fresh budget.
+                  "runner_retry_count": "0",
               },
           }
           data = json.dumps(payload).encode()
