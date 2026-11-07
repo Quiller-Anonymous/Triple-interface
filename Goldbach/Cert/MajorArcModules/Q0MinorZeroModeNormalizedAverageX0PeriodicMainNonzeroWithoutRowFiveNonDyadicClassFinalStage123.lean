@@ -11,22 +11,16 @@ open Goldbach
 open Goldbach.BankParams
 open Goldbach.Windows
 
-/- Checkpointed tail assembly stage for class groups 284..284. -/
+/- Reset the late tail so the final tail merge can be checked in small pairwise pieces. -/
 
-def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo284 : Finset (ℕ × ℕ) :=
-  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo283 ∪ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup284Pairs
+def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284 : Finset (ℕ × ℕ) :=
+  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup284Pairs
 
-def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailTotalUpTo284 : ℚ :=
-  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailTotalUpTo283 + PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup284Total
+def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailTotalUpTo284 : ℚ :=
+  PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup284Total
 
-theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo283_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup284Pairs :
-    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo283 PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup284Pairs := by
-  native_decide
-
-theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo284_actual_sum :
-    (∑ p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo284, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p) = PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailTotalUpTo284 := by
-  rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo284, Finset.sum_union PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo283_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup284Pairs]
-  rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailPairsUpTo283_actual_sum, periodicMainNonzeroWithoutRowFiveNonDyadicClassGroup284_actual_sum]
-  rfl
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284_actual_sum :
+    (∑ p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p) = PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailTotalUpTo284 := by
+  simpa [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284, PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailTotalUpTo284] using periodicMainNonzeroWithoutRowFiveNonDyadicClassGroup284_actual_sum
 
 end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

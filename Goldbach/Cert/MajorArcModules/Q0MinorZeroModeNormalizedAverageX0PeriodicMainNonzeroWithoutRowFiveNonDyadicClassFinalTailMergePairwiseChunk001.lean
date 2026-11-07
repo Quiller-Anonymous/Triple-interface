@@ -1,0 +1,27 @@
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalTailLateStage125
+
+set_option maxHeartbeats 0
+set_option maxRecDepth 100000
+set_option linter.constructorNameAsVariable false
+
+namespace Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
+
+open Goldbach
+open Goldbach.BankParams
+open Goldbach.Windows
+
+/- Small pairwise checks for tail groups 276..278 against the late tail. -/
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 :
+    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 := by
+  native_decide
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 :
+    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 := by
+  native_decide
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 :
+    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 := by
+  native_decide
+
+end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

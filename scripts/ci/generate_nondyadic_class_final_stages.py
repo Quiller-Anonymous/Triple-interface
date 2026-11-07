@@ -30,6 +30,8 @@ DEFAULT_TAIL_START = 184
 DEFAULT_TAIL_STAGE_SIZE = 1
 DEFAULT_ACCUMULATION_RESET_START = 273
 DEFAULT_DISJOINT_CHUNK_SIZE = 10
+DEFAULT_LATE_TAIL_START = 284
+DEFAULT_LATE_TAIL_DISJOINT_CHUNK_SIZE = 3
 
 
 def module_name(stem: str) -> str:
@@ -79,6 +81,20 @@ def tail_upto_name(index: int) -> str:
 
 def tail_total_name(index: int) -> str:
     return f"PeriodicMainNonzeroWithoutRowFiveNonDyadicClassTailTotalUpTo{index:03d}"
+
+
+def late_tail_upto_name(index: int) -> str:
+    return (
+        "PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo"
+        f"{index:03d}"
+    )
+
+
+def late_tail_total_name(index: int) -> str:
+    return (
+        "PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailTotalUpTo"
+        f"{index:03d}"
+    )
 
 
 def emit_group_step(index: int) -> list[str]:
@@ -166,6 +182,49 @@ def emit_tail_group_step(index: int, reset_start: int) -> list[str]:
     ]
 
 
+def emit_late_tail_group_step(index: int, reset_start: int) -> list[str]:
+    group = group_name(index)
+    upto = late_tail_upto_name(index)
+    total = late_tail_total_name(index)
+    actual = "surrogatePeriodicMainActiveOrderedPairSummandRat X0"
+    group_actual = group[0].lower() + group[1:] + "_actual_sum"
+    if index == reset_start:
+        return [
+            f"def {upto} : Finset (ℕ × ℕ) :=",
+            f"  {group}Pairs",
+            "",
+            f"def {total} : ℚ :=",
+            f"  {group}Total",
+            "",
+            f"theorem {upto}_actual_sum :",
+            f"    (∑ p ∈ {upto}, {actual} p) = {total} := by",
+            f"  simpa [{upto}, {total}] using {group_actual}",
+            "",
+        ]
+
+    previous_upto = late_tail_upto_name(index - 1)
+    previous_total = late_tail_total_name(index - 1)
+    disjoint = f"{previous_upto}_disjoint_{group}Pairs"
+    return [
+        f"def {upto} : Finset (ℕ × ℕ) :=",
+        f"  {previous_upto} ∪ {group}Pairs",
+        "",
+        f"def {total} : ℚ :=",
+        f"  {previous_total} + {group}Total",
+        "",
+        f"theorem {disjoint} :",
+        f"    Disjoint {previous_upto} {group}Pairs := by",
+        "  native_decide",
+        "",
+        f"theorem {upto}_actual_sum :",
+        f"    (∑ p ∈ {upto}, {actual} p) = {total} := by",
+        f"  rw [{upto}, Finset.sum_union {disjoint}]",
+        f"  rw [{previous_upto}_actual_sum, {group_actual}]",
+        "  rfl",
+        "",
+    ]
+
+
 def stage_stem(index: int) -> str:
     return f"{STEM}Stage{index:03d}"
 
@@ -175,6 +234,7 @@ def render_stage(
     start: int,
     end: int,
     accumulation_reset_start: int,
+    late_tail_start: int,
 ) -> str:
     if stage_index == 0:
         imports = [BRIDGE_MODULE]
@@ -183,7 +243,18 @@ def render_stage(
     imports.extend(
         module_name(f"{GROUP_STEM}{index:03d}") for index in range(start, end)
     )
-    if start >= accumulation_reset_start:
+    if start >= late_tail_start:
+        if start == late_tail_start:
+            comment = (
+                "/- Reset the late tail so the final tail merge can be checked "
+                "in small pairwise pieces. -/"
+            )
+        else:
+            comment = (
+                f"/- Checkpointed late-tail assembly stage for class groups "
+                f"{start:03d}..{end - 1:03d}. -/"
+            )
+    elif start >= accumulation_reset_start:
         comment = (
             f"/- Checkpointed tail assembly stage for class groups "
             f"{start:03d}..{end - 1:03d}. -/"
@@ -195,7 +266,9 @@ def render_stage(
         )
     lines = common_header(imports, comment)
     for index in range(start, end):
-        if index >= accumulation_reset_start:
+        if index >= late_tail_start:
+            lines.extend(emit_late_tail_group_step(index, late_tail_start))
+        elif index >= accumulation_reset_start:
             lines.extend(emit_tail_group_step(index, accumulation_reset_start))
         else:
             lines.extend(emit_group_step(index))
@@ -211,12 +284,148 @@ def aggregate_chunk_stem(index: int) -> str:
     return f"{STEM}PrefixTailAggregateChunk{index:03d}"
 
 
+def late_stage_stem(index: int) -> str:
+    return f"{STEM}TailLateStage{index:03d}"
+
+
+def tail_merge_pairwise_chunk_stem(index: int) -> str:
+    return f"{STEM}TailMergePairwiseChunk{index:03d}"
+
+
+def tail_merge_aggregate_stem() -> str:
+    return f"{STEM}TailMergeAggregate"
+
+
 def group_tail_disjoint_name(group_index: int, tail_end: int) -> str:
     return f"{group_name(group_index)}Pairs_disjoint_{tail_upto_name(tail_end)}"
 
 
 def prefix_tail_disjoint_name(prefix_end: int, tail_end: int) -> str:
     return f"{upto_name(prefix_end)}_disjoint_{tail_upto_name(tail_end)}"
+
+
+def group_late_tail_disjoint_name(group_index: int, late_tail_end: int) -> str:
+    return (
+        f"{group_name(group_index)}Pairs_disjoint_"
+        f"{late_tail_upto_name(late_tail_end)}"
+    )
+
+
+def tail_late_tail_disjoint_name(tail_end: int, late_tail_end: int) -> str:
+    return (
+        f"{tail_upto_name(tail_end)}_disjoint_"
+        f"{late_tail_upto_name(late_tail_end)}"
+    )
+
+
+def render_tail_merge_pairwise_chunk(
+    chunk_index: int,
+    start: int,
+    end: int,
+    late_stage_index: int,
+    late_tail_end: int,
+) -> str:
+    lines = common_header(
+        [module_name(late_stage_stem(late_stage_index))],
+        (
+            f"/- Small pairwise checks for tail groups {start:03d}.."
+            f"{end - 1:03d} against the late tail. -/"
+        ),
+    )
+    late_tail = late_tail_upto_name(late_tail_end)
+    for index in range(start, end):
+        theorem_name = group_late_tail_disjoint_name(index, late_tail_end)
+        lines.extend(
+            [
+                f"theorem {theorem_name} :",
+                f"    Disjoint {group_name(index)}Pairs {late_tail} := by",
+                "  native_decide",
+                "",
+            ]
+        )
+    lines.extend(common_footer())
+    return "\n".join(lines)
+
+
+def render_tail_merge_aggregate(
+    chunk_count: int,
+    tail_start: int,
+    tail_end: int,
+    late_tail_end: int,
+) -> str:
+    imports = [
+        module_name(tail_merge_pairwise_chunk_stem(index))
+        for index in range(chunk_count)
+    ]
+    lines = common_header(
+        imports,
+        (
+            f"/- Structural disjointness assembly for tail groups "
+            f"{tail_start:03d}..{tail_end:03d} against the late tail. -/"
+        ),
+    )
+    late_tail = late_tail_upto_name(late_tail_end)
+    for index in range(tail_start, tail_end + 1):
+        theorem_name = tail_late_tail_disjoint_name(index, late_tail_end)
+        group_theorem = group_late_tail_disjoint_name(index, late_tail_end)
+        if index == tail_start:
+            lines.extend(
+                [
+                    f"theorem {theorem_name} :",
+                    f"    Disjoint {tail_upto_name(index)} {late_tail} := by",
+                    f"  simpa [{tail_upto_name(index)}] using {group_theorem}",
+                    "",
+                ]
+            )
+            continue
+        previous_theorem = tail_late_tail_disjoint_name(index - 1, late_tail_end)
+        lines.extend(
+            [
+                f"theorem {theorem_name} :",
+                f"    Disjoint {tail_upto_name(index)} {late_tail} := by",
+                f"  rw [{tail_upto_name(index)}, Finset.disjoint_union_left]",
+                f"  exact ⟨{previous_theorem}, {group_theorem}⟩",
+                "",
+            ]
+        )
+    lines.extend(common_footer())
+    return "\n".join(lines)
+
+
+def render_tail_merge_stage(
+    stage_index: int,
+    tail_end: int,
+    late_tail_end: int,
+) -> str:
+    tail_pairs = tail_upto_name(late_tail_end)
+    tail_total = tail_total_name(late_tail_end)
+    early_pairs = tail_upto_name(tail_end)
+    early_total = tail_total_name(tail_end)
+    late_pairs = late_tail_upto_name(late_tail_end)
+    late_total = late_tail_total_name(late_tail_end)
+    disjoint = tail_late_tail_disjoint_name(tail_end, late_tail_end)
+    lines = common_header(
+        [module_name(tail_merge_aggregate_stem())],
+        "/- Recombine the two independently checked tail segments. -/",
+    )
+    lines.extend(
+        [
+            f"def {tail_pairs} : Finset (ℕ × ℕ) :=",
+            f"  {early_pairs} ∪ {late_pairs}",
+            "",
+            f"def {tail_total} : ℚ :=",
+            f"  {early_total} + {late_total}",
+            "",
+            f"theorem {tail_pairs}_actual_sum :",
+            f"    (∑ p ∈ {tail_pairs}, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p) = {tail_total} := by",
+            f"  rw [{tail_pairs}, Finset.sum_union {disjoint}]",
+            f"  rw [{early_pairs}_actual_sum, {late_pairs}_actual_sum]",
+            "  rfl",
+            "",
+        ]
+    )
+    lines.extend(common_footer())
+    return "\n".join(lines)
 
 
 def render_pairwise_chunk(
@@ -416,10 +625,19 @@ def expected_files(
     tail_stage_size: int,
     accumulation_reset_start: int,
     disjoint_chunk_size: int,
+    late_tail_start: int,
+    late_tail_disjoint_chunk_size: int,
 ) -> dict[Path, str]:
     rendered: dict[Path, str] = {}
     if disjoint_chunk_size <= 0:
         raise ValueError("disjoint chunk size must be positive")
+    if late_tail_disjoint_chunk_size <= 0:
+        raise ValueError("late-tail disjoint chunk size must be positive")
+    if not accumulation_reset_start < late_tail_start < GROUP_COUNT:
+        raise ValueError(
+            "late-tail start must be after the accumulation reset and before "
+            f"{GROUP_COUNT}"
+        )
     ranges = stage_ranges(
         stage_size,
         tail_start,
@@ -427,13 +645,50 @@ def expected_files(
         accumulation_reset_start,
     )
     for stage_index, (start, end) in enumerate(ranges):
-        rendered[OUT_DIR / f"{stage_stem(stage_index)}.lean"] = render_stage(
+        output_stem = (
+            late_stage_stem(stage_index)
+            if end == GROUP_COUNT
+            else stage_stem(stage_index)
+        )
+        rendered[OUT_DIR / f"{output_stem}.lean"] = render_stage(
             stage_index,
             start,
             end,
             accumulation_reset_start,
+            late_tail_start,
         )
     last_stage = len(ranges) - 1
+    early_tail_end = late_tail_start - 1
+    late_tail_end = GROUP_COUNT - 1
+    late_pairwise_starts = list(
+        range(
+            accumulation_reset_start,
+            late_tail_start,
+            late_tail_disjoint_chunk_size,
+        )
+    )
+    for chunk_index, start in enumerate(late_pairwise_starts):
+        end = min(late_tail_start, start + late_tail_disjoint_chunk_size)
+        rendered[
+            OUT_DIR / f"{tail_merge_pairwise_chunk_stem(chunk_index)}.lean"
+        ] = render_tail_merge_pairwise_chunk(
+            chunk_index,
+            start,
+            end,
+            last_stage,
+            late_tail_end,
+        )
+    rendered[OUT_DIR / f"{tail_merge_aggregate_stem()}.lean"] = (
+        render_tail_merge_aggregate(
+            len(late_pairwise_starts),
+            accumulation_reset_start,
+            early_tail_end,
+            late_tail_end,
+        )
+    )
+    rendered[OUT_DIR / f"{stage_stem(last_stage)}.lean"] = (
+        render_tail_merge_stage(last_stage, early_tail_end, late_tail_end)
+    )
     prefix_ranges = list(
         range(0, accumulation_reset_start, disjoint_chunk_size)
     )
@@ -496,6 +751,18 @@ def main() -> None:
         default=DEFAULT_DISJOINT_CHUNK_SIZE,
         help="Prefix groups per pairwise/structural disjointness module.",
     )
+    parser.add_argument(
+        "--late-tail-start",
+        type=int,
+        default=DEFAULT_LATE_TAIL_START,
+        help="Restart the tail again before the final oversized accumulation.",
+    )
+    parser.add_argument(
+        "--late-tail-disjoint-chunk-size",
+        type=int,
+        default=DEFAULT_LATE_TAIL_DISJOINT_CHUNK_SIZE,
+        help="Early-tail groups per pairwise late-tail module.",
+    )
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()
 
@@ -505,6 +772,8 @@ def main() -> None:
         args.tail_stage_size,
         args.accumulation_reset_start,
         args.disjoint_chunk_size,
+        args.late_tail_start,
+        args.late_tail_disjoint_chunk_size,
     )
     mismatches: list[str] = []
     for path, content in rendered.items():
@@ -522,7 +791,9 @@ def main() -> None:
         f"stage_size={args.stage_size}, tail_start={args.tail_start}, "
         f"tail_stage_size={args.tail_stage_size}, "
         f"accumulation_reset_start={args.accumulation_reset_start}, "
-        f"disjoint_chunk_size={args.disjoint_chunk_size}"
+        f"disjoint_chunk_size={args.disjoint_chunk_size}, "
+        f"late_tail_start={args.late_tail_start}, "
+        f"late_tail_disjoint_chunk_size={args.late_tail_disjoint_chunk_size}"
     )
 
 
