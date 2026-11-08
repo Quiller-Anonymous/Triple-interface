@@ -32,6 +32,13 @@ DEFAULT_ACCUMULATION_RESET_START = 273
 DEFAULT_DISJOINT_CHUNK_SIZE = 10
 DEFAULT_LATE_TAIL_START = 284
 DEFAULT_LATE_TAIL_DISJOINT_CHUNK_SIZE = 3
+OLD_TAIL_MIN_UPPER = 1391
+LATE_TAIL_MIN_LOWER = 1393
+LATE_GROUP_MIN_BOUNDS = {
+    284: (1393, 1493),
+    285: (1495, 1610),
+    286: (1613, 1661),
+}
 
 
 def module_name(stem: str) -> str:
@@ -95,6 +102,30 @@ def late_tail_total_name(index: int) -> str:
         "PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailTotalUpTo"
         f"{index:03d}"
     )
+
+
+def min_coordinate(p: str = "p") -> str:
+    return f"Nat.min {p}.1 {p}.2"
+
+
+def group_min_bounds_name(index: int) -> str:
+    return f"{group_name(index)}Pairs_min_coordinate_bounds"
+
+
+def group_min_upper_name(index: int) -> str:
+    return f"{group_name(index)}Pairs_min_coordinate_le_{OLD_TAIL_MIN_UPPER}"
+
+
+def tail_min_upper_name(index: int) -> str:
+    return f"{tail_upto_name(index)}_min_coordinate_le_{OLD_TAIL_MIN_UPPER}"
+
+
+def late_tail_min_lower_name(index: int) -> str:
+    return f"{late_tail_upto_name(index)}_min_coordinate_ge_{LATE_TAIL_MIN_LOWER}"
+
+
+def late_tail_min_upper_name(index: int, upper: int) -> str:
+    return f"{late_tail_upto_name(index)}_min_coordinate_le_{upper}"
 
 
 def emit_group_step(index: int) -> list[str]:
@@ -205,7 +236,9 @@ def emit_late_tail_group_step(index: int, reset_start: int) -> list[str]:
     previous_upto = late_tail_upto_name(index - 1)
     previous_total = late_tail_total_name(index - 1)
     disjoint = f"{previous_upto}_disjoint_{group}Pairs"
-    return [
+    lower, upper = LATE_GROUP_MIN_BOUNDS[index]
+    previous_upper = LATE_GROUP_MIN_BOUNDS[index - 1][1]
+    lines = [
         f"def {upto} : Finset (ℕ × ℕ) :=",
         f"  {previous_upto} ∪ {group}Pairs",
         "",
@@ -214,7 +247,14 @@ def emit_late_tail_group_step(index: int, reset_start: int) -> list[str]:
         "",
         f"theorem {disjoint} :",
         f"    Disjoint {previous_upto} {group}Pairs := by",
-        "  native_decide",
+        "  refine Finset.disjoint_left.mpr ?_",
+        "  intro p hp_previous hp_group",
+        (
+            f"  have hprevious := {late_tail_min_upper_name(index - 1, previous_upper)} "
+            "hp_previous"
+        ),
+        f"  have hgroup := {group_min_bounds_name(index)} hp_group",
+        "  omega",
         "",
         f"theorem {upto}_actual_sum :",
         f"    (∑ p ∈ {upto}, {actual} p) = {total} := by",
@@ -223,6 +263,25 @@ def emit_late_tail_group_step(index: int, reset_start: int) -> list[str]:
         "  rfl",
         "",
     ]
+    lines.extend(
+        [
+            f"theorem {late_tail_min_lower_name(index)} {{p : ℕ × ℕ}}",
+            f"    (hp : p ∈ {upto}) : {LATE_TAIL_MIN_LOWER} ≤ {min_coordinate()} := by",
+            f"  rw [{upto}, Finset.mem_union] at hp",
+            "  rcases hp with hp | hp",
+            f"  · exact {late_tail_min_lower_name(index - 1)} hp",
+            f"  · exact ({group_min_bounds_name(index)} hp).1",
+            "",
+            f"theorem {late_tail_min_upper_name(index, upper)} {{p : ℕ × ℕ}}",
+            f"    (hp : p ∈ {upto}) : {min_coordinate()} ≤ {upper} := by",
+            f"  rw [{upto}, Finset.mem_union] at hp",
+            "  rcases hp with hp | hp",
+            f"  · exact {late_tail_min_upper_name(index - 1, previous_upper)} hp",
+            f"  · exact ({group_min_bounds_name(index)} hp).2",
+            "",
+        ]
+    )
+    return lines
 
 
 def stage_stem(index: int) -> str:
@@ -240,9 +299,16 @@ def render_stage(
         imports = [BRIDGE_MODULE]
     else:
         imports = [module_name(stage_stem(stage_index - 1))]
-    imports.extend(
-        module_name(f"{GROUP_STEM}{index:03d}") for index in range(start, end)
-    )
+    if start == 285 and end == 286:
+        imports.extend(
+            [module_name(late_bound_stem(284)), module_name(late_bound_stem(285))]
+        )
+    elif start == 286 and end == 287:
+        imports.append(module_name(late_bound_stem(286)))
+    else:
+        imports.extend(
+            module_name(f"{GROUP_STEM}{index:03d}") for index in range(start, end)
+        )
     if start >= late_tail_start:
         if start == late_tail_start:
             comment = (
@@ -288,12 +354,60 @@ def late_stage_stem(index: int) -> str:
     return f"{STEM}TailLateStage{index:03d}"
 
 
+def late_bound_stem(index: int) -> str:
+    return f"{STEM}LateBound{index:03d}"
+
+
 def tail_merge_pairwise_chunk_stem(index: int) -> str:
     return f"{STEM}TailMergePairwiseChunk{index:03d}"
 
 
 def tail_merge_aggregate_stem() -> str:
     return f"{STEM}TailMergeAggregate"
+
+
+def render_late_bound(index: int, stage_123_index: int) -> str:
+    lower, upper = LATE_GROUP_MIN_BOUNDS[index]
+    if index == 284:
+        imports = [module_name(stage_stem(stage_123_index))]
+    else:
+        imports = [module_name(f"{GROUP_STEM}{index:03d}")]
+    group_pairs = f"{group_name(index)}Pairs"
+    predicate = f"{lower} ≤ {min_coordinate()} ∧ {min_coordinate()} ≤ {upper}"
+    lines = common_header(
+        imports,
+        f"/- Linear coordinate-range certificate for late-tail group {index:03d}. -/",
+    )
+    lines.extend(
+        [
+            f"private theorem {group_name(index)}Pairs_min_coordinate_filter :",
+            f"    {group_pairs}.filter (fun p => {predicate}) = {group_pairs} := by",
+            "  native_decide",
+            "",
+            f"theorem {group_min_bounds_name(index)} {{p : ℕ × ℕ}}",
+            f"    (hp : p ∈ {group_pairs}) : {predicate} := by",
+            f"  have hp' : p ∈ {group_pairs}.filter (fun p => {predicate}) := by",
+            f"    rw [{group_name(index)}Pairs_min_coordinate_filter]",
+            "    exact hp",
+            "  exact (Finset.mem_filter.mp hp').2",
+            "",
+        ]
+    )
+    if index == 284:
+        lines.extend(
+            [
+                f"theorem {late_tail_min_lower_name(index)} {{p : ℕ × ℕ}}",
+                f"    (hp : p ∈ {late_tail_upto_name(index)}) : {LATE_TAIL_MIN_LOWER} ≤ {min_coordinate()} := by",
+                f"  exact ({group_min_bounds_name(index)} (by simpa [{late_tail_upto_name(index)}] using hp)).1",
+                "",
+                f"theorem {late_tail_min_upper_name(index, upper)} {{p : ℕ × ℕ}}",
+                f"    (hp : p ∈ {late_tail_upto_name(index)}) : {min_coordinate()} ≤ {upper} := by",
+                f"  exact ({group_min_bounds_name(index)} (by simpa [{late_tail_upto_name(index)}] using hp)).2",
+                "",
+            ]
+        )
+    lines.extend(common_footer())
+    return "\n".join(lines)
 
 
 def group_tail_disjoint_name(group_index: int, tail_end: int) -> str:
@@ -322,24 +436,31 @@ def render_tail_merge_pairwise_chunk(
     chunk_index: int,
     start: int,
     end: int,
-    late_stage_index: int,
+    early_tail_stage_index: int,
     late_tail_end: int,
 ) -> str:
     lines = common_header(
-        [module_name(late_stage_stem(late_stage_index))],
+        [module_name(stage_stem(early_tail_stage_index))],
         (
-            f"/- Small pairwise checks for tail groups {start:03d}.."
-            f"{end - 1:03d} against the late tail. -/"
+            f"/- Linear coordinate-range checks for tail groups {start:03d}.."
+            f"{end - 1:03d}. -/"
         ),
     )
-    late_tail = late_tail_upto_name(late_tail_end)
     for index in range(start, end):
-        theorem_name = group_late_tail_disjoint_name(index, late_tail_end)
+        group_pairs = f"{group_name(index)}Pairs"
+        predicate = f"{min_coordinate()} ≤ {OLD_TAIL_MIN_UPPER}"
         lines.extend(
             [
-                f"theorem {theorem_name} :",
-                f"    Disjoint {group_name(index)}Pairs {late_tail} := by",
+                f"private theorem {group_name(index)}Pairs_min_coordinate_filter :",
+                f"    {group_pairs}.filter (fun p => {predicate}) = {group_pairs} := by",
                 "  native_decide",
+                "",
+                f"theorem {group_min_upper_name(index)} {{p : ℕ × ℕ}}",
+                f"    (hp : p ∈ {group_pairs}) : {predicate} := by",
+                f"  have hp' : p ∈ {group_pairs}.filter (fun p => {predicate}) := by",
+                f"    rw [{group_name(index)}Pairs_min_coordinate_filter]",
+                "    exact hp",
+                "  exact (Finset.mem_filter.mp hp').2",
                 "",
             ]
         )
@@ -352,11 +473,13 @@ def render_tail_merge_aggregate(
     tail_start: int,
     tail_end: int,
     late_tail_end: int,
+    late_stage_index: int,
 ) -> str:
     imports = [
         module_name(tail_merge_pairwise_chunk_stem(index))
         for index in range(chunk_count)
     ]
+    imports.append(module_name(late_stage_stem(late_stage_index)))
     lines = common_header(
         imports,
         (
@@ -364,30 +487,45 @@ def render_tail_merge_aggregate(
             f"{tail_start:03d}..{tail_end:03d} against the late tail. -/"
         ),
     )
-    late_tail = late_tail_upto_name(late_tail_end)
     for index in range(tail_start, tail_end + 1):
-        theorem_name = tail_late_tail_disjoint_name(index, late_tail_end)
-        group_theorem = group_late_tail_disjoint_name(index, late_tail_end)
+        theorem_name = tail_min_upper_name(index)
+        group_theorem = group_min_upper_name(index)
         if index == tail_start:
             lines.extend(
                 [
-                    f"theorem {theorem_name} :",
-                    f"    Disjoint {tail_upto_name(index)} {late_tail} := by",
-                    f"  simpa [{tail_upto_name(index)}] using {group_theorem}",
+                    f"theorem {theorem_name} {{p : ℕ × ℕ}}",
+                    f"    (hp : p ∈ {tail_upto_name(index)}) : {min_coordinate()} ≤ {OLD_TAIL_MIN_UPPER} := by",
+                    f"  exact {group_theorem} (by simpa [{tail_upto_name(index)}] using hp)",
                     "",
                 ]
             )
             continue
-        previous_theorem = tail_late_tail_disjoint_name(index - 1, late_tail_end)
+        previous_theorem = tail_min_upper_name(index - 1)
         lines.extend(
             [
-                f"theorem {theorem_name} :",
-                f"    Disjoint {tail_upto_name(index)} {late_tail} := by",
-                f"  rw [{tail_upto_name(index)}, Finset.disjoint_union_left]",
-                f"  exact ⟨{previous_theorem}, {group_theorem}⟩",
+                f"theorem {theorem_name} {{p : ℕ × ℕ}}",
+                f"    (hp : p ∈ {tail_upto_name(index)}) : {min_coordinate()} ≤ {OLD_TAIL_MIN_UPPER} := by",
+                f"  rw [{tail_upto_name(index)}, Finset.mem_union] at hp",
+                "  rcases hp with hp | hp",
+                f"  · exact {previous_theorem} hp",
+                f"  · exact {group_theorem} hp",
                 "",
             ]
         )
+    late_tail = late_tail_upto_name(late_tail_end)
+    disjoint = tail_late_tail_disjoint_name(tail_end, late_tail_end)
+    lines.extend(
+        [
+            f"theorem {disjoint} :",
+            f"    Disjoint {tail_upto_name(tail_end)} {late_tail} := by",
+            "  refine Finset.disjoint_left.mpr ?_",
+            "  intro p hp_tail hp_late",
+            f"  have htail := {tail_min_upper_name(tail_end)} hp_tail",
+            f"  have hlate := {late_tail_min_lower_name(late_tail_end)} hp_late",
+            "  omega",
+            "",
+        ]
+    )
     lines.extend(common_footer())
     return "\n".join(lines)
 
@@ -658,6 +796,16 @@ def expected_files(
             late_tail_start,
         )
     last_stage = len(ranges) - 1
+    late_reset_stage = next(
+        stage_index
+        for stage_index, (start, _end) in enumerate(ranges)
+        if start == late_tail_start
+    )
+    early_tail_stage = late_reset_stage - 1
+    for index in range(late_tail_start, GROUP_COUNT):
+        rendered[OUT_DIR / f"{late_bound_stem(index)}.lean"] = render_late_bound(
+            index, late_reset_stage
+        )
     early_tail_end = late_tail_start - 1
     late_tail_end = GROUP_COUNT - 1
     late_pairwise_starts = list(
@@ -675,7 +823,7 @@ def expected_files(
             chunk_index,
             start,
             end,
-            last_stage,
+            early_tail_stage,
             late_tail_end,
         )
     rendered[OUT_DIR / f"{tail_merge_aggregate_stem()}.lean"] = (
@@ -684,6 +832,7 @@ def expected_files(
             accumulation_reset_start,
             early_tail_end,
             late_tail_end,
+            last_stage,
         )
     )
     rendered[OUT_DIR / f"{stage_stem(last_stage)}.lean"] = (

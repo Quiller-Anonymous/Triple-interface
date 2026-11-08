@@ -1,4 +1,4 @@
-import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalTailLateStage125
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalStage122
 
 set_option maxHeartbeats 0
 set_option maxRecDepth 100000
@@ -10,18 +10,39 @@ open Goldbach
 open Goldbach.BankParams
 open Goldbach.Windows
 
-/- Small pairwise checks for tail groups 276..278 against the late tail. -/
+/- Linear coordinate-range checks for tail groups 276..278. -/
 
-theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 :
-    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 := by
+private theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs_min_coordinate_filter :
+    PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs.filter (fun p => Nat.min p.1 p.2 ≤ 1391) = PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs := by
   native_decide
 
-theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 :
-    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 := by
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs_min_coordinate_le_1391 {p : ℕ × ℕ}
+    (hp : p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs) : Nat.min p.1 p.2 ≤ 1391 := by
+  have hp' : p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs.filter (fun p => Nat.min p.1 p.2 ≤ 1391) := by
+    rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup276Pairs_min_coordinate_filter]
+    exact hp
+  exact (Finset.mem_filter.mp hp').2
+
+private theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs_min_coordinate_filter :
+    PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs.filter (fun p => Nat.min p.1 p.2 ≤ 1391) = PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs := by
   native_decide
 
-theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 :
-    Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo286 := by
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs_min_coordinate_le_1391 {p : ℕ × ℕ}
+    (hp : p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs) : Nat.min p.1 p.2 ≤ 1391 := by
+  have hp' : p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs.filter (fun p => Nat.min p.1 p.2 ≤ 1391) := by
+    rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup277Pairs_min_coordinate_filter]
+    exact hp
+  exact (Finset.mem_filter.mp hp').2
+
+private theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs_min_coordinate_filter :
+    PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs.filter (fun p => Nat.min p.1 p.2 ≤ 1391) = PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs := by
   native_decide
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs_min_coordinate_le_1391 {p : ℕ × ℕ}
+    (hp : p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs) : Nat.min p.1 p.2 ≤ 1391 := by
+  have hp' : p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs.filter (fun p => Nat.min p.1 p.2 ≤ 1391) := by
+    rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup278Pairs_min_coordinate_filter]
+    exact hp
+  exact (Finset.mem_filter.mp hp').2
 
 end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage

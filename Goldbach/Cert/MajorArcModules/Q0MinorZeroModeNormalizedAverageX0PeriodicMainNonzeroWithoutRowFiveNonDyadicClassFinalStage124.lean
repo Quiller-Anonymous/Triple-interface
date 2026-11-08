@@ -1,5 +1,6 @@
 import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalStage123
-import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup285
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalLateBound284
+import Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFiveNonDyadicClassFinalLateBound285
 
 set_option maxHeartbeats 0
 set_option maxRecDepth 100000
@@ -21,12 +22,30 @@ def PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailTotalUpTo285 : ℚ :=
 
 theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup285Pairs :
     Disjoint PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284 PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup285Pairs := by
-  native_decide
+  refine Finset.disjoint_left.mpr ?_
+  intro p hp_previous hp_group
+  have hprevious := PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284_min_coordinate_le_1493 hp_previous
+  have hgroup := PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup285Pairs_min_coordinate_bounds hp_group
+  omega
 
 theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo285_actual_sum :
     (∑ p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo285, surrogatePeriodicMainActiveOrderedPairSummandRat X0 p) = PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailTotalUpTo285 := by
   rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo285, Finset.sum_union PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284_disjoint_PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup285Pairs]
   rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284_actual_sum, periodicMainNonzeroWithoutRowFiveNonDyadicClassGroup285_actual_sum]
   rfl
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo285_min_coordinate_ge_1393 {p : ℕ × ℕ}
+    (hp : p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo285) : 1393 ≤ Nat.min p.1 p.2 := by
+  rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo285, Finset.mem_union] at hp
+  rcases hp with hp | hp
+  · exact PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284_min_coordinate_ge_1393 hp
+  · exact (PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup285Pairs_min_coordinate_bounds hp).1
+
+theorem PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo285_min_coordinate_le_1610 {p : ℕ × ℕ}
+    (hp : p ∈ PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo285) : Nat.min p.1 p.2 ≤ 1610 := by
+  rw [PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo285, Finset.mem_union] at hp
+  rcases hp with hp | hp
+  · exact PeriodicMainNonzeroWithoutRowFiveNonDyadicClassLateTailPairsUpTo284_min_coordinate_le_1493 hp
+  · exact (PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup285Pairs_min_coordinate_bounds hp).2
 
 end Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage
