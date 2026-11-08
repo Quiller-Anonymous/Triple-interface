@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 
 
@@ -18,6 +19,10 @@ GROUP_STEM = (
     "Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFive"
     "NonDyadicClassGroup"
 )
+CLASS_STEM = (
+    "Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFive"
+    "NonDyadicClass"
+)
 BRIDGE_MODULE = (
     MODULE_PREFIX
     + "Q0MinorZeroModeNormalizedAverageX0PeriodicMainNonzeroWithoutRowFive"
@@ -25,6 +30,8 @@ BRIDGE_MODULE = (
 )
 NAMESPACE = "Goldbach.Cert.MajorArcModules.Q0MinorZeroModeNormalizedAverage"
 GROUP_COUNT = 287
+CLASS_COUNT = 7158
+CLASSES_PER_GROUP = 25
 DEFAULT_STAGE_SIZE = 8
 DEFAULT_TAIL_START = 184
 DEFAULT_TAIL_STAGE_SIZE = 1
@@ -114,6 +121,18 @@ def group_min_bounds_name(index: int) -> str:
 
 def group_min_upper_name(index: int) -> str:
     return f"{group_name(index)}Pairs_min_coordinate_le_{OLD_TAIL_MIN_UPPER}"
+
+
+def class_name(index: int) -> str:
+    return f"PeriodicMainRecordsNonzeroWithoutRowFiveNonDyadicClass{index}"
+
+
+def class_min_bounds_name(index: int) -> str:
+    return f"{class_name(index)}Pairs_min_coordinate_bounds"
+
+
+def class_min_upper_name(index: int) -> str:
+    return f"{class_name(index)}Pairs_min_coordinate_le_{OLD_TAIL_MIN_UPPER}"
 
 
 def tail_min_upper_name(index: int) -> str:
@@ -358,6 +377,131 @@ def late_bound_stem(index: int) -> str:
     return f"{STEM}LateBound{index:03d}"
 
 
+def range_leaf_stem(index: int) -> str:
+    return f"{STEM}RangeLeaf{index:04d}"
+
+
+def range_group_stem(index: int) -> str:
+    return f"{STEM}RangeGroup{index:03d}"
+
+
+def group_class_indices(group_index: int) -> range:
+    start = group_index * CLASSES_PER_GROUP
+    return range(start, min(start + CLASSES_PER_GROUP, CLASS_COUNT))
+
+
+def class_pair_count(index: int) -> int:
+    path = OUT_DIR / f"{CLASS_STEM}{index}.lean"
+    text = path.read_text()
+    name = re.escape(f"{class_name(index)}Pairs")
+    match = re.search(
+        rf"def {name} : Finset \(ℕ × ℕ\) :=\s*\[(.*?)\]\.toFinset",
+        text,
+        flags=re.DOTALL,
+    )
+    if match is None:
+        raise ValueError(f"could not parse pair list in {path.relative_to(ROOT)}")
+    count = len(re.findall(r"\(\d+,\s*\d+\)", match.group(1)))
+    if count == 0:
+        raise ValueError(f"empty pair list in {path.relative_to(ROOT)}")
+    return count
+
+
+def render_range_leaf(class_index: int, group_index: int) -> str:
+    pairs = f"{class_name(class_index)}Pairs"
+    if group_index < 284:
+        predicate = f"{min_coordinate()} ≤ {OLD_TAIL_MIN_UPPER}"
+        theorem_name = class_min_upper_name(class_index)
+    else:
+        lower, upper = LATE_GROUP_MIN_BOUNDS[group_index]
+        predicate = f"{lower} ≤ {min_coordinate()} ∧ {min_coordinate()} ≤ {upper}"
+        theorem_name = class_min_bounds_name(class_index)
+    alternatives = " | ".join("rfl" for _ in range(class_pair_count(class_index)))
+    lines = common_header(
+        [module_name(f"{CLASS_STEM}{class_index}")],
+        f"/- Constant-size coordinate certificate for non-dyadic class {class_index}. -/",
+    )
+    lines.extend(
+        [
+            f"theorem {theorem_name} {{p : ℕ × ℕ}}",
+            f"    (hp : p ∈ {pairs}) : {predicate} := by",
+            f"  simp [{pairs}] at hp",
+            f"  rcases hp with {alternatives} <;> norm_num",
+            "",
+        ]
+    )
+    lines.extend(common_footer())
+    return "\n".join(lines)
+
+
+def render_range_group(group_index: int) -> str:
+    class_indices = list(group_class_indices(group_index))
+    imports = [module_name(f"{GROUP_STEM}{group_index:03d}")]
+    imports.extend(module_name(range_leaf_stem(index)) for index in class_indices)
+    if group_index < 284:
+        predicate = f"{min_coordinate()} ≤ {OLD_TAIL_MIN_UPPER}"
+        group_theorem = group_min_upper_name(group_index)
+        leaf_theorem = class_min_upper_name
+    else:
+        lower, upper = LATE_GROUP_MIN_BOUNDS[group_index]
+        predicate = f"{lower} ≤ {min_coordinate()} ∧ {min_coordinate()} ≤ {upper}"
+        group_theorem = group_min_bounds_name(group_index)
+        leaf_theorem = class_min_bounds_name
+    lines = common_header(
+        imports,
+        f"/- Structural coordinate-range assembly for non-dyadic group {group_index:03d}. -/",
+    )
+    for offset, class_index in enumerate(class_indices):
+        upto = (
+            f"PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup{group_index:03d}"
+            f"PairsUpTo{offset:03d}"
+        )
+        upto_theorem = f"{upto}_coordinate_bound"
+        if offset == 0:
+            lines.extend(
+                [
+                    f"theorem {upto_theorem} {{p : ℕ × ℕ}}",
+                    f"    (hp : p ∈ {upto}) : {predicate} := by",
+                    f"  exact {leaf_theorem(class_index)} (by simpa [{upto}] using hp)",
+                    "",
+                ]
+            )
+        else:
+            previous = (
+                f"PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup{group_index:03d}"
+                f"PairsUpTo{offset - 1:03d}_coordinate_bound"
+            )
+            lines.extend(
+                [
+                    f"theorem {upto_theorem} {{p : ℕ × ℕ}}",
+                    f"    (hp : p ∈ {upto}) : {predicate} := by",
+                    f"  rw [{upto}, Finset.mem_union] at hp",
+                    "  rcases hp with hp | hp",
+                    f"  · exact {previous} hp",
+                    f"  · exact {leaf_theorem(class_index)} hp",
+                    "",
+                ]
+            )
+    final_upto = (
+        f"PeriodicMainNonzeroWithoutRowFiveNonDyadicClassGroup{group_index:03d}"
+        f"PairsUpTo{len(class_indices) - 1:03d}"
+    )
+    group_pairs = f"{group_name(group_index)}Pairs"
+    lines.extend(
+        [
+            f"theorem {group_theorem} {{p : ℕ × ℕ}}",
+            f"    (hp : p ∈ {group_pairs}) : {predicate} := by",
+            (
+                f"  exact {final_upto}_coordinate_bound "
+                f"(by simpa [{group_pairs}] using hp)"
+            ),
+            "",
+        ]
+    )
+    lines.extend(common_footer())
+    return "\n".join(lines)
+
+
 def tail_merge_pairwise_chunk_stem(index: int) -> str:
     return f"{STEM}TailMergePairwiseChunk{index:03d}"
 
@@ -369,29 +513,15 @@ def tail_merge_aggregate_stem() -> str:
 def render_late_bound(index: int, stage_123_index: int) -> str:
     lower, upper = LATE_GROUP_MIN_BOUNDS[index]
     if index == 284:
-        imports = [module_name(stage_stem(stage_123_index))]
+        imports = [
+            module_name(stage_stem(stage_123_index)),
+            module_name(range_group_stem(index)),
+        ]
     else:
-        imports = [module_name(f"{GROUP_STEM}{index:03d}")]
-    group_pairs = f"{group_name(index)}Pairs"
-    predicate = f"{lower} ≤ {min_coordinate()} ∧ {min_coordinate()} ≤ {upper}"
+        imports = [module_name(range_group_stem(index))]
     lines = common_header(
         imports,
-        f"/- Linear coordinate-range certificate for late-tail group {index:03d}. -/",
-    )
-    lines.extend(
-        [
-            f"private theorem {group_name(index)}Pairs_min_coordinate_filter :",
-            f"    {group_pairs}.filter (fun p => {predicate}) = {group_pairs} := by",
-            "  native_decide",
-            "",
-            f"theorem {group_min_bounds_name(index)} {{p : ℕ × ℕ}}",
-            f"    (hp : p ∈ {group_pairs}) : {predicate} := by",
-            f"  have hp' : p ∈ {group_pairs}.filter (fun p => {predicate}) := by",
-            f"    rw [{group_name(index)}Pairs_min_coordinate_filter]",
-            "    exact hp",
-            "  exact (Finset.mem_filter.mp hp').2",
-            "",
-        ]
+        f"/- Late-tail coordinate interface for group {index:03d}. -/",
     )
     if index == 284:
         lines.extend(
@@ -439,31 +569,15 @@ def render_tail_merge_pairwise_chunk(
     early_tail_stage_index: int,
     late_tail_end: int,
 ) -> str:
+    imports = [module_name(stage_stem(early_tail_stage_index))]
+    imports.extend(module_name(range_group_stem(index)) for index in range(start, end))
     lines = common_header(
-        [module_name(stage_stem(early_tail_stage_index))],
+        imports,
         (
-            f"/- Linear coordinate-range checks for tail groups {start:03d}.."
-            f"{end - 1:03d}. -/"
+            f"/- Import constant-size coordinate certificates for tail groups "
+            f"{start:03d}..{end - 1:03d}. -/"
         ),
     )
-    for index in range(start, end):
-        group_pairs = f"{group_name(index)}Pairs"
-        predicate = f"{min_coordinate()} ≤ {OLD_TAIL_MIN_UPPER}"
-        lines.extend(
-            [
-                f"private theorem {group_name(index)}Pairs_min_coordinate_filter :",
-                f"    {group_pairs}.filter (fun p => {predicate}) = {group_pairs} := by",
-                "  native_decide",
-                "",
-                f"theorem {group_min_upper_name(index)} {{p : ℕ × ℕ}}",
-                f"    (hp : p ∈ {group_pairs}) : {predicate} := by",
-                f"  have hp' : p ∈ {group_pairs}.filter (fun p => {predicate}) := by",
-                f"    rw [{group_name(index)}Pairs_min_coordinate_filter]",
-                "    exact hp",
-                "  exact (Finset.mem_filter.mp hp').2",
-                "",
-            ]
-        )
     lines.extend(common_footer())
     return "\n".join(lines)
 
@@ -802,6 +916,14 @@ def expected_files(
         if start == late_tail_start
     )
     early_tail_stage = late_reset_stage - 1
+    for group_index in range(accumulation_reset_start, GROUP_COUNT):
+        for class_index in group_class_indices(group_index):
+            rendered[OUT_DIR / f"{range_leaf_stem(class_index)}.lean"] = (
+                render_range_leaf(class_index, group_index)
+            )
+        rendered[OUT_DIR / f"{range_group_stem(group_index)}.lean"] = (
+            render_range_group(group_index)
+        )
     for index in range(late_tail_start, GROUP_COUNT):
         rendered[OUT_DIR / f"{late_bound_stem(index)}.lean"] = render_late_bound(
             index, late_reset_stage
